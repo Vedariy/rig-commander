@@ -835,6 +835,47 @@
       font-weight: 700;
     }
 
+    /* LANG SWITCHER */
+    .nav-actions-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.04em;
+    }
+
+    .lang-btn:hover {
+      color: #fff;
+    }
+
+    .lang-btn.active {
+      background: rgba(0, 240, 255, 0.16);
+      color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+    }
+
     /* TOAST */
     .toast {
       position: fixed;
@@ -867,15 +908,22 @@
         <span class="nav-brand-badge">v3.1 LIVE</span>
       </a>
       <ul class="nav-links">
-        <li><a href="#features">Features</a></li>
-        <li><a href="#comparison">Why RigCommander</a></li>
-        <li><a href="#architecture">Architecture</a></li>
-        <li><a href="#waitlist">Waitlist</a></li>
+        <li><a href="#features" data-i18n="nav.features">Features</a></li>
+        <li><a href="#comparison" data-i18n="nav.why">Why RigCommander</a></li>
+        <li><a href="#architecture" data-i18n="nav.arch">Architecture</a></li>
+        <li><a href="/demo" data-i18n="nav.demo">Live Demo</a></li>
+        <li><a href="#waitlist" data-i18n="nav.waitlist">Waitlist</a></li>
       </ul>
-      <a href="#waitlist" class="nav-cta">
-        <span>Request Access</span>
-        <span>→</span>
-      </a>
+      <div class="nav-actions-right">
+        <div class="lang-switch" role="group" aria-label="Language switch">
+          <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+          <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+        </div>
+        <a href="#waitlist" class="nav-cta">
+          <span data-i18n="nav.cta">Request Access</span>
+          <span>→</span>
+        </a>
+      </div>
     </nav>
   </header>
 
@@ -885,25 +933,25 @@
     <section class="hero container">
       <div class="hero-eyebrow">
         <span class="pulse-dot"></span>
-        <span>MISSION CONTROL FOR AUTONOMOUS AI SWARMS</span>
+        <span data-i18n="hero.eyebrow">MISSION CONTROL FOR AUTONOMOUS AI SWARMS</span>
       </div>
 
-      <h1 class="hero-title">
+      <h1 class="hero-title" data-i18n-html="hero.title">
         Stop Agent Chaos.<br>
         <span class="accent-cyan">Command Your AI Fleets.</span>
       </h1>
 
-      <p class="hero-subtitle">
+      <p class="hero-subtitle" data-i18n="hero.subtitle">
         The real-time operational flight deck for autonomous multi-agent engineering teams.
         Live topological routing, 1-click tmux terminal introspection, token quota thermodynamics, and deterministic human-in-the-loop oversight.
       </p>
 
       <div class="hero-actions">
         <a href="#waitlist" class="btn-primary">
-          <span>⚡ Join Priority Waitlist</span>
+          <span data-i18n="hero.cta">⚡ Join Priority Waitlist</span>
           <span>→</span>
         </a>
-        <div class="cli-copy-box" onclick="copyCli('npx rig-commander@latest')" title="Click to copy CLI installer">
+        <div class="cli-copy-box" onclick="copyCli('npx rig-commander@latest')" title="Click to copy CLI installer" data-i18n-title="hero.cliTitle">
           <span class="cli-prompt">$</span>
           <span>npx rig-commander@latest</span>
           <span class="cli-icon">📋</span>
@@ -923,14 +971,14 @@
             <div style="font-family:var(--font-mono); font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px;">
               <span style="color:#fff; font-weight:700;">NEURAL DECK v3.1</span>
               <span>•</span>
-              <span style="color:var(--emerald);">● LIVE TELEMETRY</span>
+              <span style="color:var(--emerald);" data-i18n="sim.liveTelemetry">● LIVE TELEMETRY</span>
               <span>•</span>
-              <span>9 AGENTS CONNECTED</span>
+              <span data-i18n="sim.agentsConnected">9 AGENTS CONNECTED</span>
             </div>
 
             <div class="sim-bar-controls">
-              <button class="sim-btn" id="simCalmBtn" onclick="toggleSimCalm()">🧘 CALM FOCUS</button>
-              <button class="sim-btn active" id="simSliceAll" onclick="setSimSlice('all')">🌐 ALL LANES</button>
+              <button class="sim-btn" id="simCalmBtn" onclick="toggleSimCalm()" data-i18n="sim.calmOff">🧘 CALM FOCUS</button>
+              <button class="sim-btn active" id="simSliceAll" onclick="setSimSlice('all')" data-i18n="sim.allLanes">🌐 ALL LANES</button>
               <button class="sim-btn" id="simSliceUx" onclick="setSimSlice('ux')">🏷️ UX-GATE</button>
             </div>
           </div>
@@ -939,14 +987,14 @@
             <!-- Left Col: Wait Radar -->
             <div class="sim-left-col">
               <div class="sim-col-title">
-                <span>WAIT RADAR</span>
+                <span data-i18n="sim.waitRadar">WAIT RADAR</span>
                 <span style="color:var(--amber);">LIVE TSV</span>
               </div>
               <div class="sim-card" style="border-left: 3px solid var(--amber);">
                 <div class="sim-card-header">
                   <span>dev-owner → dev-check</span>
                 </div>
-                <div class="sim-card-body">
+                <div class="sim-card-body" data-i18n="sim.card1">
                   Stuck sweep: stalled after claim on qitem-20261108. Waiting QA acceptance test.
                 </div>
               </div>
@@ -954,7 +1002,7 @@
                 <div class="sim-card-header">
                   <span>dev-coder → dev-owner</span>
                 </div>
-                <div class="sim-card-body">
+                <div class="sim-card-body" data-i18n="sim.card2">
                   UX Core P1 done: workflow + real HTTP TW adapter. Ready for review.
                 </div>
               </div>
@@ -962,7 +1010,7 @@
                 <div class="sim-card-header">
                   <span style="color:var(--coral);">dev-check (QA)</span>
                 </div>
-                <div class="sim-card-body">
+                <div class="sim-card-body" data-i18n="sim.card3">
                   Stopped at terminal permission_prompt: needs human HITL authorization.
                 </div>
               </div>
@@ -1044,7 +1092,7 @@
             <!-- Right Col: Live Terminal & Inspector -->
             <div class="sim-right-col">
               <div class="sim-col-title">
-                <span>INSPECTOR & TMUX</span>
+                <span data-i18n="sim.inspector">INSPECTOR & TMUX</span>
                 <span style="color:var(--cyan);" id="simInspectorId">dev-check (QA)</span>
               </div>
               <div class="sim-terminal-screen" id="simTerminalScreen">
@@ -1062,8 +1110,8 @@ and re-run test runner? [y/N]:
 _
               </div>
               <div style="display:flex; gap:6px;">
-                <button class="sim-btn" style="flex:1; border-color:var(--emerald); color:#6ee7b7;" onclick="simAuthorize()">✓ AUTHORIZE</button>
-                <button class="sim-btn" style="border-color:var(--coral); color:#fda4af;" onclick="simReject()">✕ STOP</button>
+                <button class="sim-btn" style="flex:1; border-color:var(--emerald); color:#6ee7b7;" onclick="simAuthorize()" data-i18n="sim.authorize">✓ AUTHORIZE</button>
+                <button class="sim-btn" style="border-color:var(--coral); color:#fda4af;" onclick="simReject()" data-i18n="sim.stop">✕ STOP</button>
               </div>
             </div>
           </div>
@@ -1074,9 +1122,9 @@ _
     <!-- THE PAIN STRIP / WHY NOW -->
     <section class="pain-section" id="comparison">
       <div class="container">
-        <div class="section-eyebrow">THE 10-AGENT TIPPING POINT</div>
-        <h2 class="section-title">Why Autonomous Swarms Break Down</h2>
-        <p class="section-desc">
+        <div class="section-eyebrow" data-i18n="pain.eyebrow">THE 10-AGENT TIPPING POINT</div>
+        <h2 class="section-title" data-i18n="pain.title">Why Autonomous Swarms Break Down</h2>
+        <p class="section-desc" data-i18n="pain.desc">
           One AI agent in your editor feels like magic. Ten concurrent agents across separate worktrees create an unobservable, expensive black box.
         </p>
 
@@ -1084,24 +1132,24 @@ _
           <div class="compare-card bad">
             <div class="compare-header" style="color: var(--coral);">
               <span>✕</span>
-              <span>Without RigCommander: Chaos</span>
+              <span data-i18n="pain.badTitle">Without RigCommander: Chaos</span>
             </div>
             <ul class="compare-list">
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span><b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked.</span>
+                <span data-i18n-html="pain.bad1"><b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked.</span>
               </li>
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span><b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a human keypress you never saw.</span>
+                <span data-i18n-html="pain.bad2"><b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a human keypress you never saw.</span>
               </li>
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span><b>Circular Rework Loops:</b> QA rejects coder's PR 5 times in a loop, burning 300,000 tokens on repetitive fixes.</span>
+                <span data-i18n-html="pain.bad3"><b>Circular Rework Loops:</b> QA rejects coder's PR 5 times in a loop, burning 300,000 tokens on repetitive fixes.</span>
               </li>
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span><b>Overnight Budget Shock:</b> Waking up to a $1,400 API invoice because two agents entered an unmonitored ping-pong loop.</span>
+                <span data-i18n-html="pain.bad4"><b>Overnight Budget Shock:</b> Waking up to a $1,400 API invoice because two agents entered an unmonitored ping-pong loop.</span>
               </li>
             </ul>
           </div>
@@ -1109,24 +1157,24 @@ _
           <div class="compare-card good">
             <div class="compare-header" style="color: var(--emerald);">
               <span>✓</span>
-              <span>With RigCommander: Deterministic Control</span>
+              <span data-i18n="pain.goodTitle">With RigCommander: Deterministic Control</span>
             </div>
             <ul class="compare-list">
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span><b>Single-Pane Topological Radar:</b> Instantly see every agent seat, who called whom, and who is holding the queue.</span>
+                <span data-i18n-html="pain.good1"><b>Single-Pane Topological Radar:</b> Instantly see every agent seat, who called whom, and who is holding the queue.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span><b>1-Click Introspection & HITL:</b> Instant terminal screen streaming with one-click authorization directly on the map.</span>
+                <span data-i18n-html="pain.good2"><b>1-Click Introspection & HITL:</b> Instant terminal screen streaming with one-click authorization directly on the map.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span><b>Bounce-Back Detection:</b> Real-time QA rework counters with automated alerts when bounce count exceeds thresholds.</span>
+                <span data-i18n-html="pain.good3"><b>Bounce-Back Detection:</b> Real-time QA rework counters with automated alerts when bounce count exceeds thresholds.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span><b>Context Thermodynamics:</b> Live model quota reservoirs with automated /compact warnings before context degrades.</span>
+                <span data-i18n-html="pain.good4"><b>Context Thermodynamics:</b> Live model quota reservoirs with automated /compact warnings before context degrades.</span>
               </li>
             </ul>
           </div>
@@ -1137,9 +1185,9 @@ _
     <!-- 2026 ASYMMETRIC BENTO GRID -->
     <section class="bento-section" id="features">
       <div class="container">
-        <div class="section-eyebrow">ENGINEERING CAPABILITIES</div>
-        <h2 class="section-title">Built for High-Reliability Fleets</h2>
-        <p class="section-desc">
+        <div class="section-eyebrow" data-i18n="bento.eyebrow">ENGINEERING CAPABILITIES</div>
+        <h2 class="section-title" data-i18n="bento.title">Built for High-Reliability Fleets</h2>
+        <p class="section-desc" data-i18n="bento.desc">
           Architected on Endsley's Situation Awareness principles and ISO 11064 control room ergonomics.
         </p>
 
@@ -1147,23 +1195,23 @@ _
           <!-- Bento Tile 1: Wide Topology -->
           <div class="bento-tile bento-wide">
             <div>
-              <span class="bento-badge">🌐 SA-DSS TOPOLOGY</span>
-              <h3 class="bento-title">Live Neural Highway & Call Volumes</h3>
-              <p class="bento-desc">
+              <span class="bento-badge" data-i18n="bento.t1.badge">🌐 SA-DSS TOPOLOGY</span>
+              <h3 class="bento-title" data-i18n="bento.t1.title">Live Neural Highway & Call Volumes</h3>
+              <p class="bento-desc" data-i18n="bento.t1.desc">
                 Dynamic SVG graph discovers your rig topology automatically. Edge line widths scale dynamically with real transmission volume. Click any highway to inspect recent envelope exchanges and queue payloads.
               </p>
             </div>
             <div class="bento-widget">
               <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#cbd5e1;">
                 <span>HIGHWAY: dev-owner ⇄ dev-coder4</span>
-                <span style="color:var(--cyan); font-weight:700;">31 ENVELOPES</span>
+                <span style="color:var(--cyan); font-weight:700;" data-i18n="bento.t1.envelopes">31 ENVELOPES</span>
               </div>
               <div style="background:rgba(255,255,255,0.06); height:6px; border-radius:3px; overflow:hidden;">
                 <div style="width:68%; height:100%; background:linear-gradient(90deg, var(--cyan), var(--emerald));"></div>
               </div>
               <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#64748b; margin-top:6px;">
                 <span>Latency: 420ms</span>
-                <span>Zero Drops • 100% Retries Handled</span>
+                <span data-i18n="bento.t1.zeroDrops">Zero Drops • 100% Retries Handled</span>
               </div>
             </div>
           </div>
@@ -1171,9 +1219,9 @@ _
           <!-- Bento Tile 2: Zero-Latency TMUX -->
           <div class="bento-tile">
             <div>
-              <span class="bento-badge">⚡ ZERO-LATENCY TMUX</span>
-              <h3 class="bento-title">In-Terminal Screen Capture</h3>
-              <p class="bento-desc">
+              <span class="bento-badge" data-i18n="bento.t2.badge">⚡ ZERO-LATENCY TMUX</span>
+              <h3 class="bento-title" data-i18n="bento.t2.title">In-Terminal Screen Capture</h3>
+              <p class="bento-desc" data-i18n="bento.t2.desc">
                 Inspect 80-line active terminal captures without switching windows. Safe command dispatching straight from your browser.
               </p>
             </div>
@@ -1189,9 +1237,9 @@ _
           <!-- Bento Tile 3: Quota Thermodynamics -->
           <div class="bento-tile">
             <div>
-              <span class="bento-badge">🔥 FINOPS GUARD</span>
-              <h3 class="bento-title">Context Thermodynamics</h3>
-              <p class="bento-desc">
+              <span class="bento-badge" data-i18n="bento.t3.badge">🔥 FINOPS GUARD</span>
+              <h3 class="bento-title" data-i18n="bento.t3.title">Context Thermodynamics</h3>
+              <p class="bento-desc" data-i18n="bento.t3.desc">
                 Avoid context saturation crashes. Monitor peak and average pool utilization across Claude, GPT-5, DeepSeek and Gemini seats.
               </p>
             </div>
@@ -1214,18 +1262,18 @@ _
           <!-- Bento Tile 4: Fleet Intelligence (Wide) -->
           <div class="bento-tile bento-wide">
             <div>
-              <span class="bento-badge">💡 FLEET INTELLIGENCE ADVISOR</span>
-              <h3 class="bento-title">Automated Swarm Bottleneck Detection</h3>
-              <p class="bento-desc">
+              <span class="bento-badge" data-i18n="bento.t4.badge">💡 FLEET INTELLIGENCE ADVISOR</span>
+              <h3 class="bento-title" data-i18n="bento.t4.title">Automated Swarm Bottleneck Detection</h3>
+              <p class="bento-desc" data-i18n="bento.t4.desc">
                 Out-of-band analytical engine evaluates token entropy, ceremony overhead, model mismatches, and QA bounce-back ratios in real time. Receive proactive recommendations before your pipeline stalls.
               </p>
             </div>
             <div class="bento-widget">
               <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <span style="background:rgba(251,191,36,0.15); border:1px solid var(--amber); color:var(--amber); border-radius:4px; padding:2px 6px; font-size:10px; font-weight:800;">ADVICE</span>
-                <span style="color:#fff; font-weight:700;">Trigger preemptive /compact on dev-check (QA)</span>
+                <span style="background:rgba(251,191,36,0.15); border:1px solid var(--amber); color:var(--amber); border-radius:4px; padding:2px 6px; font-size:10px; font-weight:800;" data-i18n="bento.t4.adviceTag">ADVICE</span>
+                <span style="color:#fff; font-weight:700;" data-i18n="bento.t4.adviceTitle">Trigger preemptive /compact on dev-check (QA)</span>
               </div>
-              <div style="color:#94a3b8; font-size:11px; line-height:1.4;">
+              <div style="color:#94a3b8; font-size:11px; line-height:1.4;" data-i18n="bento.t4.adviceBody">
                 Context utilization is at 80% (380K/475K). Compacting token memory now will prevent token budget exhaustion on subsequent acceptance runs.
               </div>
             </div>
@@ -1237,17 +1285,17 @@ _
     <!-- ARCHITECTURE BLUEPRINT -->
     <section class="arch-section" id="architecture">
       <div class="container">
-        <div class="section-eyebrow">NON-INVASIVE ARCHITECTURE</div>
-        <h2 class="section-title">Zero-Code Instrumentation</h2>
-        <p class="section-desc">
+        <div class="section-eyebrow" data-i18n="arch.eyebrow">NON-INVASIVE ARCHITECTURE</div>
+        <h2 class="section-title" data-i18n="arch.title">Zero-Code Instrumentation</h2>
+        <p class="section-desc" data-i18n="arch.desc">
           RigCommander connects directly to your existing environment. No vendor lock-in, no rewriting agent logic, zero latency overhead.
         </p>
 
         <div class="steps-grid">
           <div class="step-card">
             <div class="step-num">01</div>
-            <h3 class="step-title">Run Local Bridge</h3>
-            <p class="step-desc">
+            <h3 class="step-title" data-i18n="arch.s1.title">Run Local Bridge</h3>
+            <p class="step-desc" data-i18n="arch.s1.desc">
               Lightweight Node.js daemon inspects local tmux sockets, worktree git states, and queue logs out-of-band.
             </p>
             <div class="step-code">$ npx rig-commander@latest</div>
@@ -1255,17 +1303,17 @@ _
 
           <div class="step-card">
             <div class="step-num">02</div>
-            <h3 class="step-title">Auto-Discovery</h3>
-            <p class="step-desc">
+            <h3 class="step-title" data-i18n="arch.s2.title">Auto-Discovery</h3>
+            <p class="step-desc" data-i18n="arch.s2.desc">
               Dynamically maps active agents, harness types, seats, models, and task communication channels in seconds.
             </p>
-            <div class="step-code">● Discovered 3 rigs, 9 seats</div>
+            <div class="step-code" data-i18n="arch.s2.code">● Discovered 3 rigs, 9 seats</div>
           </div>
 
           <div class="step-card">
             <div class="step-num">03</div>
-            <h3 class="step-title">Command & Optimize</h3>
-            <p class="step-desc">
+            <h3 class="step-title" data-i18n="arch.s3.title">Command & Optimize</h3>
+            <p class="step-desc" data-i18n="arch.s3.desc">
               Monitor live Sankey traffic, authorize HITL requests, and prevent token burn from a single unified glass pane.
             </p>
             <div class="step-code">HTTP 200 • Deck on :7440</div>
@@ -1278,55 +1326,55 @@ _
     <section class="waitlist-section" id="waitlist">
       <div class="container">
         <div class="waitlist-card">
-          <div class="bento-badge" style="margin: 0 auto 16px;">🚀 PRIVATE ACCESS</div>
-          <h2 style="font-size: clamp(28px, 3.5vw, 38px); font-weight:800; letter-spacing:-0.02em; margin-bottom:12px;">
+          <div class="bento-badge" style="margin: 0 auto 16px;" data-i18n="waitlist.badge">🚀 PRIVATE ACCESS</div>
+          <h2 style="font-size: clamp(28px, 3.5vw, 38px); font-weight:800; letter-spacing:-0.02em; margin-bottom:12px;" data-i18n="waitlist.title">
             Deploy RigCommander in Your Fleet
           </h2>
-          <p style="color:#94a3b8; font-size:15px; line-height:1.5; max-width:520px; margin:0 auto;">
+          <p style="color:#94a3b8; font-size:15px; line-height:1.5; max-width:520px; margin:0 auto;" data-i18n="waitlist.desc">
             We are onboarding engineering teams and autonomous AI startups in priority batches. Reserve your spot today.
           </p>
 
           <form class="waitlist-form" id="waitlistForm" onsubmit="handleWaitlistSubmit(event)">
             <div class="form-group">
-              <label class="form-label" for="workEmail">Work Email</label>
+              <label class="form-label" for="workEmail" data-i18n="waitlist.emailLabel">Work Email</label>
               <input type="email" id="workEmail" class="form-input" placeholder="name@company.com" required>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="fleetSize">How many AI coding agents do you run?</label>
+              <label class="form-label" for="fleetSize" data-i18n="waitlist.fleetLabel">How many AI coding agents do you run?</label>
               <select id="fleetSize" class="form-select" required>
-                <option value="1-3">1–3 agents (Individual / Prototyping)</option>
-                <option value="4-10" selected>4–10 agents (Parallel Swarms in Production)</option>
-                <option value="10+">10+ agents (Enterprise Swarms / Autonomous Teams)</option>
+                <option value="1-3" data-i18n="waitlist.fleet1">1–3 agents (Individual / Prototyping)</option>
+                <option value="4-10" selected data-i18n="waitlist.fleet2">4–10 agents (Parallel Swarms in Production)</option>
+                <option value="10+" data-i18n="waitlist.fleet3">10+ agents (Enterprise Swarms / Autonomous Teams)</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="primaryHarness">Primary Harness / Framework</label>
+              <label class="form-label" for="primaryHarness" data-i18n="waitlist.harnessLabel">Primary Harness / Framework</label>
               <select id="primaryHarness" class="form-select">
-                <option value="claude-code">Claude Code / Anthropic Swarms</option>
-                <option value="codex-sol">Codex / OpenAI Swarms</option>
-                <option value="custom-tmux" selected>Custom Tmux / Worktree Orchestration</option>
-                <option value="crewai-langgraph">CrewAI / LangGraph / AutoGen</option>
+                <option value="claude-code" data-i18n="waitlist.h1">Claude Code / Anthropic Swarms</option>
+                <option value="codex-sol" data-i18n="waitlist.h2">Codex / OpenAI Swarms</option>
+                <option value="custom-tmux" selected data-i18n="waitlist.h3">Custom Tmux / Worktree Orchestration</option>
+                <option value="crewai-langgraph" data-i18n="waitlist.h4">CrewAI / LangGraph / AutoGen</option>
               </select>
             </div>
 
-            <button type="submit" class="form-submit-btn" id="submitBtn">
+            <button type="submit" class="form-submit-btn" id="submitBtn" data-i18n="waitlist.submit">
               Claim Priority Access →
             </button>
           </form>
 
           <div id="waitlistSuccess" style="display:none; margin-top:24px; padding:18px; background:rgba(0,255,157,0.12); border:1px solid var(--emerald); border-radius:8px;">
-            <div style="font-weight:800; font-size:16px; color:#6ee7b7; margin-bottom:6px;">
+            <div style="font-weight:800; font-size:16px; color:#6ee7b7; margin-bottom:6px;" data-i18n="waitlist.successTitle">
               ✓ You are on the priority waitlist!
             </div>
-            <div style="font-family:var(--font-mono); font-size:12px; color:#cbd5e1;">
+            <div style="font-family:var(--font-mono); font-size:12px; color:#cbd5e1;" data-i18n-html="waitlist.successDesc">
               Access position: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>
               We have sent a confirmation email with setup instructions.
             </div>
           </div>
 
-          <div class="waitlist-meta">
+          <div class="waitlist-meta" data-i18n="waitlist.meta">
             🔒 100% Local-First Architecture • Zero telemetry leaks • Self-hosted ready
           </div>
         </div>
@@ -1340,13 +1388,13 @@ _
     <div class="container footer-content">
       <div class="footer-status">
         <span class="pulse-dot" style="background:var(--emerald); box-shadow:0 0 10px var(--emerald);"></span>
-        <span>ALL SYSTEMS OPERATIONAL</span>
+        <span data-i18n="footer.status">ALL SYSTEMS OPERATIONAL</span>
         <span>•</span>
         <span>RigCommander v3.1</span>
       </div>
 
       <div class="footer-keycaps">
-        <span>Shortcuts:</span>
+        <span data-i18n="footer.shortcuts">Shortcuts:</span>
         <span class="keycap">[</span>
         <span class="keycap">]</span>
         <span class="keycap">\</span>
@@ -1354,7 +1402,7 @@ _
         <span class="keycap">F</span>
       </div>
 
-      <div style="font-family:var(--font-mono); font-size:12px; color:#64748b;">
+      <div style="font-family:var(--font-mono); font-size:12px; color:#64748b;" data-i18n="footer.copy">
         © 2026 RigCommander. All rights reserved.
       </div>
     </div>
@@ -1363,11 +1411,230 @@ _
   <div class="toast" id="copyToast">Copied to clipboard!</div>
 
   <script>
+    const I18N = {
+      en: {
+        _title: 'RigCommander — Mission Control for Autonomous AI Coding Fleets',
+        'nav.features': 'Features',
+        'nav.why': 'Why RigCommander',
+        'nav.arch': 'Architecture',
+        'nav.demo': 'Live Demo',
+        'nav.waitlist': 'Waitlist',
+        'nav.cta': 'Request Access',
+        'hero.eyebrow': 'MISSION CONTROL FOR AUTONOMOUS AI SWARMS',
+        'hero.title': 'Stop Agent Chaos.<br><span class="accent-cyan">Command Your AI Fleets.</span>',
+        'hero.subtitle': 'The real-time operational flight deck for autonomous multi-agent engineering teams. Live topological routing, 1-click tmux terminal introspection, token quota thermodynamics, and deterministic human-in-the-loop oversight.',
+        'hero.cta': '⚡ Join Priority Waitlist',
+        'hero.cliTitle': 'Click to copy CLI installer',
+        'sim.liveTelemetry': '● LIVE TELEMETRY',
+        'sim.agentsConnected': '9 AGENTS CONNECTED',
+        'sim.calmOff': '🧘 CALM FOCUS',
+        'sim.calmOn': '🧘 CALM: ON',
+        'sim.allLanes': '🌐 ALL LANES',
+        'sim.waitRadar': 'WAIT RADAR',
+        'sim.card1': 'Stuck sweep: stalled after claim on qitem-20261108. Waiting QA acceptance test.',
+        'sim.card2': 'UX Core P1 done: workflow + real HTTP TW adapter. Ready for review.',
+        'sim.card3': 'Stopped at terminal permission_prompt: needs human HITL authorization.',
+        'sim.inspector': 'INSPECTOR & TMUX',
+        'sim.authorize': '✓ AUTHORIZE',
+        'sim.stop': '✕ STOP',
+        'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
+        'pain.title': 'Why Autonomous Swarms Break Down',
+        'pain.desc': 'One AI agent in your editor feels like magic. Ten concurrent agents across separate worktrees create an unobservable, expensive black box.',
+        'pain.badTitle': 'Without RigCommander: Chaos',
+        'pain.bad1': '<b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked.',
+        'pain.bad2': '<b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a human keypress you never saw.',
+        'pain.bad3': '<b>Circular Rework Loops:</b> QA rejects coder\'s PR 5 times in a loop, burning 300,000 tokens on repetitive fixes.',
+        'pain.bad4': '<b>Overnight Budget Shock:</b> Waking up to a $1,400 API invoice because two agents entered an unmonitored ping-pong loop.',
+        'pain.goodTitle': 'With RigCommander: Deterministic Control',
+        'pain.good1': '<b>Single-Pane Topological Radar:</b> Instantly see every agent seat, who called whom, and who is holding the queue.',
+        'pain.good2': '<b>1-Click Introspection & HITL:</b> Instant terminal screen streaming with one-click authorization directly on the map.',
+        'pain.good3': '<b>Bounce-Back Detection:</b> Real-time QA rework counters with automated alerts when bounce count exceeds thresholds.',
+        'pain.good4': '<b>Context Thermodynamics:</b> Live model quota reservoirs with automated /compact warnings before context degrades.',
+        'bento.eyebrow': 'ENGINEERING CAPABILITIES',
+        'bento.title': 'Built for High-Reliability Fleets',
+        'bento.desc': 'Architected on Endsley\'s Situation Awareness principles and ISO 11064 control room ergonomics.',
+        'bento.t1.badge': '🌐 SA-DSS TOPOLOGY',
+        'bento.t1.title': 'Live Neural Highway & Call Volumes',
+        'bento.t1.desc': 'Dynamic SVG graph discovers your rig topology automatically. Edge line widths scale dynamically with real transmission volume. Click any highway to inspect recent envelope exchanges and queue payloads.',
+        'bento.t1.envelopes': '31 ENVELOPES',
+        'bento.t1.zeroDrops': 'Zero Drops • 100% Retries Handled',
+        'bento.t2.badge': '⚡ ZERO-LATENCY TMUX',
+        'bento.t2.title': 'In-Terminal Screen Capture',
+        'bento.t2.desc': 'Inspect 80-line active terminal captures without switching windows. Safe command dispatching straight from your browser.',
+        'bento.t3.badge': '🔥 FINOPS GUARD',
+        'bento.t3.title': 'Context Thermodynamics',
+        'bento.t3.desc': 'Avoid context saturation crashes. Monitor peak and average pool utilization across Claude, GPT-5, DeepSeek and Gemini seats.',
+        'bento.t4.badge': '💡 FLEET INTELLIGENCE ADVISOR',
+        'bento.t4.title': 'Automated Swarm Bottleneck Detection',
+        'bento.t4.desc': 'Out-of-band analytical engine evaluates token entropy, ceremony overhead, model mismatches, and QA bounce-back ratios in real time. Receive proactive recommendations before your pipeline stalls.',
+        'bento.t4.adviceTag': 'ADVICE',
+        'bento.t4.adviceTitle': 'Trigger preemptive /compact on dev-check (QA)',
+        'bento.t4.adviceBody': 'Context utilization is at 80% (380K/475K). Compacting token memory now will prevent token budget exhaustion on subsequent acceptance runs.',
+        'arch.eyebrow': 'NON-INVASIVE ARCHITECTURE',
+        'arch.title': 'Zero-Code Instrumentation',
+        'arch.desc': 'RigCommander connects directly to your existing environment. No vendor lock-in, no rewriting agent logic, zero latency overhead.',
+        'arch.s1.title': 'Run Local Bridge',
+        'arch.s1.desc': 'Lightweight Node.js daemon inspects local tmux sockets, worktree git states, and queue logs out-of-band.',
+        'arch.s2.title': 'Auto-Discovery',
+        'arch.s2.desc': 'Dynamically maps active agents, harness types, seats, models, and task communication channels in seconds.',
+        'arch.s2.code': '● Discovered 3 rigs, 9 seats',
+        'arch.s3.title': 'Command & Optimize',
+        'arch.s3.desc': 'Monitor live Sankey traffic, authorize HITL requests, and prevent token burn from a single unified glass pane.',
+        'waitlist.badge': '🚀 PRIVATE ACCESS',
+        'waitlist.title': 'Deploy RigCommander in Your Fleet',
+        'waitlist.desc': 'We are onboarding engineering teams and autonomous AI startups in priority batches. Reserve your spot today.',
+        'waitlist.emailLabel': 'Work Email',
+        'waitlist.fleetLabel': 'How many AI coding agents do you run?',
+        'waitlist.fleet1': '1–3 agents (Individual / Prototyping)',
+        'waitlist.fleet2': '4–10 agents (Parallel Swarms in Production)',
+        'waitlist.fleet3': '10+ agents (Enterprise Swarms / Autonomous Teams)',
+        'waitlist.harnessLabel': 'Primary Harness / Framework',
+        'waitlist.h1': 'Claude Code / Anthropic Swarms',
+        'waitlist.h2': 'Codex / OpenAI Swarms',
+        'waitlist.h3': 'Custom Tmux / Worktree Orchestration',
+        'waitlist.h4': 'CrewAI / LangGraph / AutoGen',
+        'waitlist.submit': 'Claim Priority Access →',
+        'waitlist.successTitle': '✓ You are on the priority waitlist!',
+        'waitlist.successDesc': 'Access position: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>We have sent a confirmation email with setup instructions.',
+        'waitlist.meta': '🔒 100% Local-First Architecture • Zero telemetry leaks • Self-hosted ready',
+        'footer.status': 'ALL SYSTEMS OPERATIONAL',
+        'footer.shortcuts': 'Shortcuts:',
+        'footer.copy': '© 2026 RigCommander. All rights reserved.',
+        'toast.copied': 'Copied'
+      },
+      ru: {
+        _title: 'RigCommander — Центр управления автономными ИИ-командами',
+        'nav.features': 'Возможности',
+        'nav.why': 'Зачем RigCommander',
+        'nav.arch': 'Архитектура',
+        'nav.demo': 'Живое демо',
+        'nav.waitlist': 'Ранний доступ',
+        'nav.cta': 'Запросить доступ',
+        'hero.eyebrow': 'ЦЕНТР УПРАВЛЕНИЯ АВТОНОМНЫМИ ИИ-РОЯМИ',
+        'hero.title': 'Остановите хаос агентов.<br><span class="accent-cyan">Управляйте ИИ-флотом.</span>',
+        'hero.subtitle': 'Операционный командный мостик реального времени для мультиагентных команд разработки. Живая топология вызовов, инспекция tmux-терминалов в 1 клик, термодинамика квот и детерминированный HITL-контроль.',
+        'hero.cta': '⚡ Вступить в Waitlist',
+        'hero.cliTitle': 'Нажмите, чтобы скопировать команду установки',
+        'sim.liveTelemetry': '● LIVE ТЕЛЕМЕТРИЯ',
+        'sim.agentsConnected': '9 АГЕНТОВ В КОНТУРЕ',
+        'sim.calmOff': '🧘 CALM ФОКУС',
+        'sim.calmOn': '🧘 CALM: ВКЛ',
+        'sim.allLanes': '🌐 ВСЕ ПОТОКИ',
+        'sim.waitRadar': 'РАДАР ОЖИДАНИЯ',
+        'sim.card1': 'Зависание: задача qitem-20261108 взята, но ждёт приёмки QA.',
+        'sim.card2': 'UX Core P1 готов: воркфлоу + HTTP-адаптер. Ожидает ревью.',
+        'sim.card3': 'Остановлен на permission_prompt: требуется подтверждение оператора.',
+        'sim.inspector': 'ИНСПЕКТОР & TMUX',
+        'sim.authorize': '✓ РАЗРЕШИТЬ',
+        'sim.stop': '✕ СТОП',
+        'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
+        'pain.title': 'Почему автономные рои ломаются',
+        'pain.desc': 'Один ИИ-агент в редакторе ощущается как магия. Десять параллельных агентов в отдельных worktree превращаются в неуправляемый и дорогой чёрный ящик.',
+        'pain.badTitle': 'Без RigCommander: хаос',
+        'pain.bad1': '<b>Слепые прыжки по терминалам:</b> лихорадочный перебор 12 tmux-панелей в поисках заблокированного агента.',
+        'pain.bad2': '<b>Тихие зависания на промптах:</b> агент простаивает 4 часа, ожидая нажатия клавиши, которое вы не заметили.',
+        'pain.bad3': '<b>Циклы переделок:</b> QA отклоняет PR кодера 5 раз подряд, сжигая 300 000 токенов на однотипные правки.',
+        'pain.bad4': '<b>Ночной шок от счёта:</b> утренний инвойс на $1,400 из-за пинг-понг цикла между двумя агентами без надзора.',
+        'pain.goodTitle': 'С RigCommander: детерминированный контроль',
+        'pain.good1': '<b>Единый топологический радар:</b> мгновенно видно каждого агента, кто кого вызвал и кто держит очередь.',
+        'pain.good2': '<b>Инспекция и HITL в 1 клик:</b> живой стриминг экрана терминала и подтверждение действий прямо с карты.',
+        'pain.good3': '<b>Детекция возвратов (Bounce-Back):</b> счётчики кругов QA в реальном времени и алерты при превышении порога.',
+        'pain.good4': '<b>Термодинамика контекста:</b> живые шкалы квот моделей с ранним предупреждением до деградации контекста.',
+        'bento.eyebrow': 'ИНЖЕНЕРНЫЕ ВОЗМОЖНОСТИ',
+        'bento.title': 'Создан для надёжных ИИ-флотов',
+        'bento.desc': 'Спроектирован по принципам ситуационной осведомлённости Endsley и эргономики диспетчерских ISO 11064.',
+        'bento.t1.badge': '🌐 ТОПОЛОГИЯ SA-DSS',
+        'bento.t1.title': 'Живые магистрали и объёмы вызовов',
+        'bento.t1.desc': 'Динамический SVG-граф автоматически находит топологию рига. Толщина линий отражает реальный трафик. Клик по магистрали открывает историю конвертов.',
+        'bento.t1.envelopes': '31 КОНВЕРТ',
+        'bento.t1.zeroDrops': '0 потерь • 100% ретраев обработано',
+        'bento.t2.badge': '⚡ TMUX БЕЗ ЗАДЕРЖЕК',
+        'bento.t2.title': 'Захват экрана терминала',
+        'bento.t2.desc': 'Просматривайте последние 80 строк активного терминала без переключения окон. Безопасная отправка команд прямо из браузера.',
+        'bento.t3.badge': '🔥 КОНТРОЛЬ FINOPS',
+        'bento.t3.title': 'Термодинамика контекста',
+        'bento.t3.desc': 'Предотвращайте падения из-за переполнения окна. Следите за пиковой и средней нагрузкой пулов Claude, GPT, DeepSeek и Gemini.',
+        'bento.t4.badge': '💡 СОВЕТНИК ФЛОТА',
+        'bento.t4.title': 'Автоматический поиск узких мест',
+        'bento.t4.desc': 'Аналитический движок в реальном времени оценивает энтропию токенов, накладные расходы, несоответствие моделей и возвраты QA до остановки пайплайна.',
+        'bento.t4.adviceTag': 'СОВЕТ',
+        'bento.t4.adviceTitle': 'Запустить превентивный /compact на dev-check (QA)',
+        'bento.t4.adviceBody': 'Заполнение контекста достигло 80% (380K/475K). Сжатие памяти сейчас предотвратит исчерпание бюджета на следующих прогонах приёмки.',
+        'arch.eyebrow': 'НЕИНВАЗИВНАЯ АРХИТЕКТУРА',
+        'arch.title': 'Инструментация без правки кода',
+        'arch.desc': 'RigCommander подключается напрямую к текущему окружению. Без привязки к вендору, без переписывания агентов и без накладных задержек.',
+        'arch.s1.title': 'Запуск локального моста',
+        'arch.s1.desc': 'Лёгкий Node.js-демон вне полосы читает локальные tmux-сокеты, статус worktree git и журналы очереди.',
+        'arch.s2.title': 'Автообнаружение',
+        'arch.s2.desc': 'За секунды строит карту активных агентов, харнесов, сидений, моделей и каналов передачи задач.',
+        'arch.s2.code': '● Найдено 3 рига, 9 сидений',
+        'arch.s3.title': 'Контроль и оптимизация',
+        'arch.s3.desc': 'Наблюдайте живой трафик, подтверждайте HITL-запросы и экономьте токены из единого окна.',
+        'waitlist.badge': '🚀 ЗАКРЫТЫЙ ДОСТУП',
+        'waitlist.title': 'Разверните RigCommander на своём флоте',
+        'waitlist.desc': 'Мы подключаем инженерные команды и AI-стартапы приоритетными волнами. Забронируйте место сейчас.',
+        'waitlist.emailLabel': 'Рабочий Email',
+        'waitlist.fleetLabel': 'Сколько ИИ-агентов разработки вы запускаете?',
+        'waitlist.fleet1': '1–3 агента (Индивидуально / Прототипы)',
+        'waitlist.fleet2': '4–10 агентов (Параллельные рои в продакшене)',
+        'waitlist.fleet3': '10+ агентов (Корпоративные рои / Автономные команды)',
+        'waitlist.harnessLabel': 'Основной харнес / фреймворк',
+        'waitlist.h1': 'Claude Code / Anthropic Swarms',
+        'waitlist.h2': 'Codex / OpenAI Swarms',
+        'waitlist.h3': 'Своя оркестрация Tmux / Worktree',
+        'waitlist.h4': 'CrewAI / LangGraph / AutoGen',
+        'waitlist.submit': 'Получить приоритетный доступ →',
+        'waitlist.successTitle': '✓ Вы в списке приоритетного доступа!',
+        'waitlist.successDesc': 'Позиция в очереди: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>Мы отправили письмо с инструкцией по подключению.',
+        'waitlist.meta': '🔒 100% Local-First архитектура • Без утечек телеметрии • Готово к self-hosted',
+        'footer.status': 'ВСЕ СИСТЕМЫ В ШТАТНОМ РЕЖИМЕ',
+        'footer.shortcuts': 'Горячие клавиши:',
+        'footer.copy': '© 2026 RigCommander. Все права защищены.',
+        'toast.copied': 'Скопировано'
+      }
+    };
+
+    let currentLang = 'en';
+
+    function setLang(lang) {
+      currentLang = lang === 'ru' ? 'ru' : 'en';
+      const dict = I18N[currentLang];
+      document.documentElement.lang = currentLang;
+      document.title = dict._title;
+
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === currentLang);
+      });
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key] !== undefined) el.textContent = dict[key];
+      });
+
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (dict[key] !== undefined) el.innerHTML = dict[key];
+      });
+
+      document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (dict[key] !== undefined) el.setAttribute('title', dict[key]);
+      });
+
+      const calmBtn = document.getElementById('simCalmBtn');
+      if (calmBtn) {
+        calmBtn.textContent = simCalm ? dict['sim.calmOn'] : dict['sim.calmOff'];
+      }
+
+      try { localStorage.setItem('rigcommander_lang', currentLang); } catch {}
+    }
+
     // Copy CLI installer
     function copyCli(cmd) {
       navigator.clipboard.writeText(cmd);
       const t = document.getElementById('copyToast');
-      t.textContent = `Copied: ${cmd}`;
+      const prefix = (I18N[currentLang] && I18N[currentLang]['toast.copied']) || 'Copied';
+      t.textContent = `${prefix}: ${cmd}`;
       t.style.display = 'block';
       setTimeout(() => { t.style.display = 'none'; }, 2200);
     }
@@ -1377,8 +1644,9 @@ _
     function toggleSimCalm() {
       simCalm = !simCalm;
       const btn = document.getElementById('simCalmBtn');
+      const dict = I18N[currentLang] || I18N.en;
       btn.classList.toggle('purple-active', simCalm);
-      btn.textContent = simCalm ? '🧘 CALM: ON' : '🧘 CALM FOCUS';
+      btn.textContent = simCalm ? dict['sim.calmOn'] : dict['sim.calmOff'];
 
       const nodes = document.querySelectorAll('.sim-node');
       nodes.forEach(n => {
@@ -1473,6 +1741,23 @@ Session preserved in tmux:4175.
       });
       localStorage.setItem('rigcommander_leads', JSON.stringify(leads));
     }
+
+    // Initialize language from URL (?lang=ru|en), localStorage, or browser locale
+    (function initLang() {
+      let initial = 'en';
+      try {
+        const urlLang = new URLSearchParams(window.location.search).get('lang');
+        const saved = localStorage.getItem('rigcommander_lang');
+        if (urlLang === 'ru' || urlLang === 'en') {
+          initial = urlLang;
+        } else if (saved === 'ru' || saved === 'en') {
+          initial = saved;
+        } else if (navigator.language && navigator.language.toLowerCase().startsWith('ru')) {
+          initial = 'ru';
+        }
+      } catch {}
+      setLang(initial);
+    })();
   </script>
 </body>
 </html>

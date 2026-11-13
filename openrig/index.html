@@ -2978,6 +2978,7 @@
     ];
 
     let selectedAgentId = 'dev-coder5@core-platform';
+    let hasPurgedSnapshotSeeds = false;
     let LIVE_OPEN_QUEUE = [];
     let PAIR_ENVELOPES = {
       'dev-coder3@core-platform <-> dev-owner@core-platform': [
@@ -3018,7 +3019,19 @@
     function onRigFilterChange(val) {
       currentRigFilter = val;
       renderTopology();
+      renderInspectorAndScorecards(false);
       refreshTelemetryNow();
+    }
+
+    function getNodeDisplayTitle(agent) {
+      const base = String((agent && (agent.shortName || agent.id)) || '');
+      if (currentRigFilter && currentRigFilter !== 'all') {
+        const suffix = `@${currentRigFilter}`;
+        if (base.endsWith(suffix)) {
+          return base.slice(0, -suffix.length);
+        }
+      }
+      return base;
     }
 
     function setInspectorTab(tab) {
@@ -3141,7 +3154,7 @@
         // Tier 2 (primary core-platform coders): y = 50%, slots = [11, 37, 63, 89]
         // Tier 3 (auxiliary / cross-rig, e.g. payment-gateway): y = 84%, slots = [24, 76]
         const tier2Coders = AGENTS.filter(a => Math.abs(a.y - 50) < 6);
-        const tier3Coders = AGENTS.filter(a => Math.abs(a.y - 84) < 6 && a.id !== 'dev-check@core-platform');
+        const tier3Coders = AGENTS.filter(a => Math.abs(a.y - 84) < 6 && !a.id.startsWith('dev-check@'));
         if (tier2Coders.length < 4) {
           const slotX = [11, 37, 63, 89];
           defaultY = 50;
@@ -3387,7 +3400,9 @@
       }
 
       const existingNodes = nodesLayer.querySelectorAll('.agent-node');
-      if (existingNodes.length === AGENTS.length) {
+      const allNodesMatch = existingNodes.length === AGENTS.length &&
+        AGENTS.every(a => nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`));
+      if (allNodesMatch) {
         // Update in-place without recreating DOM nodes so animations (heart / Zzz...) and clicks are never interrupted!
         AGENTS.forEach(agent => {
           const el = nodesLayer.querySelector(`.agent-node[data-agent-id="${agent.id}"]`);
@@ -3420,6 +3435,12 @@
 
           const modelEl = el.querySelector('.chip-model');
           if (modelEl) modelEl.textContent = `🧠 ${agent.model}`;
+
+          const nameEl = el.querySelector('.node-name');
+          if (nameEl) {
+            const nextTitle = getNodeDisplayTitle(agent);
+            if (nameEl.textContent !== nextTitle) nameEl.textContent = nextTitle;
+          }
 
           const burn = computeBurn(agent);
           let urgentThermalHtml = '';
@@ -3500,7 +3521,7 @@
                 <div class="node-identity">
                   <div class="node-icon">${agent.icon}</div>
                   <div>
-                    <div class="node-name">${agent.shortName}</div>
+                    <div class="node-name">${getNodeDisplayTitle(agent)}</div>
                     <div class="node-role">${agent.role}</div>
                   </div>
                 </div>
@@ -3875,7 +3896,7 @@
       const box = document.getElementById('nodeInspector');
       const headerBadge = document.getElementById('selectedNodeHeaderBadge');
       if (headerBadge) {
-        headerBadge.textContent = `ВЫБРАН: ${agent.shortName.toUpperCase()}`;
+        headerBadge.textContent = `ВЫБРАН: ${getNodeDisplayTitle(agent).toUpperCase()}`;
         headerBadge.style.color = thermal.color;
       }
 
@@ -3984,7 +4005,7 @@
                 <span style="font-size:22px; flex-shrink:0;">${agent.icon}</span>
                 <div style="min-width:0; flex:1; overflow:hidden;">
                   <div style="font-family:var(--font-mono); font-size:13.5px; font-weight:800; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${agent.id}">
-                    ${agent.shortName} <span style="font-size:10.5px; color:#94a3b8; font-weight:500;">(${shortSeat(agent.id)})</span>
+                    ${getNodeDisplayTitle(agent)} <span style="font-size:10.5px; color:#94a3b8; font-weight:500;">(${shortSeat(agent.id)})</span>
                   </div>
                   <div style="font-size:11px; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${agent.role}</div>
                 </div>
@@ -4216,6 +4237,32 @@
         let workingCount = 0;
         let attnNodes = [];
         if (Array.isArray(data.nodes)) {
+          if (data.nodes.length > 0 && !hasPurgedSnapshotSeeds) {
+            hasPurgedSnapshotSeeds = true;
+            const liveIds = new Set(data.nodes.map(n => n.canonicalSessionName).filter(Boolean));
+            const removedIds = new Set();
+            for (let i = AGENTS.length - 1; i >= 0; i--) {
+              if (!liveIds.has(AGENTS[i].id)) {
+                removedIds.add(AGENTS[i].id);
+                AGENTS.splice(i, 1);
+              }
+            }
+            for (let i = EDGES.length - 1; i >= 0; i--) {
+              if (removedIds.has(EDGES[i].from) || removedIds.has(EDGES[i].to)) {
+                EDGES.splice(i, 1);
+              }
+            }
+            if (removedIds.has(selectedAgentId)) {
+              const seatPrefix = String(selectedAgentId).split('@')[0] + '@';
+              const liveMatch = data.nodes.find(n => n.canonicalSessionName && n.canonicalSessionName.startsWith(seatPrefix));
+              selectedAgentId = (liveMatch && liveMatch.canonicalSessionName) ||
+                (data.nodes[0] && data.nodes[0].canonicalSessionName) ||
+                selectedAgentId;
+              fetchTerminalCapture(selectedAgentId, true);
+            }
+            const nl = document.getElementById('nodesLayer');
+            if (nl) nl.innerHTML = '';
+          }
           for (const liveNode of data.nodes) {
             const target = ensureDynamicAgent(liveNode);
             if (!target) continue;
