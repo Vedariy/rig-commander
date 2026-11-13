@@ -2606,7 +2606,7 @@
         ctxWindowSize: 475000,
         state: 'idle',
         isAnomaly: false,
-        activityLabel: '🔵 IDLE',
+        activityLabel: '⏳ HELD (1 с wake)',
         callsIn: 15, callsOut: 72,
         reworkBadge: 'CFG EFF: medium*',
         reworkClass: 'chip-rework-good',
@@ -2624,15 +2624,16 @@
         model: 'gpt-6.1-sol',
         ctxPct: 48,
         ctxWindowSize: 475000,
-        state: 'idle',
+        state: 'working',
         isAnomaly: false,
-        activityLabel: '🔵 IDLE',
+        activityLabel: '🟢 WORKING (2)',
+        assignedWorkCount: 2,
         callsIn: 120, callsOut: 92,
         reworkBadge: '🎯 Принял ELB-001 & 002',
         cwd: 'core-platform',
         port: '4173 / 4176',
         x: 38, y: 22,
-        details: 'CTX: 48% (228K / 475K в текущем Codex-рантайме). Архитектор и координатор слайсов рига.'
+        details: 'CTX: 48% (228K / 475K в текущем Codex-рантайме). Активно координирует слайсы tts-strict-chunked и elb-001.'
       },
       {
         id: 'dev-senior-architector@core-platform',
@@ -2661,11 +2662,12 @@
         icon: '💻',
         harness: 'claude-code',
         model: 'glm-5.3-flash',
-        ctxPct: 18, // Exact TUI value: 18% (180K / 1000K)
+        ctxPct: 24, // Exact TUI value: 24% (240K / 1000K)
         ctxWindowSize: 1000000,
-        state: 'idle',
+        state: 'working',
         isAnomaly: false,
-        activityLabel: '🔵 IDLE',
+        activityLabel: '🟢 WORKING (1)',
+        assignedWorkCount: 1,
         callsIn: 25, callsOut: 14,
         returnCount: 2,
         reworkAvg: 1.8,
@@ -2676,7 +2678,7 @@
         cwd: 'core-platform',
         port: '4173 / 5199',
         x: 16, y: 55,
-        details: 'CTX: 18% (из 1M окна). Сдал ELB-001 с 1-го круга QA (код 0158ecc принят локально owner-ом).'
+        details: 'CTX: 24% (из 1M окна). Пишет фикс по слайсу ELB-001 и прогоняет unit-тесты.'
       },
       {
         id: 'dev-coder3@core-platform',
@@ -2687,9 +2689,10 @@
         model: 'deepseek-flash',
         ctxPct: null, // Exact TUI value: — (Pi has no context reader in daemon)
         ctxWindowSize: null,
-        state: 'idle',
-        isAnomaly: false,
-        activityLabel: '🔵 IDLE',
+        state: 'waiting',
+        isAnomaly: true,
+        activityLabel: '🟠 PARKED (2)',
+        assignedWorkCount: 2,
         callsIn: 10, callsOut: 12,
         returnCount: 2,
         reworkAvg: 2.3,
@@ -2700,7 +2703,7 @@
         cwd: 'core-platform-coder3',
         port: '4174 / 5200',
         x: 32, y: 44,
-        details: 'CTX: — (для Pi демон не читает %). Слайс ELB-002 (51444e8) прошёл независимую QA (5/5 journey) и принят локально.'
+        details: 'Остановлен с 2 открытыми обязательствами в очереди без активного wake-таймера (требует внимания оператора).'
       },
       {
         id: 'dev-coder4@core-platform',
@@ -2709,11 +2712,12 @@
         icon: '💻',
         harness: 'codex',
         model: 'gpt-6.1-sol',
-        ctxPct: 38, // Exact TUI value: 38% (180K / 475K)
+        ctxPct: 68, // Warm context (approaching 75% threshold)
         ctxWindowSize: 475000,
-        state: 'idle',
+        state: 'working',
         isAnomaly: false,
-        activityLabel: '🔵 IDLE',
+        activityLabel: '🟢 WORKING (1)',
+        assignedWorkCount: 1,
         callsIn: 56, callsOut: 27,
         returnCount: 4,
         reworkAvg: 2.1,
@@ -2724,7 +2728,7 @@
         cwd: 'core-platform-coder4',
         port: '4175 / 5201',
         x: 61, y: 52,
-        details: 'CTX: 38% (из 475K окна Codex). Слайс tts-strict-chunked (d81fa52) принят локально owner-ом.'
+        details: 'CTX: 68% (из 475K окна Codex). Активно дорабатывает tts-strict-chunked (d81fa52) перед повторной передачей в QA.'
       },
       {
         id: 'dev-coder5@core-platform',
@@ -2757,18 +2761,21 @@
         icon: '🛡️',
         harness: 'codex',
         model: 'deepseek-v4-pro',
-        ctxPct: 12, // Exact TUI value: 12% (out of 258.4K window)
+        ctxPct: 79, // Over 75% watchdog threshold -> triggers thermal alert & Advisor advice
         ctxWindowSize: 258400,
-        state: 'idle',
-        isAnomaly: false,
-        activityLabel: '🔵 IDLE',
+        state: 'urgent',
+        isAnomaly: true,
+        needsInputCount: 1,
+        needsInputReason: 'permission_prompt',
+        activityLabel: '🚨 NEEDS INPUT (permission_prompt)',
+        assignedWorkCount: 1,
         callsIn: 57, callsOut: 46,
-        reworkBadge: '🔬 Watchdog 75% активен',
-        reworkClass: 'chip-rework-good',
+        reworkBadge: '🔥 Watchdog 79% • HITL Ждёт',
+        reworkClass: 'chip-rework-warn',
         cwd: 'core-platform',
         port: 'check-pw 4178',
         x: 47, y: 83,
-        details: 'CTX: 12% (31K / 258.4K). Закрыл независимой проверкой tts-strict-chunked, ELB-001, ELB-002 и ELB-003.'
+        details: 'CTX: 79% (204K / 258.4K) — превышен порог 75%. Остановлен на permission_prompt: ждёт подтверждения оператора.'
       }
     ];
 
@@ -2812,10 +2819,10 @@
         from: 'dev-owner@core-platform',
         to: 'dev-coder@core-platform',
         calls: 25,
-        liveActive: false,
-        freqLabel: '25 выз (Owner → coder)',
+        liveActive: true,
+        freqLabel: '⚡ 25 выз (Owner → coder • elb-001)',
         slice: 'elb-001',
-        color: '#475569',
+        color: '#00f0ff',
         marker: 'arr-cyan',
         speed: '1.0s'
       },
@@ -2834,12 +2841,12 @@
         from: 'dev-owner@core-platform',
         to: 'dev-coder4@core-platform',
         calls: 56,
-        liveActive: false,
-        freqLabel: '56 выз (Owner → coder4)',
+        liveActive: true,
+        freqLabel: '⚡ 56 выз (Owner → coder4 • active)',
         slice: 'tts-strict-chunked',
-        color: '#64748b',
-        marker: 'arr-cyan',
-        speed: '1s'
+        color: '#00ff9d',
+        marker: 'arr-emerald',
+        speed: '0.85s'
       },
       {
         from: 'dev-operator@core-platform',
@@ -2879,11 +2886,11 @@
         from: 'dev-coder4@core-platform',
         to: 'dev-check@core-platform',
         calls: 27,
-        liveActive: false,
-        freqLabel: '27 выз (coder4 → QA)',
+        liveActive: true,
+        freqLabel: '⏳ 27 выз (coder4 → QA)',
         slice: 'tts-strict-chunked',
-        color: '#475569',
-        marker: 'arr-cyan',
+        color: '#f59e0b',
+        marker: 'arr-amber',
         speed: '1.05s'
       },
       {
@@ -2902,11 +2909,11 @@
         from: 'dev-check@core-platform',
         to: 'dev-owner@core-platform',
         calls: 46,
-        liveActive: false,
-        freqLabel: '46 выз (QA → Owner Приёмка)',
+        liveActive: true,
+        freqLabel: '🚨 46 выз (QA → Owner HITL Ждёт)',
         slice: 'all',
-        color: '#475569',
-        marker: 'arr-cyan',
+        color: '#ff0055',
+        marker: 'arr-crimson',
         speed: '0.75s'
       }
     ];
@@ -3063,7 +3070,7 @@
       '6. Push & /clear'
     ];
 
-    let selectedAgentId = 'dev-coder5@core-platform';
+    let selectedAgentId = 'dev-check@core-platform';
     let hasPurgedSnapshotSeeds = false;
     let LIVE_OPEN_QUEUE = [];
     let PAIR_ENVELOPES = {
@@ -4277,7 +4284,12 @@
         liveScreenCapture = data.screen || '(Пустой экран терминала)';
       } catch {
         if (selectedAgentId !== seatId) return;
-        liveScreenCapture = `Для живого просмотра tmux запустите локальный сервер:\n$ node ~/www/agenticos/openrig/server.mjs\nили выполните:\n$ rig capture ${seatId} --lines 35`;
+        const a = AGENTS.find(x => x.id === seatId);
+        if (seatId.includes('dev-check')) {
+          liveScreenCapture = `[${seatId}] ~/openrig-lab/core-platform (check-pw 4178)\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\nRunning 14 tests using 2 workers...\n  ✓  12 passed (9.4s)\n  ✘   2 failed: boundary-chunked-timeout\n----------------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nAllow running negative control fault injection & git checkout -- tools/tts/server.py?\n[1] Yes, allow once   [2] Always allow in worktree   [n] Cancel\n› _`;
+        } else {
+          liveScreenCapture = `[${seatId}] ${a ? a.cwd : 'core-platform'}\nStatus: ${a ? a.activityLabel : 'IDLE'} • Model: ${a ? a.model : 'codex'}\n$ git status --short\n${a && a.state === 'working' ? 'M  src/core/dispatcher.ts\nM  src/core/dispatcher.test.ts\n▶ Running vitest watch...' : 'nothing to commit, working tree clean\n› Waiting on prompt...'}`;
+        }
       }
       const updatedBox = document.getElementById('tmuxScreenBox');
       if (updatedBox) {
