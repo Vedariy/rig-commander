@@ -820,6 +820,70 @@
       border-color: var(--wait-color);
     }
 
+    .radar-filter-bar {
+      display: flex;
+      gap: 4px;
+      padding: 6px 10px;
+      background: rgba(8, 13, 27, 0.85);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.14);
+    }
+
+    .radar-tab {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      color: #94a3b8;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .radar-tab:hover {
+      color: #e2e8f0;
+      border-color: rgba(0, 240, 255, 0.35);
+    }
+
+    .radar-tab.active {
+      background: rgba(0, 240, 255, 0.14);
+      border-color: rgba(0, 240, 255, 0.55);
+      color: #67e8f9;
+    }
+
+    .radar-quick-btn {
+      margin-top: 7px;
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      color: #67e8f9;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .radar-quick-btn:hover {
+      background: rgba(0, 240, 255, 0.22);
+      color: #fff;
+    }
+
+    .radar-quick-btn.urgent {
+      background: rgba(255, 0, 85, 0.14);
+      border-color: rgba(255, 0, 85, 0.5);
+      color: #fda4af;
+    }
+
+    .radar-quick-btn.urgent:hover {
+      background: rgba(255, 0, 85, 0.28);
+      color: #fff;
+    }
+
     .wait-flow {
       display: flex;
       align-items: center;
@@ -2498,6 +2562,11 @@
         <span>⏳ КТО → КОГО → ЗАЧЕМ ЖДЁТ</span>
         <span id="waitCountBadge" style="color:#fbbf24">LIVE</span>
       </div>
+      <div class="radar-filter-bar" id="radarFilterBar">
+        <button class="radar-tab active" data-radar-tab="all" onclick="setRadarFilter('all')">Все</button>
+        <button class="radar-tab" data-radar-tab="blockers" onclick="setRadarFilter('blockers')">🚨 Блокеры</button>
+        <button class="radar-tab" data-radar-tab="tasks" onclick="setRadarFilter('tasks')">📦 Задачи</button>
+      </div>
       <div class="panel-body">
         <div id="waitListContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
 
@@ -3364,59 +3433,127 @@
       return agent;
     }
 
+    let currentRadarFilter = 'all'; // 'all' | 'blockers' | 'tasks'
+
+    function setRadarFilter(tab) {
+      currentRadarFilter = tab;
+      document.querySelectorAll('#radarFilterBar .radar-tab').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-radar-tab') === tab);
+      });
+      renderWaitRadarAndDecisions();
+    }
+
+    function focusFromRadar(seatId, actionKind) {
+      if (!seatId) return;
+      const target = AGENTS.find(a => a.id === seatId || a.shortName === seatId || a.id.startsWith(seatId + '@'));
+      const resolvedId = target ? target.id : seatId;
+      selectAgent(resolvedId);
+      if (actionKind === 'tmux' && typeof openTerminalModal === 'function') {
+        openTerminalModal(resolvedId);
+      } else if (actionKind === 'compact' && typeof sendTerminalRaw === 'function') {
+        sendTerminalRaw(resolvedId, '/compact');
+      }
+    }
+
+    function resolveSeatIdByShort(shortOrId) {
+      if (!shortOrId) return null;
+      const clean = String(shortOrId).replace(/^[^\w-]+/, '').trim();
+      const hit = AGENTS.find(a => a.id === shortOrId || a.id === clean || a.shortName === shortOrId || a.shortName === clean || a.id.startsWith(clean + '@'));
+      return hit ? hit.id : null;
+    }
+
     function buildLiveRadar() {
       const items = [];
+      const rigAgents = currentRigFilter === 'all'
+        ? AGENTS
+        : AGENTS.filter(a => a.id.endsWith('@' + currentRigFilter));
+
       // P0: agents waiting for a human (needsInput / needsAttention)
-      for (const a of AGENTS) {
+      for (const a of rigAgents) {
         if (a.state === 'urgent') {
           items.push({
-            prio: 0, color: '#ff0055', from: a.shortName, to: '👤 ЧЕЛОВЕК',
+            prio: 0, category: 'blocker', seatId: a.id, actionKind: 'tmux', actionLabel: '🖥️ Ответить в tmux',
+            color: '#ff0055', from: getNodeDisplayTitle(a), to: '👤 ЧЕЛОВЕК',
             slice: 'terminal gate', state: '🚨 P0 • ЖДЁТ ЧЕЛОВЕКА',
             summary: `Агент остановлен на подтверждении в терминале${a.needsInputReason ? `: ${escapeHtml(a.needsInputReason)}` : ''}. Открой tmux и ответь.`
           });
         }
       }
-      // P1: live queue rows
-      for (const q of LIVE_OPEN_QUEUE) {
-        const sliceTag = ((q.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', '') || '—';
-        const inProg = q.state === 'in-progress';
-        const age = ageLabel(q.updatedAt || q.createdAt);
-        items.push({
-          prio: 1, color: inProg ? '#00ff9d' : '#f59e0b',
-          from: shortSeat(q.sourceSession), to: shortSeat(q.destinationSession),
-          slice: sliceTag, state: `${inProg ? '🟢 В РАБОТЕ' : '🟠 ЖДЁТ ВЗЯТИЯ'}${age ? ` • ${age}` : ''}`,
-          summary: escapeHtml(q.summary || '')
-        });
-      }
-      // P2: context overheating
-      for (const a of AGENTS) {
+
+      // P1.5: context overheating >= 75% (critical blocker) and 70-74% (warning)
+      for (const a of rigAgents) {
         if (typeof a.ctxPct === 'number' && a.ctxPct >= 70) {
           const burn = computeBurn(a);
+          const isCrit = a.ctxPct >= 75;
           items.push({
-            prio: 2, color: a.ctxPct >= 75 ? '#ff2a6d' : '#fbbf24',
-            from: a.shortName, to: '🔄 РОТАЦИЯ',
-            slice: `CTX ${a.ctxPct}%`, state: a.ctxPct >= 75 ? '⚠️ ПОРОГ 75% ПРОЙДЕН' : '⚠️ СКОРО РОТАЦИЯ',
+            prio: isCrit ? 0.8 : 2.1,
+            category: isCrit ? 'blocker' : 'task',
+            seatId: a.id,
+            actionKind: 'compact',
+            actionLabel: '🗜️ Сжать /compact',
+            color: isCrit ? '#ff2a6d' : '#fbbf24',
+            from: getNodeDisplayTitle(a), to: '🔄 РОТАЦИЯ',
+            slice: `CTX ${a.ctxPct}%`, state: isCrit ? '⚠️ ПОРОГ 75% ПРОЙДЕН' : '⚠️ СКОРО РОТАЦИЯ',
             summary: `Контекст ${a.ctxPct}%${a.ctxUsedTokens && a.ctxWindowSize ? ` (${Math.round(a.ctxUsedTokens / 1000)}K / ${Math.round(a.ctxWindowSize / 1000)}K tok)` : ''}. ${burn.label}${a.lastSwapAt ? ` Сессия после свапа: ${ageLabel(a.lastSwapAt)}.` : ''}`
           });
         }
       }
-      // P2.5: OpenRig native parked seats (stopped seats with unhandled/unhealthy obligations)
-      for (const a of AGENTS) {
-        if (a.parkedData && a.parkedData.parked) {
+
+      // P1.2: OpenRig native parked seats (or snapshot PARKED seats)
+      for (const a of rigAgents) {
+        const isParked = (a.parkedData && a.parkedData.parked) || (a.activityLabel || '').includes('PARKED');
+        if (isParked) {
           items.push({
-            prio: 2.5, color: '#f59e0b', from: a.shortName, to: '⏸️ HOLD / PARK',
+            prio: 1.1, category: 'blocker', seatId: a.id, actionKind: 'focus', actionLabel: '🔍 К узлу',
+            color: '#f59e0b', from: getNodeDisplayTitle(a), to: '⏸️ HOLD / PARK',
             slice: 'parked: no live wake', state: '🟠 ЗАПАРКОВАН (RIG)',
-            summary: escapeHtml(a.parkedReason || `Узел остановлен с незавершёнными обязательствами (${a.parkedData.openCount} open, ${a.parkedData.heldCount} held).`)
+            summary: escapeHtml(a.parkedReason || a.details || `Узел остановлен с незавершёнными обязательствами.`)
           });
         }
       }
+
+      // P1.5: live queue rows (or demo snapshot LIVE_QITEMS when offline)
+      const queueSource = IS_LIVE ? LIVE_OPEN_QUEUE : LIVE_QITEMS.map(q => ({
+        sourceSession: resolveSeatIdByShort(q.from) || q.from,
+        destinationSession: resolveSeatIdByShort(q.to) || q.to,
+        state: String(q.state || '').includes('in-progress') ? 'in-progress' : 'pending',
+        tags: [`slice:${q.slice || 'all'}`],
+        summary: q.summary || ''
+      }));
+
+      for (const q of queueSource) {
+        const src = String(q.sourceSession || '');
+        const dst = String(q.destinationSession || '');
+        if (currentRigFilter !== 'all' && !src.endsWith('@' + currentRigFilter) && !dst.endsWith('@' + currentRigFilter)) {
+          continue;
+        }
+        const isSystemNoise = src.includes('change-detector') || src.includes('@external') || String(q.summary || '').includes('undelivered-wake');
+        const sliceTag = ((q.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', '') || '—';
+        const inProg = q.state === 'in-progress';
+        const age = ageLabel(q.updatedAt || q.createdAt);
+        const targetSeatId = resolveSeatIdByShort(dst) || resolveSeatIdByShort(src);
+        items.push({
+          prio: isSystemNoise ? 2.8 : 1.5,
+          category: isSystemNoise ? 'system' : 'task',
+          seatId: targetSeatId,
+          actionKind: 'focus',
+          actionLabel: targetSeatId ? '🔍 К узлу' : '',
+          color: isSystemNoise ? '#64748b' : (inProg ? '#00ff9d' : '#f59e0b'),
+          from: shortSeat(src), to: shortSeat(dst),
+          slice: sliceTag,
+          state: `${isSystemNoise ? '🔔 СИСТЕМНЫЙ СИГНАЛ' : (inProg ? '🟢 В РАБОТЕ' : '🟠 ЖДЁТ ВЗЯТИЯ')}${age ? ` • ${age}` : ''}`,
+          summary: escapeHtml(q.summary || '')
+        });
+      }
+
       // P3: working without a queue row
-      for (const a of AGENTS) {
+      for (const a of rigAgents) {
         if (a.state === 'working' && !LIVE_OPEN_QUEUE.some(q => q.destinationSession === a.id || q.sourceSession === a.id)) {
           items.push({
-            prio: 3, color: '#00f0ff', from: a.shortName, to: '⚙️ терминал',
-            slice: 'вне очереди', state: '⚡ РАБОТАЕТ',
-            summary: `Агент активен без открытой строки очереди${a.lastActivityAt ? ` (последняя активность ${new Date(a.lastActivityAt).toLocaleTimeString('ru-RU')})` : ''}.`
+            prio: 3, category: 'task', seatId: a.id, actionKind: 'focus', actionLabel: '🔍 К узлу',
+            color: '#00f0ff', from: getNodeDisplayTitle(a), to: '⚙️ терминал',
+            slice: 'в работе', state: '⚡ РАБОТАЕТ',
+            summary: `Агент активен в контуре${a.lastActivityAt ? ` (последняя активность ${new Date(a.lastActivityAt).toLocaleTimeString('ru-RU')})` : ''}.`
           });
         }
       }
@@ -3431,10 +3568,26 @@
 
     function renderWaitRadarAndDecisions() {
       const waitContainer = document.getElementById('waitListContainer');
-      const source = IS_LIVE ? buildLiveRadar() : LIVE_QITEMS;
-      const activeItems = source.filter(q =>
-        currentSliceFilter === 'all' || (q.slice && q.slice.toLowerCase().includes(currentSliceFilter)) || q.prio === 0 || q.prio === 2 || q.prio === 2.5
+      const source = buildLiveRadar();
+      const sliceFiltered = source.filter(q =>
+        currentSliceFilter === 'all' || (q.slice && q.slice.toLowerCase().includes(currentSliceFilter)) || q.prio < 1.2
       );
+
+      const blockersCount = sliceFiltered.filter(q => q.category === 'blocker').length;
+      const tasksCount = sliceFiltered.filter(q => q.category === 'task').length;
+
+      const tabAll = document.querySelector('#radarFilterBar [data-radar-tab="all"]');
+      const tabBlk = document.querySelector('#radarFilterBar [data-radar-tab="blockers"]');
+      const tabTsk = document.querySelector('#radarFilterBar [data-radar-tab="tasks"]');
+      if (tabAll) tabAll.textContent = `Все (${sliceFiltered.length})`;
+      if (tabBlk) tabBlk.textContent = `🚨 Блокеры (${blockersCount})`;
+      if (tabTsk) tabTsk.textContent = `📦 Задачи (${tasksCount})`;
+
+      const activeItems = sliceFiltered.filter(q => {
+        if (currentRadarFilter === 'blockers') return q.category === 'blocker';
+        if (currentRadarFilter === 'tasks') return q.category === 'task';
+        return true;
+      });
 
       // Group repeated homogeneous entries (e.g. multiple undelivered-wake) to cut noise while keeping 100% access
       const groups = [];
@@ -3460,17 +3613,24 @@
       }
 
       waitContainer.innerHTML = activeItems.length === 0
-        ? `<div class="wait-card" style="--wait-color:#00ff9d"><div style="font-size:12.5px; color:#6ee7b7;">🟢 Никто никого не держит: очередь пуста, агенты в покое.</div></div>`
+        ? `<div class="wait-card" style="--wait-color:#00ff9d"><div style="font-size:12.5px; color:#6ee7b7;">🟢 В этой категории пусто: критических задержек нет.</div></div>`
         : groups.map(g => {
           const isExpanded = expandedRadarGroups.has(g.key);
           const listToRender = isExpanded ? g.items : [g.lead];
           return listToRender.map((w, idx) => {
             const safeKey = escapeHtml(g.key).replace(/'/g, '&#39;');
+            const safeSeat = escapeHtml(w.seatId || '').replace(/'/g, '&#39;');
             const groupBtn = g.items.length > 1 && idx === 0
-              ? `<button class="wait-group-badge" onclick="toggleRadarGroup('${safeKey}')" title="Свернуть или раскрыть повторяющиеся события">${isExpanded ? `▲ Свернуть (${g.items.length})` : `×${g.items.length} похожих`}</button>`
+              ? `<button class="wait-group-badge" onclick="event.stopPropagation(); toggleRadarGroup('${safeKey}')" title="Свернуть или раскрыть повторяющиеся события">${isExpanded ? `▲ Свернуть (${g.items.length})` : `×${g.items.length} похожих`}</button>`
+              : '';
+            const quickActionBtn = w.seatId && w.actionLabel
+              ? `<button class="radar-quick-btn ${w.actionKind === 'tmux' ? 'urgent' : ''}" onclick="event.stopPropagation(); focusFromRadar('${safeSeat}', '${w.actionKind}')">${w.actionLabel}</button>`
               : '';
             return `
-        <div class="wait-card" style="--wait-color:${w.color}">
+        <div class="wait-card" style="--wait-color:${w.color}"
+             onmouseenter="${safeSeat ? `setHoverAgent('${safeSeat}')` : ''}"
+             onmouseleave="${safeSeat ? `setHoverAgent(null)` : ''}"
+             onclick="${safeSeat ? `focusFromRadar('${safeSeat}', 'focus')` : ''}">
           <div class="wait-flow">
             <span class="actor-pill">${w.from}</span>
             <span class="wait-arrow">══▶</span>
@@ -3482,6 +3642,7 @@
             <span style="font-family:var(--font-mono); font-size:10.5px; font-weight:800; color:${w.color};">${w.state}</span>
           </div>
           <div style="font-size:12.5px; line-height:1.4; color:#cbd5e1;">${w.summary}</div>
+          ${quickActionBtn}
         </div>
       `;
           }).join('');
