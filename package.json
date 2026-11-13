@@ -1,0 +1,41 @@
+{
+  "name": "rig-commander",
+  "version": "3.1.0",
+  "description": "Mission Control & Neural Command Deck for Autonomous AI Engineering Fleets",
+  "type": "module",
+  "main": "openrig/server.mjs",
+  "bin": {
+    "rig-commander": "./bin/cli.mjs",
+    "rig-cmd": "./bin/cli.mjs"
+  },
+  "scripts": {
+    "start": "node bin/cli.mjs",
+    "deck": "node openrig/server.mjs"
+  },
+  "keywords": [
+    "ai-agents",
+    "agentic-workflows",
+    "orchestration",
+    "mission-control",
+    "command-deck",
+    "tmux",
+    "telemetry",
+    "multi-agent",
+    "finops",
+    "sa-dss"
+  ],
+  "author": "RigCommander Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vedariy/rig-commander.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Vedariy/rig-commander/issues"
+  },
+  "homepage": "https://github.com/Vedariy/rig-commander#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {}
+}

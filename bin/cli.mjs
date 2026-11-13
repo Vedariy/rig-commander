@@ -1,0 +1,94 @@
+#!/usr/bin/env node
+import { spawn, execFile } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+
+// Check flags
+if (args.includes('-h') || args.includes('--help')) {
+  console.log(`
+💠 RIGCOMMANDER // NEURAL COMMAND DECK v3.1
+Mission Control for Autonomous AI Coding Fleets
+
+Usage:
+  npx rig-commander [options]
+  rig-commander [options]
+
+Options:
+  -p, --port <number>   Specify telemetry bridge port (default: 7440)
+  --no-open             Do not automatically open browser on startup
+  -v, --version         Show version
+  -h, --help            Show this help manual
+
+Keyboard Shortcuts in Deck:
+  [                     Toggle Left Radar (Who Waits for Whom)
+  ]                     Toggle Right Inspector & TMUX Capture
+  \\                     Zen Canvas Mode (Maximize Topology Graph)
+  D                     Toggle Card Density (Fit / Detailed)
+  F                     Toggle Fullscreen Mode
+`);
+  process.exit(0);
+}
+
+if (args.includes('-v') || args.includes('--version')) {
+  console.log('rig-commander v3.1.0');
+  process.exit(0);
+}
+
+let port = 7440;
+const portIdx = args.findIndex(a => a === '-p' || a === '--port');
+if (portIdx !== -1 && args[portIdx + 1]) {
+  port = Number(args[portIdx + 1]) || 7440;
+} else if (process.env.PORT) {
+  port = Number(process.env.PORT) || 7440;
+}
+
+const noOpen = args.includes('--no-open');
+const serverPath = path.resolve(__dirname, '../openrig/server.mjs');
+const url = `http://127.0.0.1:${port}`;
+
+console.log(`
+\x1b[36m  💠 RIGCOMMANDER // NEURAL COMMAND DECK v3.1\x1b[0m
+  \x1b[90m==============================================================\x1b[0m
+  \x1b[32m●\x1b[0m Status:            \x1b[1m\x1b[32mLIVE TELEMETRY BRIDGE\x1b[0m
+  \x1b[36m●\x1b[0m Command Deck:      \x1b[4m\x1b[36m${url}\x1b[0m
+  \x1b[33m●\x1b[0m Keyboard Control:  \x1b[90m[ [ ] Radar | [ ] ] Inspector | [ \\ ] Zen\x1b[0m
+  \x1b[90m--------------------------------------------------------------\x1b[0m
+  \x1b[90mPress \x1b[37mCtrl+C\x1b[90m to safely detach flight deck.\x1b[0m
+`);
+
+// Launch Server Process
+const serverProc = spawn(process.execPath, [serverPath], {
+  env: { ...process.env, PORT: String(port) },
+  stdio: 'inherit'
+});
+
+serverProc.on('error', err => {
+  console.error('\x1b[31m✕ Failed to launch RigCommander server:\x1b[0m', err.message);
+  process.exit(1);
+});
+
+// Auto-open browser
+if (!noOpen) {
+  setTimeout(() => {
+    const platform = process.platform;
+    if (platform === 'darwin') {
+      execFile('open', [url], () => {});
+    } else if (platform === 'win32') {
+      execFile('cmd', ['/c', 'start', url], () => {});
+    } else {
+      execFile('xdg-open', [url], () => {});
+    }
+  }, 450);
+}
+
+function shutdown() {
+  console.log('\n\x1b[36m💠 Detaching RigCommander flight deck. Agents remain in background.\x1b[0m');
+  serverProc.kill('SIGINT');
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

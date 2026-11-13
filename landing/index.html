@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RigCommander // Mission Control for Autonomous AI Fleets</title>
+  <meta name="description" content="The real-time operational command deck for autonomous multi-agent coding swarms. Live neural topology, 1-click tmux terminal introspection, token quota thermodynamics, and deterministic human-in-the-loop oversight.">
+  
+  <!-- Modern Font Stack: Inter Display & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --bg-card: rgba(8, 14, 28, 0.75);
+      --bg-card-hover: rgba(14, 24, 46, 0.85);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(56, 189, 248, 0.28);
+      --cyan: #00f0ff;
+      --cyan-dim: rgba(0, 240, 255, 0.15);
+      --emerald: #00ff9d;
+      --emerald-dim: rgba(0, 255, 157, 0.15);
+      --amber: #fbbf24;
+      --amber-dim: rgba(251, 191, 36, 0.15);
+      --lavender: #a855f7;
+      --coral: #ff0055;
+      
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-dark);
+      color: #f1f5f9;
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 15% 70%, rgba(0, 255, 157, 0.05) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Ambient glow elements */
+    .ambient-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(140px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.45;
+    }
+    .glow-cyan { top: -100px; left: 50%; transform: translateX(-50%); background: rgba(0, 240, 255, 0.16); }
+    .glow-purple { top: 700px; right: 5%; background: rgba(168, 85, 247, 0.12); }
+    .glow-emerald { top: 1600px; left: 5%; background: rgba(0, 255, 157, 0.1); }
+
+    /* LAYOUT CONTAINERS */
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* FLOATING PILL NAVBAR (2026 STANDARD) */
+    .navbar-wrapper {
+      position: fixed;
+      top: 18px;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      padding: 0 20px;
+    }
+    .navbar {
+      background: rgba(4, 10, 24, 0.82);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      border-radius: 9999px;
+      padding: 8px 18px 8px 22px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .navbar:hover {
+      border-color: var(--border-bright);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.8), 0 0 24px rgba(0, 240, 255, 0.15);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.8px;
+    }
+    .nav-brand-badge {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      background: rgba(0, 240, 255, 0.12);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-radius: 9999px;
+      padding: 2px 7px;
+      font-weight: 700;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: color 0.18s ease;
+    }
+    .nav-links a:hover {
+      color: #fff;
+    }
+    .nav-cta {
+      background: #fff;
+      color: #030712;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-cta:hover {
+      background: var(--cyan);
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.6);
+      transform: translateY(-1px);
+    }
+
+    /* HERO SECTION */
+    .hero {
+      padding-top: 140px;
+      padding-bottom: 70px;
+      text-align: center;
+      position: relative;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(10, 22, 44, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      border-radius: 9999px;
+      padding: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--cyan);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+      margin-bottom: 24px;
+      user-select: none;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--cyan);
+      animation: pulseAnim 2s infinite;
+    }
+    @keyframes pulseAnim {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(0, 240, 255, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0); }
+    }
+
+    .hero-title {
+      font-size: clamp(38px, 5.5vw, 68px);
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+      margin-bottom: 22px;
+      background: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-title span.accent-cyan {
+      background: linear-gradient(135deg, #00f0ff 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      max-width: 740px;
+      margin: 0 auto 36px;
+      font-size: clamp(16px, 1.8vw, 19px);
+      line-height: 1.55;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #00f0ff 0%, #0284c7 100%);
+      color: #030712;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 13px 26px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 28px rgba(0, 240, 255, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 40px rgba(0, 240, 255, 0.7);
+      transform: translateY(-2px);
+      color: #000;
+    }
+    .cli-copy-box {
+      background: rgba(8, 16, 32, 0.9);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.6);
+    }
+    .cli-copy-box:hover {
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+    }
+    .cli-prompt { color: var(--cyan); font-weight: 700; user-select: none; }
+    .cli-icon { opacity: 0.6; transition: opacity 0.2s; }
+    .cli-copy-box:hover .cli-icon { opacity: 1; }
+
+    /* INTERACTIVE PRODUCT HERO SIMULATOR */
+    .hero-simulator-wrapper {
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.25) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+      padding: 1px;
+      border-radius: 16px;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.85), 0 0 60px rgba(0, 240, 255, 0.12);
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+    .hero-simulator {
+      background: #020612;
+      border-radius: 15px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(0, 240, 255, 0.2);
+    }
+
+    .sim-header {
+      background: rgba(6, 14, 30, 0.95);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .sim-window-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .sim-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .sim-dot.red { background: #ff5f56; }
+    .sim-dot.yellow { background: #ffbd2e; }
+    .sim-dot.green { background: #27c93f; }
+
+    .sim-bar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sim-btn {
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sim-btn:hover, .sim-btn.active {
+      background: rgba(0, 240, 255, 0.22);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+      color: #fff;
+    }
+    .sim-btn.purple-active {
+      background: rgba(168, 85, 247, 0.25);
+      border-color: #a855f7;
+      color: #f3e8ff;
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+    }
+
+    /* SIMULATOR STAGE / WORKSPACE */
+    .sim-body {
+      display: grid;
+      grid-template-columns: 240px 1fr 280px;
+      min-height: 480px;
+      background: #01040a;
+      position: relative;
+    }
+    @media (max-width: 960px) {
+      .sim-body { grid-template-columns: 1fr; }
+      .sim-left-col, .sim-right-col { display: none; }
+    }
+
+    .sim-left-col {
+      background: rgba(4, 10, 22, 0.85);
+      border-right: 1px solid rgba(56, 189, 248, 0.15);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sim-col-title {
+      font-size: 10px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .sim-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 6px;
+      padding: 9px 11px;
+      transition: all 0.2s;
+    }
+    .sim-card:hover {
+      border-color: var(--cyan);
+      background: rgba(20, 32, 58, 0.8);
+    }
+    .sim-card-header {
+      display: flex;
+      justify-content: space-between;
+      color: #7dd3fc;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .sim-card-body {
+      color: #94a3b8;
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    /* CANVAS GRAPH AREA */
+    .sim-canvas {
+      position: relative;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.04) 0%, transparent 80%),
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 28px 28px, 28px 28px;
+      padding: 24px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sim-node {
+      position: absolute;
+      background: rgba(8, 16, 34, 0.92);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+      cursor: pointer;
+      transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 155px;
+    }
+    .sim-node:hover, .sim-node.selected {
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+      transform: scale(1.05);
+    }
+    .sim-node.pulse-amber {
+      border-color: var(--amber);
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.4);
+    }
+    .sim-node.pulse-coral {
+      border-color: var(--coral);
+      box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+    }
+    .sim-node-title {
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .sim-node-meta {
+      font-size: 9.5px;
+      color: #94a3b8;
+    }
+    .sim-node-meter {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .sim-node-fill {
+      height: 100%;
+      background: var(--cyan);
+      border-radius: 2px;
+    }
+
+    .sim-right-col {
+      background: rgba(4, 10, 22, 0.85);
+      border-left: 1px solid rgba(56, 189, 248, 0.15);
+      padding: 12px;
+      font-family: var(--font-mono);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sim-terminal-screen {
+      background: #010307;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 10px;
+      line-height: 1.45;
+      color: #a7f3d0;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* THE PAIN STRIP / WHY NOW */
+    .pain-section {
+      padding: 90px 0 60px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .section-title {
+      font-size: clamp(28px, 3.5vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 16px;
+      background: linear-gradient(180deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .section-desc {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 50px;
+      color: #94a3b8;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 768px) {
+      .comparison-grid { grid-template-columns: 1fr; }
+    }
+    .compare-card {
+      background: rgba(8, 14, 28, 0.6);
+      border-radius: 12px;
+      padding: 28px;
+      border: 1px solid var(--border-subtle);
+      transition: all 0.25s ease;
+    }
+    .compare-card.bad {
+      border-color: rgba(255, 0, 85, 0.25);
+    }
+    .compare-card.bad:hover {
+      border-color: rgba(255, 0, 85, 0.5);
+      box-shadow: 0 10px 30px rgba(255, 0, 85, 0.1);
+    }
+    .compare-card.good {
+      border-color: rgba(0, 255, 157, 0.3);
+      background: rgba(10, 24, 40, 0.7);
+    }
+    .compare-card.good:hover {
+      border-color: var(--emerald);
+      box-shadow: 0 10px 36px rgba(0, 255, 157, 0.18);
+    }
+    .compare-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+    .compare-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .compare-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    /* 2026 ASYMMETRIC BENTO GRID */
+    .bento-section {
+      padding: 100px 0;
+    }
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 1024px) {
+      .bento-grid { grid-template-columns: 1fr; }
+    }
+
+    .bento-tile {
+      background: rgba(7, 13, 26, 0.75);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .bento-tile:hover {
+      border-color: var(--border-bright);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.8), 0 0 24px rgba(0, 240, 255, 0.15);
+      transform: translateY(-2px);
+    }
+    .bento-wide {
+      grid-column: span 2;
+    }
+    @media (max-width: 1024px) {
+      .bento-wide { grid-column: span 1; }
+    }
+
+    .bento-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--cyan);
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: 9999px;
+      padding: 3px 10px;
+      margin-bottom: 16px;
+      width: fit-content;
+    }
+    .bento-title {
+      font-size: 21px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 10px;
+      letter-spacing: -0.015em;
+    }
+    .bento-desc {
+      font-size: 14px;
+      line-height: 1.55;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+    .bento-widget {
+      background: #01040a;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 9px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      margin-top: auto;
+    }
+
+    /* HOW IT WORKS / ARCHITECTURE BLUEPRINT */
+    .arch-section {
+      padding: 80px 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+    @media (max-width: 900px) {
+      .steps-grid { grid-template-columns: 1fr; }
+    }
+    .step-card {
+      background: rgba(8, 14, 28, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 26px;
+      position: relative;
+    }
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 900;
+      color: rgba(0, 240, 255, 0.4);
+      margin-bottom: 14px;
+      line-height: 1;
+    }
+    .step-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+    .step-desc {
+      font-size: 13.5px;
+      line-height: 1.55;
+      color: #94a3b8;
+    }
+    .step-code {
+      margin-top: 14px;
+      background: #01040a;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--cyan);
+    }
+
+    /* WAITLIST & LEAD QUALIFICATION */
+    .waitlist-section {
+      padding: 100px 0;
+      text-align: center;
+      position: relative;
+    }
+    .waitlist-card {
+      max-width: 660px;
+      margin: 0 auto;
+      background: linear-gradient(180deg, rgba(10, 22, 44, 0.85) 0%, rgba(4, 10, 22, 0.95) 100%);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 18px;
+      padding: 44px 36px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 50px rgba(0, 240, 255, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+    .waitlist-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    }
+
+    .waitlist-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 28px;
+      text-align: left;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-input, .form-select {
+      background: #01040a;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 7px;
+      padding: 12px 14px;
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+    }
+    .form-submit-btn {
+      background: linear-gradient(135deg, #00f0ff 0%, #0284c7 100%);
+      color: #030712;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 14px;
+      border-radius: 7px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.5);
+      margin-top: 8px;
+    }
+    .form-submit-btn:hover {
+      box-shadow: 0 0 36px rgba(0, 240, 255, 0.8);
+      transform: translateY(-1px);
+    }
+    .waitlist-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 16px;
+    }
+
+    /* FOOTER */
+    .footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 40px 0;
+      background: #02050c;
+    }
+    .footer-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .footer-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
+    .footer-keycaps {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #64748b;
+    }
+    .keycap {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #00ff9d;
+      color: #020617;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 10px 18px;
+      border-radius: 6px;
+      box-shadow: 0 0 25px rgba(0, 255, 157, 0.6);
+      display: none;
+      z-index: 99999;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-purple"></div>
+  <div class="ambient-glow glow-emerald"></div>
+
+  <!-- FLOATING PILL NAVBAR -->
+  <header class="navbar-wrapper">
+    <nav class="navbar">
+      <a href="#" class="nav-brand">
+        <span>💠 RIGCOMMANDER</span>
+        <span class="nav-brand-badge">v3.1 LIVE</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#comparison">Why RigCommander</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#waitlist">Waitlist</a></li>
+      </ul>
+      <a href="#waitlist" class="nav-cta">
+        <span>Request Access</span>
+        <span>→</span>
+      </a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- HERO SECTION -->
+    <section class="hero container">
+      <div class="hero-eyebrow">
+        <span class="pulse-dot"></span>
+        <span>MISSION CONTROL FOR AUTONOMOUS AI SWARMS</span>
+      </div>
+
+      <h1 class="hero-title">
+        Stop Agent Chaos.<br>
+        <span class="accent-cyan">Command Your AI Fleets.</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        The real-time operational flight deck for autonomous multi-agent engineering teams.
+        Live topological routing, 1-click tmux terminal introspection, token quota thermodynamics, and deterministic human-in-the-loop oversight.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#waitlist" class="btn-primary">
+          <span>⚡ Join Priority Waitlist</span>
+          <span>→</span>
+        </a>
+        <div class="cli-copy-box" onclick="copyCli('npx rig-commander@latest')" title="Click to copy CLI installer">
+          <span class="cli-prompt">$</span>
+          <span>npx rig-commander@latest</span>
+          <span class="cli-icon">📋</span>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE PRODUCT HERO SIMULATOR -->
+      <div class="hero-simulator-wrapper">
+        <div class="hero-simulator">
+          <div class="sim-header">
+            <div class="sim-window-dots">
+              <span class="sim-dot red"></span>
+              <span class="sim-dot yellow"></span>
+              <span class="sim-dot green"></span>
+            </div>
+            
+            <div style="font-family:var(--font-mono); font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px;">
+              <span style="color:#fff; font-weight:700;">NEURAL DECK v3.1</span>
+              <span>•</span>
+              <span style="color:var(--emerald);">● LIVE TELEMETRY</span>
+              <span>•</span>
+              <span>9 AGENTS CONNECTED</span>
+            </div>
+
+            <div class="sim-bar-controls">
+              <button class="sim-btn" id="simCalmBtn" onclick="toggleSimCalm()">🧘 CALM FOCUS</button>
+              <button class="sim-btn active" id="simSliceAll" onclick="setSimSlice('all')">🌐 ALL LANES</button>
+              <button class="sim-btn" id="simSliceUx" onclick="setSimSlice('ux')">🏷️ UX-GATE</button>
+            </div>
+          </div>
+
+          <div class="sim-body">
+            <!-- Left Col: Wait Radar -->
+            <div class="sim-left-col">
+              <div class="sim-col-title">
+                <span>WAIT RADAR</span>
+                <span style="color:var(--amber);">LIVE TSV</span>
+              </div>
+              <div class="sim-card" style="border-left: 3px solid var(--amber);">
+                <div class="sim-card-header">
+                  <span>dev-owner → dev-check</span>
+                </div>
+                <div class="sim-card-body">
+                  Stuck sweep: stalled after claim on qitem-20261108. Waiting QA acceptance test.
+                </div>
+              </div>
+              <div class="sim-card" style="border-left: 3px solid var(--emerald);">
+                <div class="sim-card-header">
+                  <span>dev-coder → dev-owner</span>
+                </div>
+                <div class="sim-card-body">
+                  UX Core P1 done: workflow + real HTTP TW adapter. Ready for review.
+                </div>
+              </div>
+              <div class="sim-card" style="border-left: 3px solid var(--coral);">
+                <div class="sim-card-header">
+                  <span style="color:var(--coral);">dev-check (QA)</span>
+                </div>
+                <div class="sim-card-body">
+                  Stopped at terminal permission_prompt: needs human HITL authorization.
+                </div>
+              </div>
+            </div>
+
+            <!-- Center Col: Interactive Topology Canvas -->
+            <div class="sim-canvas" id="simCanvas">
+              <!-- SVG Connection Lines -->
+              <svg style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;" id="simSvgLines">
+                <line x1="20%" y1="20%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" stroke-dasharray="4,4" />
+                <line x1="80%" y1="22%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+                <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="rgba(0, 255, 157, 0.5)" stroke-width="3" />
+                <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+                <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="rgba(251, 191, 36, 0.5)" stroke-width="2" />
+                <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+              </svg>
+
+              <!-- Node 1: Kernel Operator -->
+              <div class="sim-node" style="top: 14%; left: 8%;" onclick="selectSimNode('kernel-operator', 'Operator', '38% context • 0 alerts', 'healthy')">
+                <div class="sim-node-title">
+                  <span>⚙️ kernel-op</span>
+                  <span style="color:var(--emerald);">Zzz</span>
+                </div>
+                <div class="sim-node-meta">CTX: 42% (200K / 475K)</div>
+                <div class="sim-node-meter"><div class="sim-node-fill" style="width:42%;"></div></div>
+              </div>
+
+              <!-- Node 2: Architect -->
+              <div class="sim-node" style="top: 12%; right: 10%;" onclick="selectSimNode('dev-architect', 'Senior Architect', 'Spec authoring • Clean pipeline', 'healthy')">
+                <div class="sim-node-title">
+                  <span>📐 dev-architect</span>
+                  <span style="color:var(--emerald);">Zzz</span>
+                </div>
+                <div class="sim-node-meta">CTX: 30% (143K / 475K)</div>
+                <div class="sim-node-meter"><div class="sim-node-fill" style="width:30%;"></div></div>
+              </div>
+
+              <!-- Node 3: Owner (Hub) -->
+              <div class="sim-node selected" style="top: 26%; left: 38%; min-width:160px;" onclick="selectSimNode('dev-owner', 'Dispatch Hub', 'Routing 12 tasks across 4 worktrees', 'active')">
+                <div class="sim-node-title">
+                  <span>🏛️ dev-owner</span>
+                  <span style="color:var(--cyan); font-weight:800;">ACTIVE</span>
+                </div>
+                <div class="sim-node-meta">CTX: 34% • 94 calls in flight</div>
+                <div class="sim-node-meter"><div class="sim-node-fill" style="width:34%; background:var(--cyan);"></div></div>
+              </div>
+
+              <!-- Node 4: Coder 3 -->
+              <div class="sim-node" style="top: 52%; left: 16%;" onclick="selectSimNode('dev-coder3', 'PWA Specialist', 'Writing responsive CSS adapters', 'healthy')">
+                <div class="sim-node-title">
+                  <span>💻 dev-coder3</span>
+                  <span style="color:var(--emerald);">Zzz</span>
+                </div>
+                <div class="sim-node-meta">CTX: 22% (220K / 1000K)</div>
+                <div class="sim-node-meter"><div class="sim-node-fill" style="width:22%;"></div></div>
+              </div>
+
+              <!-- Node 5: Coder 5 -->
+              <div class="sim-node" style="top: 52%; right: 18%;" onclick="selectSimNode('dev-coder5', 'Backend Specialist', 'FastAPI & Token Reservoir', 'healthy')">
+                <div class="sim-node-title">
+                  <span>⚡ dev-coder5</span>
+                  <span style="color:var(--emerald);">Zzz</span>
+                </div>
+                <div class="sim-node-meta">CTX: 39% (185K / 475K)</div>
+                <div class="sim-node-meter"><div class="sim-node-fill" style="width:39%;"></div></div>
+              </div>
+
+              <!-- Node 6: QA Checker (Alert) -->
+              <div class="sim-node pulse-coral" style="bottom: 12%; left: 40%;" onclick="selectSimNode('dev-check (QA)', 'Quality Assurance', 'Awaiting operator permission prompt', 'alert')">
+                <div class="sim-node-title">
+                  <span>🛡️ dev-check (QA)</span>
+                  <span style="color:var(--coral); font-weight:800;">NEED INPUT</span>
+                </div>
+                <div class="sim-node-meta">CTX: 80% • Threshold 75% ⚠️</div>
+                <div class="sim-node-meter"><div class="sim-node-fill" style="width:80%; background:var(--coral);"></div></div>
+              </div>
+            </div>
+
+            <!-- Right Col: Live Terminal & Inspector -->
+            <div class="sim-right-col">
+              <div class="sim-col-title">
+                <span>INSPECTOR & TMUX</span>
+                <span style="color:var(--cyan);" id="simInspectorId">dev-check (QA)</span>
+              </div>
+              <div class="sim-terminal-screen" id="simTerminalScreen">
+[dev-check@core-platform]
+$ pytest tests/e2e/test_checkout.py
+Running 14 tests across worktree...
+=============================
+PASSED 13 tests
+FAIL: test_receipt_hash_signature
+AssertionError: Hash mismatch
+-----------------------------
+⚠️ PERMISSION PROMPT:
+Authorize git reset --hard HEAD~1
+and re-run test runner? [y/N]:
+_
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="sim-btn" style="flex:1; border-color:var(--emerald); color:#6ee7b7;" onclick="simAuthorize()">✓ AUTHORIZE</button>
+                <button class="sim-btn" style="border-color:var(--coral); color:#fda4af;" onclick="simReject()">✕ STOP</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE PAIN STRIP / WHY NOW -->
+    <section class="pain-section" id="comparison">
+      <div class="container">
+        <div class="section-eyebrow">THE 10-AGENT TIPPING POINT</div>
+        <h2 class="section-title">Why Autonomous Swarms Break Down</h2>
+        <p class="section-desc">
+          One AI agent in your editor feels like magic. Ten concurrent agents across separate worktrees create an unobservable, expensive black box.
+        </p>
+
+        <div class="comparison-grid">
+          <div class="compare-card bad">
+            <div class="compare-header" style="color: var(--coral);">
+              <span>✕</span>
+              <span>Without RigCommander: Chaos</span>
+            </div>
+            <ul class="compare-list">
+              <li>
+                <span style="color:var(--coral);">•</span>
+                <span><b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked.</span>
+              </li>
+              <li>
+                <span style="color:var(--coral);">•</span>
+                <span><b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a human keypress you never saw.</span>
+              </li>
+              <li>
+                <span style="color:var(--coral);">•</span>
+                <span><b>Circular Rework Loops:</b> QA rejects coder's PR 5 times in a loop, burning 300,000 tokens on repetitive fixes.</span>
+              </li>
+              <li>
+                <span style="color:var(--coral);">•</span>
+                <span><b>Overnight Budget Shock:</b> Waking up to a $1,400 API invoice because two agents entered an unmonitored ping-pong loop.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="compare-card good">
+            <div class="compare-header" style="color: var(--emerald);">
+              <span>✓</span>
+              <span>With RigCommander: Deterministic Control</span>
+            </div>
+            <ul class="compare-list">
+              <li>
+                <span style="color:var(--emerald);">•</span>
+                <span><b>Single-Pane Topological Radar:</b> Instantly see every agent seat, who called whom, and who is holding the queue.</span>
+              </li>
+              <li>
+                <span style="color:var(--emerald);">•</span>
+                <span><b>1-Click Introspection & HITL:</b> Instant terminal screen streaming with one-click authorization directly on the map.</span>
+              </li>
+              <li>
+                <span style="color:var(--emerald);">•</span>
+                <span><b>Bounce-Back Detection:</b> Real-time QA rework counters with automated alerts when bounce count exceeds thresholds.</span>
+              </li>
+              <li>
+                <span style="color:var(--emerald);">•</span>
+                <span><b>Context Thermodynamics:</b> Live model quota reservoirs with automated /compact warnings before context degrades.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2026 ASYMMETRIC BENTO GRID -->
+    <section class="bento-section" id="features">
+      <div class="container">
+        <div class="section-eyebrow">ENGINEERING CAPABILITIES</div>
+        <h2 class="section-title">Built for High-Reliability Fleets</h2>
+        <p class="section-desc">
+          Architected on Endsley's Situation Awareness principles and ISO 11064 control room ergonomics.
+        </p>
+
+        <div class="bento-grid">
+          <!-- Bento Tile 1: Wide Topology -->
+          <div class="bento-tile bento-wide">
+            <div>
+              <span class="bento-badge">🌐 SA-DSS TOPOLOGY</span>
+              <h3 class="bento-title">Live Neural Highway & Call Volumes</h3>
+              <p class="bento-desc">
+                Dynamic SVG graph discovers your rig topology automatically. Edge line widths scale dynamically with real transmission volume. Click any highway to inspect recent envelope exchanges and queue payloads.
+              </p>
+            </div>
+            <div class="bento-widget">
+              <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#cbd5e1;">
+                <span>HIGHWAY: dev-owner ⇄ dev-coder4</span>
+                <span style="color:var(--cyan); font-weight:700;">31 ENVELOPES</span>
+              </div>
+              <div style="background:rgba(255,255,255,0.06); height:6px; border-radius:3px; overflow:hidden;">
+                <div style="width:68%; height:100%; background:linear-gradient(90deg, var(--cyan), var(--emerald));"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#64748b; margin-top:6px;">
+                <span>Latency: 420ms</span>
+                <span>Zero Drops • 100% Retries Handled</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Tile 2: Zero-Latency TMUX -->
+          <div class="bento-tile">
+            <div>
+              <span class="bento-badge">⚡ ZERO-LATENCY TMUX</span>
+              <h3 class="bento-title">In-Terminal Screen Capture</h3>
+              <p class="bento-desc">
+                Inspect 80-line active terminal captures without switching windows. Safe command dispatching straight from your browser.
+              </p>
+            </div>
+            <div class="bento-widget" style="color:#a7f3d0; line-height:1.45;">
+              <div>[core-platform:4175]</div>
+              <div style="color:#38bdf8;">$ git status --short</div>
+              <div>M  lib/payment/router.mjs</div>
+              <div>M  tests/test_router.py</div>
+              <div style="color:var(--emerald);">✓ 4 tests passing in 0.8s</div>
+            </div>
+          </div>
+
+          <!-- Bento Tile 3: Quota Thermodynamics -->
+          <div class="bento-tile">
+            <div>
+              <span class="bento-badge">🔥 FINOPS GUARD</span>
+              <h3 class="bento-title">Context Thermodynamics</h3>
+              <p class="bento-desc">
+                Avoid context saturation crashes. Monitor peak and average pool utilization across Claude, GPT-5, DeepSeek and Gemini seats.
+              </p>
+            </div>
+            <div class="bento-widget">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span>CLAUDE 3.7 (1 SEAT)</span>
+                <span style="color:var(--emerald);">18% CTX</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span>CODEX SOL (7 SEATS)</span>
+                <span style="color:var(--amber);">80% CTX ⚠️</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>DEEPSEEK V3 (4 SEATS)</span>
+                <span style="color:var(--cyan);">35% CTX</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Tile 4: Fleet Intelligence (Wide) -->
+          <div class="bento-tile bento-wide">
+            <div>
+              <span class="bento-badge">💡 FLEET INTELLIGENCE ADVISOR</span>
+              <h3 class="bento-title">Automated Swarm Bottleneck Detection</h3>
+              <p class="bento-desc">
+                Out-of-band analytical engine evaluates token entropy, ceremony overhead, model mismatches, and QA bounce-back ratios in real time. Receive proactive recommendations before your pipeline stalls.
+              </p>
+            </div>
+            <div class="bento-widget">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <span style="background:rgba(251,191,36,0.15); border:1px solid var(--amber); color:var(--amber); border-radius:4px; padding:2px 6px; font-size:10px; font-weight:800;">ADVICE</span>
+                <span style="color:#fff; font-weight:700;">Trigger preemptive /compact on dev-check (QA)</span>
+              </div>
+              <div style="color:#94a3b8; font-size:11px; line-height:1.4;">
+                Context utilization is at 80% (380K/475K). Compacting token memory now will prevent token budget exhaustion on subsequent acceptance runs.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE BLUEPRINT -->
+    <section class="arch-section" id="architecture">
+      <div class="container">
+        <div class="section-eyebrow">NON-INVASIVE ARCHITECTURE</div>
+        <h2 class="section-title">Zero-Code Instrumentation</h2>
+        <p class="section-desc">
+          RigCommander connects directly to your existing environment. No vendor lock-in, no rewriting agent logic, zero latency overhead.
+        </p>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-num">01</div>
+            <h3 class="step-title">Run Local Bridge</h3>
+            <p class="step-desc">
+              Lightweight Node.js daemon inspects local tmux sockets, worktree git states, and queue logs out-of-band.
+            </p>
+            <div class="step-code">$ npx rig-commander@latest</div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-num">02</div>
+            <h3 class="step-title">Auto-Discovery</h3>
+            <p class="step-desc">
+              Dynamically maps active agents, harness types, seats, models, and task communication channels in seconds.
+            </p>
+            <div class="step-code">● Discovered 3 rigs, 9 seats</div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-num">03</div>
+            <h3 class="step-title">Command & Optimize</h3>
+            <p class="step-desc">
+              Monitor live Sankey traffic, authorize HITL requests, and prevent token burn from a single unified glass pane.
+            </p>
+            <div class="step-code">HTTP 200 • Deck on :7440</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WAITLIST & LEAD QUALIFICATION -->
+    <section class="waitlist-section" id="waitlist">
+      <div class="container">
+        <div class="waitlist-card">
+          <div class="bento-badge" style="margin: 0 auto 16px;">🚀 PRIVATE ACCESS</div>
+          <h2 style="font-size: clamp(28px, 3.5vw, 38px); font-weight:800; letter-spacing:-0.02em; margin-bottom:12px;">
+            Deploy RigCommander in Your Fleet
+          </h2>
+          <p style="color:#94a3b8; font-size:15px; line-height:1.5; max-width:520px; margin:0 auto;">
+            We are onboarding engineering teams and autonomous AI startups in priority batches. Reserve your spot today.
+          </p>
+
+          <form class="waitlist-form" id="waitlistForm" onsubmit="handleWaitlistSubmit(event)">
+            <div class="form-group">
+              <label class="form-label" for="workEmail">Work Email</label>
+              <input type="email" id="workEmail" class="form-input" placeholder="name@company.com" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="fleetSize">How many AI coding agents do you run?</label>
+              <select id="fleetSize" class="form-select" required>
+                <option value="1-3">1–3 agents (Individual / Prototyping)</option>
+                <option value="4-10" selected>4–10 agents (Parallel Swarms in Production)</option>
+                <option value="10+">10+ agents (Enterprise Swarms / Autonomous Teams)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="primaryHarness">Primary Harness / Framework</label>
+              <select id="primaryHarness" class="form-select">
+                <option value="claude-code">Claude Code / Anthropic Swarms</option>
+                <option value="codex-sol">Codex / OpenAI Swarms</option>
+                <option value="custom-tmux" selected>Custom Tmux / Worktree Orchestration</option>
+                <option value="crewai-langgraph">CrewAI / LangGraph / AutoGen</option>
+              </select>
+            </div>
+
+            <button type="submit" class="form-submit-btn" id="submitBtn">
+              Claim Priority Access →
+            </button>
+          </form>
+
+          <div id="waitlistSuccess" style="display:none; margin-top:24px; padding:18px; background:rgba(0,255,157,0.12); border:1px solid var(--emerald); border-radius:8px;">
+            <div style="font-weight:800; font-size:16px; color:#6ee7b7; margin-bottom:6px;">
+              ✓ You are on the priority waitlist!
+            </div>
+            <div style="font-family:var(--font-mono); font-size:12px; color:#cbd5e1;">
+              Access position: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>
+              We have sent a confirmation email with setup instructions.
+            </div>
+          </div>
+
+          <div class="waitlist-meta">
+            🔒 100% Local-First Architecture • Zero telemetry leaks • Self-hosted ready
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container footer-content">
+      <div class="footer-status">
+        <span class="pulse-dot" style="background:var(--emerald); box-shadow:0 0 10px var(--emerald);"></span>
+        <span>ALL SYSTEMS OPERATIONAL</span>
+        <span>•</span>
+        <span>RigCommander v3.1</span>
+      </div>
+
+      <div class="footer-keycaps">
+        <span>Shortcuts:</span>
+        <span class="keycap">[</span>
+        <span class="keycap">]</span>
+        <span class="keycap">\</span>
+        <span class="keycap">D</span>
+        <span class="keycap">F</span>
+      </div>
+
+      <div style="font-family:var(--font-mono); font-size:12px; color:#64748b;">
+        © 2026 RigCommander. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast" id="copyToast">Copied to clipboard!</div>
+
+  <script>
+    // Copy CLI installer
+    function copyCli(cmd) {
+      navigator.clipboard.writeText(cmd);
+      const t = document.getElementById('copyToast');
+      t.textContent = `Copied: ${cmd}`;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2200);
+    }
+
+    // Interactive Hero Simulator Logic
+    let simCalm = false;
+    function toggleSimCalm() {
+      simCalm = !simCalm;
+      const btn = document.getElementById('simCalmBtn');
+      btn.classList.toggle('purple-active', simCalm);
+      btn.textContent = simCalm ? '🧘 CALM: ON' : '🧘 CALM FOCUS';
+
+      const nodes = document.querySelectorAll('.sim-node');
+      nodes.forEach(n => {
+        if (simCalm && !n.classList.contains('pulse-coral') && !n.classList.contains('selected')) {
+          n.style.opacity = '0.4';
+        } else {
+          n.style.opacity = '1';
+        }
+      });
+    }
+
+    function setSimSlice(slice) {
+      document.getElementById('simSliceAll').classList.toggle('active', slice === 'all');
+      document.getElementById('simSliceUx').classList.toggle('active', slice === 'ux');
+
+      const lines = document.getElementById('simSvgLines');
+      if (slice === 'ux') {
+        lines.innerHTML = `
+          <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="#00f0ff" stroke-width="4" />
+          <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="#00ff9d" stroke-width="3" />
+        `;
+      } else {
+        lines.innerHTML = `
+          <line x1="20%" y1="20%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" stroke-dasharray="4,4" />
+          <line x1="80%" y1="22%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+          <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="rgba(0, 255, 157, 0.5)" stroke-width="3" />
+          <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+          <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="rgba(251, 191, 36, 0.5)" stroke-width="2" />
+          <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+        `;
+      }
+    }
+
+    function selectSimNode(id, role, status, mood) {
+      document.querySelectorAll('.sim-node').forEach(n => n.classList.remove('selected'));
+      event.currentTarget.classList.add('selected');
+
+      document.getElementById('simInspectorId').textContent = id;
+      const screen = document.getElementById('simTerminalScreen');
+      screen.innerHTML = `
+[${id}]
+Role: ${role}
+Status: ${status}
+---------------------------------
+$ git status
+On branch feat/${id}
+All 4 local worktree test runners passing.
+Last sync: 2 sec ago • ${mood.toUpperCase()}
+      `;
+    }
+
+    function simAuthorize() {
+      const screen = document.getElementById('simTerminalScreen');
+      screen.innerHTML = `
+[dev-check@core-platform]
+$ git reset --hard HEAD~1
+HEAD is now at 8f3c1a2 fix(receipt): test suite green
+✓ HITL Authorization received.
+Running validation harness...
+=============================
+PASSED 14 of 14 tests (100%)
+Status: READY FOR LOCAL PUSH 🟢
+      `;
+    }
+
+    function simReject() {
+      const screen = document.getElementById('simTerminalScreen');
+      screen.innerHTML = `
+[dev-check@core-platform]
+✕ STOP SIGNAL RECEIVED FROM OPERATOR.
+Worktree locked for human inspection.
+Session preserved in tmux:4175.
+      `;
+    }
+
+    // Waitlist Form Submission
+    function handleWaitlistSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('workEmail').value;
+      if (!email) return;
+
+      document.getElementById('waitlistForm').style.display = 'none';
+      document.getElementById('waitlistSuccess').style.display = 'block';
+
+      // Save lead locally
+      const leads = JSON.parse(localStorage.getItem('rigcommander_leads') || '[]');
+      leads.push({
+        email,
+        fleetSize: document.getElementById('fleetSize').value,
+        harness: document.getElementById('primaryHarness').value,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('rigcommander_leads', JSON.stringify(leads));
+    }
+  </script>
+</body>
+</html>

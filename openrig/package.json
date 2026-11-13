@@ -1,0 +1,29 @@
+{
+  "name": "@openrig/deck",
+  "version": "3.1.0",
+  "description": "Neural Command Deck — Standalone Control Plane and Operator Dashboard for OpenRig Multi-Agent Clusters",
+  "type": "module",
+  "main": "server.mjs",
+  "bin": {
+    "openrig-deck": "./server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  },
+  "keywords": [
+    "openrig",
+    "ai-agents",
+    "orchestration",
+    "dashboard",
+    "telemetry",
+    "tmux",
+    "command-deck"
+  ],
+  "author": "OpenRig Contributors",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {}
+}
