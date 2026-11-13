@@ -1000,8 +1000,61 @@
     }
 
     body.calm-mode .agent-node.calm-normal:not(:hover):not(.selected) {
-      opacity: 0.5;
+      opacity: 0.45;
       box-shadow: none;
+    }
+
+    body.calm-mode .edge-group.is-ghost:not(:hover):not(.selected) .edge-badge-bg,
+    body.calm-mode .edge-group.is-ghost:not(:hover):not(.selected) .edge-badge-text {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body.calm-mode .edge-group.is-ghost:not(:hover):not(.selected) .edge-trunk {
+      opacity: 0.25;
+    }
+
+    .wait-group-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(251, 191, 36, 0.16);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      color: #fde68a;
+      cursor: pointer;
+    }
+    .wait-group-badge:hover {
+      background: rgba(251, 191, 36, 0.28);
+    }
+
+    .idle-collapsed-pill {
+      position: absolute;
+      bottom: 12px;
+      left: 14px;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(9, 15, 30, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    }
+    .idle-collapsed-pill.visible { display: inline-flex; }
+    .idle-collapsed-pill:hover {
+      border-color: var(--cyan);
+      color: #fff;
     }
 
     /* STRICT NON-BLINKING BY DEFAULT, BLINK ONLY WHEN ATTN=YES */
@@ -2394,6 +2447,9 @@
 
       <!-- CLUSTER 3: WORKSPACE DOCKING & VIEWPORT TOOLS -->
       <div class="hud-cluster hud-cluster-dock" style="margin-left:auto;">
+        <button class="cyber-btn" id="btnHideIdle" onclick="toggleHideIdle()" title="Свернуть спящих агентов (без активных связей), оставив в фокусе рабочие и проблемные цепи">
+          💤 СПЯЩИЕ: ВИДНЫ
+        </button>
         <button class="cyber-btn" id="btnDensityMode" onclick="toggleDensityMode()" title="Режим карточек узлов: Fit / Детально [Горячая клавиша: D]">
           📐 FIT: КОМПАКТ
         </button>
@@ -2480,6 +2536,7 @@
         </svg>
 
         <div class="nodes-layer" id="nodesLayer"></div>
+        <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()" title="Нажмите, чтобы вернуть спящих агентов на граф"></div>
         <div class="edge-xray-drawer" id="edgeXrayDrawer"></div>
       </div>
 
@@ -3106,6 +3163,8 @@
     let currentRigFilter = 'all';
     let lastRenderedInspectorSeatId = null;
     let calmMode = false;
+    let hideIdleNodes = false;
+    const expandedRadarGroups = new Set();
     let liveScreenCapture = 'Нажми «🔄 Обновить экран tmux» или выбери узел для живого захвата rig capture...';
     let activeInspectorTab = 'rules'; // 'rules' | 'fallback' | 'memory'
 
@@ -3364,6 +3423,12 @@
       return items.sort((x, y) => x.prio - y.prio);
     }
 
+    function toggleRadarGroup(groupKey) {
+      if (expandedRadarGroups.has(groupKey)) expandedRadarGroups.delete(groupKey);
+      else expandedRadarGroups.add(groupKey);
+      renderWaitRadarAndDecisions();
+    }
+
     function renderWaitRadarAndDecisions() {
       const waitContainer = document.getElementById('waitListContainer');
       const source = IS_LIVE ? buildLiveRadar() : LIVE_QITEMS;
@@ -3371,16 +3436,46 @@
         currentSliceFilter === 'all' || (q.slice && q.slice.toLowerCase().includes(currentSliceFilter)) || q.prio === 0 || q.prio === 2 || q.prio === 2.5
       );
 
-      document.getElementById('waitCountBadge').textContent = `${activeItems.length} В КОНТУРЕ`;
+      // Group repeated homogeneous entries (e.g. multiple undelivered-wake) to cut noise while keeping 100% access
+      const groups = [];
+      const groupByKey = new Map();
+      for (const w of activeItems) {
+        const sumPrefix = String(w.summary || '').replace(/\s+/g, ' ').slice(0, 38);
+        const key = `${w.from}|${w.to}|${w.state}|${sumPrefix}`;
+        let g = groupByKey.get(key);
+        if (!g) {
+          g = { key, items: [w], lead: w };
+          groupByKey.set(key, g);
+          groups.push(g);
+        } else {
+          g.items.push(w);
+        }
+      }
+
+      const countBadge = document.getElementById('waitCountBadge');
+      if (countBadge) {
+        countBadge.textContent = groups.length < activeItems.length
+          ? `${groups.length} ГРУПП (${activeItems.length})`
+          : `${activeItems.length} В КОНТУРЕ`;
+      }
 
       waitContainer.innerHTML = activeItems.length === 0
         ? `<div class="wait-card" style="--wait-color:#00ff9d"><div style="font-size:12.5px; color:#6ee7b7;">🟢 Никто никого не держит: очередь пуста, агенты в покое.</div></div>`
-        : activeItems.map(w => `
+        : groups.map(g => {
+          const isExpanded = expandedRadarGroups.has(g.key);
+          const listToRender = isExpanded ? g.items : [g.lead];
+          return listToRender.map((w, idx) => {
+            const safeKey = escapeHtml(g.key).replace(/'/g, '&#39;');
+            const groupBtn = g.items.length > 1 && idx === 0
+              ? `<button class="wait-group-badge" onclick="toggleRadarGroup('${safeKey}')" title="Свернуть или раскрыть повторяющиеся события">${isExpanded ? `▲ Свернуть (${g.items.length})` : `×${g.items.length} похожих`}</button>`
+              : '';
+            return `
         <div class="wait-card" style="--wait-color:${w.color}">
           <div class="wait-flow">
             <span class="actor-pill">${w.from}</span>
             <span class="wait-arrow">══▶</span>
             <span class="actor-pill">${w.to}</span>
+            ${groupBtn}
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
             <span style="font-family:var(--font-mono); font-size:11px; color:var(--cyan);">🏷️ ${w.slice}</span>
@@ -3388,7 +3483,9 @@
           </div>
           <div style="font-size:12.5px; line-height:1.4; color:#cbd5e1;">${w.summary}</div>
         </div>
-      `).join('');
+      `;
+          }).join('');
+        }).join('');
 
       const decContainer = document.getElementById('decisionsListContainer');
       const titleSpan = document.getElementById('decisionsJournalTitle');
@@ -3492,6 +3589,38 @@
         activeEdges.forEach(e => { connectedNodeIds.add(e.from); connectedNodeIds.add(e.to); });
       }
 
+      const activeEndpointIds = new Set();
+      EDGES.forEach(e => {
+        if (e.liveActive) {
+          activeEndpointIds.add(e.from);
+          activeEndpointIds.add(e.to);
+        }
+      });
+
+      const collapsedIdleIds = new Set();
+      const collapsedIdleNames = [];
+      if (hideIdleNodes) {
+        AGENTS.forEach(a => {
+          const isHotCtx = typeof a.ctxPct === 'number' && a.ctxPct >= 75;
+          const isPureIdle = a.state === 'idle' && !a.isAnomaly && !isHotCtx && a.id !== selectedAgentId && !activeEndpointIds.has(a.id);
+          if (isPureIdle) {
+            collapsedIdleIds.add(a.id);
+            collapsedIdleNames.push(getNodeDisplayTitle(a));
+          }
+        });
+      }
+
+      const idlePill = document.getElementById('idleCollapsedPill');
+      if (idlePill) {
+        if (collapsedIdleIds.size > 0) {
+          const preview = collapsedIdleNames.slice(0, 3).join(', ') + (collapsedIdleNames.length > 3 ? ` +${collapsedIdleNames.length - 3}` : '');
+          idlePill.innerHTML = `<span>💤 Скрыто спящих: <b>${collapsedIdleIds.size}</b> (${escapeHtml(preview)})</span><span style="color:var(--cyan); font-weight:700;">Показать</span>`;
+          idlePill.classList.add('visible');
+        } else {
+          idlePill.classList.remove('visible');
+        }
+      }
+
       const existingNodes = nodesLayer.querySelectorAll('.agent-node');
       const allNodesMatch = existingNodes.length === AGENTS.length &&
         AGENTS.every(a => nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`));
@@ -3500,6 +3629,9 @@
         AGENTS.forEach(agent => {
           const el = nodesLayer.querySelector(`.agent-node[data-agent-id="${agent.id}"]`);
           if (!el) return;
+          const isCollapsed = collapsedIdleIds.has(agent.id);
+          el.style.display = isCollapsed ? 'none' : '';
+          if (isCollapsed) return;
           const thermal = getContextThermal(agent.ctxPct, agent.ctxWindowSize);
           const isSelected = agent.id === selectedAgentId;
           const isRigMatch = currentRigFilter === 'all' || agent.id.endsWith('@' + currentRigFilter);
@@ -3605,7 +3737,7 @@
           return `
             <div class="agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}"
                  data-agent-id="${agent.id}"
-                 style="left:${agent.x}%; top:${agent.y}%; --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow};"
+                 style="left:${agent.x}%; top:${agent.y}%; ${collapsedIdleIds.has(agent.id) ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow};"
                  onmouseenter="setHoverAgent('${agent.id}')"
                  onmouseleave="setHoverAgent(null)"
                  onmousedown="selectAgent('${agent.id}', event)"
@@ -3681,6 +3813,7 @@
         const n1 = nodeMap[edge.from];
         const n2 = nodeMap[edge.to];
         if (!n1 || !n2) return '';
+        if (collapsedIdleIds.has(edge.from) || collapsedIdleIds.has(edge.to)) return '';
 
         const cx1 = (n1.x / 100) * cw;
         const cy1 = (n1.y / 100) * ch;
@@ -4994,6 +5127,16 @@
         b.classList.toggle('active', calmMode);
         b.innerHTML = calmMode ? '🧘 CALM: ON' : '🧘 CALM FOCUS';
       }
+    }
+
+    function toggleHideIdle() {
+      hideIdleNodes = !hideIdleNodes;
+      const b = document.getElementById('btnHideIdle');
+      if (b) {
+        b.classList.toggle('active', hideIdleNodes);
+        b.innerHTML = hideIdleNodes ? '💤 СПЯЩИЕ: СКРЫТЫ' : '💤 СПЯЩИЕ: ВИДНЫ';
+      }
+      renderTopology();
     }
 
     function copyCmd(cmd) {
