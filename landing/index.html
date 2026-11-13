@@ -1278,6 +1278,52 @@ _
               </div>
             </div>
           </div>
+
+          <!-- Bento Tile 5: Calm HUD & Exception Signaling -->
+          <div class="bento-tile">
+            <div>
+              <span class="bento-badge" data-i18n="bento.t5.badge">🧘 CALM HUD · ISO 11064</span>
+              <h3 class="bento-title" data-i18n="bento.t5.title">Exception-Based Signaling</h3>
+              <p class="bento-desc" data-i18n="bento.t5.desc">
+                Healthy sleeping nodes stay silent. Visual noise is suppressed by 70%+ so only real blockers, PARKED seats, and 75%+ context spikes break through.
+              </p>
+            </div>
+            <div class="bento-widget">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span style="color:#64748b;">● IDLE / Zzz (7 SEATS)</span>
+                <span style="color:#64748b;" data-i18n="bento.t5.silent">SILENT</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:var(--coral); font-weight:700;">🚨 NEEDS INPUT (1)</span>
+                <span style="color:var(--coral);" data-i18n="bento.t5.highlighted">SPOTLIGHT</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Tile 6: SA-DSS Levels 1-3 & Progressive Disclosure (Wide) -->
+          <div class="bento-tile bento-wide">
+            <div>
+              <span class="bento-badge" data-i18n="bento.t6.badge">🧠 COGNITIVE ERGONOMICS</span>
+              <h3 class="bento-title" data-i18n="bento.t6.title">Endsley SA (L1–L3) & Progressive Disclosure</h3>
+              <p class="bento-desc" data-i18n="bento.t6.desc">
+                Zero window-switching overhead. Glance at L1 status on the map, inspect L2 role rules and bounce-back metrics on click, and jump straight to L3 live tmux control—with FIT/ZEN modes and [ ] \ D F hotkeys.
+              </p>
+            </div>
+            <div class="bento-widget" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center;">
+              <div style="background:rgba(0,240,255,0.08); border:1px solid rgba(0,240,255,0.25); border-radius:6px; padding:8px;">
+                <div style="color:var(--cyan); font-weight:800;">L1 · PERCEPTION</div>
+                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l1">Map & Thermal Rings</div>
+              </div>
+              <div style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); border-radius:6px; padding:8px;">
+                <div style="color:#d8b4fe; font-weight:800;">L2 · COMPREHENSION</div>
+                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l2">Wait Radar & Sankey</div>
+              </div>
+              <div style="background:rgba(0,255,157,0.08); border:1px solid rgba(0,255,157,0.25); border-radius:6px; padding:8px;">
+                <div style="color:var(--emerald); font-weight:800;">L3 · PROJECTION</div>
+                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l3">Burn-Rate ETA & Tmux</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1470,6 +1516,17 @@ _
         'bento.t4.adviceTag': 'ADVICE',
         'bento.t4.adviceTitle': 'Trigger preemptive /compact on dev-check (QA)',
         'bento.t4.adviceBody': 'Context utilization is at 80% (380K/475K). Compacting token memory now will prevent token budget exhaustion on subsequent acceptance runs.',
+        'bento.t5.badge': '🧘 CALM HUD · ISO 11064',
+        'bento.t5.title': 'Exception-Based Signaling',
+        'bento.t5.desc': 'Healthy sleeping nodes stay silent. Visual noise is suppressed by 70%+ so only real blockers, PARKED seats, and 75%+ context spikes break through.',
+        'bento.t5.silent': 'SILENT',
+        'bento.t5.highlighted': 'SPOTLIGHT',
+        'bento.t6.badge': '🧠 COGNITIVE ERGONOMICS',
+        'bento.t6.title': 'Endsley SA (L1–L3) & Progressive Disclosure',
+        'bento.t6.desc': 'Zero window-switching overhead. Glance at L1 status on the map, inspect L2 role rules and bounce-back metrics on click, and jump straight to L3 live tmux control—with FIT/ZEN modes and [ ] \\ D F hotkeys.',
+        'bento.t6.l1': 'Map & Thermal Rings',
+        'bento.t6.l2': 'Wait Radar & Sankey',
+        'bento.t6.l3': 'Burn-Rate ETA & Tmux',
         'arch.eyebrow': 'NON-INVASIVE ARCHITECTURE',
         'arch.title': 'Zero-Code Instrumentation',
         'arch.desc': 'RigCommander connects directly to your existing environment. No vendor lock-in, no rewriting agent logic, zero latency overhead.',
@@ -1560,6 +1617,17 @@ _
         'bento.t4.adviceTag': 'СОВЕТ',
         'bento.t4.adviceTitle': 'Запустить превентивный /compact на dev-check (QA)',
         'bento.t4.adviceBody': 'Заполнение контекста достигло 80% (380K/475K). Сжатие памяти сейчас предотвратит исчерпание бюджета на следующих прогонах приёмки.',
+        'bento.t5.badge': '🧘 CALM HUD · ISO 11064',
+        'bento.t5.title': 'Сигнализация по исключениям',
+        'bento.t5.desc': 'Штатные спящие узлы не мигают. Визуальный шум снижен на 70%+, поэтому внимание тратится только на блокировки, PARKED и перегрев контекста ≥ 75%.',
+        'bento.t5.silent': 'ТИШИНА',
+        'bento.t5.highlighted': 'В ФОКУСЕ',
+        'bento.t6.badge': '🧠 КОГНИТИВНАЯ ЭРГОНОМИКА',
+        'bento.t6.title': 'Endsley SA (L1–L3) и Progressive Disclosure',
+        'bento.t6.desc': 'Ноль переключений между окнами: L1-статус на карте, L2-паспорт и возвраты QA по клику, L3-терминал tmux в 1 клик — плюс режимы FIT/ZEN и клавиши [ ] \\ D F.',
+        'bento.t6.l1': 'Карта и термокольца',
+        'bento.t6.l2': 'Радар и Sankey-потоки',
+        'bento.t6.l3': 'Burn-Rate ETA и Tmux',
         'arch.eyebrow': 'НЕИНВАЗИВНАЯ АРХИТЕКТУРА',
         'arch.title': 'Инструментация без правки кода',
         'arch.desc': 'RigCommander подключается напрямую к текущему окружению. Без привязки к вендору, без переписывания агентов и без накладных задержек.',

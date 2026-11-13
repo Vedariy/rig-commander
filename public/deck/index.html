@@ -2238,6 +2238,87 @@
         font-size: 11px;
       }
     }
+    /* SA-DSS & COGNITIVE LOAD SPOTLIGHT TOUR */
+    .sa-spotlight {
+      position: relative;
+      z-index: 60 !important;
+      outline: 2px solid #00f0ff !important;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(0, 240, 255, 0.22), 0 0 28px rgba(0, 240, 255, 0.45) !important;
+      transition: box-shadow 0.25s ease, outline 0.25s ease;
+    }
+
+    .sa-tour-card {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(640px, calc(100vw - 32px));
+      background: rgba(7, 13, 28, 0.96);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(0, 240, 255, 0.55);
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.78), 0 0 30px rgba(0, 240, 255, 0.18);
+      z-index: 9500;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sa-tour-card.open { display: flex; }
+    .sa-tour-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .sa-tour-badge {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(0, 240, 255, 0.14);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      color: #67e8f9;
+      text-transform: uppercase;
+    }
+    .sa-tour-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.3;
+    }
+    .sa-tour-desc {
+      font-size: 12.5px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .sa-tour-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.7);
+      border-left: 3px solid #a855f7;
+      padding: 6px 10px;
+      border-radius: 4px;
+    }
+    .sa-tour-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .cyber-btn.sa-active {
+      border-color: #00f0ff;
+      color: #67e8f9;
+      background: rgba(0, 240, 255, 0.16);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.32);
+    }
   </style>
 </head>
 <body>
@@ -2333,6 +2414,10 @@
         </div>
 
         <div class="hud-cluster-subdivider"></div>
+
+        <button class="cyber-btn" id="btnSaTour" onclick="toggleSaTour()" title="Интерактивный гид по SA-DSS и снижению когнитивной нагрузки [ ? ]">
+          🧠 SA-DSS / UX
+        </button>
 
         <button class="cyber-btn" id="btnFullscreen" onclick="toggleFullscreen()" title="Полноэкранный режим [Горячая клавиша: F]">
           📺 FULLSCREEN
@@ -2432,6 +2517,7 @@
 
   </main>
 
+  <div class="sa-tour-card" id="saTourCard" role="dialog" aria-label="SA-DSS & Cognitive Ergonomics Tour"></div>
   <div class="toast" id="copyToast">Скопировано в буфер обмена!</div>
 
   <div class="modal-overlay" id="terminalModal" onclick="if (event.target === this) closeTerminalModal()">
@@ -5398,7 +5484,7 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); }
+      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeSaTour(); }
     });
 
     // ===== Stage 4: Edge X-ray =====
@@ -5643,8 +5729,126 @@
       } else if (e.key === 'd' || e.key === 'D') {
         e.preventDefault();
         toggleDensityMode();
+      } else if (e.key === '?') {
+        e.preventDefault();
+        toggleSaTour();
       }
     });
+
+    // ===== SA-DSS & Cognitive Load Interactive Tour =====
+    const SA_TOUR_STEPS = [
+      {
+        badge: 'SA LEVEL 1 • CALM HUD (ISO 11064)',
+        title: 'Сигнализация по исключениям: норма молчит, горят только аномалии',
+        desc: 'Спящие и штатные узлы (Zzz) не мигают и не отнимают внимание. Пульсируют и пробивают тишину только реальные проблемы: NEEDS INPUT, PARKED и перегрев контекста ≥ 75%.',
+        meta: 'Эффект: снижение зрительного шума на 70%+ • режим CALM FOCUS приглушает здоровые узлы одним кликом.',
+        selector: '#panelCenter',
+        actionLabel: '🧘 Переключить CALM FOCUS',
+        action: () => toggleCalmMode()
+      },
+      {
+        badge: 'SA LEVEL 2 • TOPOLOGICAL RADAR',
+        title: 'Радар «Кто → Кого → Зачем ждёт» и Sankey-магистрали',
+        desc: 'Вместо прыжков по 10 терминалам оператор за 1 взгляд видит цепочку блокировок слева и толщину потока задач в центре. Клик по магистрали открывает историю конвертов.',
+        meta: 'Эффект: понимание состояния всего флота за 2–3 секунды без чтения логов.',
+        selector: '#panelLeft',
+        actionLabel: '◧ Показать / скрыть Радар',
+        action: () => toggleSidebar('left')
+      },
+      {
+        badge: 'SA LEVEL 3 • PROJECTION & ADVISOR',
+        title: 'Прогноз выгорания контекста (Burn-Rate) и Советник флота',
+        desc: 'Верхняя полоса прогнозирует время до порога 75% CTX и подсвечивает системные узкие места (зависшие задачи, перекос моделей, частые возвраты QA) с готовыми действиями в 1 клик.',
+        meta: 'Эффект: превентивный /compact и перебалансировка до того, как агент упадёт или сожжёт квоту.',
+        selector: '#triageStrip',
+        actionLabel: '💡 Открыть Советник флота',
+        action: () => { if (typeof openFleetAdvisorModal === 'function') openFleetAdvisorModal(); }
+      },
+      {
+        badge: 'COGNITIVE ERGONOMICS • PROGRESSIVE DISCLOSURE',
+        title: '3 уровня глубины (L1 → L2 → L3) и компактная плотность FIT',
+        desc: 'Карта (L1) показывает только статус и контекст; инспектор справа (L2) — паспорт и правила роли; нижний блок (L3) — живой захват tmux и отправку команд прямо из браузера.',
+        meta: 'Горячие клавиши: [ Радар • ] Инспектор • \\ Только граф • D Плотность FIT/Детально • F Fullscreen.',
+        selector: '#panelRight',
+        actionLabel: '📐 Переключить FIT / Детально',
+        action: () => toggleDensityMode()
+      },
+      {
+        badge: 'PIPELINE FLOW • 6 СТАНЦИЙ ПОСТАВКИ',
+        title: 'Дорожки слайсов и детекция возвратов QA (Bounce-Back)',
+        desc: 'Каждая задача видна на 6 фиксированных этапах (Spec/Dev → Код → QA Границы → Сверка → Приёмка → Push). Сразу видно, какой слайс зациклился на доработках.',
+        meta: 'Эффект: ноль потерянных задач при параллельной работе 4–10+ кодеров.',
+        selector: '.swimlanes-section',
+        actionLabel: '🕸️ Сбросить фильтры потоков',
+        action: () => setSliceFilter('all')
+      }
+    ];
+
+    let saTourOpen = false;
+    let saTourIdx = 0;
+
+    function clearSaSpotlight() {
+      document.querySelectorAll('.sa-spotlight').forEach(el => el.classList.remove('sa-spotlight'));
+    }
+
+    function renderSaTour() {
+      const card = document.getElementById('saTourCard');
+      const btn = document.getElementById('btnSaTour');
+      clearSaSpotlight();
+      if (!saTourOpen) {
+        if (card) card.classList.remove('open');
+        if (btn) btn.classList.remove('sa-active');
+        return;
+      }
+      if (btn) btn.classList.add('sa-active');
+      const step = SA_TOUR_STEPS[saTourIdx] || SA_TOUR_STEPS[0];
+      const targetEl = step.selector ? document.querySelector(step.selector) : null;
+      if (targetEl) {
+        targetEl.classList.add('sa-spotlight');
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      if (!card) return;
+      card.innerHTML = `
+        <div class="sa-tour-top">
+          <span class="sa-tour-badge">${step.badge}</span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:#94a3b8;">Шаг ${saTourIdx + 1} / ${SA_TOUR_STEPS.length} • [Esc] закрыть</span>
+        </div>
+        <div class="sa-tour-title">${step.title}</div>
+        <div class="sa-tour-desc">${step.desc}</div>
+        <div class="sa-tour-meta">${step.meta}</div>
+        <div class="sa-tour-actions">
+          <button class="cyber-btn" onclick="runSaTourAction()" style="border-color:rgba(0,255,157,0.55); color:#6ee7b7;">${step.actionLabel}</button>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="cyber-btn" onclick="moveSaTour(-1)">← Назад</button>
+            <button class="cyber-btn" onclick="moveSaTour(1)" style="border-color:#00f0ff; color:#67e8f9;">Далее →</button>
+            <button class="cyber-btn" onclick="closeSaTour()">✕</button>
+          </div>
+        </div>
+      `;
+      card.classList.add('open');
+    }
+
+    function toggleSaTour() {
+      saTourOpen = !saTourOpen;
+      if (saTourOpen) saTourIdx = 0;
+      renderSaTour();
+    }
+
+    function closeSaTour() {
+      if (!saTourOpen) return;
+      saTourOpen = false;
+      renderSaTour();
+    }
+
+    function moveSaTour(delta) {
+      saTourIdx = (saTourIdx + delta + SA_TOUR_STEPS.length) % SA_TOUR_STEPS.length;
+      renderSaTour();
+    }
+
+    function runSaTourAction() {
+      const step = SA_TOUR_STEPS[saTourIdx];
+      if (step && typeof step.action === 'function') step.action();
+    }
 
     // Initial render + start live polling loop
     initSidebarState();
