@@ -15,5 +15,6 @@ export {
   buildOntologySnapshot,
   getSeatActiveObligation,
   getSituationsForSeat,
-  getFleetBudgetRows
+  getFleetBudgetRows,
+  getActionRecordsForSeat
 } from './snapshot.js';

@@ -346,9 +346,20 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
     obligations,
     openObligations,
     situations,
+    actionRecords: Array.isArray(data.actionAudit) ? data.actionAudit : [],
     fleetUsageSummary: data.fleetUsageSummary || null,
     intelligence
   };
+}
+
+/**
+ * Pure selector: returns recent operator ActionRecords for a seat (newest first).
+ */
+export function getActionRecordsForSeat(snapshot, seatId, limit = 5) {
+  if (!snapshot || !seatId || !Array.isArray(snapshot.actionRecords)) return [];
+  return snapshot.actionRecords
+    .filter(r => r && r.targetSeatId === seatId)
+    .slice(0, Math.max(1, limit));
 }
 
 /**

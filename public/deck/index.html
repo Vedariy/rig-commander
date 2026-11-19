@@ -2147,7 +2147,7 @@
       const key = btn.getAttribute('data-key');
       const statusElId = btn.getAttribute('data-status') || 'cmdSendStatus';
       if (!seat || !key) return;
-      sendTerminalKey(seat, key, statusElId);
+      sendTerminalKey(seat, key, statusElId, 'answer_prompt_option');
       if (statusElId === 'modalCmdStatus') {
         setTimeout(fetchModalCapture, 450);
       } else {
@@ -2190,6 +2190,7 @@
 
     function dispatchOntologyAction(btn) {
       if (!btn) return;
+      const actionId = btn.getAttribute('data-action-id') || '';
       const transport = btn.getAttribute('data-transport') || '';
       const seatId = btn.getAttribute('data-seat') || '';
       const payload = btn.getAttribute('data-payload') || '';
@@ -2198,9 +2199,9 @@
       const closeModal = btn.getAttribute('data-close-modal') || '';
 
       if (transport === 'tmux_key' && seatId && payload) {
-        sendTerminalKey(seatId, payload, statusElId);
+        sendTerminalKey(seatId, payload, statusElId, actionId);
       } else if (transport === 'tmux_raw' && seatId && payload) {
-        sendTerminalRaw(seatId, payload, statusElId);
+        sendTerminalRaw(seatId, payload, statusElId, actionId);
       } else if (transport === 'modal_terminal' && seatId) {
         selectAgent(seatId);
         openTerminalModal(seatId);
@@ -2229,6 +2230,35 @@
           <summary style="cursor:pointer; font-family:var(--font-mono); font-size:10px; color:#64748b; user-select:none;">⌨️ Ручные клавиши / команды</summary>
           <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${manualHtml}</div>
         </details>
+      `;
+    }
+
+    function renderActionAuditHtml(seatId) {
+      const records = window.ONTOLOGY_SNAPSHOT && typeof getActionRecordsForSeat === 'function'
+        ? getActionRecordsForSeat(window.ONTOLOGY_SNAPSHOT, seatId, 5)
+        : [];
+      if (!records.length) return '';
+      const iconOf = (st) =>
+        st === 'verified' ? '✅' :
+        st === 'pending' ? '⏳' :
+        st === 'unchanged' ? '⚠️' : '❌';
+      const colorOf = (st) =>
+        st === 'verified' ? '#6ee7b7' :
+        st === 'pending' ? '#7dd3fc' :
+        st === 'unchanged' ? '#fde68a' : '#fda4af';
+      return `
+        <div style="background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.16); border-radius:6px; padding:6px 8px; display:flex; flex-direction:column; gap:4px;">
+          <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; letter-spacing:0.4px;">🧾 ЖУРНАЛ ДЕЙСТВИЙ (AUDIT + POSTCONDITION)</div>
+          ${records.map(r => {
+            const tm = r.executedAt ? new Date(r.executedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+            return `
+              <div style="font-family:var(--font-mono); font-size:10.5px; display:flex; justify-content:space-between; align-items:baseline; gap:6px; border-top:1px dashed rgba(148,163,184,0.12); padding-top:3px;">
+                <span style="color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(r.payloadPreview)}">${iconOf(r.postconditionStatus)} <b>${escapeHtml(r.actionId)}</b></span>
+                <span style="color:${colorOf(r.postconditionStatus)}; flex-shrink:0; font-size:10px;" title="${escapeHtml(r.postconditionDetail || '')}">${escapeHtml(r.postconditionDetail || r.postconditionStatus)} · ${tm}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
       `;
     }
 
@@ -2317,6 +2347,15 @@
         const elTechMeta = document.getElementById('inspTechMeta');
         if (elTechMeta) {
           elTechMeta.innerHTML = `📥 ${agent.callsIn} / 📤 ${agent.callsOut} выз • 📂 ${escapeHtml(agent.cwd)}${agent.assignedWorkCount ? ` • В работе: ${agent.assignedWorkCount}` : ''}${escapeHtml(formatSeatUsageMeta(agent))}`;
+        }
+
+        const elAudit = document.getElementById('inspActionAudit');
+        if (elAudit) {
+          const auditHtml = renderActionAuditHtml(agent.id);
+          if (elAudit.getAttribute('data-cache-key') !== auditHtml) {
+            elAudit.innerHTML = auditHtml;
+            elAudit.setAttribute('data-cache-key', auditHtml);
+          }
         }
 
         const elGuidance = document.getElementById('inspGuidanceBody');
@@ -2426,6 +2465,7 @@
                 <div id="inspTechMeta" style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; background:rgba(15,23,42,0.45); padding:5px 8px; border-radius:5px;">
                   📥 ${agent.callsIn} / 📤 ${agent.callsOut} выз • 📂 ${escapeHtml(agent.cwd)}${agent.assignedWorkCount ? ` • В работе: ${agent.assignedWorkCount}` : ''}${escapeHtml(formatSeatUsageMeta(agent))}
                 </div>
+                <div id="inspActionAudit">${renderActionAuditHtml(agent.id)}</div>
                 <div class="guidance-panel" style="margin-top:0;">
                   <div class="guidance-tabs">
                     <button class="guidance-tab-btn ${activeInspectorTab === 'rules' ? 'active' : ''}" data-tab="rules" onclick="setInspectorTab('rules')">📋 ПРАВИЛА</button>
@@ -3246,7 +3286,7 @@
       }
     }
 
-    async function executeApiSend(seat, text, type, statusElId) {
+    async function executeApiSend(seat, text, type, statusElId, actionId = '') {
       const statusEl = statusElId ? document.getElementById(statusElId) : null;
       if (statusEl) {
         statusEl.className = 'ctrl-status';
@@ -3259,7 +3299,7 @@
             'Content-Type': 'application/json',
             'X-Deck-Token': (document.querySelector('meta[name="deck-token"]') || {}).content || ''
           },
-          body: JSON.stringify({ seat, text, type })
+          body: JSON.stringify({ seat, text, type, actionId })
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Ошибка отправки');
@@ -3291,12 +3331,12 @@
       }
     }
 
-    function sendTerminalKey(seat, keyStr, statusElId = 'cmdSendStatus') {
-      executeApiSend(seat, keyStr, 'key', statusElId);
+    function sendTerminalKey(seat, keyStr, statusElId = 'cmdSendStatus', actionId = '') {
+      executeApiSend(seat, keyStr, 'key', statusElId, actionId);
     }
 
-    function sendTerminalRaw(seat, rawText, statusElId = 'cmdSendStatus') {
-      executeApiSend(seat, rawText, 'raw', statusElId);
+    function sendTerminalRaw(seat, rawText, statusElId = 'cmdSendStatus', actionId = '') {
+      executeApiSend(seat, rawText, 'raw', statusElId, actionId);
     }
 
     function submitAgentPrompt(seat, ev, inputId = 'terminalCmdInput', statusElId = 'cmdSendStatus') {

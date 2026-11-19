@@ -8,10 +8,13 @@ import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { FleetIntelligenceEngine } from './lib/fleet-intelligence/index.mjs';
+import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalThrottleMs: 3000 });
+const actionAudit = new ActionAuditLog({ maxRecords: 100 });
+const latestSeatBaselines = new Map();
 
 function tokenMatches(got) {
   const a = Buffer.from(String(got || ''));
@@ -955,6 +958,15 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // Update latest per-seat baselines & reconcile pending action postconditions
+    for (const node of nodes) {
+      const seatId = node && node.canonicalSessionName;
+      if (seatId) {
+        boundedMapSet(latestSeatBaselines, seatId, extractSeatBaseline(node, parkedSeats[seatId] || null), MAX_GUIDANCE_CACHE);
+      }
+    }
+    actionAudit.reconcileWithTelemetry(nodes, parkedSeats);
+
     const payload = {
       timestamp: new Date().toISOString(),
       requestedRig,
@@ -976,6 +988,7 @@ const server = http.createServer(async (req, res) => {
       seatGuidance: guidanceMap,
       seatUsage: usageReport.seatUsage,
       fleetUsageSummary: usageReport.fleetUsageSummary,
+      actionAudit: actionAudit.list(30),
       intelligence: fleetIntelligence.getLatestReport(requestedRig)
     };
 
@@ -993,6 +1006,17 @@ const server = http.createServer(async (req, res) => {
     const requestedRig = url.searchParams.get('rig') || 'all';
     const report = fleetIntelligence.getLatestReport(requestedRig);
     await sendJson(req, res, 200, report);
+    return;
+  }
+
+  // 1.2 Action Audit Log endpoint (read-only)
+  if (url.pathname === '/api/audit') {
+    const seat = url.searchParams.get('seat') || null;
+    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 30));
+    await sendJson(req, res, 200, {
+      timestamp: new Date().toISOString(),
+      records: actionAudit.list(limit, seat)
+    });
     return;
   }
 
@@ -1042,6 +1066,8 @@ const server = http.createServer(async (req, res) => {
           const seat = String(payload.seat || '').trim();
           const text = String(payload.text || '');
           const type = String(payload.type || 'msg').trim(); // 'msg' | 'raw' | 'key' | 'interact'
+          const actionId = String(payload.actionId || '').trim();
+          const baseline = latestSeatBaselines.get(seat) || null;
 
           if (!/^[a-zA-Z0-9._@-]+$/.test(seat)) {
             await sendJson(req, res, 400, { ok: false, error: 'Invalid seat identifier' });
@@ -1053,6 +1079,7 @@ const server = http.createServer(async (req, res) => {
             // Specific tmux keystrokes validated against strict allowlist (prevents flag injection)
             const keyArgs = parseAllowedTmuxKeys(text);
             if (!keyArgs) {
+              actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 400, ok: false, baseline });
               await sendJson(req, res, 400, { ok: false, error: 'Disallowed tmux keystroke' });
               return;
             }
@@ -1065,6 +1092,7 @@ const server = http.createServer(async (req, res) => {
 
             // 2. Pi harness guard: Pi (DeepSeek) does not support slash commands
             if ((seat.includes('coder3') || seat.includes('pi')) && cleanText.startsWith('/compact')) {
+              actionAudit.record({ actionId, seatId: seat, type, payload: cleanText, httpStatus: 400, ok: false, baseline });
               await sendJson(req, res, 400, { ok: false, error: 'Харнес Pi (DeepSeek) не поддерживает команду /compact. Используйте ротацию сиденья.' });
               return;
             }
@@ -1091,7 +1119,8 @@ const server = http.createServer(async (req, res) => {
             output = await safeTextExec(RIG_BIN, ['send', seat, text]);
           }
 
-          await sendJson(req, res, 200, { ok: true, seat, type, text, output: (output || '').trim() });
+          const auditRec = actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
+          await sendJson(req, res, 200, { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() });
         } catch (err) {
           await sendJson(req, res, 500, { ok: false, error: err.message });
         }
