@@ -7,3 +7,13 @@ export {
   getManualHarnessActions,
   resolveActionFromFinding
 } from './actions.js';
+
+export {
+  shouldIncludeLiveNode,
+  updateContextHistory,
+  classifySeatOperationalState,
+  buildOntologySnapshot,
+  getSeatActiveObligation,
+  getSituationsForSeat,
+  getFleetBudgetRows
+} from './snapshot.js';

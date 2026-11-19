@@ -917,18 +917,8 @@
     }
 
     function ensureDynamicAgent(liveNode) {
-      if (!liveNode || !liveNode.canonicalSessionName) return null;
+      if (!shouldIncludeLiveNode(liveNode)) return null;
       const id = liveNode.canonicalSessionName;
-      // Filter out internal daemon workers and raw human terminals
-      if (id.includes('operator-human') || id.includes('queue-worker')) return null;
-      // CorePlatform dashboard: from kernel rig, only operator-agent acts as bridge dispatcher
-      if (id.includes('@kernel') && id !== 'operator-agent@kernel') return null;
-      if (liveNode.nodeKind === 'infrastructure' &&
-          !liveNode.modelObservation?.model &&
-          !liveNode.model &&
-          !/(check|qa|coder|owner|operator|senior|arch|lead)/i.test(id)) {
-        return null;
-      }
 
       let agent = AGENTS.find(a => a.id === id);
       if (agent) return agent;
@@ -1962,24 +1952,37 @@
 
     function renderCurrentTaskHtml(agent) {
       if (!agent) return '';
-      const queueSource = IS_LIVE ? LIVE_OPEN_QUEUE : LIVE_QITEMS.map(q => ({
-        sourceSession: q.from,
-        destinationSession: q.to,
-        state: String(q.state || '').includes('in-progress') ? 'in-progress' : 'pending',
-        tags: q.slice ? [q.slice.startsWith('slice:') ? q.slice : `slice:${q.slice}`] : [],
-        summary: q.summary || ''
-      }));
-
-      const myTasks = queueSource.filter(q =>
-        q.destinationSession === agent.id && (q.state === 'in-progress' || q.state === 'pending' || q.state === 'claimed')
-      );
-      myTasks.sort((a, b) => (a.state === 'in-progress' ? -1 : 1) - (b.state === 'in-progress' ? -1 : 1));
-      const activeTask = myTasks[0];
+      let activeTask = null;
+      let totalCount = 0;
+      if (IS_LIVE && window.ONTOLOGY_SNAPSHOT) {
+        const hit = getSeatActiveObligation(window.ONTOLOGY_SNAPSHOT, agent.id);
+        if (hit) {
+          activeTask = {
+            slice: hit.primary.slice,
+            from: hit.primary.fromSeatId,
+            state: hit.primary.state,
+            summary: hit.primary.summary
+          };
+          totalCount = hit.totalCount;
+        }
+      } else {
+        const myTasks = LIVE_QITEMS.filter(q =>
+          q.to === agent.id || resolveSeatIdByShort(q.to) === agent.id
+        ).map(q => ({
+          slice: (q.slice || '').replace(/^slice:/, ''),
+          from: q.from,
+          state: String(q.state || '').includes('in-progress') ? 'in-progress' : 'pending',
+          summary: q.summary || ''
+        }));
+        myTasks.sort((a, b) => (a.state === 'in-progress' ? -1 : 1) - (b.state === 'in-progress' ? -1 : 1));
+        activeTask = myTasks[0] || null;
+        totalCount = myTasks.length;
+      }
 
       if (activeTask) {
-        const sliceTag = ((activeTask.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', '');
-        const fromShort = activeTask.sourceSession ? shortSeat(activeTask.sourceSession) : '';
-        const extra = myTasks.length > 1 ? ` <span style="color:#94a3b8; font-weight:500;">(+${myTasks.length - 1})</span>` : '';
+        const sliceTag = activeTask.slice || '';
+        const fromShort = activeTask.from ? shortSeat(activeTask.from) : '';
+        const extra = totalCount > 1 ? ` <span style="color:#94a3b8; font-weight:500;">(+${totalCount - 1})</span>` : '';
         return `
           <div style="background:rgba(14,165,233,0.08); border:1px solid rgba(56,189,248,0.28); border-radius:6px; padding:7px 9px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:3px;">
@@ -2552,12 +2555,13 @@
         const res = await fetch(`/api/telemetry${rigParam}`);
         if (!res.ok) throw new Error('Offline');
         const data = await res.json();
-        window.LIVE_INTELLIGENCE = data.intelligence || null;
+        const snapshot = buildOntologySnapshot(data, window.ONTOLOGY_SNAPSHOT);
+        window.ONTOLOGY_SNAPSHOT = snapshot;
+        window.LIVE_INTELLIGENCE = snapshot.intelligence;
         window.LIVE_SEAT_USAGE = data.seatUsage || {};
-        window.LIVE_FLEET_USAGE = data.fleetUsageSummary || null;
+        window.LIVE_FLEET_USAGE = snapshot.fleetUsageSummary;
 
-        const hasLiveDaemonData = (Array.isArray(data.nodes) && data.nodes.length > 0) ||
-                                  (Array.isArray(data.availableRigs) && data.availableRigs.length > 0);
+        const hasLiveDaemonData = snapshot.hasLiveDaemonData;
         const badge = document.getElementById('liveConnectionBadge');
         if (hasLiveDaemonData) {
           badge.textContent = `● LIVE API :${location.port || '7440'}`;
@@ -2567,14 +2571,14 @@
           badge.classList.add('offline');
         }
 
-        if (Array.isArray(data.availableRigs) && data.availableRigs.length > 0) {
+        if (snapshot.rigs.length > 0) {
           const sel = document.getElementById('rigFilterSelect');
           if (sel) {
             const curVal = currentRigFilter;
             const optionsHtml = [
-              `<option value="all"${curVal === 'all' ? ' selected' : ''}>🌐 ВСЕ РИГИ (${data.availableRigs.length})</option>`,
-              ...data.availableRigs.map(r =>
-                `<option value="${r.name}"${curVal === r.name ? ' selected' : ''}>${r.status === 'running' ? '🟢' : '🟡'} ${r.name} (${r.runningCount}/${r.nodeCount})</option>`
+              `<option value="all"${curVal === 'all' ? ' selected' : ''}>🌐 ВСЕ РИГИ (${snapshot.rigs.length})</option>`,
+              ...snapshot.rigs.map(r =>
+                `<option value="${escapeHtml(r.name)}"${curVal === r.name ? ' selected' : ''}>${r.status === 'running' ? '🟢' : '🟡'} ${escapeHtml(r.name)} (${r.runningCount}/${r.nodeCount})</option>`
               )
             ].join('');
             if (sel.getAttribute('data-rigs-key') !== optionsHtml) {
@@ -2584,17 +2588,17 @@
           }
         }
 
-        const timeStr = new Date(data.timestamp).toLocaleTimeString('ru-RU');
+        const timeStr = new Date(snapshot.timestamp).toLocaleTimeString('ru-RU');
         document.getElementById('lastSyncSubtitle').textContent =
           `ПОСЛЕДНЯЯ СИНХРОНИЗАЦИЯ С RIG DAEMON: ${timeStr} MSK • АВТООБНОВЛЕНИЕ КАЖДЫЕ 4 СЕК`;
 
-        // Update nodes state & exact TUI contextUsage.usedPercentage from OpenRig Daemon /api/rigs/:id/nodes
+        // Project canonical Ontology Seats & OccupantSessions onto topology AGENTS layout cards
         let workingCount = 0;
         let attnNodes = [];
         if (Array.isArray(data.nodes)) {
           if (data.nodes.length > 0 && !hasPurgedSnapshotSeeds) {
             hasPurgedSnapshotSeeds = true;
-            const liveIds = new Set(data.nodes.map(n => n.canonicalSessionName).filter(Boolean));
+            const liveIds = new Set(Object.keys(snapshot.seatsById));
             const removedIds = new Set();
             for (let i = AGENTS.length - 1; i >= 0; i--) {
               if (!liveIds.has(AGENTS[i].id)) {
@@ -2609,9 +2613,9 @@
             }
             if (removedIds.has(selectedAgentId)) {
               const seatPrefix = String(selectedAgentId).split('@')[0] + '@';
-              const liveMatch = data.nodes.find(n => n.canonicalSessionName && n.canonicalSessionName.startsWith(seatPrefix));
-              selectedAgentId = (liveMatch && liveMatch.canonicalSessionName) ||
-                (data.nodes[0] && data.nodes[0].canonicalSessionName) ||
+              const liveMatch = snapshot.seats.find(s => s.seatId.startsWith(seatPrefix));
+              selectedAgentId = (liveMatch && liveMatch.seatId) ||
+                (snapshot.seats[0] && snapshot.seats[0].seatId) ||
                 selectedAgentId;
               fetchTerminalCapture(selectedAgentId, true);
             }
@@ -2621,100 +2625,44 @@
           for (const liveNode of data.nodes) {
             const target = ensureDynamicAgent(liveNode);
             if (!target) continue;
+            const seat = snapshot.seatsById[target.id];
+            const sess = snapshot.sessionsBySeatId[target.id];
+            if (!seat || !sess) continue;
 
-            // 1. Exact CTX % and Window Size from daemon contextUsage (matches OpenRig TUI 1:1!)
-            if (liveNode.contextUsage) {
-              target.ctxPct = liveNode.contextUsage.usedPercentage;
-              target.ctxWindowSize = liveNode.contextUsage.contextWindowSize;
-              target.ctxUsedTokens = liveNode.contextUsage.usedTokens || liveNode.contextUsage.totalInputTokens || null;
-              target.ctxSource = liveNode.contextUsage.source;
-              target.ctxSampledAt = liveNode.contextUsage.sampledAt || null;
-              // Burn-rate history: keep a rolling window of (time, pct) samples, reset on swap (pct drop)
-              if (typeof target.ctxPct === 'number') {
-                if (!Array.isArray(target.ctxHistory)) target.ctxHistory = [];
-                const last = target.ctxHistory[target.ctxHistory.length - 1];
-                if (last && target.ctxPct < last.pct - 5) target.ctxHistory = [];
-                if (!last || last.pct !== target.ctxPct || Date.now() - last.t > 60000) {
-                  target.ctxHistory.push({ t: Date.now(), pct: target.ctxPct });
-                  if (target.ctxHistory.length > 120) target.ctxHistory.shift();
-                }
-              }
-            }
-            const actState = liveNode.activityState || {};
-            target.needsInputCount = (actState.needsInput && actState.needsInput.count) || 0;
-            target.needsInputReason = (actState.needsInput && actState.needsInput.reason) || '';
-            target.lastSwapAt = (actState.lastSwap && actState.lastSwap.at) || null;
-            target.assignedWorkCount = liveNode.assignedWorkCount || 0;
-            target.inProgressWorkCount = liveNode.inProgressWorkCount || 0;
-            target.pendingWorkCount = liveNode.pendingWorkCount || 0;
-            target.lastActivityAt = liveNode.lastActivityAt || null;
-            target.tmuxAttachCommand = liveNode.tmuxAttachCommand || null;
-            if (liveNode.effort) target.effort = liveNode.effort;
+            // Project OccupantSession
+            target.ctxPct = sess.ctxPct;
+            target.ctxWindowSize = sess.ctxWindowSize;
+            target.ctxUsedTokens = sess.ctxUsedTokens;
+            target.ctxSource = sess.ctxSource;
+            target.ctxSampledAt = sess.ctxSampledAt;
+            target.ctxHistory = sess.ctxHistory;
+            target.lastSwapAt = sess.lastSwapAt;
+            target.compactionsCount = sess.compactionsCount;
+            target.recapSnippet = sess.recapSnippet;
+            target.usage = sess.usage;
+            target.model = sess.model;
+            if (sess.effort) target.effort = sess.effort;
 
-            // Live queue traffic & persistent compaction memory
-            if (data.history && data.history.nodeTraffic && data.history.nodeTraffic[target.id]) {
-              target.callsIn = data.history.nodeTraffic[target.id].in || 0;
-              target.callsOut = data.history.nodeTraffic[target.id].out || 0;
-            }
-            if (data.seatCompactions && data.seatCompactions[target.id]) {
-              target.compactionsCount = data.seatCompactions[target.id].compactionsCount || 0;
-              target.recapSnippet = data.seatCompactions[target.id].recapSnippet || '';
-            }
-            if (data.seatGuidance && data.seatGuidance[target.id]) {
-              target.guidance = data.seatGuidance[target.id];
-            }
-            target.usage = (data.seatUsage && data.seatUsage[target.id]) || null;
+            // Project Seat
+            target.harness = seat.harness;
+            target.state = seat.state;
+            target.activityLabel = seat.activityLabel;
+            target.needsInputCount = seat.needsInputCount;
+            target.needsInputReason = seat.needsInputReason;
+            target.parkedData = seat.parkedData;
+            target.parkedReason = seat.parkedReason;
+            target.isAnomaly = seat.isCalmVisible;
+            target.assignedWorkCount = seat.assignedWorkCount;
+            target.inProgressWorkCount = seat.inProgressWorkCount;
+            target.pendingWorkCount = seat.pendingWorkCount;
+            target.callsIn = seat.callsIn;
+            target.callsOut = seat.callsOut;
+            target.lastActivityAt = seat.lastActivityAt;
+            target.tmuxAttachCommand = seat.tmuxAttachCommand;
+            if (seat.guidance) target.guidance = seat.guidance;
 
-            // 2. Exact Activity State from daemon activityState.display / agentActivity.state
-            const dispState = (liveNode.activityState && liveNode.activityState.display) ||
-                              (liveNode.agentActivity && liveNode.agentActivity.state) || 'idle';
-            const isTerminalBlocked = target.needsInputCount > 0 || dispState === 'needs-input';
-            const parkedData = (data.parkedSeats && data.parkedSeats[liveNode.canonicalSessionName]) || null;
-            target.parkedData = parkedData;
-
-            if (isTerminalBlocked) {
-              target.state = 'urgent';
-              const reasonTag = target.needsInputReason ? ` (${target.needsInputReason})` : '';
-              target.activityLabel = `🚨 NEEDS INPUT${reasonTag}`;
-              attnNodes.push(target);
-            } else if (dispState === 'working' || dispState === 'running') {
-              target.state = 'working';
-              target.activityLabel = `🟢 WORKING (${liveNode.assignedWorkCount || 0})`;
-              workingCount++;
-            } else if (parkedData && parkedData.parked) {
-              // Real OpenRig PARKED: stopped with obligations that lack a live healthy wake!
-              target.state = 'waiting';
-              target.activityLabel = `🟠 PARKED (${parkedData.openCount + parkedData.heldCount})`;
-              target.parkedReason = parkedData.reason;
-            } else if (parkedData && parkedData.heldCount > 0 && parkedData.unhealthyHeldCount === 0) {
-              // Healthy HELD: paused with an armed live timer wake (e.g. dev-operator)
-              target.state = 'idle';
-              target.activityLabel = `⏳ HELD (${parkedData.heldCount} с wake)`;
-              target.parkedReason = parkedData.reason;
-            } else if (liveNode.assignedWorkCount > 0) {
-              target.state = 'waiting';
-              target.activityLabel = `🟠 ЗАДАЧИ (${liveNode.assignedWorkCount})`;
-            } else {
-              target.state = 'idle';
-              target.activityLabel = liveNode.needsAttention ? '🔵 IDLE (ATTN)' : '🔵 IDLE';
-            }
-
-            const isHotCtx = typeof target.ctxPct === 'number' && target.ctxPct >= 75;
-            const isParked = Boolean(parkedData && parkedData.parked);
-            target.isAnomaly = Boolean(
-              target.state === 'urgent' ||
-              target.state === 'working' ||
-              isHotCtx ||
-              isParked
-            );
-
-            // 3. Exact Model & Effort
-            if (liveNode.modelObservation && liveNode.modelObservation.model) {
-              const eff = liveNode.effort ? ` (${liveNode.effort}*)` : '';
-              target.model = `${liveNode.modelObservation.model}${eff}`;
-            } else if (Array.isArray(liveNode.modelObservation) && liveNode.modelObservation[0]) {
-              target.model = liveNode.modelObservation[0];
-            }
+            if (seat.state === 'urgent') attnNodes.push(target);
+            if (seat.state === 'working') workingCount++;
           }
         }
 
@@ -3682,10 +3630,11 @@
           </table>
         `;
       } else if (activeFleetTab === 'budget') {
-        const seatUsageMap = window.LIVE_SEAT_USAGE || {};
-        const fleetSum = window.LIVE_FLEET_USAGE;
-        const usageRows = Object.entries(seatUsageMap)
-          .sort((a, b) => (b[1].estUsd || 0) - (a[1].estUsd || 0));
+        const snap = window.ONTOLOGY_SNAPSHOT;
+        const fleetSum = (snap && snap.fleetUsageSummary) || window.LIVE_FLEET_USAGE;
+        const usageRows = snap
+          ? getFleetBudgetRows(snap).map(u => [u.seatId, u])
+          : Object.entries(window.LIVE_SEAT_USAGE || {}).sort((a, b) => (b[1].estUsd || 0) - (a[1].estUsd || 0));
 
         const liveBudgetHtml = usageRows.length > 0 ? `
           <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; background:rgba(15,23,42,0.7); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:8px 12px; margin-bottom:10px; font-family:var(--font-mono); font-size:11.5px;">
