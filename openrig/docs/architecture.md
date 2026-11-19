@@ -221,3 +221,89 @@ sequenceDiagram
 | Аудио-радар и заголовок вкладки | новые `ATTN` / `CTX ≥ 75%` (сигнал только при появлении, без повтора) | `updateAlertsAndTitle()`, `playBeep()` |
 
 Темп выгорания считается только по замерам, накопленным с момента открытия страницы. После перезагрузки страницы ему нужно несколько минут, чтобы появилась оценка.
+
+---
+
+## 8. Контекстная диаграмма (C4 Level 1 — System Context & Trust Boundaries)
+
+Показывает границы системы **RigCommander**, разделение **read-only телеметрии** и **защищённого write-back контура**, а также режим статического демо на Vercel.
+
+```mermaid
+flowchart LR
+    OP["👤 Оператор (Браузер)"]
+
+    subgraph LOCAL["Локальный контур доверия (127.0.0.1)"]
+        DECK["💠 RigCommander Deck (server.mjs :7440)"]
+        GATE["🛡️ Security Gate (DECK_TOKEN + Origin + Key Allowlist + 413)"]
+        DAEMON["🧠 OpenRig Daemon (:7437 HTTP)"]
+        CLI["🔧 rig CLI (ps, queue, parked, capture)"]
+        TMUX["🖥️ tmux / rig send (Write-Back)"]
+        FS["📂 Локальная ФС (JSONL транскрипты, decisions/*.tsv, RECAP.md)"]
+    end
+
+    subgraph CLOUD["Статический хостинг (Vercel)"]
+        DEMO["🌐 Public Landing & Demo (/ , /demo, /deck)"]
+    end
+
+    OP -->|"HTTP UI + Polling 4s"| DECK
+    OP -->|"HTTPS (read-only демо)"| DEMO
+    OP -->|"Действия HITL (POST /api/send)"| GATE
+    GATE -->|"Валидированный write-back"| TMUX
+
+    DECK -->|"GET /api/rigs, /nodes (read-only)"| DAEMON
+    DECK -->|"execFile (read-only)"| CLI
+    DECK -->|"Инкрементальное чтение по offset (read-only)"| FS
+```
+
+### Инварианты границ доверия
+- **Нет внешнего биндинга:** сервер слушает строго `127.0.0.1:7440`.
+- **Разделение чтения и записи:** весь сбор телеметрии идёт без мутации состояния агентов; любая запись проходит через `POST /api/send` с per-process `DECK_TOKEN` (`timingSafeEqual`), проверкой `Origin`, ограничением тела `64KB` (`413`) и allowlist клавиш (`parseAllowedTmuxKeys`).
+- **Изоляция статики:** `resolveSafeStaticPath` блокирует `..`, скрытые файлы (`.env`, `.git`) и исходники `.mjs`.
+
+---
+
+## 9. Компонентная диаграмма и карта зависимостей (C4 Level 3 — Components)
+
+Описывает фактическую модульную структуру проекта и целевые границы при дальнейшей декомпозиции (связано с [Операционной онтологией](operational-ontology.md)).
+
+```mermaid
+flowchart TD
+    subgraph FE["Frontend (openrig/)"]
+        HTML["index.html (Проекции: Граф, Гант, Радар, Инспектор, Бюджет)"]
+        CSS["assets/styles/deck.css (Токены и стили панелей)"]
+        DOM["assets/domain/* (Чистые ES-модули: prompt-parser, thermal, audio, gantt-model)"]
+        ONT["assets/ontology/* (Целевой слой: actions.js, snapshot.js)"]
+    end
+
+    subgraph BE["Backend BFF (openrig/server.mjs + lib/)"]
+        SEC["HTTP Router & Security (resolveSafeStaticPath, parseAllowedTmuxKeys, DECK_TOKEN)"]
+        ADP["Adapters & Caches (buildGanttItems, readTranscriptTokenUsage, boundedMapSet)"]
+        FIE["lib/fleet-intelligence/ (Facade + RingBuffer + 5 Detectors + per-rig Advisory)"]
+    end
+
+    subgraph DEV["Доставка и тесты"]
+        SYNC["scripts/sync-public.mjs -> public/ (Vercel)"]
+        TEST["tests/*.test.mjs (node --test, zero-dep)"]
+    end
+
+    HTML --> CSS
+    HTML --> DOM
+    HTML -.->|"Этап A/B"| ONT
+    ONT -.-> DOM
+    HTML -->|"GET /api/telemetry, /capture; POST /api/send"| SEC
+    SEC --> ADP
+    ADP -->|"setImmediate ingest"| FIE
+    FIE -->|"per-rig report"| SEC
+
+    SYNC -.->|"копирует index.html + assets/"| FE
+    TEST -->|"прямой import"| DOM
+    TEST -->|"прямой import"| ADP
+    TEST -->|"прямой import"| SEC
+    TEST -->|"прямой import"| FIE
+```
+
+### Правила зависимостей (Dependency Rules)
+1. **`assets/domain/` не зависит от DOM и `window`:** все модули чистые, детерминированные и импортируются напрямую в `node --test`.
+2. **Один источник правды для копий:** правки вносятся только в `openrig/` и `landing/`, а `public/` обновляется командой `npm run sync:public`.
+3. **Аналитика не блокирует HTTP:** `FleetIntelligenceEngine.ingestSnapshot` выполняется через `setImmediate` с троттлингом и кэшем по `rigId`.
+4. **Действия строго по предусловию:** кнопки write-back в UI появляются только при наличии конкретной причины (`urgent`, `working`, `ctxPct >= 65%`, `parked`) и в дальнейшем сводятся в единый реестр `assets/ontology/actions.js`.

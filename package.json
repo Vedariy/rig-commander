@@ -10,7 +10,9 @@
   },
   "scripts": {
     "start": "node bin/cli.mjs",
-    "deck": "node openrig/server.mjs"
+    "deck": "node openrig/server.mjs",
+    "sync:public": "node scripts/sync-public.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "keywords": [
     "ai-agents",

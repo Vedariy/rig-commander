@@ -186,6 +186,236 @@ const DEFAULT_SEAT_GUIDANCE = {
 };
 
 const seatGuidanceCache = new Map();
+const transcriptUsageCache = new Map();
+const MAX_GUIDANCE_CACHE = 200;
+const MAX_TRANSCRIPT_CACHE = 100;
+
+function boundedMapSet(map, key, value, maxSize) {
+  if (map.has(key)) {
+    map.delete(key);
+  } else if (map.size >= maxSize) {
+    const oldestKey = map.keys().next().value;
+    if (oldestKey !== undefined) map.delete(oldestKey);
+  }
+  map.set(key, value);
+}
+
+const MODEL_PRICING_PER_M = [
+  { match: /opus/i, in: 15.0, cached: 1.5, out: 75.0, tier: 'Tier 3' },
+  { match: /sonnet/i, in: 3.0, cached: 0.3, out: 15.0, tier: 'Tier 2' },
+  { match: /haiku/i, in: 0.8, cached: 0.08, out: 4.0, tier: 'Tier 1' },
+  { match: /gpt-6\.1-terra|terra|mini/i, in: 1.5, cached: 0.15, out: 6.0, tier: 'Tier 2' },
+  { match: /gpt-6|gpt-5|codex|sol/i, in: 2.5, cached: 0.25, out: 15.0, tier: 'Tier 3' },
+  { match: /glm|flash/i, in: 0.5, cached: 0.1, out: 2.0, tier: 'Tier 1' },
+  { match: /deepseek|qwen/i, in: 0.28, cached: 0.03, out: 0.42, tier: 'Tier 1' }
+];
+
+function getModelPricing(modelName) {
+  const m = String(modelName || '');
+  return MODEL_PRICING_PER_M.find(p => p.match.test(m)) || { in: 2.0, cached: 0.2, out: 10.0, tier: 'Tier 2' };
+}
+
+function ingestTranscriptLine(line, state) {
+  if (!line) return;
+  if (!line.includes('token_count') && !line.includes('"usage"')) return;
+  try {
+    const obj = JSON.parse(line);
+    if (obj.type === 'event_msg' && obj.payload && obj.payload.type === 'token_count' && obj.payload.info && obj.payload.info.total_token_usage) {
+      state.codexTotals = obj.payload.info.total_token_usage;
+    } else if (obj.message && obj.message.usage) {
+      const msgId = obj.message.id || `line-${state.claudeByMsgId.size}`;
+      if (obj.message.model) state.lastModel = obj.message.model;
+      state.claudeByMsgId.set(msgId, obj.message.usage);
+    }
+  } catch {
+    // ignore malformed JSONL line
+  }
+}
+
+function summarizeTranscriptState(state) {
+  if (state.codexTotals) {
+    const totalInput = Number(state.codexTotals.input_tokens) || 0;
+    const cachedInput = Number(state.codexTotals.cached_input_tokens) || 0;
+    const uncachedInput = Math.max(0, totalInput - cachedInput);
+    const output = Number(state.codexTotals.output_tokens) || 0;
+    return {
+      source: 'codex_jsonl',
+      model: state.lastModel,
+      inputTokens: totalInput,
+      uncachedInputTokens: uncachedInput,
+      cachedInputTokens: cachedInput,
+      outputTokens: output,
+      totalTokens: totalInput + output
+    };
+  }
+  if (state.claudeByMsgId.size > 0) {
+    let uncachedInput = 0;
+    let cachedInput = 0;
+    let output = 0;
+    for (const u of state.claudeByMsgId.values()) {
+      uncachedInput += (Number(u.input_tokens) || 0) + (Number(u.cache_creation_input_tokens) || 0);
+      cachedInput += Number(u.cache_read_input_tokens) || 0;
+      output += Number(u.output_tokens) || 0;
+    }
+    const totalInput = uncachedInput + cachedInput;
+    return {
+      source: 'claude_jsonl',
+      model: state.lastModel,
+      inputTokens: totalInput,
+      uncachedInputTokens: uncachedInput,
+      cachedInputTokens: cachedInput,
+      outputTokens: output,
+      totalTokens: totalInput + output
+    };
+  }
+  return null;
+}
+
+async function readTranscriptTokenUsage(transcriptPath) {
+  if (!transcriptPath) return null;
+  let fh = null;
+  try {
+    const stat = await fs.stat(transcriptPath);
+    const cached = transcriptUsageCache.get(transcriptPath);
+    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+      return cached.data;
+    }
+
+    const canResume = Boolean(cached && stat.size >= cached.size && cached.offset <= stat.size);
+    const state = canResume
+      ? {
+          codexTotals: cached.codexTotals,
+          claudeByMsgId: cached.claudeByMsgId,
+          lastModel: cached.lastModel
+        }
+      : {
+          codexTotals: null,
+          claudeByMsgId: new Map(),
+          lastModel: null
+        };
+    let readOffset = canResume ? cached.offset : 0;
+    const bytesToRead = stat.size - readOffset;
+
+    let tailLine = '';
+    if (bytesToRead > 0) {
+      fh = await fs.open(transcriptPath, 'r');
+      const buf = Buffer.allocUnsafe(bytesToRead);
+      const { bytesRead } = await fh.read(buf, 0, bytesToRead, readOffset);
+      const slice = buf.subarray(0, bytesRead);
+      const lastNl = slice.lastIndexOf(0x0a);
+      if (lastNl !== -1) {
+        const completeText = slice.subarray(0, lastNl + 1).toString('utf-8');
+        for (const line of completeText.split('\n')) {
+          ingestTranscriptLine(line, state);
+        }
+        readOffset += lastNl + 1;
+        tailLine = slice.subarray(lastNl + 1).toString('utf-8').trim();
+      } else {
+        tailLine = slice.toString('utf-8').trim();
+      }
+    }
+
+    let data;
+    if (tailLine) {
+      const snapState = {
+        codexTotals: state.codexTotals,
+        claudeByMsgId: new Map(state.claudeByMsgId),
+        lastModel: state.lastModel
+      };
+      ingestTranscriptLine(tailLine, snapState);
+      data = summarizeTranscriptState(snapState);
+    } else {
+      data = summarizeTranscriptState(state);
+    }
+
+    boundedMapSet(transcriptUsageCache, transcriptPath, {
+      mtimeMs: stat.mtimeMs,
+      size: stat.size,
+      offset: readOffset,
+      codexTotals: state.codexTotals,
+      claudeByMsgId: state.claudeByMsgId,
+      lastModel: state.lastModel,
+      data
+    }, MAX_TRANSCRIPT_CACHE);
+    return data;
+  } catch {
+    return null;
+  } finally {
+    if (fh) await fh.close().catch(() => {});
+  }
+}
+
+async function buildSeatUsageReport(nodes) {
+  const seatUsage = {};
+  let totalUncached = 0;
+  let totalCached = 0;
+  let totalOutput = 0;
+  let totalUsd = 0;
+
+  await Promise.all((nodes || []).map(async (node) => {
+    const seatId = node.canonicalSessionName || node.logicalId;
+    if (!seatId) return;
+    const cu = node.contextUsage || {};
+    const parsed = await readTranscriptTokenUsage(cu.transcriptPath);
+    const modelName = (node.modelObservation && node.modelObservation.model) || node.model || (parsed && parsed.model) || '';
+    const pricing = getModelPricing(modelName);
+
+    let uncached = 0;
+    let cached = 0;
+    let output = 0;
+    let source = 'none';
+
+    if (parsed) {
+      uncached = parsed.uncachedInputTokens;
+      cached = parsed.cachedInputTokens;
+      output = parsed.outputTokens;
+      source = parsed.source;
+    } else if (typeof cu.totalInputTokens === 'number' || typeof cu.totalOutputTokens === 'number') {
+      uncached = Number(cu.totalInputTokens) || 0;
+      output = Number(cu.totalOutputTokens) || 0;
+      source = 'daemon_ctx';
+    } else {
+      return;
+    }
+
+    const totalInput = uncached + cached;
+    const totalTokens = totalInput + output;
+    const cachedPct = totalInput > 0 ? Math.round((cached / totalInput) * 100) : 0;
+    const estUsd = (uncached / 1e6) * pricing.in + (cached / 1e6) * pricing.cached + (output / 1e6) * pricing.out;
+
+    seatUsage[seatId] = {
+      model: modelName || 'unknown',
+      tier: pricing.tier,
+      source,
+      inputTokens: totalInput,
+      uncachedInputTokens: uncached,
+      cachedInputTokens: cached,
+      outputTokens: output,
+      totalTokens,
+      cachedPct,
+      estUsd: Number(estUsd.toFixed(4))
+    };
+
+    totalUncached += uncached;
+    totalCached += cached;
+    totalOutput += output;
+    totalUsd += estUsd;
+  }));
+
+  const totalInput = totalUncached + totalCached;
+  const fleetUsageSummary = {
+    totalTokens: totalInput + totalOutput,
+    totalInputTokens: totalInput,
+    totalUncachedInputTokens: totalUncached,
+    totalCachedInputTokens: totalCached,
+    totalOutputTokens: totalOutput,
+    cachedPct: totalInput > 0 ? Math.round((totalCached / totalInput) * 100) : 0,
+    totalEstUsd: Number(totalUsd.toFixed(2)),
+    seatCount: Object.keys(seatUsage).length
+  };
+
+  return { seatUsage, fleetUsageSummary };
+}
 
 async function parseAgentsDoc(filePath) {
   try {
@@ -296,7 +526,7 @@ async function resolveSeatGuidance(seatId, liveNode) {
     fallbackRoute: 'OpenRig daemon auto-rotation'
   };
 
-  seatGuidanceCache.set(seatId, result);
+  boundedMapSet(seatGuidanceCache, seatId, result, MAX_GUIDANCE_CACHE);
   return result;
 }
 
@@ -536,10 +766,103 @@ function computeHistoryStats(allQueue) {
     pairEnvelopes,
     coderStats,
     nodeTraffic,
+    ganttItems: buildGanttItems(allQueue),
     sliceStats: Object.fromEntries(
       Object.entries(sliceMap).map(([k, v]) => [k, { ...v, coders: Array.from(v.coders) }])
     )
   };
+}
+
+const GANTT_OPEN_STATES = new Set(['pending', 'in-progress', 'claimed']);
+const GANTT_STALE_OPEN_MS = 6 * 3600 * 1000;
+
+function isGanttSystemNoise(q) {
+  const id = q.qitemId || q.id || '';
+  if (id.startsWith('qitem-opgate-')) return true;
+  if (q.sourceSession === 'operator-change-detector@external') return true;
+  if (Array.isArray(q.tags) && q.tags.includes('stuck-sweep-finding')) return true;
+  return false;
+}
+
+function buildGanttItems(allQueue) {
+  if (!Array.isArray(allQueue)) return [];
+  const rows = allQueue.filter(q => q && q.destinationSession && (q.tsCreated || q.createdAt) && !isGanttSystemNoise(q));
+
+  // Union-find over qitem links (handoff / recovery-for) to group untagged rows into chains
+  const parent = new Map();
+  const find = (a) => {
+    let r = a;
+    while (parent.has(r) && parent.get(r) !== r) r = parent.get(r);
+    return r;
+  };
+  const union = (a, b) => {
+    if (!a || !b) return;
+    if (!parent.has(a)) parent.set(a, a);
+    if (!parent.has(b)) parent.set(b, b);
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent.set(rb, ra);
+  };
+
+  for (const q of rows) {
+    const id = q.qitemId || q.id;
+    if (!id) continue;
+    if (!parent.has(id)) parent.set(id, id);
+    for (const ref of [q.handedOffFrom, q.handedOffTo]) {
+      if (typeof ref === 'string' && ref.startsWith('qitem-')) union(ref, id);
+    }
+    for (const t of (q.tags || [])) {
+      const m = /^recovery-for:(qitem-[\w-]+)$/.exec(t);
+      if (m) union(m[1], id);
+    }
+  }
+
+  // Track next task createdAt per destinationSession to cap stale superseded open rows
+  const byDestTimes = new Map();
+  for (const q of rows) {
+    const t = Date.parse(q.tsCreated || q.createdAt || '');
+    if (!Number.isFinite(t)) continue;
+    if (!byDestTimes.has(q.destinationSession)) byDestTimes.set(q.destinationSession, []);
+    byDestTimes.get(q.destinationSession).push(t);
+  }
+  for (const arr of byDestTimes.values()) arr.sort((a, b) => a - b);
+
+  const nowMs = Date.now();
+  return rows.map(q => {
+    const id = q.qitemId || q.id || '';
+    const sliceTag = (q.tags || []).find(t => typeof t === 'string' && t.startsWith('slice:'));
+    const slice = sliceTag ? sliceTag.slice('slice:'.length) : '';
+    const state = q.state || 'done';
+    const createdStr = q.tsCreated || q.createdAt || null;
+    const createdMs = Date.parse(createdStr || '');
+    const updatedStr = q.closedAt || q.tsUpdated || q.updatedAt || null;
+    const lastTouchMs = Date.parse(updatedStr || q.claimedAt || createdStr || '');
+
+    const destTimes = byDestTimes.get(q.destinationSession) || [];
+    const nextCreatedMs = Number.isFinite(createdMs) ? destTimes.find(t => t > createdMs) : undefined;
+    const hasLaterTask = Number.isFinite(nextCreatedMs);
+    const isStaleOpen = Number.isFinite(lastTouchMs) && (nowMs - lastTouchMs > GANTT_STALE_OPEN_MS);
+
+    let endAt = null;
+    if (!GANTT_OPEN_STATES.has(state)) {
+      endAt = updatedStr || q.claimedAt || createdStr;
+    } else if (hasLaterTask || isStaleOpen) {
+      endAt = updatedStr || (hasLaterTask ? new Date(nextCreatedMs).toISOString() : null) || q.claimedAt || createdStr;
+    }
+
+    return {
+      id,
+      from: q.sourceSession || '',
+      to: q.destinationSession,
+      chain: slice ? `slice:${slice}` : `q:${id ? find(id) : id}`,
+      slice,
+      summary: (q.summary || '').slice(0, 240),
+      state,
+      createdAt: createdStr,
+      claimedAt: q.claimedAt || null,
+      endAt
+    };
+  });
 }
 
 let cachedHistory = { ts: 0, data: null };
@@ -547,7 +870,7 @@ async function getHistoryStats() {
   if (Date.now() - cachedHistory.ts < 20000 && cachedHistory.data) {
     return cachedHistory.data;
   }
-  const allQueue = await safeJsonExec(RIG_BIN, ['queue', 'list', '-a', '-A', '--limit', '300', '--json']);
+  const allQueue = await safeJsonExec(RIG_BIN, ['queue', 'list', '-a', '-A', '--limit', '800', '--json']);
   const data = computeHistoryStats(allQueue);
   cachedHistory = { ts: Date.now(), data };
   return data;
@@ -566,11 +889,23 @@ const server = http.createServer(async (req, res) => {
       ? allRigs
       : allRigs.filter(r => r.rigId === requestedRig || r.name === requestedRig || r.rigName === requestedRig);
 
-    // Fallback if no rigs found via ps
-    const effectiveRigs = targetRigs.length > 0 ? targetRigs : [
-      { rigId: '01M67K8ARXGTK4NFKC1C0NZP4X', name: 'core-platform', rigName: 'core-platform' },
-      { rigId: '01M497NCDWB4JA5FN1VPSTG6QY', name: 'kernel', rigName: 'kernel' }
-    ];
+    // Fallback if no rigs found via `rig ps --json`: query daemon /api/rigs directly
+    let effectiveRigs = targetRigs;
+    if (effectiveRigs.length === 0) {
+      const daemonRigs = await fetchDaemonJson('/api/rigs');
+      if (Array.isArray(daemonRigs)) {
+        const mapped = daemonRigs
+          .filter(r => r && (r.id || r.rigId))
+          .map(r => ({
+            rigId: r.id || r.rigId,
+            name: r.name || r.rigName || r.id,
+            rigName: r.name || r.rigName || r.id
+          }));
+        effectiveRigs = (requestedRig === 'all' || !requestedRig)
+          ? mapped
+          : mapped.filter(r => r.rigId === requestedRig || r.name === requestedRig);
+      }
+    }
 
     const nodesPromises = effectiveRigs.map(r => fetchDaemonJson(`/api/rigs/${r.rigId}/nodes`));
     const parkedPromises = effectiveRigs.map(r => safeJsonExec(RIG_BIN, ['parked', '--rig', r.name || r.rigName, '--json']));
@@ -590,7 +925,10 @@ const server = http.createServer(async (req, res) => {
     ]);
 
     const nodes = nodesArrays.flatMap(arr => Array.isArray(arr) ? arr : []);
-    const decisions = await readRecentDecisions(15, nodes);
+    const [decisions, usageReport] = await Promise.all([
+      readRecentDecisions(15, nodes),
+      buildSeatUsageReport(nodes)
+    ]);
 
     const guidanceMap = Object.assign({}, DEFAULT_SEAT_GUIDANCE);
     for (const node of nodes) {
@@ -636,6 +974,8 @@ const server = http.createServer(async (req, res) => {
       parkedSeats,
       seatCompactions: seatCompactions || {},
       seatGuidance: guidanceMap,
+      seatUsage: usageReport.seatUsage,
+      fleetUsageSummary: usageReport.fleetUsageSummary,
       intelligence: fleetIntelligence.getLatestReport(requestedRig)
     };
 
@@ -684,12 +1024,19 @@ const server = http.createServer(async (req, res) => {
 
     {
       let bodyStr = '';
+      let tooLarge = false;
       req.on('data', chunk => {
+        if (tooLarge) return;
         bodyStr += chunk;
-        if (bodyStr.length > 64 * 1024) req.destroy();
+        if (bodyStr.length > 64 * 1024) {
+          tooLarge = true;
+          sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
+          req.resume();
+        }
       });
 
       req.on('end', async () => {
+        if (tooLarge) return;
         try {
           const payload = JSON.parse(bodyStr || '{}');
           const seat = String(payload.seat || '').trim();
@@ -703,8 +1050,12 @@ const server = http.createServer(async (req, res) => {
 
           let output = '';
           if (type === 'key') {
-            // Specific tmux keystrokes: '1 Enter', 'y Enter', 'C-c', 'Escape', 'Enter'
-            const keyArgs = text.split(/\s+/).filter(Boolean);
+            // Specific tmux keystrokes validated against strict allowlist (prevents flag injection)
+            const keyArgs = parseAllowedTmuxKeys(text);
+            if (!keyArgs) {
+              await sendJson(req, res, 400, { ok: false, error: 'Disallowed tmux keystroke' });
+              return;
+            }
             output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', seat, ...keyArgs]);
           } else if (type === 'raw') {
             // Harness-aware hygiene and deduplication:
@@ -749,12 +1100,16 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 3. Static files
-  const safeRel = url.pathname === '/' ? 'index.html' : url.pathname.replace(/^\/+/, '');
-  const filePath = path.join(__dirname, safeRel);
+  // 3. Static files (strictly contained within __dirname, safe extensions only)
+  const staticTarget = resolveSafeStaticPath(__dirname, url.pathname);
+  if (!staticTarget) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Forbidden');
+    return;
+  }
+  const { resolved: filePath, rel: safeRel, ext } = staticTarget;
   try {
     let data = await fs.readFile(filePath);
-    const ext = path.extname(filePath);
     if (safeRel === 'index.html') {
       data = Buffer.from(
         data.toString('utf-8').replace('<head>', `<head>\n  <meta name="deck-token" content="${DECK_TOKEN}">`)
@@ -762,8 +1117,12 @@ const server = http.createServer(async (req, res) => {
     }
     const mime =
       ext === '.html' ? 'text/html; charset=utf-8' :
+      ext === '.css' ? 'text/css; charset=utf-8' :
       ext === '.md' ? 'text/markdown; charset=utf-8' :
-      ext === '.js' || ext === '.mjs' ? 'text/javascript; charset=utf-8' :
+      ext === '.js' ? 'text/javascript; charset=utf-8' :
+      ext === '.json' ? 'application/json; charset=utf-8' :
+      ext === '.svg' ? 'image/svg+xml' :
+      ext === '.png' ? 'image/png' :
       'text/plain; charset=utf-8';
     res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
     res.end(data);
@@ -773,6 +1132,56 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`💠 RigCommander // Neural Command Deck v3.1 at http://127.0.0.1:${PORT}`);
-});
+const ALLOWED_TMUX_KEY_RE = /^([1-9]|[a-zA-Z]|Enter|Escape|Tab|Space|BSpace|Up|Down|Left|Right|C-c|C-u|C-d|C-z|C-l)$/;
+const ALLOWED_STATIC_EXTS = new Set(['.html', '.css', '.js', '.json', '.svg', '.png', '.ico', '.md', '.txt']);
+
+function parseAllowedTmuxKeys(text) {
+  const keys = String(text || '').trim().split(/\s+/).filter(Boolean);
+  if (keys.length === 0 || keys.length > 6) return null;
+  for (const k of keys) {
+    if (k.startsWith('-') || !ALLOWED_TMUX_KEY_RE.test(k)) return null;
+  }
+  return keys;
+}
+
+function resolveSafeStaticPath(baseDir, pathname) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(String(pathname || '/'));
+  } catch {
+    return null;
+  }
+  if (decoded.includes('\0')) return null;
+  const rel = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  const segments = rel.split(/[\\/]+/);
+  if (segments.some(s => s === '' || s === '.' || s === '..' || s.startsWith('.'))) {
+    return null;
+  }
+  const baseResolved = path.resolve(baseDir);
+  const resolved = path.resolve(baseResolved, rel);
+  const rootPrefix = baseResolved.endsWith(path.sep) ? baseResolved : baseResolved + path.sep;
+  if (!resolved.startsWith(rootPrefix)) return null;
+  const ext = path.extname(resolved).toLowerCase();
+  if (!ALLOWED_STATIC_EXTS.has(ext)) return null;
+  return { resolved, rel, ext };
+}
+
+export {
+  buildGanttItems,
+  isGanttSystemNoise,
+  readTranscriptTokenUsage,
+  buildSeatUsageReport,
+  getModelPricing,
+  boundedMapSet,
+  parseAllowedTmuxKeys,
+  resolveSafeStaticPath,
+  transcriptUsageCache,
+  seatGuidanceCache
+};
+
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMainModule) {
+  server.listen(PORT, '127.0.0.1', () => {
+    console.log(`💠 RigCommander // Neural Command Deck v3.1 at http://127.0.0.1:${PORT}`);
+  });
+}

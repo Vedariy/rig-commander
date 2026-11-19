@@ -22,7 +22,8 @@ export class FleetIntelligenceEngine {
       new ZombieSeatDetector()
     ];
     this.cachedReport = null;
-    this.lastEvaluationTs = 0;
+    this.cachedReports = new Map();
+    this.lastEvalByRig = new Map();
     this.evalThrottleMs = options.evalThrottleMs || 3000;
   }
 
@@ -33,10 +34,12 @@ export class FleetIntelligenceEngine {
     if (!snapshot) return;
     try {
       this.buffer.push(snapshot);
+      const rigId = snapshot.requestedRig || 'all';
       const now = Date.now();
-      if (now - this.lastEvaluationTs >= this.evalThrottleMs) {
+      const lastTs = this.lastEvalByRig.get(rigId) || 0;
+      if (now - lastTs >= this.evalThrottleMs) {
         this.evaluate(snapshot);
-        this.lastEvaluationTs = now;
+        this.lastEvalByRig.set(rigId, now);
       }
     } catch (err) {
       console.error('[FleetIntelligence] Ingest error (isolated):', err.message);
@@ -51,7 +54,9 @@ export class FleetIntelligenceEngine {
     const context = {
       nodes: snapshot.nodes || [],
       activeQueue: snapshot.activeQueue || [],
-      recentQueue: snapshot.recentQueue || snapshot.history?.sliceStats ? [] : [],
+      recentQueue: Array.isArray(snapshot.recentQueue)
+        ? snapshot.recentQueue
+        : (Array.isArray(snapshot.history?.ganttItems) ? snapshot.history.ganttItems : []),
       usageSeries: snapshot.usageSeries || [],
       healthFindings: snapshot.healthFindings || [],
       rigId: snapshot.requestedRig || 'all'
@@ -68,17 +73,19 @@ export class FleetIntelligenceEngine {
       }
     }
 
-    this.cachedReport = compileAdvisoryReport(rawFindings, context.rigId);
-    return this.cachedReport;
+    const report = compileAdvisoryReport(rawFindings, context.rigId);
+    this.cachedReport = report;
+    this.cachedReports.set(context.rigId, report);
+    return report;
   }
 
   /**
-   * Returns latest cached advisory report, or generates a default if empty
+   * Returns latest cached advisory report for rigId, or generates one from matching snapshot
    */
   getLatestReport(rigId = 'all') {
-    if (this.cachedReport) return this.cachedReport;
+    if (this.cachedReports.has(rigId)) return this.cachedReports.get(rigId);
     const latestSnapshot = this.buffer.getLatest();
-    if (latestSnapshot) {
+    if (latestSnapshot && (latestSnapshot.requestedRig || 'all') === rigId) {
       return this.evaluate(latestSnapshot);
     }
     return compileAdvisoryReport([], rigId);
