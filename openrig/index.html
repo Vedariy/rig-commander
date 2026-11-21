@@ -11,26 +11,30 @@
   <!-- LEVEL 0: TOP-3 ACTIONABLE TRIAGE STRIP (ADR-0006) -->
   <div class="triage-strip" id="triageStrip">
     <div class="triage-meta">
-      <span class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal()" style="cursor:pointer;" title="Открыть полный радар Fleet Intelligence">🟢 LIVE TELEMETRY</span>
-      <button class="triage-refresh-btn" onclick="openFleetAdvisorModal()" style="border-color:var(--cyan); color:var(--cyan);" title="Развернуть полный аналитический отчёт Fleet Intelligence">
-        💡 <span>Советник флота</span>
+      <span class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal()" style="cursor:pointer;" title="Fleet Intelligence">🟢 LIVE TELEMETRY</span>
+      <button class="triage-refresh-btn" onclick="openFleetAdvisorModal()" style="border-color:var(--cyan); color:var(--cyan);">
+        💡 <span data-i18n="triage.advisor">Советник флота</span>
       </button>
     </div>
     <div class="triage-cards-container" id="triageCardsContainer">
       <div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
-        <span>🔄 Инициализация оперативной обстановки OpenRig...</span>
+        <span data-i18n="triage.init">🔄 Инициализация оперативной обстановки...</span>
       </div>
     </div>
     <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-      <button class="triage-refresh-btn" onclick="refreshTelemetryNow()" title="Принудительный опрос телеметрии">
-        🔄 <span>Обновить</span>
+      <button class="triage-refresh-btn" onclick="refreshTelemetryNow()">
+        🔄 <span data-i18n="triage.refresh">Обновить</span>
       </button>
-      <button class="triage-refresh-btn" onclick="copyCmd('rig status')" title="Скопировать команду rig status в буфер">
+      <button class="triage-refresh-btn" onclick="copyCmd('rig status')">
         📋 <span>rig status</span>
       </button>
-      <a class="triage-refresh-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.45); color:#e9d5ff;" title="Открыть архитектурный паспорт проекта (C4, Онтология, Безопасность, Тесты)">
-        📄 <span>Паспорт</span>
+      <a class="triage-refresh-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.45); color:#e9d5ff;">
+        📄 <span data-i18n="triage.passport">Паспорт</span>
       </a>
+      <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.3); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
+        <button type="button" id="deckLangEn" class="triage-refresh-btn" style="padding:2px 7px; border:none; font-size:10.5px;" onclick="setDeckLang('en')">EN</button>
+        <button type="button" id="deckLangRu" class="triage-refresh-btn" style="padding:2px 7px; border:none; font-size:10.5px;" onclick="setDeckLang('ru')">RU</button>
+      </div>
     </div>
   </div>
 
@@ -42,8 +46,8 @@
         <div class="brand-title">
           <span>RIGCOMMANDER // NEURAL COMMAND DECK v3.1</span>
           <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
-          <select id="rigFilterSelect" class="rig-select" onchange="onRigFilterChange(this.value)" title="Выбор активного рига OpenRig">
-            <option value="all" selected>🌐 ВСЕ РИГИ (2)</option>
+          <select id="rigFilterSelect" class="rig-select" onchange="onRigFilterChange(this.value)">
+            <option value="all" selected data-i18n="hud.allRigs">🌐 ВСЕ РИГИ (2)</option>
             <option value="core-platform">🎯 core-platform</option>
             <option value="kernel">⚙️ kernel</option>
           </select>
@@ -59,10 +63,10 @@
     <div class="hud-controls" id="hudControlsBar">
       <!-- CLUSTER 1: SENSORY & ALARM HYGIENE -->
       <div class="hud-cluster hud-cluster-sensory">
-        <button class="cyber-btn calm-toggle" id="btnCalmMode" onclick="toggleCalmMode()" title="Режим глубокой концентрации: приглушение фоновых узлов">
+        <button class="cyber-btn calm-toggle" id="btnCalmMode" onclick="toggleCalmMode()" data-i18n="hud.calmOff">
           🧘 CALM FOCUS
         </button>
-        <button class="cyber-btn audio-toggle" id="btnAudioRadar" onclick="toggleAudioRadar()" title="Звуковой сигнал при ATTN и перегреве контекста">
+        <button class="cyber-btn audio-toggle" id="btnAudioRadar" onclick="toggleAudioRadar()" data-i18n="hud.audioOff">
           🔕 АУДИО: ВЫКЛ
         </button>
       </div>
@@ -71,9 +75,9 @@
 
       <!-- CLUSTER 2: DOMAIN DATA SLICING (SEGMENTED CONTROL) -->
       <div class="hud-cluster hud-cluster-scope">
-        <span class="hud-cluster-label">СРЕЗ:</span>
+        <span class="hud-cluster-label" data-i18n="hud.sliceLabel">СРЕЗ:</span>
         <div class="hud-segmented-group" id="sliceSegmentedGroup">
-          <button class="hud-segment-btn active" id="btnFilterAll" onclick="setSliceFilter('all')" title="Отображать все магистрали и потоки">
+          <button class="hud-segment-btn active" id="btnFilterAll" onclick="setSliceFilter('all')" data-i18n="hud.allFlows">
             🌐 ВСЕ ПОТОКИ
           </button>
           <div id="dynamicSliceButtons" style="display:inline-flex; gap:2px;"></div>
@@ -82,35 +86,35 @@
 
       <!-- CLUSTER 3: WORKSPACE DOCKING & VIEWPORT TOOLS -->
       <div class="hud-cluster hud-cluster-dock" style="margin-left:auto;">
-        <button class="cyber-btn" id="btnHideIdle" onclick="toggleHideIdle()" title="Свернуть спящих агентов (без активных связей), оставив в фокусе рабочие и проблемные цепи">
+        <button class="cyber-btn" id="btnHideIdle" onclick="toggleHideIdle()" data-i18n="hud.idleShown">
           💤 СПЯЩИЕ: ВИДНЫ
         </button>
-        <button class="cyber-btn" id="btnDensityMode" onclick="toggleDensityMode()" title="Режим карточек узлов: Fit / Детально [Горячая клавиша: D]">
+        <button class="cyber-btn" id="btnDensityMode" onclick="toggleDensityMode()" data-i18n="hud.fitCompact">
           📐 FIT: КОМПАКТ
         </button>
 
         <div class="hud-cluster-subdivider"></div>
 
         <!-- SPATIAL DOCKING GLYPHS: LEFT -> CANVAS -> RIGHT -->
-        <div class="hud-dock-group" title="Управление раскладкой панелей">
-          <button class="hud-dock-btn active" id="btnToggleLeft" onclick="toggleSidebar('left')" title="Левая панель: Радар ожидания и решений [ [ ]">
+        <div class="hud-dock-group">
+          <button class="hud-dock-btn active" id="btnToggleLeft" onclick="toggleSidebar('left')">
             <span class="dock-glyph">◧</span> РАДАР
           </button>
-          <button class="hud-dock-btn" id="btnMaximizeCanvas" onclick="toggleBothSidebars()" title="Максимизировать граф (скрыть оба сайдбара) [ \ ]">
+          <button class="hud-dock-btn" id="btnMaximizeCanvas" onclick="toggleBothSidebars()">
             <span class="dock-glyph">⛶</span> ТОЛЬКО ГРАФ
           </button>
-          <button class="hud-dock-btn active" id="btnToggleRight" onclick="toggleSidebar('right')" title="Правая панель: Инспектор телеметрии и tmux [ ] ]">
+          <button class="hud-dock-btn active" id="btnToggleRight" onclick="toggleSidebar('right')">
             ИНСПЕКТОР <span class="dock-glyph">◨</span>
           </button>
         </div>
 
         <div class="hud-cluster-subdivider"></div>
 
-        <button class="cyber-btn" id="btnSaTour" onclick="toggleSaTour()" title="Интерактивный гид по SA-DSS и снижению когнитивной нагрузки [ ? ]">
+        <button class="cyber-btn" id="btnSaTour" onclick="toggleSaTour()">
           🧠 SA-DSS / UX
         </button>
 
-        <button class="cyber-btn" id="btnFullscreen" onclick="toggleFullscreen()" title="Полноэкранный режим [Горячая клавиша: F]">
+        <button class="cyber-btn" id="btnFullscreen" onclick="toggleFullscreen()" data-i18n="hud.fullscreen">
           📺 FULLSCREEN
         </button>
       </div>
@@ -120,23 +124,23 @@
   <main class="main-layout" id="mainLayout">
 
     <!-- Interactive Edge Tabs for collapsed sidebars -->
-    <div class="sidebar-edge-tab tab-left" id="edgeTabLeft" onclick="toggleSidebar('left')" title="Развернуть радар ожидания [ [ ]">
-      <span>◀</span><span class="tab-text">РАДАР</span>
+    <div class="sidebar-edge-tab tab-left" id="edgeTabLeft" onclick="toggleSidebar('left')">
+      <span>◀</span><span class="tab-text" data-i18n="hud.radar">РАДАР</span>
     </div>
-    <div class="sidebar-edge-tab tab-right" id="edgeTabRight" onclick="toggleSidebar('right')" title="Развернуть инспектор телеметрии [ ] ]">
-      <span>▶</span><span class="tab-text">ИНСПЕКТОР</span>
+    <div class="sidebar-edge-tab tab-right" id="edgeTabRight" onclick="toggleSidebar('right')">
+      <span>▶</span><span class="tab-text" data-i18n="hud.inspector">ИНСПЕКТОР</span>
     </div>
 
     <!-- COLUMN A: WHO WAITS FOR WHOM & WHY + DECISIONS LOG -->
     <section class="panel" id="panelLeft">
       <div class="panel-header">
-        <span>⏳ КТО → КОГО → ЗАЧЕМ ЖДЁТ</span>
+        <span data-i18n="radar.title">⏳ КТО → КОГО → ЗАЧЕМ ЖДЁТ</span>
         <span id="waitCountBadge" style="color:#fbbf24">LIVE</span>
       </div>
       <div class="radar-filter-bar" id="radarFilterBar">
-        <button class="radar-tab active" data-radar-tab="all" onclick="setRadarFilter('all')">Все</button>
-        <button class="radar-tab" data-radar-tab="blockers" onclick="setRadarFilter('blockers')">🚨 Блокеры</button>
-        <button class="radar-tab" data-radar-tab="tasks" onclick="setRadarFilter('tasks')">📦 Задачи</button>
+        <button class="radar-tab active" data-radar-tab="all" onclick="setRadarFilter('all')" data-i18n="radar.all">Все</button>
+        <button class="radar-tab" data-radar-tab="blockers" onclick="setRadarFilter('blockers')" data-i18n="radar.blockers">🚨 Блокеры</button>
+        <button class="radar-tab" data-radar-tab="tasks" onclick="setRadarFilter('tasks')" data-i18n="radar.tasks">📦 Задачи</button>
       </div>
       <div class="panel-body">
         <div id="waitListContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
@@ -152,11 +156,11 @@
     <!-- COLUMN B: SANKEY TOPOLOGY GRAPH + PROPORTIONAL SLICE SWIMLANES -->
     <section class="panel" id="panelCenter">
       <div class="panel-header">
-        <span id="centerPanelTitle">🕸️ МАГИСТРАЛИ ВЫЗОВОВ (ШИРИНА ЛИНИИ = ЧИСЛО ПЕРЕДАЧ В ОЧЕРЕДИ, НАВЕДИ ДЛЯ ФОКУСА)</span>
+        <span id="centerPanelTitle" data-i18n="center.graphTitle">🕸️ МАГИСТРАЛИ ВЫЗОВОВ (ШИРИНА ЛИНИИ = ЧИСЛО ПЕРЕДАЧ В ОЧЕРЕДИ, НАВЕДИ ДЛЯ ФОКУСА)</span>
         <span style="display:flex; align-items:center; gap:8px;">
-          <span id="activeFilterLabel" style="color:#00ff9d">ВСЕ МАГИСТРАЛИ</span>
-          <button class="hud-segment-btn active" id="btnViewGraph" onclick="setCenterView('graph')" title="Граф вызовов [G]">🕸️ ГРАФ</button>
-          <button class="hud-segment-btn" id="btnViewGantt" onclick="setCenterView('gantt')" title="Гант: кто, что и когда делал [G]">📊 ГАНТ</button>
+          <span id="activeFilterLabel" style="color:#00ff9d" data-i18n="center.allHighways">ВСЕ МАГИСТРАЛИ</span>
+          <button class="hud-segment-btn active" id="btnViewGraph" onclick="setCenterView('graph')" data-i18n="center.btnGraph">🕸️ ГРАФ</button>
+          <button class="hud-segment-btn" id="btnViewGantt" onclick="setCenterView('gantt')" data-i18n="center.btnGantt">📊 ГАНТ</button>
         </span>
       </div>
 
@@ -180,7 +184,7 @@
         </svg>
 
         <div class="nodes-layer" id="nodesLayer"></div>
-        <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()" title="Нажмите, чтобы вернуть спящих агентов на граф"></div>
+        <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()"></div>
         <div class="edge-xray-drawer" id="edgeXrayDrawer"></div>
       </div>
 
@@ -188,18 +192,18 @@
       <div class="gantt-wrap" id="ganttWrap" style="display:none;">
         <div class="gantt-toolbar">
           <span style="display:flex; gap:6px; align-items:center;">
-            <span>ОКНО:</span>
-            <button class="hud-segment-btn" data-gantt-window="1" onclick="setGanttWindow(1)">1ч</button>
-            <button class="hud-segment-btn" data-gantt-window="6" onclick="setGanttWindow(6)">6ч</button>
-            <button class="hud-segment-btn" data-gantt-window="24" onclick="setGanttWindow(24)">24ч</button>
-            <button class="hud-segment-btn" id="btnGanttClearFocus" onclick="setGanttFocus(null)" style="display:none;">✕ Сбросить фокус</button>
+            <span data-i18n="gantt.window">ОКНО:</span>
+            <button class="hud-segment-btn" data-gantt-window="1" onclick="setGanttWindow(1)" data-i18n="gantt.h1">1ч</button>
+            <button class="hud-segment-btn" data-gantt-window="6" onclick="setGanttWindow(6)" data-i18n="gantt.h6">6ч</button>
+            <button class="hud-segment-btn" data-gantt-window="24" onclick="setGanttWindow(24)" data-i18n="gantt.h24">24ч</button>
+            <button class="hud-segment-btn" id="btnGanttClearFocus" onclick="setGanttFocus(null)" style="display:none;" data-i18n="gantt.clearFocus">✕ Сбросить фокус</button>
           </span>
           <span class="gantt-legend">
-            <span><i style="background:repeating-linear-gradient(45deg, rgba(148,163,184,0.55) 0 3px, transparent 3px 6px); border:1px solid rgba(148,163,184,0.6);"></i>ждёт взятия</span>
-            <span><i style="background:#38bdf8;"></i>в работе</span>
-            <span><i style="background:transparent; border:2px solid #f59e0b;"></i>долгое ожидание</span>
-            <span>🪃 &gt;2 круга QA</span>
-            <span style="color:#64748b;">цвет = цепочка • клик = фокус + инспектор</span>
+            <span><i style="background:repeating-linear-gradient(45deg, rgba(148,163,184,0.55) 0 3px, transparent 3px 6px); border:1px solid rgba(148,163,184,0.6);"></i><span data-i18n="gantt.legWait">ждёт взятия</span></span>
+            <span><i style="background:#38bdf8;"></i><span data-i18n="gantt.legWork">в работе</span></span>
+            <span><i style="background:transparent; border:2px solid #f59e0b;"></i><span data-i18n="gantt.legLong">долгое ожидание</span></span>
+            <span data-i18n="gantt.legRework">🪃 &gt;2 круга QA</span>
+            <span style="color:#64748b;" data-i18n="gantt.legHint">цвет = цепочка • клик = фокус + инспектор</span>
           </span>
         </div>
         <div class="gantt-body" id="ganttBody"></div>
@@ -208,8 +212,8 @@
       <!-- PROPORTIONAL SLICE SWIMLANES -->
       <div class="swimlanes-section">
         <div class="swimlanes-title">
-          <span>🛤️ ДОРОЖКИ СЛАЙСОВ (ШИРИНА ДОРОЖКИ = ЧИСЛО ВЫЗОВОВ И КРУГОВ ДОРАБОТКИ)</span>
-          <span style="color:#94a3b8; font-weight:400;">Станции: Spec/Dev → Код → QA Границы → Сверка/Фикс → Приёмка → Push</span>
+          <span data-i18n="swim.title">🛤️ ДОРОЖКИ СЛАЙСОВ (ШИРИНА ДОРОЖКИ = ЧИСЛО ВЫЗОВОВ И КРУГОВ ДОРАБОТКИ)</span>
+          <span style="color:#94a3b8; font-weight:400;" data-i18n="swim.stages">Станции: Spec/Dev → Код → QA Границы → Сверка/Фикс → Приёмка → Push</span>
         </div>
         <div id="swimlanesContainer" style="display:flex; flex-direction:column; gap:7px;"></div>
       </div>
@@ -218,19 +222,19 @@
     <!-- COLUMN C: TELEMETRY INSPECTOR, LIVE TMUX CAPTURE & ACTIVE ENVELOPES -->
     <section class="panel" id="panelRight">
       <div class="panel-header">
-        <span>🔬 ПАСПОРТ УЗЛА, ЭКРАН TMUX & КОНВЕРТЫ L3</span>
-        <span id="selectedNodeHeaderBadge" style="color:var(--emerald)">ВЫБРАН: DEV-CODER5</span>
+        <span data-i18n="insp.header">🔬 ПАСПОРТ УЗЛА, ЭКРАН TMUX & КОНВЕРТЫ L3</span>
+        <span id="selectedNodeHeaderBadge" style="color:var(--emerald)">SELECTED</span>
       </div>
       <div class="panel-body" id="inspectorPanelBody">
         <div id="nodeInspector"></div>
 
         <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between;">
-          <span>📦 АКТИВНЫЕ КОНВЕРТЫ В ОЧЕРЕДИ (`rig queue`)</span>
-          <span id="queueCountBadge" style="color:#00ff9d">4 ШТ</span>
+          <span data-i18n="insp.activeQueue">📦 АКТИВНЫЕ КОНВЕРТЫ В ОЧЕРЕДИ</span>
+          <span id="queueCountBadge" style="color:#00ff9d">4</span>
         </div>
         <div id="queuePacketsList" style="display:flex; flex-direction:column; gap:7px;"></div>
 
-        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px;">
+        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px;" data-i18n="insp.scorecardTitle">
           🪃 РЕЙТИНГ КОДЕРОВ ПО ВОЗВРАТАМ НА ДОРАБОТКУ (QA PING-PONG)
         </div>
         <div id="coderScorecards" style="display:flex; flex-direction:column; gap:8px;"></div>
@@ -240,18 +244,18 @@
   </main>
 
   <div class="sa-tour-card" id="saTourCard" role="dialog" aria-label="SA-DSS & Cognitive Ergonomics Tour"></div>
-  <div class="toast" id="copyToast">Скопировано в буфер обмена!</div>
+  <div class="toast" id="copyToast">Copied!</div>
 
   <div class="modal-overlay" id="terminalModal" onclick="if (event.target === this) closeTerminalModal()">
     <div class="modal-terminal-card">
       <div class="modal-terminal-header">
         <span id="terminalModalTitle">🖥️ TMUX</span>
         <span style="display:flex; gap:8px;">
-          <button class="action-pill" onclick="fetchModalCapture()">🔄 Обновить</button>
-          <button class="action-pill" onclick="closeTerminalModal()">✕ Закрыть (Esc)</button>
+          <button class="action-pill" onclick="fetchModalCapture()" data-i18n="modal.refresh">🔄 Обновить</button>
+          <button class="action-pill" onclick="closeTerminalModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
         </span>
       </div>
-      <div class="modal-terminal-body" id="terminalModalBody">Загрузка...</div>
+      <div class="modal-terminal-body" id="terminalModalBody" data-i18n="modal.loading">Загрузка...</div>
       <div style="padding: 10px 18px; background: rgba(6, 14, 30, 0.98); border-top: 1px solid rgba(56, 189, 248, 0.25);">
         <div id="modalTerminalCtrlMount"></div>
       </div>
@@ -270,11 +274,11 @@
           <span class="triage-badge" id="modalFleetHealthBadge" style="margin:0; font-size:11px;"></span>
         </div>
         <span style="display:flex; gap:8px;">
-          <button class="action-pill" onclick="refreshFleetAdvisorModal()">🔄 Обновить</button>
-          <button class="action-pill" onclick="closeFleetAdvisorModal()">✕ Закрыть (Esc)</button>
+          <button class="action-pill" onclick="refreshFleetAdvisorModal()" data-i18n="modal.refresh">🔄 Обновить</button>
+          <button class="action-pill" onclick="closeFleetAdvisorModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
         </span>
       </div>
-      <div class="modal-fleet-body" id="fleetAdvisorModalBody">
+      <div class="modal-fleet-body" id="fleetAdvisorModalBody" data-i18n="modal.loading">
         Загрузка аналитики флота...
       </div>
     </div>
@@ -1086,10 +1090,10 @@
         if (a.state === 'urgent') {
           items.push({
             prio: 0, category: 'blocker', seatId: a.id, actionKind: 'tmux',
-            action: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: '🖥️ Ответить в tmux', title: 'Открыть живой экран tmux', tone: 'urgent' },
-            color: '#ff0055', from: getNodeDisplayTitle(a), to: '👤 ЧЕЛОВЕК',
-            slice: 'terminal gate', state: '🚨 P0 • ЖДЁТ ЧЕЛОВЕКА',
-            summary: `Агент остановлен на подтверждении в терминале${a.needsInputReason ? `: ${escapeHtml(a.needsInputReason)}` : ''}. Открой tmux и ответь.`
+            action: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: td('radar.waitingHumanBtn'), title: td('radar.waitingHumanBtn'), tone: 'urgent' },
+            color: '#ff0055', from: getNodeDisplayTitle(a), to: td('radar.toHuman'),
+            slice: 'terminal gate', state: td('radar.waitingHumanState'),
+            summary: td('radar.waitingHumanDesc', { reason: a.needsInputReason ? `: ${escapeHtml(a.needsInputReason)}` : '' })
           });
         }
       }
@@ -1101,8 +1105,8 @@
           const isCrit = a.ctxPct >= CONTEXT_CRIT_PCT;
           const isPi = isPiHarness(a);
           const ctxAction = isPi
-            ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: '🔄 Ротация Pi', title: `Скопировать rig restart ${a.id}`, tone: 'warn' }
-            : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: '🗜️ Сжать /compact', title: `Отправить /compact в ${a.id}`, tone: isCrit ? 'critical' : 'warn' };
+            ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('radar.rotateBtn'), title: `rig restart ${a.id}`, tone: 'warn' }
+            : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: td('radar.compactBtn'), title: `/compact → ${a.id}`, tone: isCrit ? 'critical' : 'warn' };
           items.push({
             prio: isCrit ? 0.8 : 2.1,
             category: isCrit ? 'blocker' : 'task',
@@ -1110,9 +1114,9 @@
             actionKind: isPi ? 'restart' : 'compact',
             action: ctxAction,
             color: isCrit ? '#ff2a6d' : '#fbbf24',
-            from: getNodeDisplayTitle(a), to: '🔄 РОТАЦИЯ',
-            slice: `CTX ${a.ctxPct}%`, state: isCrit ? '⚠️ ПОРОГ 75% ПРОЙДЕН' : '⚠️ СКОРО РОТАЦИЯ',
-            summary: `Контекст ${a.ctxPct}%${a.ctxUsedTokens && a.ctxWindowSize ? ` (${Math.round(a.ctxUsedTokens / 1000)}K / ${Math.round(a.ctxWindowSize / 1000)}K tok)` : ''}. ${burn.label}${a.lastSwapAt ? ` Сессия после свапа: ${ageLabel(a.lastSwapAt)}.` : ''}`
+            from: getNodeDisplayTitle(a), to: td('radar.toRotation'),
+            slice: `CTX ${a.ctxPct}%`, state: isCrit ? td('radar.ctxOverState') : td('radar.ctxWarnState'),
+            summary: `CTX ${a.ctxPct}%${a.ctxUsedTokens && a.ctxWindowSize ? ` (${Math.round(a.ctxUsedTokens / 1000)}K / ${Math.round(a.ctxWindowSize / 1000)}K tok)` : ''}. ${burn.label}`
           });
         }
       }
@@ -1123,10 +1127,10 @@
         if (isParked) {
           items.push({
             prio: 1.1, category: 'blocker', seatId: a.id, actionKind: 'focus',
-            action: { id: 'wake_parked_seat', transport: 'tmux_key', seatId: a.id, payload: 'Enter', label: '⚡ Разбудить (Enter)', title: 'Отправить Enter в запаркованное сиденье', tone: 'warn' },
+            action: { id: 'wake_parked_seat', transport: 'tmux_key', seatId: a.id, payload: 'Enter', label: td('radar.wakeBtn'), title: td('radar.wakeBtn'), tone: 'warn' },
             color: '#f59e0b', from: getNodeDisplayTitle(a), to: '⏸️ HOLD / PARK',
-            slice: 'parked: no live wake', state: '🟠 ЗАПАРКОВАН (RIG)',
-            summary: escapeHtml(a.parkedReason || a.details || `Узел остановлен с незавершёнными обязательствами.`)
+            slice: 'parked: no live wake', state: td('radar.parkedState'),
+            summary: escapeHtml(a.parkedReason || a.details || td('triage.parkedDesc'))
           });
         }
       }
@@ -1156,11 +1160,11 @@
           category: isSystemNoise ? 'system' : 'task',
           seatId: targetSeatId,
           actionKind: 'focus',
-          actionLabel: targetSeatId ? '🔍 К узлу' : '',
+          actionLabel: targetSeatId ? td('radar.toSeat') : '',
           color: isSystemNoise ? '#64748b' : (inProg ? '#00ff9d' : '#f59e0b'),
           from: shortSeat(src), to: shortSeat(dst),
           slice: sliceTag,
-          state: `${isSystemNoise ? '🔔 СИСТЕМНЫЙ СИГНАЛ' : (inProg ? '🟢 В РАБОТЕ' : '🟠 ЖДЁТ ВЗЯТИЯ')}${age ? ` • ${age}` : ''}`,
+          state: `${isSystemNoise ? td('radar.systemSig') : (inProg ? td('radar.inProgress') : td('radar.pending'))}${age ? ` • ${age}` : ''}`,
           summary: escapeHtml(q.summary || '')
         });
       }
@@ -1169,10 +1173,10 @@
       for (const a of rigAgents) {
         if (a.state === 'working' && !LIVE_OPEN_QUEUE.some(q => q.destinationSession === a.id || q.sourceSession === a.id)) {
           items.push({
-            prio: 3, category: 'task', seatId: a.id, actionKind: 'focus', actionLabel: '🔍 К узлу',
-            color: '#00f0ff', from: getNodeDisplayTitle(a), to: '⚙️ терминал',
-            slice: 'в работе', state: '⚡ РАБОТАЕТ',
-            summary: `Агент активен в контуре${a.lastActivityAt ? ` (последняя активность ${new Date(a.lastActivityAt).toLocaleTimeString('ru-RU')})` : ''}.`
+            prio: 3, category: 'task', seatId: a.id, actionKind: 'focus', actionLabel: td('radar.toSeat'),
+            color: '#00f0ff', from: getNodeDisplayTitle(a), to: td('radar.workingTerminal'),
+            slice: 'active', state: td('radar.workingState'),
+            summary: td('radar.workingSummary', { last: a.lastActivityAt ? ` (${new Date(a.lastActivityAt).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU')})` : '' })
           });
         }
       }
@@ -1198,9 +1202,9 @@
       const tabAll = document.querySelector('#radarFilterBar [data-radar-tab="all"]');
       const tabBlk = document.querySelector('#radarFilterBar [data-radar-tab="blockers"]');
       const tabTsk = document.querySelector('#radarFilterBar [data-radar-tab="tasks"]');
-      if (tabAll) tabAll.textContent = `Все (${sliceFiltered.length})`;
-      if (tabBlk) tabBlk.textContent = `🚨 Блокеры (${blockersCount})`;
-      if (tabTsk) tabTsk.textContent = `📦 Задачи (${tasksCount})`;
+      if (tabAll) tabAll.textContent = `${td('radar.all')} (${sliceFiltered.length})`;
+      if (tabBlk) tabBlk.textContent = `${td('radar.blockers')} (${blockersCount})`;
+      if (tabTsk) tabTsk.textContent = `${td('radar.tasks')} (${tasksCount})`;
 
       const activeItems = sliceFiltered.filter(q => {
         if (currentRadarFilter === 'blockers') return q.category === 'blocker';
@@ -1227,12 +1231,12 @@
       const countBadge = document.getElementById('waitCountBadge');
       if (countBadge) {
         countBadge.textContent = groups.length < activeItems.length
-          ? `${groups.length} ГРУПП (${activeItems.length})`
-          : `${activeItems.length} В КОНТУРЕ`;
+          ? `${groups.length} ${td('radar.groups')} (${activeItems.length})`
+          : `${activeItems.length} ${td('radar.inLoop')}`;
       }
 
       waitContainer.innerHTML = activeItems.length === 0
-        ? `<div class="wait-card" style="--wait-color:#00ff9d"><div style="font-size:12.5px; color:#6ee7b7;">🟢 В этой категории пусто: критических задержек нет.</div></div>`
+        ? `<div class="wait-card" style="--wait-color:#00ff9d"><div style="font-size:12.5px; color:#6ee7b7;">${td('radar.empty')}</div></div>`
         : groups.map(g => {
           const isExpanded = expandedRadarGroups.has(g.key);
           const listToRender = isExpanded ? g.items : [g.lead];
@@ -1279,10 +1283,10 @@
       if (titleSpan) {
         const firstWithDate = RECENT_DECISIONS.find(d => d.dateFile);
         const fileName = firstWithDate ? `decisions/${firstWithDate.dateFile}.tsv` : 'decisions/*.tsv';
-        titleSpan.textContent = `📜 ЖУРНАЛ РЕШЕНИЙ (${fileName})`;
+        titleSpan.textContent = `${td('radar.decisionsTitle')} (${fileName})`;
       }
       decContainer.innerHTML = RECENT_DECISIONS.length === 0
-        ? `<div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono); padding:8px 6px;">Журнал решений пуст или не подключён для активного рига.</div>`
+        ? `<div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono); padding:8px 6px;">${td('radar.decisionsEmpty')}</div>`
         : RECENT_DECISIONS.slice(0, 6).map(d => `
         <div class="decision-item">
           <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:11px; color:#e9d5ff; font-weight:700; margin-bottom:4px;">
@@ -1290,7 +1294,7 @@
             <span style="color:#94a3b8">${d.time}</span>
           </div>
           <div style="color:#f8fafc; font-weight:600; margin-bottom:3px;">${d.decision}</div>
-          <div style="color:#94a3b8; font-size:11.5px;">Причина: ${d.reason}</div>
+          <div style="color:#94a3b8; font-size:11.5px;">${td('radar.reason')} ${d.reason}</div>
         </div>
       `).join('');
     }
@@ -1376,9 +1380,7 @@
       if (bT) bT.classList.toggle('active', isGantt);
       const title = document.getElementById('centerPanelTitle');
       if (title) {
-        title.textContent = isGantt
-          ? '📊 ГАНТ ЗАДАЧ (СТРОКА = УЗЕЛ, ЦВЕТ = ЦЕПОЧКА, ШТРИХОВКА = ЖДЁТ ВЗЯТИЯ)'
-          : '🕸️ МАГИСТРАЛИ ВЫЗОВОВ (ШИРИНА ЛИНИИ = ЧИСЛО ПЕРЕДАЧ В ОЧЕРЕДИ, НАВЕДИ ДЛЯ ФОКУСА)';
+        title.textContent = isGantt ? td('center.ganttTitle') : td('center.graphTitle');
       }
       document.querySelectorAll('[data-gantt-window]').forEach(b => {
         b.classList.toggle('active', Number(b.getAttribute('data-gantt-window')) === ganttWindowH);
@@ -1445,19 +1447,20 @@
         claimedAt: claimedMin === null ? null : new Date(now - claimedMin * min).toISOString(),
         endAt: endMin === null ? null : new Date(now - endMin * min).toISOString()
       });
+      const en = deckLang === 'en';
       return [
-        mk('slice:moderation-single-writer', 'moderation-single-writer', arch, owner, 330, 325, 290, 'Спека и границы single-writer'),
-        mk('slice:moderation-single-writer', 'moderation-single-writer', coder4, owner, 285, 280, 200, 'Реализация single-writer + тесты'),
-        mk('slice:moderation-single-writer', 'moderation-single-writer', check, coder4, 198, 160, 140, 'QA границ: возврат (race на записи)'),
-        mk('slice:moderation-single-writer', 'moderation-single-writer', coder4, check, 138, 135, 100, 'Фикс race + регресс-тест'),
-        mk('slice:moderation-single-writer', 'moderation-single-writer', check, coder4, 98, 95, 80, 'Повторный QA: возврат (лимит +1)'),
-        mk('slice:moderation-single-writer', 'moderation-single-writer', coder4, check, 78, 76, 50, 'Фикс граничного лимита'),
+        mk('slice:moderation-single-writer', 'moderation-single-writer', arch, owner, 330, 325, 290, en ? 'Single-writer spec & boundaries' : 'Спека и границы single-writer'),
+        mk('slice:moderation-single-writer', 'moderation-single-writer', coder4, owner, 285, 280, 200, en ? 'Single-writer implementation + tests' : 'Реализация single-writer + тесты'),
+        mk('slice:moderation-single-writer', 'moderation-single-writer', check, coder4, 198, 160, 140, en ? 'QA bounds: bounce (write race)' : 'QA границ: возврат (race на записи)'),
+        mk('slice:moderation-single-writer', 'moderation-single-writer', coder4, check, 138, 135, 100, en ? 'Race fix + regression test' : 'Фикс race + регресс-тест'),
+        mk('slice:moderation-single-writer', 'moderation-single-writer', check, coder4, 98, 95, 80, en ? 'QA round 2: bounce (limit +1)' : 'Повторный QA: возврат (лимит +1)'),
+        mk('slice:moderation-single-writer', 'moderation-single-writer', coder4, check, 78, 76, 50, en ? 'Boundary limit +1 fix' : 'Фикс граничного лимита'),
         mk('slice:moderation-single-writer', 'moderation-single-writer', check, coder4, 48, 46, 30, 'QA: GREEN'),
-        mk('slice:moderation-single-writer', 'moderation-single-writer', owner, check, 28, 20, null, 'Приёмка и push'),
-        mk('slice:viewer-channel-chat', 'viewer-channel-chat', coder, owner, 240, 236, 120, 'Чат канала зрителя'),
-        mk('slice:viewer-channel-chat', 'viewer-channel-chat', check, coder, 118, 110, 70, 'QA чата: GREEN'),
-        mk('slice:viewer-channel-chat', 'viewer-channel-chat', owner, check, 68, 64, 55, 'Приёмка локально'),
-        mk('slice:context-supervision', 'context-supervision', coder, owner, 50, 12, null, 'Контроль контекста (долго ждал взятия)')
+        mk('slice:moderation-single-writer', 'moderation-single-writer', owner, check, 28, 20, null, en ? 'Acceptance & push' : 'Приёмка и push'),
+        mk('slice:viewer-channel-chat', 'viewer-channel-chat', coder, owner, 240, 236, 120, en ? 'Viewer channel chat feature' : 'Чат канала зрителя'),
+        mk('slice:viewer-channel-chat', 'viewer-channel-chat', check, coder, 118, 110, 70, en ? 'Chat QA: GREEN' : 'QA чата: GREEN'),
+        mk('slice:viewer-channel-chat', 'viewer-channel-chat', owner, check, 68, 64, 55, en ? 'Accepted locally' : 'Приёмка локально'),
+        mk('slice:context-supervision', 'context-supervision', coder, owner, 50, 12, null, en ? 'Context guard (long queue wait)' : 'Контроль контекста (долго ждал взятия)')
       ];
     }
 
@@ -1642,7 +1645,7 @@
           ${ticks}
           ${chainsSvg}
           <line x1="${nowX}" y1="${TOP - 6}" x2="${nowX}" y2="${H}" stroke="#ff2a6d" stroke-width="1.2" stroke-dasharray="3 3" />
-          <text x="${nowX - 4}" y="${TOP - 9}" fill="#ff2a6d" font-size="10" font-weight="700" text-anchor="end" font-family="var(--font-mono)">сейчас</text>
+          <text x="${nowX - 4}" y="${TOP - 9}" fill="#ff2a6d" font-size="10" font-weight="700" text-anchor="end" font-family="var(--font-mono)">${td('gantt.now')}</text>
         </svg>
       `;
       applyGanttFocus();
@@ -2195,7 +2198,7 @@
       }).join('');
       return `
         <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
-          <span style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">⚡ ВЫБОР ВАРИАНТА:</span>
+          <span style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
           ${btns}
         </div>
       `;
@@ -2257,7 +2260,7 @@
       return `
         ${contextualHtml ? `<div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center; width:100%;">${contextualHtml}</div>` : ''}
         <details style="width:100%; margin-top:${contextualHtml ? '4px' : '0'};">
-          <summary style="cursor:pointer; font-family:var(--font-mono); font-size:10px; color:#64748b; user-select:none;">⌨️ Ручные клавиши / команды</summary>
+          <summary style="cursor:pointer; font-family:var(--font-mono); font-size:10px; color:#64748b; user-select:none;">${td('insp.manualKeys')}</summary>
           <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:5px;">${manualHtml}</div>
         </details>
       `;
@@ -2278,7 +2281,7 @@
         st === 'unchanged' ? '#fde68a' : '#fda4af';
       return `
         <div style="background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.16); border-radius:6px; padding:6px 8px; display:flex; flex-direction:column; gap:4px;">
-          <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; letter-spacing:0.4px;">🧾 ЖУРНАЛ ДЕЙСТВИЙ (AUDIT + POSTCONDITION)</div>
+          <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; letter-spacing:0.4px;">${td('insp.auditTitle')}</div>
           ${records.map(r => {
             const tm = r.executedAt ? new Date(r.executedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
             return `
@@ -2304,7 +2307,7 @@
       const box = document.getElementById('nodeInspector');
       const headerBadge = document.getElementById('selectedNodeHeaderBadge');
       if (headerBadge) {
-        headerBadge.textContent = `ВЫБРАН: ${getNodeDisplayTitle(agent).toUpperCase()}`;
+        headerBadge.textContent = td('insp.selected', { name: getNodeDisplayTitle(agent).toUpperCase() });
         headerBadge.style.color = thermal.color;
       }
 
@@ -2435,8 +2438,8 @@
                 </div>
               </div>
               <div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
-                <button class="action-pill" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))" title="Открыть живой экран tmux (80 строк)">🖥️ Экран</button>
-                <button class="action-pill" data-cmd="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))" title="Скопировать команду подключения к tmux">📋 tmux</button>
+                <button class="action-pill" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.screenBtn')}</button>
+                <button class="action-pill" data-cmd="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 tmux</button>
               </div>
             </div>
 
@@ -2466,8 +2469,8 @@
             <div style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:6px;">
               <span>🖥️ LIVE TMUX</span>
               <span style="display:flex; gap:5px;">
-                <button class="action-pill" id="btnAutoFollow" onclick="toggleAutoFollow()" title="Автообновление экрана, пока агент работает">${autoFollow ? '🔴 AUTO-FOLLOW' : '⚪ FOLLOW OFF'}</button>
-                <button class="action-pill" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))" title="Развернуть 80 строк">⛶ 80 строк</button>
+                <button class="action-pill" id="btnAutoFollow" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
+                <button class="action-pill" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
               </span>
             </div>
             <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(liveScreenCapture)}</div>
@@ -2479,8 +2482,8 @@
               </div>
               <form class="ctrl-input-form" onsubmit="submitAgentPrompt('${agent.id}', event, 'terminalCmdInput', 'cmdSendStatus')">
                 <div class="ctrl-prompt-tag">&gt;</div>
-                <input type="text" id="terminalCmdInput" class="ctrl-input" placeholder="Команда, сообщение агенту или /команда..." autocomplete="off" onkeydown="handleHistoryKey(event, 'terminalCmdInput')" />
-                <button type="submit" class="cyber-btn active ctrl-send-btn">🚀 ОТПРАВИТЬ</button>
+                <input type="text" id="terminalCmdInput" class="ctrl-input" placeholder="${escapeHtml(td('insp.cmdPlaceholder'))}" autocomplete="off" onkeydown="handleHistoryKey(event, 'terminalCmdInput')" />
+                <button type="submit" class="cyber-btn active ctrl-send-btn">${td('insp.sendBtn')}</button>
               </form>
               <div id="cmdSendStatus" class="ctrl-status"></div>
             </div>
@@ -2491,18 +2494,18 @@
             <!-- Reference & Rare Metadata Accordion (Collapsed by default) -->
             <details ${inspectorRefOpen ? 'open' : ''} ontoggle="inspectorRefOpen = this.open" style="border-top:1px solid rgba(56,189,248,0.14); padding-top:6px;">
               <summary style="cursor:pointer; font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; user-select:none; display:flex; justify-content:space-between; align-items:center;">
-                <span>📚 Правила, Харнес, Recap и тех. детали</span>
-                <span style="font-size:10px; color:#64748b;">раскрыть</span>
+                <span>${td('insp.refSummary')}</span>
+                <span style="font-size:10px; color:#64748b;">${td('insp.expand')}</span>
               </summary>
               <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
                 <div id="inspTechMeta" style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; background:rgba(15,23,42,0.45); padding:5px 8px; border-radius:5px;">
-                  📥 ${agent.callsIn} / 📤 ${agent.callsOut} выз • 📂 ${escapeHtml(agent.cwd)}${agent.assignedWorkCount ? ` • В работе: ${agent.assignedWorkCount}` : ''}${escapeHtml(formatSeatUsageMeta(agent))}
+                  📥 ${agent.callsIn} / 📤 ${agent.callsOut} • 📂 ${escapeHtml(agent.cwd)}${agent.assignedWorkCount ? ` • Active: ${agent.assignedWorkCount}` : ''}${escapeHtml(formatSeatUsageMeta(agent))}
                 </div>
                 <div class="guidance-panel" style="margin-top:0;">
                   <div class="guidance-tabs">
-                    <button class="guidance-tab-btn ${activeInspectorTab === 'rules' ? 'active' : ''}" data-tab="rules" onclick="setInspectorTab('rules')">📋 ПРАВИЛА</button>
-                    <button class="guidance-tab-btn ${activeInspectorTab === 'fallback' ? 'active' : ''}" data-tab="fallback" onclick="setInspectorTab('fallback')">🔄 ХАРНЕС</button>
-                    <button class="guidance-tab-btn ${activeInspectorTab === 'memory' ? 'active' : ''}" data-tab="memory" onclick="setInspectorTab('memory')">🧠 RECAP</button>
+                    <button class="guidance-tab-btn ${activeInspectorTab === 'rules' ? 'active' : ''}" data-tab="rules" onclick="setInspectorTab('rules')">${td('insp.tabRules')}</button>
+                    <button class="guidance-tab-btn ${activeInspectorTab === 'fallback' ? 'active' : ''}" data-tab="fallback" onclick="setInspectorTab('fallback')">${td('insp.tabHarness')}</button>
+                    <button class="guidance-tab-btn ${activeInspectorTab === 'memory' ? 'active' : ''}" data-tab="memory" onclick="setInspectorTab('memory')">${td('insp.tabRecap')}</button>
                   </div>
                   <div class="guidance-body" id="inspGuidanceBody">
                     ${renderGuidanceHtml(agent)}
@@ -2648,7 +2651,8 @@
         const hasLiveDaemonData = snapshot.hasLiveDaemonData;
         const badge = document.getElementById('liveConnectionBadge');
         if (hasLiveDaemonData) {
-          badge.textContent = `● LIVE API :${location.port || '7440'}`;
+          const modeTag = data.discoveryMode === 'universal' ? 'LIVE UNIVERSAL' : 'LIVE API';
+          badge.textContent = `● ${modeTag} :${location.port || '7440'}`;
           badge.classList.remove('offline');
         } else {
           badge.textContent = '⚠️ NO DAEMON (DEMO)';
@@ -2660,7 +2664,7 @@
           if (sel) {
             const curVal = currentRigFilter;
             const optionsHtml = [
-              `<option value="all"${curVal === 'all' ? ' selected' : ''}>🌐 ВСЕ РИГИ (${snapshot.rigs.length})</option>`,
+              `<option value="all"${curVal === 'all' ? ' selected' : ''}>${td('hud.allRigs')} (${snapshot.rigs.length})</option>`,
               ...snapshot.rigs.map(r =>
                 `<option value="${escapeHtml(r.name)}"${curVal === r.name ? ' selected' : ''}>${r.status === 'running' ? '🟢' : '🟡'} ${escapeHtml(r.name)} (${r.runningCount}/${r.nodeCount})</option>`
               )
@@ -2672,9 +2676,9 @@
           }
         }
 
-        const timeStr = new Date(snapshot.timestamp).toLocaleTimeString('ru-RU');
-        document.getElementById('lastSyncSubtitle').textContent =
-          `ПОСЛЕДНЯЯ СИНХРОНИЗАЦИЯ С RIG DAEMON: ${timeStr} MSK • АВТООБНОВЛЕНИЕ КАЖДЫЕ 4 СЕК`;
+        const timeStr = new Date(snapshot.timestamp).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU');
+        const modeLabel = data.discoveryMode === 'universal' ? 'CLAUDE / CODEX / TMUX' : 'RIG DAEMON';
+        document.getElementById('lastSyncSubtitle').textContent = td('hud.liveSub', { mode: modeLabel, time: timeStr });
 
         // Project canonical Ontology Seats & OccupantSessions onto topology AGENTS layout cards
         let workingCount = 0;
@@ -2977,7 +2981,7 @@
         }
         const sub = document.getElementById('lastSyncSubtitle');
         if (sub) {
-          sub.textContent = '⚡ АВТОНОМНЫЙ СНИМОК • СЕРВЕР ТЕЛЕМЕТРИИ ОФЛАЙН • ПОВТОР КАЖДЫЕ 4 СЕК';
+          sub.textContent = td('hud.snapshotSub');
         }
       }
     }
@@ -2997,9 +3001,9 @@
             prio: 0,
             type: 'p0-urgent',
             tag: 'P0 • INPUT',
-            title: `🚨 ${a.shortName}: ждёт человека`,
-            desc: a.needsInputReason || 'Остановлен на подтверждении в терминале',
-            action: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: '📺 Экран', tone: 'urgent' },
+            title: `🚨 ${a.shortName}: ${td('triage.waitingHuman')}`,
+            desc: a.needsInputReason || td('triage.waitingDefault'),
+            action: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: td('triage.screenBtn'), tone: 'urgent' },
             targetAgentId: a.id
           });
         }
@@ -3013,15 +3017,15 @@
         const isOver = a.ctxPct >= CONTEXT_CRIT_PCT;
         const burnRate = burn.perHour > 0 ? burn.perHour : 20;
         const etaMin = Math.max(1, Math.round(((CONTEXT_CRIT_PCT - a.ctxPct) / burnRate) * 60));
-        const etaStr = isOver ? 'порог 75% пройден!' : `~${etaMin} мин до 75%`;
+        const etaStr = isOver ? td('triage.ctxOver') : td('triage.ctxEta', { min: etaMin });
         const isPi = isPiHarness(a);
         const action = isPi
-          ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: '🔄 Ротация', tone: 'warn' }
+          ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('radar.rotateBtn'), tone: 'warn' }
           : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: '⚡ /compact', tone: isOver ? 'critical' : 'warn' };
         candidates.push({
           prio: 1,
           type: 'p1-hot',
-          tag: isOver ? 'P1 • КРИТИЧЕСКИЙ' : 'P1 • КОНТЕКСТ',
+          tag: isOver ? td('triage.critTag') : td('triage.ctxTag'),
           title: `🔥 ${a.shortName}: CTX ${a.ctxPct}%`,
           desc: `${etaStr} • ${burn.label}`,
           action,
@@ -3035,9 +3039,9 @@
           candidates.push({
             prio: 2,
             type: 'p2-release',
-            tag: 'P2 • РЕЛИЗ',
+            tag: td('triage.releaseTag'),
             title: `🎯 ${lane.name}`,
-            desc: 'Принят QA локально. Готов к push в origin/dev',
+            desc: td('triage.releaseDesc'),
             action: { id: 'copy_command', transport: 'clipboard', seatId: '', payload: 'git push origin dev', label: '🚀 Push dev', tone: 'default' },
             targetSliceId: lane.id
           });
@@ -3050,10 +3054,10 @@
           candidates.push({
             prio: 3,
             type: 'p3-parked',
-            tag: 'P3 • HOLD',
-            title: `🟠 ${a.shortName}: запаркован`,
-            desc: a.parkedReason || 'Обязательства без live wake',
-            action: { id: 'focus_seat', transport: 'select_seat', seatId: a.id, payload: '', label: '🔍 Осмотреть', tone: 'default' },
+            tag: td('triage.parkedTag'),
+            title: `🟠 ${a.shortName}: ${td('triage.parkedTitle')}`,
+            desc: a.parkedReason || td('triage.parkedDesc'),
+            action: { id: 'focus_seat', transport: 'select_seat', seatId: a.id, payload: '', label: td('triage.inspectBtn'), tone: 'default' },
             targetAgentId: a.id
           });
         }
@@ -3103,32 +3107,32 @@
       // Take top 3
       const top3 = candidates.slice(0, 3);
       const healthScore = window.LIVE_INTELLIGENCE?.healthScore;
-      const healthSuffix = typeof healthScore === 'number' ? ` • ЗДОРОВЬЕ: ${healthScore}%` : '';
+      const healthSuffix = typeof healthScore === 'number' ? ` • ${td('triage.health')}: ${healthScore}%` : '';
 
       // Update strip alert status
       const hasP0 = top3.some(c => c.prio === 0);
       if (hasP0) {
         strip.classList.add('has-alert');
         badge.className = 'triage-badge alert-pulse';
-        badge.innerHTML = `🚨 ТРЕБУЕТ ВНИМАНИЯ (${top3.filter(c => c.prio === 0).length})${healthSuffix}`;
+        badge.innerHTML = `🚨 ${td('triage.attention')} (${top3.filter(c => c.prio === 0).length})${healthSuffix}`;
       } else if (top3.length > 0 && top3[0].prio <= 1.5) {
         strip.classList.remove('has-alert');
         badge.className = 'triage-badge';
         badge.style.borderColor = 'var(--amber)';
         badge.style.color = 'var(--amber)';
-        badge.innerHTML = `⚠️ ВНИМАНИЕ: СИТУАЦИИ (${top3.length})${healthSuffix}`;
+        badge.innerHTML = `⚠️ ${td('triage.situations')} (${top3.length})${healthSuffix}`;
       } else {
         strip.classList.remove('has-alert');
         badge.className = 'triage-badge';
         badge.style.borderColor = 'var(--emerald)';
         badge.style.color = 'var(--emerald)';
-        badge.innerHTML = `🟢 ШТАТНЫЙ РЕЖИМ${healthSuffix}`;
+        badge.innerHTML = `🟢 ${td('triage.healthy')}${healthSuffix}`;
       }
 
       if (top3.length === 0) {
         container.innerHTML = `
           <div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
-            <span>✅ Все узлы в балансе: нет блокировок, перегрева или зависших задач.</span>
+            <span>${td('triage.allClear')}</span>
           </div>
         `;
       } else {
@@ -3165,17 +3169,17 @@
         const ctxFillBg = pool.isOver
           ? '#ff0055'
           : (pool.hasValidCtx && pool.peakCtx >= 65 ? 'linear-gradient(90deg, #3b82f6, #f59e0b)' : pool.color);
-        const ctxRightText = pool.hasValidCtx ? `${pool.peakCtx}%` : 'нет замеров';
+        const ctxRightText = pool.hasValidCtx ? `${pool.peakCtx}%` : td('pool.noMeter');
         const secondRowHtml = pool.hasUsage
           ? `
-          <div class="meter-row" title="Суммарный расход сессий в пуле ${escapeHtml(pool.name)} (ср. CTX: ${pool.hasValidCtx ? pool.avgCtx + '%' : '—'})">
-            <span class="meter-label">💰 Расход:</span>
+          <div class="meter-row" title="${escapeHtml(pool.name)} (avg CTX: ${pool.hasValidCtx ? pool.avgCtx + '%' : '—'})">
+            <span class="meter-label">${td('pool.spend')}</span>
             <span style="flex:1; font-family:var(--font-mono); font-size:10.5px; color:#7dd3fc; text-align:right;">${formatTokensShort(pool.totalTokens)} tok</span>
             <span style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#fde68a; min-width:52px; text-align:right;">~$${pool.totalEstUsd.toFixed(2)}</span>
           </div>`
           : `
-          <div class="meter-row" title="Средняя загрузка контекста среди узлов пула ${escapeHtml(pool.name)}">
-            <span class="meter-label">🛢️ Ср. CTX:</span>
+          <div class="meter-row" title="${escapeHtml(pool.name)}">
+            <span class="meter-label">${td('pool.avgCtx')}</span>
             <div class="meter-track">
               <div class="meter-fill" style="width: ${pool.hasValidCtx ? Math.min(100, pool.avgCtx) : 0}%; background: ${pool.color}; opacity: 0.85;"></div>
             </div>
@@ -3183,13 +3187,13 @@
           </div>`;
 
         return `
-        <div class="tank-card" title="Узлы пула (${pool.seatCount}): ${seatListTip}" style="--tank-color: ${pool.color}; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
+        <div class="tank-card" title="Seats (${pool.seatCount}): ${seatListTip}" style="--tank-color: ${pool.color}; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
           <div class="tank-top">
             <span>${pool.name}</span>
             <span style="color:${pool.activeCount > 0 ? '#6ee7b7' : '#e9d5ff'}; font-family:var(--font-mono); font-size:11px;">${pool.statusLabel}</span>
           </div>
-          <div class="meter-row" title="Максимальный нагрев контекста в пуле ${escapeHtml(pool.name)} (ср. ${pool.hasValidCtx ? pool.avgCtx + '%' : 'нет замеров'})">
-            <span class="meter-label">⚡ Пик CTX:</span>
+          <div class="meter-row" title="Peak CTX ${escapeHtml(pool.name)}">
+            <span class="meter-label">${td('pool.peakCtx')}</span>
             <div class="meter-track">
               <div class="meter-fill" style="width: ${ctxFillWidth}%; background: ${ctxFillBg};"></div>
             </div>
@@ -3220,7 +3224,7 @@
     function setSliceFilter(slice) {
       currentSliceFilter = slice;
       document.getElementById('activeFilterLabel').textContent =
-        slice === 'all' ? 'ВСЕ МАГИСТРАЛИ' : `ФОКУС ПОТОКА: ${slice.toUpperCase()}`;
+        slice === 'all' ? td('center.allHighways') : td('center.flowFocus', { slice: slice.toUpperCase() });
 
       renderFilterButtons();
       renderWaitRadarAndDecisions();
@@ -3234,7 +3238,7 @@
       const b = document.getElementById('btnCalmMode');
       if (b) {
         b.classList.toggle('active', calmMode);
-        b.innerHTML = calmMode ? '🧘 CALM: ON' : '🧘 CALM FOCUS';
+        b.innerHTML = calmMode ? td('hud.calmOn') : td('hud.calmOff');
       }
     }
 
@@ -3243,7 +3247,7 @@
       const b = document.getElementById('btnHideIdle');
       if (b) {
         b.classList.toggle('active', hideIdleNodes);
-        b.innerHTML = hideIdleNodes ? '💤 СПЯЩИЕ: СКРЫТЫ' : '💤 СПЯЩИЕ: ВИДНЫ';
+        b.innerHTML = hideIdleNodes ? td('hud.idleHidden') : td('hud.idleShown');
       }
       renderTopology();
     }
@@ -3576,10 +3580,10 @@
 
       const score = typeof intel.healthScore === 'number' ? intel.healthScore : 85;
       const scoreColor = score >= 80 ? '#00ff9d' : score >= 60 ? '#f59e0b' : '#ff0055';
-      const scoreLabel = score >= 80 ? 'СТАБИЛЬНЫЙ ФЛОТ' : score >= 60 ? 'ТРЕБУЕТ ВНИМАНИЯ' : 'КРИТИЧЕСКИЙ РИСК';
+      const scoreLabel = score >= 80 ? td('advisor.stable') : score >= 60 ? td('advisor.warn') : td('advisor.crit');
 
       if (badge) {
-        badge.textContent = `ЗДОРОВЬЕ: ${score}% • ${scoreLabel}`;
+        badge.textContent = `${td('triage.health')}: ${score}% • ${scoreLabel}`;
         badge.style.borderColor = scoreColor;
         badge.style.color = scoreColor;
       }
@@ -3595,7 +3599,7 @@
         <div class="fleet-summary-bar">
           <div class="fleet-gauge-box">
             <div style="font-size:11px; font-family:var(--font-mono); color:#94a3b8; font-weight:700; margin-bottom:4px;">
-              ИНДЕКС ЗДОРОВЬЯ
+              ${td('advisor.healthIndex')}
             </div>
             <div class="fleet-gauge-val" style="color:${scoreColor}; text-shadow:0 0 18px ${scoreColor};">
               ${score}%
@@ -3606,28 +3610,28 @@
           </div>
           <div class="fleet-kpis-grid">
             <div class="fleet-kpi-item">
-              <span class="fleet-kpi-label">ВСЕГО АНОМАЛИЙ</span>
-              <span class="fleet-kpi-val" style="color:${findings.length > 0 ? 'var(--cyan)' : '#00ff9d'}">${findings.length} ШТ</span>
+              <span class="fleet-kpi-label">${td('advisor.totalAnomalies')}</span>
+              <span class="fleet-kpi-val" style="color:${findings.length > 0 ? 'var(--cyan)' : '#00ff9d'}">${findings.length}</span>
             </div>
             <div class="fleet-kpi-item">
-              <span class="fleet-kpi-label">P0 КРИТИЧНО</span>
+              <span class="fleet-kpi-label">P0 CRITICAL</span>
               <span class="fleet-kpi-val" style="color:${p0Count > 0 ? '#ff0055' : '#64748b'}">${p0Count}</span>
             </div>
             <div class="fleet-kpi-item">
-              <span class="fleet-kpi-label">P1 ВЫСОКИЙ</span>
+              <span class="fleet-kpi-label">P1 HIGH</span>
               <span class="fleet-kpi-val" style="color:${p1Count > 0 ? '#f59e0b' : '#64748b'}">${p1Count}</span>
             </div>
             <div class="fleet-kpi-item">
-              <span class="fleet-kpi-label">P2 СРЕДНИЙ</span>
+              <span class="fleet-kpi-label">P2 MEDIUM</span>
               <span class="fleet-kpi-val" style="color:${p2Count > 0 ? '#00f0ff' : '#64748b'}">${p2Count}</span>
             </div>
             <div class="fleet-kpi-item">
-              <span class="fleet-kpi-label">P3 ИНФО</span>
+              <span class="fleet-kpi-label">P3 INFO</span>
               <span class="fleet-kpi-val" style="color:#94a3b8">${p3Count}</span>
             </div>
             <div class="fleet-kpi-item">
-              <span class="fleet-kpi-label">АКТИВНЫХ СИДЕНИЙ</span>
-              <span class="fleet-kpi-val">${AGENTS.length} УЗЛОВ</span>
+              <span class="fleet-kpi-label">${td('advisor.activeSeats')}</span>
+              <span class="fleet-kpi-val">${AGENTS.length} ${td('advisor.seatsUnit')}</span>
             </div>
           </div>
         </div>
@@ -3637,16 +3641,16 @@
       let tabsHtml = `
         <div class="fleet-tabs">
           <button class="fleet-tab-btn ${activeFleetTab === 'findings' ? 'active' : ''}" onclick="setFleetAdvisorTab('findings')">
-            💡 РЕКОМЕНДАЦИИ И НАХОДКИ (${findings.length})
+            ${td('advisor.tabFindings')} (${findings.length})
           </button>
           <button class="fleet-tab-btn ${activeFleetTab === 'quality' ? 'active' : ''}" onclick="setFleetAdvisorTab('quality')">
-            🎯 РАДАР КАЧЕСТВА КОДЕРОВ (QA)
+            ${td('advisor.tabQuality')}
           </button>
           <button class="fleet-tab-btn ${activeFleetTab === 'budget' ? 'active' : ''}" onclick="setFleetAdvisorTab('budget')">
-            💰 БЮДЖЕТ И ПУЛЫ МОДЕЛЕЙ
+            ${td('advisor.tabBudget')}
           </button>
           <button class="fleet-tab-btn ${activeFleetTab === 'topology' ? 'active' : ''}" onclick="setFleetAdvisorTab('topology')">
-            🌐 ТОПОЛОГИЯ И ОЧЕРЕДИ (WWR)
+            ${td('advisor.tabTopology')}
           </button>
         </div>
       `;
@@ -3655,11 +3659,11 @@
 
       if (activeFleetTab === 'findings') {
         const categories = [
-          { id: 'all', label: `Все (${findings.length})` },
-          { id: 'quality', label: `Качество (${findings.filter(f => f.category === 'quality').length})` },
-          { id: 'budget', label: `Бюджет (${findings.filter(f => f.category === 'budget').length})` },
-          { id: 'topology', label: `Топология (${findings.filter(f => f.category === 'topology').length})` },
-          { id: 'ceremony', label: `Церемонии (${findings.filter(f => f.category === 'ceremony').length})` }
+          { id: 'all', label: `${td('advisor.catAll')} (${findings.length})` },
+          { id: 'quality', label: `${td('advisor.catQuality')} (${findings.filter(f => f.category === 'quality').length})` },
+          { id: 'budget', label: `${td('advisor.catBudget')} (${findings.filter(f => f.category === 'budget').length})` },
+          { id: 'topology', label: `${td('advisor.catTopology')} (${findings.filter(f => f.category === 'topology').length})` },
+          { id: 'ceremony', label: `${td('advisor.catCeremony')} (${findings.filter(f => f.category === 'ceremony').length})` }
         ];
 
         const filterPills = `
@@ -3774,19 +3778,19 @@
 
         const liveBudgetHtml = usageRows.length > 0 ? `
           <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; background:rgba(15,23,42,0.7); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:8px 12px; margin-bottom:10px; font-family:var(--font-mono); font-size:11.5px;">
-            <span>💰 ИТОГО ПО СЕССИЯМ: <b style="color:#fde68a;">~$${(fleetSum?.totalEstUsd || 0).toFixed(2)}</b> <span style="color:#64748b;">(оценка по прайсу модели)</span></span>
-            <span>🧮 Токены: <b style="color:#7dd3fc;">${formatTokensShort(fleetSum?.totalTokens || 0)}</b> (кэш: <b style="color:#6ee7b7;">${fleetSum?.cachedPct || 0}%</b> • out: ${formatTokensShort(fleetSum?.totalOutputTokens || 0)})</span>
+            <span>${td('advisor.sessionTotal')} <b style="color:#fde68a;">~$${(fleetSum?.totalEstUsd || 0).toFixed(2)}</b> <span style="color:#64748b;">${td('advisor.estNote')}</span></span>
+            <span>${td('advisor.tokens')} <b style="color:#7dd3fc;">${formatTokensShort(fleetSum?.totalTokens || 0)}</b> (${td('advisor.cache')} <b style="color:#6ee7b7;">${fleetSum?.cachedPct || 0}%</b> • out: ${formatTokensShort(fleetSum?.totalOutputTokens || 0)})</span>
           </div>
           <table class="fleet-table" style="margin-bottom:14px;">
             <thead>
               <tr>
-                <th>УЗЕЛ</th>
-                <th>МОДЕЛЬ / ТИР</th>
+                <th>${td('advisor.colSeat')}</th>
+                <th>${td('advisor.colHarness')}</th>
                 <th>UNCACHED IN</th>
                 <th>CACHED IN</th>
                 <th>OUTPUT</th>
-                <th>ВСЕГО ТОК.</th>
-                <th>ОЦЕНКА $</th>
+                <th>TOTAL TOK</th>
+                <th>EST $</th>
               </tr>
             </thead>
             <tbody>
@@ -3806,32 +3810,33 @@
         ` : '';
 
         const livePools = computeModelPools(AGENTS, currentRigFilter);
+        const en = deckLang === 'en';
         const poolMeta = {
-          'codex-gpt': { tier: 'Tier 3 (Frontier, High $/M)', rec: 'Архитектурные решения, декомпозиция, безопасность' },
-          'claude': { tier: 'Tier 2 (Balanced, Medium $/M)', rec: 'Спецификации, комплексная TDD-реализация, рефакторинг' },
-          'fast-open': { tier: 'Tier 1 (Fast, Low $/M)', rec: 'Независимый QA, фиксы, линтер, массовые проверки' },
-          'terminal-agy': { tier: 'Tier 1 (CLI / AGY)', rec: 'Быстрая терминальная разработка, локальные правки' }
+          'codex-gpt': { tier: 'Tier 3 (Frontier, High $/M)', rec: en ? 'Architecture, decomposition, security audits' : 'Архитектурные решения, декомпозиция, безопасность' },
+          'claude': { tier: 'Tier 2 (Balanced, Medium $/M)', rec: en ? 'Specs, complex TDD implementation, refactoring' : 'Спецификации, комплексная TDD-реализация, рефакторинг' },
+          'fast-open': { tier: 'Tier 1 (Fast, Low $/M)', rec: en ? 'Independent QA, lint/fixes, bulk checks' : 'Независимый QA, фиксы, линтер, массовые проверки' },
+          'terminal-agy': { tier: 'Tier 1 (CLI / AGY)', rec: en ? 'Fast terminal tasks, scoped edits' : 'Быстрая терминальная разработка, локальные правки' }
         };
 
         tabContentHtml = `
           <div style="font-size:12px; color:#94a3b8; margin-bottom:8px; font-family:var(--font-mono);">
-            💰 БЮДЖЕТ И РАСХОД ТОКЕНОВ: Потребление по JSONL-транскриптам и эксклюзивная аллокация модельных пулов.
+            ${td('advisor.budgetDesc')}
           </div>
           ${liveBudgetHtml}
           <table class="fleet-table">
             <thead>
               <tr>
-                <th>ПУЛ МОДЕЛЕЙ</th>
-                <th>КЛАСС СТОИМОСТИ</th>
-                <th>УЗЛЫ ПУЛА (ЭКСКЛЮЗИВНО)</th>
-                <th>ПИК CTX / РАСХОД</th>
-                <th>РЕКОМЕНДОВАННЫЙ КЛАСС ЗАДАЧ</th>
+                <th>${td('advisor.colPool')}</th>
+                <th>${td('advisor.colTier')}</th>
+                <th>${td('advisor.colPoolSeats')}</th>
+                <th>${td('advisor.colPeakSpend')}</th>
+                <th>${td('advisor.colRecommended')}</th>
               </tr>
             </thead>
             <tbody>
               ${livePools.map(p => {
-                const meta = poolMeta[p.id] || { tier: 'Standard', rec: 'Общие задачи' };
-                const ctxStr = p.hasValidCtx ? `${p.peakCtx}% пик (ср. ${p.avgCtx}%)` : 'нет замеров';
+                const meta = poolMeta[p.id] || { tier: 'Standard', rec: en ? 'General workload' : 'Общие задачи' };
+                const ctxStr = p.hasValidCtx ? `${p.peakCtx}% (${en ? 'avg' : 'ср.'} ${p.avgCtx}%)` : td('pool.noMeter');
                 const spendStr = p.hasUsage ? ` • ~$${p.totalEstUsd.toFixed(2)}` : '';
                 return `
                   <tr>
@@ -4061,20 +4066,17 @@
       const btnLeft = document.getElementById('btnToggleLeft');
       if (btnLeft) {
         btnLeft.classList.toggle('active', !leftCol);
-        btnLeft.innerHTML = `<span class="dock-glyph">${leftCol ? '◻' : '◧'}</span> РАДАР`;
-        btnLeft.title = leftCol ? 'Развернуть левый радар [ [ ]' : 'Скрыть левый радар [ [ ]';
+        btnLeft.innerHTML = `<span class="dock-glyph">${leftCol ? '◻' : '◧'}</span> ${td('hud.radar')}`;
       }
       const btnRight = document.getElementById('btnToggleRight');
       if (btnRight) {
         btnRight.classList.toggle('active', !rightCol);
-        btnRight.innerHTML = `ИНСПЕКТОР <span class="dock-glyph">${rightCol ? '◻' : '◨'}</span>`;
-        btnRight.title = rightCol ? 'Развернуть правый инспектор [ ] ]' : 'Скрыть правый инспектор [ ] ]';
+        btnRight.innerHTML = `${td('hud.inspector')} <span class="dock-glyph">${rightCol ? '◻' : '◨'}</span>`;
       }
       const btnMax = document.getElementById('btnMaximizeCanvas');
       if (btnMax) {
         btnMax.classList.toggle('zen-active', bothCol);
-        btnMax.innerHTML = `<span class="dock-glyph">${bothCol ? '🗗' : '⛶'}</span> ${bothCol ? 'ВСЕ ПАНЕЛИ' : 'ТОЛЬКО ГРАФ'}`;
-        btnMax.title = bothCol ? 'Восстановить панели [ \\ ]' : 'Фокус холста (скрыть панели) [ \\ ]';
+        btnMax.innerHTML = `<span class="dock-glyph">${bothCol ? '🗗' : '⛶'}</span> ${bothCol ? td('hud.allPanels') : td('hud.graphOnly')}`;
       }
     }
 
@@ -4124,7 +4126,7 @@
       const isDetailed = document.body.classList.contains('density-detailed');
       const btnDensity = document.getElementById('btnDensityMode');
       if (btnDensity) {
-        btnDensity.innerHTML = isDetailed ? '🔍 ДЕТАЛЬНО' : '📐 FIT: КОМПАКТ';
+        btnDensity.innerHTML = isDetailed ? td('hud.fitDetailed') : td('hud.fitCompact');
         btnDensity.classList.toggle('active', !isDetailed);
       }
     }
@@ -4163,62 +4165,65 @@
     });
 
     // ===== SA-DSS & Cognitive Load Interactive Tour =====
-    const SA_TOUR_STEPS = [
-      {
-        badge: 'SA LEVEL 1 • CALM HUD (ISO 11064)',
-        title: 'Сигнализация по исключениям: норма молчит, горят только аномалии',
-        desc: 'Спящие и штатные узлы (Zzz) не мигают и не отнимают внимание. Пульсируют и пробивают тишину только реальные проблемы: NEEDS INPUT, PARKED и перегрев контекста ≥ 75%.',
-        meta: 'Эффект: снижение зрительного шума на 70%+ • режим CALM FOCUS приглушает здоровые узлы одним кликом.',
-        selector: '#panelCenter',
-        actionLabel: '🧘 Переключить CALM FOCUS',
-        action: () => toggleCalmMode()
-      },
-      {
-        badge: 'SA LEVEL 2 • TOPOLOGICAL RADAR',
-        title: 'Радар «Кто → Кого → Зачем ждёт» и Sankey-магистрали',
-        desc: 'Вместо прыжков по 10 терминалам оператор за 1 взгляд видит цепочку блокировок слева и толщину потока задач в центре. Клик по магистрали открывает историю конвертов.',
-        meta: 'Эффект: понимание состояния всего флота за 2–3 секунды без чтения логов.',
-        selector: '#panelLeft',
-        actionLabel: '◧ Показать / скрыть Радар',
-        action: () => toggleSidebar('left')
-      },
-      {
-        badge: 'SA LEVEL 3 • PROJECTION & ADVISOR',
-        title: 'Прогноз выгорания контекста (Burn-Rate) и Советник флота',
-        desc: 'Верхняя полоса прогнозирует время до порога 75% CTX и подсвечивает системные узкие места (зависшие задачи, перекос моделей, частые возвраты QA) с готовыми действиями в 1 клик.',
-        meta: 'Эффект: превентивный /compact и перебалансировка до того, как агент упадёт или сожжёт квоту.',
-        selector: '#triageStrip',
-        actionLabel: '💡 Открыть Советник флота',
-        action: () => { if (typeof openFleetAdvisorModal === 'function') openFleetAdvisorModal(); }
-      },
-      {
-        badge: 'COGNITIVE ERGONOMICS • PROGRESSIVE DISCLOSURE',
-        title: '3 уровня глубины (L1 → L2 → L3) и компактная плотность FIT',
-        desc: 'Карта (L1) показывает только статус и контекст; инспектор справа (L2) — паспорт и правила роли; нижний блок (L3) — живой захват tmux и отправку команд прямо из браузера.',
-        meta: 'Горячие клавиши: [ Радар • ] Инспектор • \\ Только граф • D Плотность FIT/Детально • F Fullscreen.',
-        selector: '#panelRight',
-        actionLabel: '📐 Переключить FIT / Детально',
-        action: () => toggleDensityMode()
-      },
-      {
-        badge: 'PIPELINE FLOW • 6 СТАНЦИЙ ПОСТАВКИ',
-        title: 'Дорожки слайсов и детекция возвратов QA (Bounce-Back)',
-        desc: 'Каждая задача видна на 6 фиксированных этапах (Spec/Dev → Код → QA Границы → Сверка → Приёмка → Push). Сразу видно, какой слайс зациклился на доработках.',
-        meta: 'Эффект: ноль потерянных задач при параллельной работе 4–10+ кодеров.',
-        selector: '.swimlanes-section',
-        actionLabel: '🕸️ Сбросить фильтры потоков',
-        action: () => setSliceFilter('all')
-      },
-      {
-        badge: 'ONTOLOGY v2.0 • GANTT & ACTION AUDIT',
-        title: 'Диаграмма Ганта (клавиша G) и журнал действий с проверкой postcondition',
-        desc: 'Переключите центр в режим Ганта, чтобы увидеть реальное время ожидания vs работы по цепочкам. Каждое write-back действие (HITL, /compact, wake) фиксируется в ActionAuditLog и автоматически проверяет эффект.',
-        meta: 'Эффект: доказательный контроль флота — видны и простои в очереди, и подтверждённый результат каждой команды.',
-        selector: '#panelCenter',
-        actionLabel: '📊 Переключить Граф ⇄ Гант',
-        action: () => setCenterView(centerViewMode === 'gantt' ? 'graph' : 'gantt')
-      }
-    ];
+    function getSaTourSteps() {
+      const en = deckLang === 'en';
+      return [
+        {
+          badge: 'SA LEVEL 1 • CALM HUD (ISO 11064)',
+          title: en ? 'Exception-Based Signaling: normal stays silent, only anomalies light up' : 'Сигнализация по исключениям: норма молчит, горят только аномалии',
+          desc: en ? 'Sleeping and nominal nodes (Zzz) never flash. Only real blockers break through: NEEDS INPUT, PARKED seats, and ≥ 75% context heat.' : 'Спящие и штатные узлы (Zzz) не мигают и не отнимают внимание. Пульсируют и пробивают тишину только реальные проблемы: NEEDS INPUT, PARKED и перегрев контекста ≥ 75%.',
+          meta: en ? 'Effect: 70%+ less visual noise • CALM FOCUS dims healthy nodes in 1 click.' : 'Эффект: снижение зрительного шума на 70%+ • режим CALM FOCUS приглушает здоровые узлы одним кликом.',
+          selector: '#panelCenter',
+          actionLabel: en ? '🧘 Toggle CALM FOCUS' : '🧘 Переключить CALM FOCUS',
+          action: () => toggleCalmMode()
+        },
+        {
+          badge: 'SA LEVEL 2 • TOPOLOGICAL RADAR',
+          title: en ? 'Wait Radar ("Who → Whom → Why") & Call Highways' : 'Радар «Кто → Кого → Зачем ждёт» и Sankey-магистрали',
+          desc: en ? 'Instead of hopping across 10 terminals, see every blocker chain on the left and live call volume in the center.' : 'Вместо прыжков по 10 терминалам оператор за 1 взгляд видит цепочку блокировок слева и толщину потока задач в центре. Клик по магистрали открывает историю конвертов.',
+          meta: en ? 'Effect: full fleet comprehension in 2–3 seconds without grepping logs.' : 'Эффект: понимание состояния всего флота за 2–3 секунды без чтения логов.',
+          selector: '#panelLeft',
+          actionLabel: en ? '◧ Toggle Wait Radar' : '◧ Показать / скрыть Радар',
+          action: () => toggleSidebar('left')
+        },
+        {
+          badge: 'SA LEVEL 3 • PROJECTION & ADVISOR',
+          title: en ? 'Context Burn-Rate Projection & Fleet Advisor' : 'Прогноз выгорания контекста (Burn-Rate) и Советник флота',
+          desc: en ? 'Top triage predicts time to 75% CTX and surfaces bottlenecks (QA bounce-backs, model cost mismatch, parked seats) with 1-click actions.' : 'Верхняя полоса прогнозирует время до порога 75% CTX и подсвечивает системные узкие места (зависшие задачи, перекос моделей, частые возвраты QA) с готовыми действиями в 1 клик.',
+          meta: en ? 'Effect: preemptive /compact before an agent degrades or burns quota.' : 'Эффект: превентивный /compact и перебалансировка до того, как агент упадёт или сожжёт квоту.',
+          selector: '#triageStrip',
+          actionLabel: en ? '💡 Open Fleet Advisor' : '💡 Открыть Советник флота',
+          action: () => { if (typeof openFleetAdvisorModal === 'function') openFleetAdvisorModal(); }
+        },
+        {
+          badge: 'COGNITIVE ERGONOMICS • PROGRESSIVE DISCLOSURE',
+          title: en ? '3 Depth Levels (L1 → L2 → L3) & FIT Density' : '3 уровня глубины (L1 → L2 → L3) и компактная плотность FIT',
+          desc: en ? 'Map (L1) shows status & context; Inspector (L2) shows task & signals; bottom block (L3) streams live tmux with clickable HITL options.' : 'Карта (L1) показывает только статус и контекст; инспектор справа (L2) — паспорт и правила роли; нижний блок (L3) — живой захват tmux и отправку команд прямо из браузера.',
+          meta: en ? 'Hotkeys: [ Radar • ] Inspector • \\ Zen Graph • D Fit/Detailed • G Gantt • F Fullscreen.' : 'Горячие клавиши: [ Радар • ] Инспектор • \\ Только граф • D Плотность • G Гант • F Fullscreen.',
+          selector: '#panelRight',
+          actionLabel: en ? '📐 Toggle FIT / Detailed' : '📐 Переключить FIT / Детально',
+          action: () => toggleDensityMode()
+        },
+        {
+          badge: en ? 'PIPELINE FLOW • 6 DELIVERY STAGES' : 'PIPELINE FLOW • 6 СТАНЦИЙ ПОСТАВКИ',
+          title: en ? 'Slice Swimlanes & QA Bounce-Back Detection' : 'Дорожки слайсов и детекция возвратов QA (Bounce-Back)',
+          desc: en ? 'Track every slice across 6 delivery stations and immediately spot rework loops.' : 'Каждая задача видна на 6 фиксированных этапах (Spec/Dev → Код → QA Границы → Сверка → Приёмка → Push). Сразу видно, какой слайс зациклился на доработках.',
+          meta: en ? 'Effect: zero dropped tasks across 4–10+ parallel coding agents.' : 'Эффект: ноль потерянных задач при параллельной работе 4–10+ кодеров.',
+          selector: '.swimlanes-section',
+          actionLabel: en ? '🕸️ Reset Flow Filters' : '🕸️ Сбросить фильтры потоков',
+          action: () => setSliceFilter('all')
+        },
+        {
+          badge: 'ONTOLOGY v2.0 • GANTT & ACTION AUDIT',
+          title: en ? 'Task Gantt (key G) & Postcondition Action Audit' : 'Диаграмма Ганта (клавиша G) и журнал действий с проверкой postcondition',
+          desc: en ? 'Flip the center pane to Gantt to distinguish queue wait from work. Every write-back action logs into ActionAuditLog with automatic postcondition verification.' : 'Переключите центр в режим Ганта, чтобы увидеть реальное время ожидания vs работы по цепочкам. Каждое write-back действие (HITL, /compact, wake) фиксируется в ActionAuditLog и автоматически проверяет эффект.',
+          meta: en ? 'Effect: evidence-based fleet control — queue delays and verified action outcomes side by side.' : 'Эффект: доказательный контроль флота — видны и простои в очереди, и подтверждённый результат каждой команды.',
+          selector: '#panelCenter',
+          actionLabel: en ? '📊 Toggle Graph ⇄ Gantt' : '📊 Переключить Граф ⇄ Гант',
+          action: () => setCenterView(centerViewMode === 'gantt' ? 'graph' : 'gantt')
+        }
+      ];
+    }
 
     let saTourOpen = false;
     let saTourIdx = 0;
@@ -4237,7 +4242,8 @@
         return;
       }
       if (btn) btn.classList.add('sa-active');
-      const step = SA_TOUR_STEPS[saTourIdx] || SA_TOUR_STEPS[0];
+      const steps = getSaTourSteps();
+      const step = steps[saTourIdx] || steps[0];
       const targetEl = step.selector ? document.querySelector(step.selector) : null;
       if (targetEl) {
         targetEl.classList.add('sa-spotlight');
@@ -4247,7 +4253,7 @@
       card.innerHTML = `
         <div class="sa-tour-top">
           <span class="sa-tour-badge">${step.badge}</span>
-          <span style="font-family:var(--font-mono); font-size:11px; color:#94a3b8;">Шаг ${saTourIdx + 1} / ${SA_TOUR_STEPS.length} • [Esc] закрыть</span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:#94a3b8;">${td('tour.step', { cur: saTourIdx + 1, total: steps.length })}</span>
         </div>
         <div class="sa-tour-title">${step.title}</div>
         <div class="sa-tour-desc">${step.desc}</div>
@@ -4255,8 +4261,8 @@
         <div class="sa-tour-actions">
           <button class="cyber-btn" onclick="runSaTourAction()" style="border-color:rgba(0,255,157,0.55); color:#6ee7b7;">${step.actionLabel}</button>
           <div style="display:flex; gap:6px; align-items:center;">
-            <button class="cyber-btn" onclick="moveSaTour(-1)">← Назад</button>
-            <button class="cyber-btn" onclick="moveSaTour(1)" style="border-color:#00f0ff; color:#67e8f9;">Далее →</button>
+            <button class="cyber-btn" onclick="moveSaTour(-1)">${td('tour.prev')}</button>
+            <button class="cyber-btn" onclick="moveSaTour(1)" style="border-color:#00f0ff; color:#67e8f9;">${td('tour.next')}</button>
             <button class="cyber-btn" onclick="closeSaTour()">✕</button>
           </div>
         </div>
@@ -4277,12 +4283,13 @@
     }
 
     function moveSaTour(delta) {
-      saTourIdx = (saTourIdx + delta + SA_TOUR_STEPS.length) % SA_TOUR_STEPS.length;
+      const len = getSaTourSteps().length;
+      saTourIdx = (saTourIdx + delta + len) % len;
       renderSaTour();
     }
 
     function runSaTourAction() {
-      const step = SA_TOUR_STEPS[saTourIdx];
+      const step = getSaTourSteps()[saTourIdx];
       if (step && typeof step.action === 'function') step.action();
     }
 
@@ -4385,8 +4392,105 @@
       };
     }
 
+    let deckLang = 'ru';
+    function td(key, vars) {
+      return typeof tDeck === 'function' ? tDeck(deckLang, key, vars) : key;
+    }
+
+    const DEMO_ROLES_I18N = {
+      en: {
+        'operator-agent@kernel': { role: 'Kernel Dispatcher', details: 'Global OpenRig kernel operator.' },
+        'dev-operator@core-platform': { role: 'Rig Operator • Watchdog 15m', details: 'CTX: 31% (475K Codex window). Monitors queue, 75% watchdog, and checker selection.' },
+        'dev-owner@core-platform': { role: 'Architect & Orchestrator', details: 'CTX: 48% (228K / 475K Codex). Coordinates tts-strict-chunked and elb-001 slices.' },
+        'dev-senior-architector@core-platform': { role: 'Senior Architect (Spec & Arch)', details: 'CTX: 26% (52K / 200K Claude Sonnet 4). Authors specs, ADRs, and architecture reviews.' },
+        'dev-coder@core-platform': { role: 'Primary Coder (Main Copy)', details: 'CTX: 24% (1M window). Implementing ELB-001 fix and running unit tests.' },
+        'dev-coder3@core-platform': { role: 'Coder 3 (Pi Isolated)', parkedReason: 'Open obligations without active wake timer', details: 'Stopped with 2 open obligations in queue without an active wake timer.' },
+        'dev-coder4@core-platform': { role: 'Coder 4 (Parallel Worktree)', details: 'CTX: 68% (475K Codex window). Finalizing tts-strict-chunked before QA handoff.' },
+        'dev-coder5@core-platform': { role: 'Coder 5 • Terminal Seat (ELB-003)', details: 'Terminal seat (Gemini 2.5 Pro). Delivered ELB-003, waiting at prompt ">".' },
+        'dev-check@core-platform': { role: 'Evidence QA • Verifier', details: 'CTX: 79% (204K / 258.4K) — above 75% threshold. Stopped on permission_prompt.' }
+      },
+      ru: {
+        'operator-agent@kernel': { role: 'Диспетчер ядра OpenRig', details: 'Глобальный оператор ядра OpenRig.' },
+        'dev-operator@core-platform': { role: 'Оператор рига • Watchdog 15m', details: 'CTX: 31% (из 475K окна Codex). Следит за очередью, Watchdog 75% и матрицей выбора чекера.' },
+        'dev-owner@core-platform': { role: 'Архитектор и Оркестратор', details: 'CTX: 48% (228K / 475K). Активно координирует слайсы tts-strict-chunked и elb-001.' },
+        'dev-senior-architector@core-platform': { role: 'Старший Архитектор (Spec & Arch)', details: 'CTX: 26% (52K / 200K Claude Sonnet 4). Постановки задач, ADR и ревью спецификаций.' },
+        'dev-coder@core-platform': { role: 'Основной кодер (Main Copy)', details: 'CTX: 24% (из 1M окна). Пишет фикс по слайсу ELB-001 и прогоняет unit-тесты.' },
+        'dev-coder3@core-platform': { role: 'Кодер 3 (Pi Isolated)', parkedReason: 'Обязательства без активного wake-таймера', details: 'Остановлен с 2 открытыми обязательствами в очереди без активного wake-таймера.' },
+        'dev-coder4@core-platform': { role: 'Кодер 4 (Parallel Worktree)', details: 'CTX: 68% (из 475K окна Codex). Дорабатывает tts-strict-chunked перед передачей в QA.' },
+        'dev-coder5@core-platform': { role: 'Кодер 5 • Terminal Seat (ELB-003)', details: 'Terminal-сиденье agy (Gemini 2.5 Pro). Сдал ELB-003, ждёт на промпте ">".' },
+        'dev-check@core-platform': { role: 'Доказательный QA • Проверяющий', details: 'CTX: 79% (204K / 258.4K) — превышен порог 75%. Остановлен на permission_prompt.' }
+      }
+    };
+
+    function localizeDemoData(lang) {
+      if (IS_LIVE) return;
+      const map = DEMO_ROLES_I18N[lang === 'en' ? 'en' : 'ru'];
+      for (const a of AGENTS) {
+        const entry = map[a.id];
+        if (!entry) continue;
+        a.role = entry.role;
+        a.details = entry.details;
+        if (entry.parkedReason && a.parkedData && a.parkedData.parked) {
+          a.parkedReason = entry.parkedReason;
+          a.parkedData.reason = entry.parkedReason;
+        }
+      }
+    }
+
+    function setDeckLang(lang, skipRerender = false) {
+      deckLang = lang === 'en' ? 'en' : 'ru';
+      document.documentElement.lang = deckLang;
+      try { localStorage.setItem('rigcommander_lang', deckLang); } catch {}
+
+      const bEn = document.getElementById('deckLangEn');
+      const bRu = document.getElementById('deckLangRu');
+      if (bEn) {
+        bEn.style.background = deckLang === 'en' ? 'rgba(0,240,255,0.2)' : 'transparent';
+        bEn.style.color = deckLang === 'en' ? '#00f0ff' : '#94a3b8';
+      }
+      if (bRu) {
+        bRu.style.background = deckLang === 'ru' ? 'rgba(0,240,255,0.2)' : 'transparent';
+        bRu.style.color = deckLang === 'ru' ? '#00f0ff' : '#94a3b8';
+      }
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        const txt = td(k);
+        if (txt && txt !== k) el.textContent = txt;
+      });
+
+      const sub = document.getElementById('lastSyncSubtitle');
+      if (sub && !IS_LIVE) sub.textContent = td('hud.snapshotSub');
+      const btnCalm = document.getElementById('btnCalmMode');
+      if (btnCalm) btnCalm.textContent = calmMode ? td('hud.calmOn') : td('hud.calmOff');
+      const btnAudio = document.getElementById('btnAudioRadar');
+      if (btnAudio) btnAudio.textContent = audioRadarOn ? td('hud.audioOn') : td('hud.audioOff');
+      const btnIdle = document.getElementById('btnHideIdle');
+      if (btnIdle) btnIdle.textContent = hideIdleNodes ? td('hud.idleHidden') : td('hud.idleShown');
+      const cTitle = document.getElementById('centerPanelTitle');
+      if (cTitle) cTitle.textContent = centerViewMode === 'gantt' ? td('center.ganttTitle') : td('center.graphTitle');
+      const fLbl = document.getElementById('activeFilterLabel');
+      if (fLbl) fLbl.textContent = currentSliceFilter === 'all' ? td('center.allHighways') : td('center.flowFocus', { slice: currentSliceFilter.toUpperCase() });
+
+      localizeDemoData(deckLang);
+      if (skipRerender) return;
+      rebuildDemoIntelligence();
+      updateSidebarUi();
+      updateDensityUi();
+      renderTriageStrip();
+      renderReservoirs();
+      renderWaitRadarAndDecisions();
+      renderTopology();
+      renderSwimlanes();
+      renderInspectorAndScorecards(true);
+      const adv = document.getElementById('fleetAdvisorModal');
+      if (adv && adv.classList.contains('open')) renderFleetAdvisorModal();
+      if (saTourOpen) renderSaTour();
+    }
+
     function rebuildDemoIntelligence() {
       if (IS_LIVE) return;
+      const en = deckLang === 'en';
       const findings = [];
       for (const a of AGENTS) {
         if (a.state === 'urgent') {
@@ -4395,13 +4499,13 @@
             detectorId: 'hitl_permission_prompt',
             severity: 'p0_urgent',
             category: 'topology',
-            title: `${a.shortName} ожидает подтверждения HITL в терминале`,
-            summary: 'В tmux распознаны 3 интерактивных варианта permission_prompt. Подтвердите в 1 клик через Инспектор или 80-строчный экран.',
-            metrics: { roiEstimate: 'Снятие простоя QA', affectedSeats: [a.id] },
+            title: en ? `${a.shortName} is awaiting HITL terminal approval` : `${a.shortName} ожидает подтверждения HITL в терминале`,
+            summary: en ? '3 interactive permission_prompt options parsed from tmux. Approve in 1 click via Inspector or 80-line screen.' : 'В tmux распознаны 3 интерактивных варианта permission_prompt. Подтвердите в 1 клик через Инспектор или 80-строчный экран.',
+            metrics: { roiEstimate: en ? 'Unblock QA' : 'Снятие простоя QA', affectedSeats: [a.id] },
             actionPlan: {
               kind: 'open_modal',
               seatTarget: a.id,
-              label: '📺 Открыть экран QA',
+              label: en ? '📺 Open QA Screen' : '📺 Открыть экран QA',
               commandPreview: `rig capture ${a.id} --lines 80`
             }
           });
@@ -4413,13 +4517,13 @@
             detectorId: 'context_saturation',
             severity: isCrit ? 'p1_high' : 'p2_medium',
             category: 'budget',
-            title: `Нагрев контекста ${a.shortName}: ${a.ctxPct}% (порог 75%)`,
-            summary: `Выполните превентивный /compact (${a.ctxUsedTokens ? Math.round(a.ctxUsedTokens / 1000) + 'K' : a.ctxPct + '%'}), чтобы сохранить точность и снизить расход токенов.`,
-            metrics: { roiEstimate: '−60% контекст', affectedSeats: [a.id] },
+            title: en ? `High context load on ${a.shortName}: ${a.ctxPct}% (75% threshold)` : `Нагрев контекста ${a.shortName}: ${a.ctxPct}% (порог 75%)`,
+            summary: en ? `Trigger preemptive /compact (${a.ctxUsedTokens ? Math.round(a.ctxUsedTokens / 1000) + 'K' : a.ctxPct + '%'}) to keep accuracy high and cut token burn.` : `Выполните превентивный /compact (${a.ctxUsedTokens ? Math.round(a.ctxUsedTokens / 1000) + 'K' : a.ctxPct + '%'}), чтобы сохранить точность и снизить расход токенов.`,
+            metrics: { roiEstimate: en ? '−60% context' : '−60% контекст', affectedSeats: [a.id] },
             actionPlan: {
               kind: 'compact_seat',
               seatTarget: a.id,
-              label: `⚡ Сжать /compact (${a.ctxPct}%)`,
+              label: en ? `⚡ Compact /compact (${a.ctxPct}%)` : `⚡ Сжать /compact (${a.ctxPct}%)`,
               commandPreview: `/compact → ${a.shortName}`
             }
           });
@@ -4430,13 +4534,13 @@
             detectorId: 'parked_seat',
             severity: 'p1_high',
             category: 'topology',
-            title: `${a.shortName} запаркован с открытыми обязательствами`,
-            summary: a.parkedReason || 'Узел держит открытые задачи очереди без активного wake-таймера.',
-            metrics: { roiEstimate: 'Разблокировка 2 задач', affectedSeats: [a.id] },
+            title: en ? `${a.shortName} is PARKED with open obligations` : `${a.shortName} запаркован с открытыми обязательствами`,
+            summary: a.parkedReason || (en ? 'Holding queue tasks without an active wake timer.' : 'Узел держит открытые задачи очереди без активного wake-таймера.'),
+            metrics: { roiEstimate: en ? 'Unblock 2 tasks' : 'Разблокировка 2 задач', affectedSeats: [a.id] },
             actionPlan: {
               kind: 'wake_seat',
               seatTarget: a.id,
-              label: '⚡ Разбудить (Enter)',
+              label: en ? '⚡ Wake (Enter)' : '⚡ Разбудить (Enter)',
               commandPreview: `tmux send-keys ${a.id} Enter`
             }
           });
@@ -4447,13 +4551,13 @@
             detectorId: 'qa_bounce_back',
             severity: 'p2_medium',
             category: 'quality',
-            title: `Повышенное число кругов QA на ${a.shortName} (Avg: ${a.reworkAvg} кр)`,
-            summary: `1-й пас прохождения QA составляет ${a.firstPassPct || '33%'}. Проверьте граничные тесты до передачи на dev-check.`,
-            metrics: { roiEstimate: '−1 круг QA', affectedSeats: [a.id] },
+            title: en ? `Elevated QA bounce-back on ${a.shortName} (Avg: ${a.reworkAvg} rnd)` : `Повышенное число кругов QA на ${a.shortName} (Avg: ${a.reworkAvg} кр)`,
+            summary: en ? `1st-pass QA rate is ${a.firstPassPct || '33%'}. Run boundary checks before handing off to QA.` : `1-й пас прохождения QA составляет ${a.firstPassPct || '33%'}. Проверьте граничные тесты до передачи на dev-check.`,
+            metrics: { roiEstimate: en ? '−1 QA round' : '−1 круг QA', affectedSeats: [a.id] },
             actionPlan: {
               kind: 'select_seat',
               seatTarget: a.id,
-              label: `🔍 Инспектор ${a.shortName}`,
+              label: en ? `🔍 Inspect ${a.shortName}` : `🔍 Инспектор ${a.shortName}`,
               commandPreview: `focus ${a.id}`
             }
           });
@@ -4520,6 +4624,10 @@
 
     // Initial render + start live polling loop (invoked after /assets/domain/index.js loads)
     window.__initRigCommander = function initRigCommander() {
+      const initialLang = typeof resolveDeckLang === 'function'
+        ? resolveDeckLang(window.location.search, localStorage.getItem('rigcommander_lang') || '', navigator.language || '')
+        : 'en';
+      setDeckLang(initialLang, true);
       seedDemoOntologyState();
       rebuildDemoIntelligence();
       initSidebarState();

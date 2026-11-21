@@ -10,7 +10,7 @@ const args = process.argv.slice(2);
 if (args.includes('-h') || args.includes('--help')) {
   console.log(`
 💠 RIGCOMMANDER // NEURAL COMMAND DECK v3.1
-Mission Control for Autonomous AI Coding Fleets
+Mission Control for Autonomous AI Coding Fleets (OpenRig + Universal Claude/Codex/tmux)
 
 Usage:
   npx rig-commander [options]
@@ -23,6 +23,7 @@ Options:
   -h, --help            Show this help manual
 
 Keyboard Shortcuts in Deck:
+  G                     Toggle Graph ⇄ Task Gantt Timeline
   [                     Toggle Left Radar (Who Waits for Whom)
   ]                     Toggle Right Inspector & TMUX Capture
   \\                     Zen Canvas Mode (Maximize Topology Graph)

@@ -1178,7 +1178,8 @@
         <li><a href="#comparison" data-i18n="nav.why">Why RigCommander</a></li>
         <li><a href="#architecture" data-i18n="nav.arch">Architecture</a></li>
         <li><a href="/passport" data-i18n="nav.passport">Passport</a></li>
-        <li><a href="#waitlist" data-i18n="nav.waitlist">Waitlist</a></li>
+        <li><a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="#waitlist" data-i18n="nav.waitlist">Early Access</a></li>
       </ul>
       <div class="nav-actions-right">
         <div class="lang-switch" role="group" aria-label="Language switch">
@@ -1706,7 +1707,7 @@ Run negative control fault check?
             <div class="step-num">01</div>
             <h3 class="step-title" data-i18n="arch.s1.title">Run Hardened Local Bridge</h3>
             <p class="step-desc" data-i18n="arch.s1.desc">
-              Loopback-only Node.js BFF (127.0.0.1) reads OpenRig daemon telemetry, queue logs, and tmux sockets out-of-band with zero npm dependencies.
+              Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.
             </p>
             <div class="step-code">$ npx rig-commander@latest</div>
           </div>
@@ -1743,9 +1744,9 @@ Run negative control fault check?
               Full engineering blueprint with C4 Level 1 &amp; Level 3 diagrams, 7-object Operational Ontology v2.0 tables, localhost security controls, and all 5 automated test suites.
             </p>
             <div class="passport-pills">
-              <span class="passport-pill">0 npm deps</span>
-              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">27 / 27 node --test PASS</span>
-              <span class="passport-pill">C4 L1 + L3</span>
+              <span class="passport-pill">0 npm deps • MIT</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">31 / 31 node --test PASS</span>
+              <span class="passport-pill">Universal Claude/Codex/tmux</span>
               <span class="passport-pill">Ontology v2.0</span>
               <span class="passport-pill">DECK_TOKEN + Allowlist</span>
             </div>
@@ -1795,23 +1796,40 @@ Run negative control fault check?
               </select>
             </div>
 
+            <div class="form-group">
+              <label class="form-label" for="topNeed" data-i18n="waitlist.needLabel">Most Urgent Pro Capability</label>
+              <select id="topNeed" class="form-select">
+                <option value="telegram-hitl" selected data-i18n="waitlist.n1">Telegram / Slack HITL approval from phone</option>
+                <option value="budget-breaker" data-i18n="waitlist.n2">Hard $ budget circuit-breaker &amp; loop killer</option>
+                <option value="multi-machine" data-i18n="waitlist.n3">Multi-machine Team Fleet Hub</option>
+                <option value="enterprise-audit" data-i18n="waitlist.n4">On-premise Policy-as-Code &amp; SIEM Audit</option>
+              </select>
+            </div>
+
             <button type="submit" class="form-submit-btn" id="submitBtn" data-i18n="waitlist.submit">
-              Claim Priority Access →
+              Request Early Access →
             </button>
           </form>
 
-          <div id="waitlistSuccess" style="display:none; margin-top:24px; padding:18px; background:rgba(0,255,157,0.12); border:1px solid var(--emerald); border-radius:8px;">
-            <div style="font-weight:800; font-size:16px; color:#6ee7b7; margin-bottom:6px;" data-i18n="waitlist.successTitle">
-              ✓ You are on the priority waitlist!
+          <div id="waitlistSuccess" style="display:none; margin-top:24px; padding:18px; background:rgba(0,255,157,0.1); border:1px solid var(--emerald); border-radius:8px; text-align:left;">
+            <div style="font-weight:800; font-size:15.5px; color:#6ee7b7; margin-bottom:8px;" data-i18n="waitlist.successTitle">
+              ✓ Request prepared! Complete in 1 click on GitHub:
             </div>
-            <div style="font-family:var(--font-mono); font-size:12px; color:#cbd5e1;" data-i18n-html="waitlist.successDesc">
-              Access position: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>
-              We have sent a confirmation email with setup instructions.
+            <div style="font-family:var(--font-mono); font-size:11.5px; color:#cbd5e1; line-height:1.5; margin-bottom:12px;" data-i18n="waitlist.successDesc">
+              No fake waitlist numbers — open the pre-filled GitHub Early Access request so your team goes straight to our onboarding queue, or copy your configuration summary below.
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+              <a id="waitlistGithubLink" href="https://github.com/Vedariy/rig-commander/issues/new" target="_blank" rel="noopener" class="btn-primary" style="padding:10px 16px; font-size:12.5px;" data-i18n="waitlist.openGithub">
+                🐙 Submit via GitHub Issue →
+              </a>
+              <button type="button" id="waitlistCopyBtn" class="btn-secondary" style="padding:10px 14px; font-size:12px; cursor:pointer;" onclick="copyWaitlistSummary()" data-i18n="waitlist.copySummary">
+                📋 Copy Summary
+              </button>
             </div>
           </div>
 
           <div class="waitlist-meta" data-i18n="waitlist.meta">
-            🔒 100% Local-First Architecture • 0 npm deps • Self-hosted ready
+            🔒 100% Local-First • MIT Open Source • 0 npm deps • Inspect code on GitHub
           </div>
         </div>
       </div>
@@ -1833,6 +1851,8 @@ Run negative control fault check?
         <a href="/demo?track=tour" style="color:#6ee7b7; text-decoration:none;" data-i18n="footer.tour">SA-DSS Tour</a>
         <span>·</span>
         <a href="/passport" style="color:#d8b4fe; text-decoration:none;" data-i18n="nav.passport">Passport</a>
+        <span>·</span>
+        <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener" style="color:#e2e8f0; text-decoration:none;">GitHub</a>
       </div>
 
       <div class="footer-keycaps">
@@ -1943,7 +1963,7 @@ Run negative control fault check?
         'arch.title': 'Zero Dependencies. Zero-Code Instrumentation.',
         'arch.desc': 'Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process DECK_TOKEN, Origin checks, and allowlisted tmux keys.',
         'arch.s1.title': 'Run Hardened Local Bridge',
-        'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) reads OpenRig daemon telemetry, queue logs, and tmux sockets out-of-band with zero npm dependencies.',
+        'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.',
         'arch.s2.title': 'Ontology & FinOps Sync',
         'arch.s2.desc': 'Builds canonical Objects & Links, cleans opgate noise for Gantt chains, and streams JSONL transcripts by byte offset for real-time $ tracking.',
         'arch.s2.code': '● 7 Objects • Exclusive Pools • Cache %',
@@ -1966,10 +1986,17 @@ Run negative control fault check?
         'waitlist.h2': 'Codex / OpenAI Swarms',
         'waitlist.h3': 'Custom Tmux / Worktree Orchestration',
         'waitlist.h4': 'CrewAI / LangGraph / AutoGen',
-        'waitlist.submit': 'Claim Priority Access →',
-        'waitlist.successTitle': '✓ You are on the priority waitlist!',
-        'waitlist.successDesc': 'Access position: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>We have sent a confirmation email with setup instructions.',
-        'waitlist.meta': '🔒 100% Local-First Architecture • 0 npm deps • Self-hosted ready',
+        'waitlist.needLabel': 'Most Urgent Pro Capability',
+        'waitlist.n1': 'Telegram / Slack HITL approval from phone',
+        'waitlist.n2': 'Hard $ budget circuit-breaker & loop killer',
+        'waitlist.n3': 'Multi-machine Team Fleet Hub',
+        'waitlist.n4': 'On-premise Policy-as-Code & SIEM Audit',
+        'waitlist.submit': 'Request Early Access →',
+        'waitlist.successTitle': '✓ Request prepared! Complete in 1 click on GitHub:',
+        'waitlist.successDesc': 'No fake waitlist numbers — open the pre-filled GitHub Early Access request so your team goes straight to our onboarding queue, or copy your configuration summary below.',
+        'waitlist.openGithub': '🐙 Submit via GitHub Issue →',
+        'waitlist.copySummary': '📋 Copy Summary',
+        'waitlist.meta': '🔒 100% Local-First • MIT Open Source • 0 npm deps • Inspect code on GitHub',
         'footer.status': 'ALL SYSTEMS OPERATIONAL',
         'footer.tour': 'SA-DSS Tour',
         'footer.shortcuts': 'Shortcuts:',
@@ -2064,7 +2091,7 @@ Run negative control fault check?
         'arch.title': 'Ноль зависимостей. Ноль правки кода агентов.',
         'arch.desc': 'Чистый Node.js ESM и нативные ES-модули браузера без npm-зависимостей. Работает локально на 127.0.0.1 с токеном DECK_TOKEN, проверкой Origin и allowlist клавиш tmux.',
         'arch.s1.title': 'Запуск локального моста',
-        'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) вне полосы читает телеметрию OpenRig, очереди и tmux-сокеты без внешних зависимостей.',
+        'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) автоматически находит OpenRig-флоты ИЛИ обычные сессии Claude Code / Codex CLI / tmux без npm-зависимостей.',
         'arch.s2.title': 'Онтология и FinOps-синхронизация',
         'arch.s2.desc': 'Строит канонический граф Objects & Links, очищает opgate-шум для Ганта и дочитывает JSONL-транскрипты по байтовому offset.',
         'arch.s2.code': '● 7 объектов • Эксклюзивные пулы • Кэш %',
@@ -2087,10 +2114,17 @@ Run negative control fault check?
         'waitlist.h2': 'Codex / OpenAI Swarms',
         'waitlist.h3': 'Своя оркестрация Tmux / Worktree',
         'waitlist.h4': 'CrewAI / LangGraph / AutoGen',
-        'waitlist.submit': 'Получить приоритетный доступ →',
-        'waitlist.successTitle': '✓ Вы в списке приоритетного доступа!',
-        'waitlist.successDesc': 'Позиция в очереди: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>Мы отправили письмо с инструкцией по подключению.',
-        'waitlist.meta': '🔒 100% Local-First архитектура • 0 npm deps • Готово к self-hosted',
+        'waitlist.needLabel': 'Какая Pro-возможность нужна в первую очередь?',
+        'waitlist.n1': 'Telegram / Slack HITL-подтверждение с телефона',
+        'waitlist.n2': 'Жёсткий предохранитель бюджета $ и авто-стоп петель',
+        'waitlist.n3': 'Мульти-машинный Team Fleet Hub',
+        'waitlist.n4': 'On-premise Policy-as-Code и аудит для SIEM',
+        'waitlist.submit': 'Запросить ранний доступ →',
+        'waitlist.successTitle': '✓ Заявка готова! Отправьте в 1 клик через GitHub:',
+        'waitlist.successDesc': 'Без фейковых «#482 в очереди» — откройте предзаполненную заявку Early Access на GitHub, чтобы мы сразу увидели вашу команду, или скопируйте параметры ниже.',
+        'waitlist.openGithub': '🐙 Отправить через GitHub Issue →',
+        'waitlist.copySummary': '📋 Скопировать заявку',
+        'waitlist.meta': '🔒 100% Local-First • MIT Open Source • 0 npm deps • Код открыт на GitHub',
         'footer.status': 'ВСЕ СИСТЕМЫ В ШТАТНОМ РЕЖИМЕ',
         'footer.tour': 'Гид SA-DSS',
         'footer.shortcuts': 'Горячие клавиши:',
@@ -2252,24 +2286,47 @@ Run negative control fault check?
       }
     }
 
-    // Waitlist Form Submission
+    // Honest Waitlist / Early Access Form Submission (pre-fills real GitHub Early Access issue + optional webhook)
+    let lastWaitlistSummary = '';
     function handleWaitlistSubmit(e) {
       e.preventDefault();
-      const email = document.getElementById('workEmail').value;
+      const email = document.getElementById('workEmail').value.trim();
       if (!email) return;
+      const fleetSize = document.getElementById('fleetSize').value;
+      const harness = document.getElementById('primaryHarness').value;
+      const topNeed = (document.getElementById('topNeed') || {}).value || 'telegram-hitl';
+
+      const payload = { email, fleetSize, harness, topNeed, lang: currentLang, timestamp: new Date().toISOString() };
+      lastWaitlistSummary = `RigCommander Early Access\n- Contact: ${email}\n- Fleet Size: ${fleetSize}\n- Primary Harness: ${harness}\n- Top Priority: ${topNeed}`;
+
+      const issueTitle = encodeURIComponent(`[Early Access] ${fleetSize} agents (${harness}) — ${topNeed}`);
+      const issueBody = encodeURIComponent(lastWaitlistSummary);
+      const ghLink = document.getElementById('waitlistGithubLink');
+      if (ghLink) {
+        ghLink.href = `https://github.com/Vedariy/rig-commander/issues/new?title=${issueTitle}&body=${issueBody}`;
+      }
+
+      if (window.WAITLIST_ENDPOINT) {
+        fetch(window.WAITLIST_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+      }
 
       document.getElementById('waitlistForm').style.display = 'none';
       document.getElementById('waitlistSuccess').style.display = 'block';
 
-      // Save lead locally
-      const leads = JSON.parse(localStorage.getItem('rigcommander_leads') || '[]');
-      leads.push({
-        email,
-        fleetSize: document.getElementById('fleetSize').value,
-        harness: document.getElementById('primaryHarness').value,
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem('rigcommander_leads', JSON.stringify(leads));
+      try {
+        const leads = JSON.parse(localStorage.getItem('rigcommander_leads') || '[]');
+        leads.push(payload);
+        localStorage.setItem('rigcommander_leads', JSON.stringify(leads));
+      } catch {}
+    }
+
+    function copyWaitlistSummary() {
+      if (!lastWaitlistSummary) return;
+      copyCli(lastWaitlistSummary);
     }
 
     // Initialize language from URL (?lang=ru|en), localStorage, or browser locale

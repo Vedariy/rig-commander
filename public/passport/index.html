@@ -433,8 +433,8 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">27 / 27 PASS</div>
-        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 5 наборов (~0.2s)</div>
+        <div class="kpi-val" style="color:var(--emerald);">31 / 31 PASS</div>
+        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 6 наборов (~0.2s)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
@@ -672,7 +672,7 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 27/27</span>
+        <span class="sec-tag">NODE --TEST • 31/31</span>
       </div>
       <table>
         <thead>
@@ -683,7 +683,8 @@
           <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, инвариант 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi, маппинг UX-транспортов <code>resolveActionFromFinding</code></td><td><span class="badge-ok">9 PASS</span></td></tr>
           <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">4 PASS</span></td></tr>
           <tr><td><code>tests/ontology-snapshot.test.mjs</code></td><td><code>shouldIncludeLiveNode</code>, сброс <code>ctxHistory</code> при свапе, <code>buildOntologySnapshot</code>, чистые селекторы и эксклюзивные пулы <code>computeModelPools</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш), <code>parseInteractivePromptOptions</code>, <code>thermal/audio/gantt</code></td><td><span class="badge-ok">3 PASS</span></td></tr>
+          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш), <code>parseInteractivePromptOptions</code>, <code>thermal/audio/gantt</code>, паритет <code>DECK_I18N</code> EN/RU</td><td><span class="badge-ok">4 PASS</span></td></tr>
+          <tr><td><code>tests/universal-discovery.test.mjs</code></td><td>Универсальное автообнаружение Claude Code / Codex JSONL + <code>tmux</code> панелей (без OpenRig), HITL-детектор и валидация target</td><td><span class="badge-ok">3 PASS</span></td></tr>
         </tbody>
       </table>
 
@@ -696,9 +697,9 @@
   </main>
 
   <footer>
-    <span>💠 RigCommander // Operational Passport v3.1</span>
+    <span>💠 RigCommander // Operational Passport v3.1 (MIT Open Source)</span>
     <span>
-      <a href="/">Landing</a> · <a href="/demo">Live Demo</a> · <a href="/demo?track=tour">SA-DSS Tour</a> · <a href="/deck">Deck</a>
+      <a href="/">Landing</a> · <a href="/demo">Live Demo</a> · <a href="/demo?track=tour">SA-DSS Tour</a> · <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
     </span>
   </footer>
 
@@ -723,7 +724,7 @@
         'kpi.ont.l': 'Онтология',
         'kpi.ont.n': '7 Objects • 7 Actions • Postcondition Audit',
         'kpi.tests.l': 'Автотесты',
-        'kpi.tests.n': 'node --test • 5 наборов (~0.2s)',
+        'kpi.tests.n': 'node --test • 6 наборов (~0.2s)',
         'kpi.sec.l': 'Граница доверия',
         'kpi.sec.n': 'DECK_TOKEN + Origin + Key Allowlist',
         's1.title': '1. Контекст системы и границы доверия (C4 Level 1)',
@@ -769,7 +770,7 @@
         'kpi.ont.l': 'Ontology',
         'kpi.ont.n': '7 Objects • 7 Actions • Postcondition Audit',
         'kpi.tests.l': 'Automated Tests',
-        'kpi.tests.n': 'node --test • 5 suites (~0.2s)',
+        'kpi.tests.n': 'node --test • 6 suites (~0.2s)',
         'kpi.sec.l': 'Trust Boundary',
         'kpi.sec.n': 'DECK_TOKEN + Origin + Key Allowlist',
         's1.title': '1. System Context & Trust Boundaries (C4 Level 1)',

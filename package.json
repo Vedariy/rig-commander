@@ -4,6 +4,13 @@
   "description": "Mission Control & Neural Command Deck for Autonomous AI Engineering Fleets",
   "type": "module",
   "main": "openrig/server.mjs",
+  "files": [
+    "bin/",
+    "openrig/",
+    "landing/",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "rig-commander": "./bin/cli.mjs",
     "rig-cmd": "./bin/cli.mjs"

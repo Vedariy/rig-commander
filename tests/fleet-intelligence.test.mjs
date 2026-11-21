@@ -8,7 +8,10 @@ import {
   computeBurn,
   getAgentAudioProfile,
   ganttChainColor,
-  ganttRoleRank
+  ganttRoleRank,
+  DECK_I18N,
+  resolveDeckLang,
+  tDeck
 } from '../openrig/assets/domain/index.js';
 
 test('FleetIntelligenceEngine passes recentQueue and isolates reports per rigId', () => {
@@ -83,4 +86,17 @@ test('domain thermal, audio and gantt helpers work deterministically', () => {
   assert.equal(ganttChainColor('slice:abc'), ganttChainColor('slice:abc'));
   assert.ok(ganttRoleRank('dev-owner@rig') < ganttRoleRank('dev-coder@rig'));
   assert.ok(ganttRoleRank('dev-coder@rig') < ganttRoleRank('dev-check@rig'));
+});
+
+test('DECK_I18N maintains full EN/RU key parity and interpolation', () => {
+  const enKeys = Object.keys(DECK_I18N.en).sort();
+  const ruKeys = Object.keys(DECK_I18N.ru).sort();
+  assert.deepEqual(enKeys, ruKeys);
+  assert.equal(resolveDeckLang('?lang=en', 'ru', 'ru-RU'), 'en');
+  assert.equal(resolveDeckLang('?lang=ru', 'en', 'en-US'), 'ru');
+  assert.equal(resolveDeckLang('', 'en', 'ru-RU'), 'en');
+  assert.equal(resolveDeckLang('', '', 'en-US'), 'en');
+  assert.equal(resolveDeckLang('', '', 'ru-RU'), 'ru');
+  assert.equal(tDeck('en', 'triage.ctxEta', { min: 12 }), '~12m to 75%');
+  assert.equal(tDeck('ru', 'triage.ctxEta', { min: 12 }), '~12 мин до 75%');
 });

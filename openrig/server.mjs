@@ -9,12 +9,14 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { FleetIntelligenceEngine } from './lib/fleet-intelligence/index.mjs';
 import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
+import { discoverUniversalFleet, isValidTmuxTarget } from './lib/universal-discovery.mjs';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalThrottleMs: 3000 });
 const actionAudit = new ActionAuditLog({ maxRecords: 100 });
 const latestSeatBaselines = new Map();
+const universalTmuxTargets = new Map();
 
 function tokenMatches(got) {
   const a = Buffer.from(String(got || ''));
@@ -927,7 +929,37 @@ const server = http.createServer(async (req, res) => {
       readSeatCompactions()
     ]);
 
-    const nodes = nodesArrays.flatMap(arr => Array.isArray(arr) ? arr : []);
+    let nodes = nodesArrays.flatMap(arr => Array.isArray(arr) ? arr : []);
+    let discoveryMode = nodes.length > 0 ? 'openrig' : 'none';
+    let resolvedAvailableRigs = allRigs.map(r => ({
+      id: r.rigId,
+      name: r.name || r.rigName,
+      status: r.status,
+      nodeCount: r.nodeCount,
+      runningCount: r.runningCount,
+      activeCount: r.activeCount,
+      hasWorkCount: r.hasWorkCount
+    }));
+
+    // Universal Auto-Discovery fallback when OpenRig daemon has 0 nodes:
+    // discovers plain tmux panes (Claude Code / Codex / Gemini) + recent ~/.claude & ~/.codex JSONL transcripts.
+    if (nodes.length === 0) {
+      const universal = await discoverUniversalFleet({ tmuxBin: TMUX_BIN });
+      if (universal.nodes.length > 0) {
+        discoveryMode = 'universal';
+        universalTmuxTargets.clear();
+        for (const [seatId, target] of universal.tmuxTargets.entries()) {
+          if (isValidTmuxTarget(target)) {
+            boundedMapSet(universalTmuxTargets, seatId, target, MAX_GUIDANCE_CACHE);
+          }
+        }
+        resolvedAvailableRigs = universal.availableRigs;
+        nodes = (requestedRig === 'all' || !requestedRig)
+          ? universal.nodes
+          : universal.nodes.filter(n => n.rigId === requestedRig);
+      }
+    }
+
     const [decisions, usageReport] = await Promise.all([
       readRecentDecisions(15, nodes),
       buildSeatUsageReport(nodes)
@@ -970,15 +1002,8 @@ const server = http.createServer(async (req, res) => {
     const payload = {
       timestamp: new Date().toISOString(),
       requestedRig,
-      availableRigs: allRigs.map(r => ({
-        id: r.rigId,
-        name: r.name || r.rigName,
-        status: r.status,
-        nodeCount: r.nodeCount,
-        runningCount: r.runningCount,
-        activeCount: r.activeCount,
-        hasWorkCount: r.hasWorkCount
-      })),
+      discoveryMode,
+      availableRigs: resolvedAvailableRigs,
       nodes,
       activeQueue: Array.isArray(activeQueue) ? activeQueue : [],
       decisions,
@@ -1028,7 +1053,11 @@ const server = http.createServer(async (req, res) => {
       await sendJson(req, res, 400, { error: 'Invalid seat identifier' });
       return;
     }
-    const screen = await safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(Number(lines) || 38)]);
+    const lineCount = Math.min(200, Math.max(10, Number(lines) || 38));
+    const universalTarget = universalTmuxTargets.get(seat);
+    const screen = universalTarget && isValidTmuxTarget(universalTarget)
+      ? await safeTextExec(TMUX_BIN, ['capture-pane', '-p', '-t', universalTarget, '-S', `-${lineCount}`])
+      : await safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(lineCount)]);
     await sendJson(req, res, 200, { seat, timestamp: new Date().toISOString(), screen });
     return;
   }
@@ -1074,6 +1103,9 @@ const server = http.createServer(async (req, res) => {
             return;
           }
 
+          const universalTarget = universalTmuxTargets.get(seat);
+          const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seat;
+
           let output = '';
           if (type === 'key') {
             // Specific tmux keystrokes validated against strict allowlist (prevents flag injection)
@@ -1083,7 +1115,7 @@ const server = http.createServer(async (req, res) => {
               await sendJson(req, res, 400, { ok: false, error: 'Disallowed tmux keystroke' });
               return;
             }
-            output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', seat, ...keyArgs]);
+            output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
           } else if (type === 'raw') {
             // Harness-aware hygiene and deduplication:
             // 1. Normalize and deduplicate repeated slash commands (e.g. /compact/compact -> /compact)
@@ -1099,24 +1131,34 @@ const server = http.createServer(async (req, res) => {
 
             // 3. Prompt line hygiene: Send C-u first to clear any dirty/pending input in the terminal buffer!
             // This prevents duplicate concatenation like /compact/compact when prompt already had a slash.
-            await safeTextExec(TMUX_BIN, ['send-keys', '-t', seat, 'C-u']);
-            await safeTextExec(TMUX_BIN, ['send-keys', '-t', seat, '-l', cleanText]);
-            output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', seat, 'Enter']);
+            await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'C-u']);
+            await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', cleanText]);
+            output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
           } else if (type === 'interact') {
-            output = await safeTextExec(RIG_BIN, [
-              'send',
-              '--dangerously-interact',
-              '--reason', 'Dashboard interactive prompt answer',
-              seat,
-              text
-            ]);
-            if (!output || output.includes('Error') || output.includes('refused')) {
-              await safeTextExec(TMUX_BIN, ['send-keys', '-t', seat, '-l', text]);
-              output += '\n' + await safeTextExec(TMUX_BIN, ['send-keys', '-t', seat, 'Enter']);
+            if (universalTarget) {
+              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+              output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+            } else {
+              output = await safeTextExec(RIG_BIN, [
+                'send',
+                '--dangerously-interact',
+                '--reason', 'Dashboard interactive prompt answer',
+                seat,
+                text
+              ]);
+              if (!output || output.includes('Error') || output.includes('refused')) {
+                await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+                output += '\n' + await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+              }
             }
           } else {
-            // Standard rig send with messaging envelope
-            output = await safeTextExec(RIG_BIN, ['send', seat, text]);
+            // Standard rig send (or direct tmux send-keys for universal standalone tmux panes)
+            if (universalTarget) {
+              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+              output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+            } else {
+              output = await safeTextExec(RIG_BIN, ['send', seat, text]);
+            }
           }
 
           const auditRec = actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
