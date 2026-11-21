@@ -18,6 +18,9 @@ RigCommander is a **zero-dependency, local-first DSS SA (L1–L3)** command deck
   - Reason-driven Action Registry (0 write-back noise on healthy idle seats) with automatic `postcondition` verification in `ActionAuditLog`.
 - **FinOps Token & Exclusive Model Pools:**
   - Live `uncached / cached / output` token usage, cache-hit %, and estimated `$` cost across non-overlapping model pools (`Codex / GPT`, `Claude`, `GLM / DeepSeek`, `Terminal / AGY`).
+- **Budget & Loop Circuit-Breaker + Telegram HITL Bridge:**
+  - Set hard guardrails (`maxSessionUsd`, `maxSeatUsd`, `maxUsdPerHour`, `maxQaRounds`) in `alert_only` or `auto_stop` (`Ctrl+C`) mode.
+  - Connect a Telegram bot (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` or via the `🛡️ Guardrails` modal) to approve parsed HITL prompts from your phone with single-use nonces, plus `/status`, `/budget`, `/stop <seat>`, and `/arm_breaker` commands.
 - **Bilingual EN / RU UI:** Full English & Russian support across Landing, Project Passport, and Command Deck.
 - **Hardened Localhost Security:** `0 npm dependencies`, loopback-only `127.0.0.1`, per-process `DECK_TOKEN` (`timingSafeEqual`), strict `Origin` check, allowlisted `tmux` keystrokes, anti-traversal static serving.
 

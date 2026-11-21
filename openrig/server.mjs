@@ -10,6 +10,8 @@ import zlib from 'node:zlib';
 import { FleetIntelligenceEngine } from './lib/fleet-intelligence/index.mjs';
 import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
 import { discoverUniversalFleet, isValidTmuxTarget } from './lib/universal-discovery.mjs';
+import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
+import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
@@ -17,6 +19,89 @@ const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalT
 const actionAudit = new ActionAuditLog({ maxRecords: 100 });
 const latestSeatBaselines = new Map();
 const universalTmuxTargets = new Map();
+let latestFleetSnapshot = null;
+
+async function captureSeatScreen(seat, lines = 38) {
+  const lineCount = Math.min(200, Math.max(10, Number(lines) || 38));
+  const universalTarget = universalTmuxTargets.get(seat);
+  return universalTarget && isValidTmuxTarget(universalTarget)
+    ? safeTextExec(TMUX_BIN, ['capture-pane', '-p', '-t', universalTarget, '-S', `-${lineCount}`])
+    : safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(lineCount)]);
+}
+
+async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
+  if (!/^[a-zA-Z0-9._@-]+$/.test(String(seatId || ''))) {
+    return { ok: false, error: 'Invalid seat identifier' };
+  }
+  const keyArgs = parseAllowedTmuxKeys(keyStroke);
+  const baseline = latestSeatBaselines.get(seatId) || null;
+  if (!keyArgs) {
+    actionAudit.record({ actionId, seatId, type: 'key', payload: keyStroke, httpStatus: 400, ok: false, baseline });
+    return { ok: false, error: 'Disallowed tmux keystroke' };
+  }
+  const universalTarget = universalTmuxTargets.get(seatId);
+  const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
+  const output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
+  const rec = actionAudit.record({ actionId, seatId, type: 'key', payload: keyStroke, httpStatus: 200, ok: true, baseline });
+  return { ok: true, execId: rec.execId, output: (output || '').trim() };
+}
+
+function formatTelegramFleetSummary(kind = 'status') {
+  const snap = latestFleetSnapshot;
+  const br = circuitBreaker.getState();
+  if (!snap) return '💠 *RigCommander*\nNo live telemetry snapshot yet.';
+  const nodes = snap.nodes || [];
+  const urgent = nodes.filter(n => n.activityState && n.activityState.display === 'needs-input').length;
+  const working = nodes.filter(n => n.activityState && (n.activityState.display === 'working' || n.activityState.display === 'running')).length;
+  const usd = Number(snap.fleetUsageSummary && snap.fleetUsageSummary.totalEstUsd) || 0;
+  const cachePct = Number(snap.fleetUsageSummary && snap.fleetUsageSummary.cachedPct) || 0;
+
+  if (kind === 'budget') {
+    const rows = Object.entries(snap.seatUsage || {})
+      .sort((a, b) => (b[1].estUsd || 0) - (a[1].estUsd || 0))
+      .slice(0, 6)
+      .map(([id, u]) => `• \`${id}\`: ~$${(u.estUsd || 0).toFixed(2)} (${u.cachedPct || 0}% cache)`);
+    return [
+      `💰 *RigCommander FinOps Budget*`,
+      `• Session Total: *~$${usd.toFixed(2)}* (burn: $${br.burnUsdPerHour.toFixed(2)}/h, cache: ${cachePct}%)`,
+      `• Circuit-Breaker: \`${br.status.toUpperCase()}\` (${br.config.mode})`,
+      `• Limits: session $${br.config.maxSessionUsd} · seat $${br.config.maxSeatUsd} · $${br.config.maxUsdPerHour}/h`,
+      ...(rows.length ? ['', ...rows] : [])
+    ].join('\n');
+  }
+
+  return [
+    `💠 *RigCommander Fleet Status* (${snap.discoveryMode || 'live'})`,
+    `• Seats: *${nodes.length}* (🟢 working: ${working}, 🚨 HITL: ${urgent})`,
+    `• Spend: *~$${usd.toFixed(2)}* ($${br.burnUsdPerHour.toFixed(2)}/h · ${cachePct}% cache)`,
+    `• Guardrail: \`${br.status.toUpperCase()}\` (${br.config.mode})`
+  ].join('\n');
+}
+
+const telegramBridge = new TelegramHitlBridge({
+  onExecuteAction: ({ seatId, keyStroke, actionId }) => executeSeatKeyAction(seatId, keyStroke, actionId),
+  getFleetSummary: (kind) => formatTelegramFleetSummary(kind),
+  onBreakerModeToggle: (mode) => circuitBreaker.updateConfig({ mode })
+});
+
+const circuitBreaker = new BudgetCircuitBreaker(
+  {
+    mode: process.env.RIG_BREAKER_MODE === 'auto_stop' ? 'auto_stop' : 'alert_only',
+    maxSessionUsd: process.env.RIG_MAX_SESSION_USD ? Number(process.env.RIG_MAX_SESSION_USD) : undefined,
+    maxSeatUsd: process.env.RIG_MAX_SEAT_USD ? Number(process.env.RIG_MAX_SEAT_USD) : undefined,
+    maxUsdPerHour: process.env.RIG_MAX_USD_PER_HOUR ? Number(process.env.RIG_MAX_USD_PER_HOUR) : undefined,
+    maxQaRounds: process.env.RIG_MAX_QA_ROUNDS ? Number(process.env.RIG_MAX_QA_ROUNDS) : undefined
+  },
+  {
+    onAutoInterrupt: async (seatId) => {
+      const res = await executeSeatKeyAction(seatId, 'C-c', 'circuit_breaker_interrupt');
+      return Boolean(res && res.ok);
+    },
+    onTrip: async (trip) => {
+      await telegramBridge.notifyCircuitBreakerTrip(trip);
+    }
+  }
+);
 
 function tokenMatches(got) {
   const a = Buffer.from(String(got || ''));
@@ -1014,12 +1099,42 @@ const server = http.createServer(async (req, res) => {
       seatUsage: usageReport.seatUsage,
       fleetUsageSummary: usageReport.fleetUsageSummary,
       actionAudit: actionAudit.list(30),
+      guardrails: {
+        breaker: circuitBreaker.getState(),
+        telegram: telegramBridge.getStatus()
+      },
       intelligence: fleetIntelligence.getLatestReport(requestedRig)
     };
 
-    // Asynchronously ingest snapshot into Fleet Intelligence engine (zero blocking!)
-    setImmediate(() => {
+    latestFleetSnapshot = payload;
+
+    // Asynchronously ingest snapshot into Fleet Intelligence, Budget Circuit-Breaker & Telegram HITL (zero blocking!)
+    setImmediate(async () => {
       fleetIntelligence.ingestSnapshot(payload);
+      try {
+        await circuitBreaker.evaluate({
+          nodes,
+          seatUsage: usageReport.seatUsage,
+          fleetUsageSummary: usageReport.fleetUsageSummary,
+          sliceStats: (history && history.sliceStats) || {}
+        });
+      } catch {
+        // non-blocking breaker error
+      }
+      if (telegramBridge.isConfigured()) {
+        for (const n of nodes) {
+          const disp = (n && n.activityState && n.activityState.display) || '';
+          const needsCount = (n && n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
+          if ((disp === 'needs-input' || needsCount > 0) && n.canonicalSessionName) {
+            try {
+              const scr = await captureSeatScreen(n.canonicalSessionName, 36);
+              await telegramBridge.notifyHitlPrompt(n.canonicalSessionName, scr);
+            } catch {
+              // ignore capture/telegram transient failure
+            }
+          }
+        }
+      }
     });
 
     await sendJson(req, res, 200, payload);
@@ -1045,6 +1160,82 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 1.3 Guardrails (Budget Circuit-Breaker + Telegram HITL Bridge) endpoints
+  if (url.pathname === '/api/guardrails' && req.method === 'GET') {
+    await sendJson(req, res, 200, {
+      timestamp: new Date().toISOString(),
+      breaker: circuitBreaker.getState(),
+      telegram: telegramBridge.getStatus()
+    });
+    return;
+  }
+
+  if (
+    url.pathname === '/api/guardrails/config' ||
+    url.pathname === '/api/guardrails/reset' ||
+    url.pathname === '/api/guardrails/telegram'
+  ) {
+    const allowedOrigins = new Set([`http://127.0.0.1:${PORT}`, `http://localhost:${PORT}`]);
+    const origin = req.headers.origin || '';
+    const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
+    if (req.method !== 'POST') return deny(405, 'Method not allowed');
+    if (!allowedOrigins.has(origin)) return deny(403, 'Forbidden origin');
+    if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
+    if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
+
+    let bodyStr = '';
+    let tooLarge = false;
+    req.on('data', chunk => {
+      if (tooLarge) return;
+      bodyStr += chunk;
+      if (bodyStr.length > 64 * 1024) {
+        tooLarge = true;
+        sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
+        req.resume();
+      }
+    });
+    req.on('end', async () => {
+      if (tooLarge) return;
+      try {
+        const body = JSON.parse(bodyStr || '{}');
+        if (url.pathname === '/api/guardrails/config') {
+          circuitBreaker.updateConfig(body);
+          await sendJson(req, res, 200, { ok: true, breaker: circuitBreaker.getState() });
+          return;
+        }
+        if (url.pathname === '/api/guardrails/reset') {
+          const seatId = body.seatId ? String(body.seatId).trim() : null;
+          await sendJson(req, res, 200, { ok: true, breaker: circuitBreaker.reset(seatId) });
+          return;
+        }
+        if (url.pathname === '/api/guardrails/telegram') {
+          const act = String(body.action || 'connect');
+          if (act === 'disconnect') {
+            await sendJson(req, res, 200, { ok: true, telegram: telegramBridge.disconnect() });
+            return;
+          }
+          if (act === 'test') {
+            const resTest = await telegramBridge.sendTestMessage();
+            await sendJson(req, res, 200, { ok: true, result: resTest, telegram: telegramBridge.getStatus() });
+            return;
+          }
+          const botToken = String(body.botToken || '').trim();
+          const chatId = String(body.chatId || '').trim();
+          if (!botToken || !chatId) {
+            await sendJson(req, res, 400, { ok: false, error: 'Bot token and Chat ID are required' });
+            return;
+          }
+          const status = telegramBridge.configure({ botToken, chatId });
+          await sendJson(req, res, 200, { ok: true, telegram: status });
+          return;
+        }
+      } catch (err) {
+        await sendJson(req, res, 500, { ok: false, error: err.message });
+      }
+    });
+    return;
+  }
+
   // 2. Live tmux terminal capture endpoint
   if (url.pathname === '/api/capture') {
     const seat = url.searchParams.get('seat') || 'dev-owner@core-platform';
@@ -1053,11 +1244,7 @@ const server = http.createServer(async (req, res) => {
       await sendJson(req, res, 400, { error: 'Invalid seat identifier' });
       return;
     }
-    const lineCount = Math.min(200, Math.max(10, Number(lines) || 38));
-    const universalTarget = universalTmuxTargets.get(seat);
-    const screen = universalTarget && isValidTmuxTarget(universalTarget)
-      ? await safeTextExec(TMUX_BIN, ['capture-pane', '-p', '-t', universalTarget, '-S', `-${lineCount}`])
-      : await safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(lineCount)]);
+    const screen = await captureSeatScreen(seat, lines);
     await sendJson(req, res, 200, { seat, timestamp: new Date().toISOString(), screen });
     return;
   }
@@ -1255,7 +1442,13 @@ export {
 
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMainModule) {
+  if (telegramBridge.isConfigured()) {
+    telegramBridge.startPolling();
+  }
   server.listen(PORT, '127.0.0.1', () => {
     console.log(`💠 RigCommander // Neural Command Deck v3.1 at http://127.0.0.1:${PORT}`);
+    if (telegramBridge.isConfigured()) {
+      console.log('📱 Telegram HITL bridge active (authorized chat polling)');
+    }
   });
 }

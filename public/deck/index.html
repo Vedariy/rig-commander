@@ -15,6 +15,9 @@
       <button class="triage-refresh-btn" onclick="openFleetAdvisorModal()" style="border-color:var(--cyan); color:var(--cyan);">
         💡 <span data-i18n="triage.advisor">Советник флота</span>
       </button>
+      <button class="triage-refresh-btn" id="btnGuardrails" onclick="openGuardrailsModal()" style="border-color:rgba(0,255,157,0.5); color:#6ee7b7;">
+        🛡️ <span data-i18n="guard.btn">Авто-тормоз / TG</span>
+      </button>
     </div>
     <div class="triage-cards-container" id="triageCardsContainer">
       <div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
@@ -281,6 +284,24 @@
       <div class="modal-fleet-body" id="fleetAdvisorModalBody" data-i18n="modal.loading">
         Загрузка аналитики флота...
       </div>
+    </div>
+  </div>
+
+  <!-- GUARDRAILS: BUDGET CIRCUIT-BREAKER & TELEGRAM HITL MODAL -->
+  <div class="modal-overlay" id="guardrailsModal" onclick="if (event.target === this) closeGuardrailsModal()">
+    <div class="modal-fleet-card" style="max-width:980px;">
+      <div class="modal-fleet-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#6ee7b7;" data-i18n="guard.title">
+            🛡️ GUARDRAILS // ПРЕДОХРАНИТЕЛЬ БЮДЖЕТА И TELEGRAM HITL
+          </span>
+          <span class="triage-badge" id="modalGuardStatusBadge" style="margin:0; font-size:10.5px;"></span>
+        </div>
+        <span style="display:flex; gap:8px;">
+          <button class="action-pill" onclick="closeGuardrailsModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        </span>
+      </div>
+      <div class="modal-fleet-body" id="guardrailsModalBody"></div>
     </div>
   </div>
 
@@ -2647,6 +2668,12 @@
         window.LIVE_INTELLIGENCE = snapshot.intelligence;
         window.LIVE_SEAT_USAGE = data.seatUsage || {};
         window.LIVE_FLEET_USAGE = snapshot.fleetUsageSummary;
+        if (data.guardrails) {
+          window.GUARDRAILS_STATE = data.guardrails;
+          updateGuardrailsBadge();
+          const gm = document.getElementById('guardrailsModal');
+          if (gm && gm.classList.contains('open')) renderGuardrailsModal();
+        }
 
         const hasLiveDaemonData = snapshot.hasLiveDaemonData;
         const badge = document.getElementById('liveConnectionBadge');
@@ -3901,8 +3928,324 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeSaTour(); }
+      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeSaTour(); }
     });
+
+    // ===== Stage 6: Guardrails (Budget Circuit-Breaker & Telegram HITL Bridge) =====
+    window.GUARDRAILS_STATE = {
+      breaker: {
+        status: 'armed',
+        config: { enabled: true, mode: 'auto_stop', maxSessionUsd: 15.0, maxSeatUsd: 5.0, maxUsdPerHour: 8.0, maxQaRounds: 3 },
+        lastSessionUsd: 6.63,
+        burnUsdPerHour: 3.4,
+        trippedSeats: [],
+        recentTrips: []
+      },
+      telegram: {
+        configured: false,
+        polling: false,
+        maskedToken: '',
+        chatId: '',
+        pendingPromptButtons: 0,
+        stats: { sentNotifications: 0, handledCallbacks: 0, handledCommands: 0, blockedUnauthorized: 0, lastError: null }
+      }
+    };
+    let tgPreviewReplyMsg = '';
+
+    function updateGuardrailsBadge() {
+      const btn = document.getElementById('btnGuardrails');
+      if (!btn || !window.GUARDRAILS_STATE) return;
+      const br = window.GUARDRAILS_STATE.breaker || {};
+      const tg = window.GUARDRAILS_STATE.telegram || {};
+      if (br.status === 'tripped') {
+        btn.style.borderColor = '#ff0055';
+        btn.style.color = '#fda4af';
+        btn.style.background = 'rgba(255,0,85,0.18)';
+      } else if (tg.configured) {
+        btn.style.borderColor = '#00f0ff';
+        btn.style.color = '#67e8f9';
+        btn.style.background = 'rgba(0,240,255,0.12)';
+      } else {
+        btn.style.borderColor = 'rgba(0,255,157,0.5)';
+        btn.style.color = '#6ee7b7';
+        btn.style.background = '';
+      }
+    }
+
+    function openGuardrailsModal() {
+      const modal = document.getElementById('guardrailsModal');
+      if (modal) modal.classList.add('open');
+      renderGuardrailsModal();
+    }
+
+    function closeGuardrailsModal() {
+      const modal = document.getElementById('guardrailsModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    async function guardrailsPost(endpoint, payload) {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Deck-Token': (document.querySelector('meta[name="deck-token"]') || {}).content || ''
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    async function saveGuardrailsConfig(modeOverride = null) {
+      const cfg = {
+        enabled: true,
+        mode: modeOverride || (document.getElementById('guardModeSelect')?.value || 'auto_stop'),
+        maxSessionUsd: Number(document.getElementById('guardMaxSession')?.value) || 15,
+        maxSeatUsd: Number(document.getElementById('guardMaxSeat')?.value) || 5,
+        maxUsdPerHour: Number(document.getElementById('guardMaxBurn')?.value) || 8,
+        maxQaRounds: Number(document.getElementById('guardMaxQa')?.value) || 3
+      };
+      const statusEl = document.getElementById('guardActionStatus');
+      try {
+        if (!IS_LIVE) throw new Error('demo');
+        const data = await guardrailsPost('/api/guardrails/config', cfg);
+        window.GUARDRAILS_STATE.breaker = data.breaker;
+        if (statusEl) statusEl.textContent = deckLang === 'en' ? '✓ Guardrail limits saved.' : '✓ Лимиты предохранителя сохранены.';
+      } catch {
+        window.GUARDRAILS_STATE.breaker.config = { ...window.GUARDRAILS_STATE.breaker.config, ...cfg };
+        if (statusEl) statusEl.textContent = deckLang === 'en' ? '✓ [DEMO] Guardrail limits updated.' : '✓ [DEMO] Лимиты предохранителя обновлены.';
+      }
+      updateGuardrailsBadge();
+      renderGuardrailsModal();
+    }
+
+    async function resetGuardrailsBreaker() {
+      const statusEl = document.getElementById('guardActionStatus');
+      try {
+        if (!IS_LIVE) throw new Error('demo');
+        const data = await guardrailsPost('/api/guardrails/reset', {});
+        window.GUARDRAILS_STATE.breaker = data.breaker;
+      } catch {
+        window.GUARDRAILS_STATE.breaker.status = 'armed';
+        window.GUARDRAILS_STATE.breaker.trippedSeats = [];
+      }
+      if (statusEl) statusEl.textContent = deckLang === 'en' ? '🔓 Breaker reset & re-armed.' : '🔓 Предохранитель сброшен и снова на страже.';
+      updateGuardrailsBadge();
+      renderGuardrailsModal();
+    }
+
+    function simulateDemoBreakerTrip() {
+      const br = window.GUARDRAILS_STATE.breaker;
+      const targetSeat = 'dev-coder4@core-platform';
+      const isAuto = br.config.mode === 'auto_stop';
+      const trip = {
+        id: `demo-trip-${Date.now()}`,
+        rule: 'burn_rate_spike',
+        seatId: targetSeat,
+        severity: 'P0',
+        title: deckLang === 'en'
+          ? `Burn-rate spike: $11.40/h >= $${br.config.maxUsdPerHour.toFixed(2)}/h`
+          : `Скачок расхода: $11.40/ч >= $${br.config.maxUsdPerHour.toFixed(2)}/ч`,
+        detail: deckLang === 'en'
+          ? `Target ${targetSeat} (${isAuto ? 'auto-stopped via Ctrl+C' : 'alerted only'})`
+          : `Узел ${targetSeat} (${isAuto ? 'остановлен через Ctrl+C' : 'только уведомление'})`,
+        actionTaken: isAuto ? 'interrupted_cc' : 'alerted',
+        at: new Date().toISOString()
+      };
+      br.status = 'tripped';
+      br.burnUsdPerHour = 11.4;
+      br.trippedSeats = [trip];
+      br.recentTrips.unshift(trip);
+      if (isAuto && !IS_LIVE) {
+        applyDemoAction(targetSeat, 'C-c', 'key', 'circuit_breaker_interrupt');
+      }
+      updateGuardrailsBadge();
+      renderGuardrailsModal();
+    }
+
+    async function handleTelegramAction(action) {
+      const statusEl = document.getElementById('tgActionStatus');
+      const botToken = (document.getElementById('tgBotTokenInput')?.value || '').trim();
+      const chatId = (document.getElementById('tgChatIdInput')?.value || '').trim();
+      try {
+        if (!IS_LIVE) {
+          if (action === 'disconnect') {
+            window.GUARDRAILS_STATE.telegram.configured = false;
+            window.GUARDRAILS_STATE.telegram.polling = false;
+            if (statusEl) statusEl.textContent = deckLang === 'en' ? '[DEMO] Telegram bridge disconnected.' : '[DEMO] Telegram-мост отключён.';
+          } else {
+            window.GUARDRAILS_STATE.telegram.configured = true;
+            window.GUARDRAILS_STATE.telegram.polling = true;
+            window.GUARDRAILS_STATE.telegram.maskedToken = botToken ? `${botToken.slice(0, 5)}…DEMO` : '74129…DEMO';
+            window.GUARDRAILS_STATE.telegram.chatId = chatId || '998…42';
+            window.GUARDRAILS_STATE.telegram.stats.sentNotifications += 1;
+            if (statusEl) statusEl.textContent = deckLang === 'en'
+              ? '✓ [DEMO] Telegram bridge simulated! Tap any phone button below to test HITL.'
+              : '✓ [DEMO] Telegram-мост симулирован! Нажми кнопку в превью телефона ниже.';
+          }
+          updateGuardrailsBadge();
+          renderGuardrailsModal();
+          return;
+        }
+        const data = await guardrailsPost('/api/guardrails/telegram', { action, botToken, chatId });
+        window.GUARDRAILS_STATE.telegram = data.telegram;
+        if (statusEl) {
+          statusEl.textContent = action === 'test'
+            ? (deckLang === 'en' ? '✓ Test message sent to Telegram!' : '✓ Тестовое сообщение отправлено в Telegram!')
+            : action === 'disconnect'
+              ? (deckLang === 'en' ? 'Disconnected.' : 'Отключено.')
+              : (deckLang === 'en' ? '✓ Connected & polling Telegram!' : '✓ Подключено! Опрос Telegram активен.');
+        }
+      } catch (err) {
+        if (statusEl) statusEl.textContent = `✕ ${err.message}`;
+      }
+      updateGuardrailsBadge();
+      renderGuardrailsModal();
+    }
+
+    function triggerTelegramPreviewAction(seatId, keyStroke, label, actionId) {
+      tgPreviewReplyMsg = `✅ Sent "${label}" to ${shortSeat(seatId)} • Logged in ActionAuditLog (${actionId})`;
+      window.GUARDRAILS_STATE.telegram.stats.handledCallbacks = (window.GUARDRAILS_STATE.telegram.stats.handledCallbacks || 0) + 1;
+      sendTerminalKey(seatId, keyStroke, 'cmdSendStatus', actionId);
+      setTimeout(() => renderGuardrailsModal(), 150);
+    }
+
+    function renderGuardrailsModal() {
+      const body = document.getElementById('guardrailsModalBody');
+      const badge = document.getElementById('modalGuardStatusBadge');
+      if (!body) return;
+      const br = window.GUARDRAILS_STATE.breaker;
+      const tg = window.GUARDRAILS_STATE.telegram;
+      const cfg = br.config;
+      const en = deckLang === 'en';
+      const liveUsd = (window.LIVE_FLEET_USAGE && window.LIVE_FLEET_USAGE.totalEstUsd) || br.lastSessionUsd || 0;
+      const pctBudget = Math.min(100, Math.round((liveUsd / Math.max(0.1, cfg.maxSessionUsd)) * 100));
+
+      if (badge) {
+        badge.textContent = `${br.status.toUpperCase()} • ${cfg.mode === 'auto_stop' ? 'AUTO-STOP' : 'ALERT ONLY'}`;
+        badge.style.borderColor = br.status === 'tripped' ? '#ff0055' : '#00ff9d';
+        badge.style.color = br.status === 'tripped' ? '#fda4af' : '#6ee7b7';
+      }
+
+      // Live phone preview for urgent seat (or dev-check in demo)
+      const urgentAgent = AGENTS.find(a => a.state === 'urgent') || AGENTS.find(a => a.id.includes('dev-check')) || AGENTS[0];
+      const previewScreen = (urgentAgent && (lastScreenBySeat[urgentAgent.id] || getDemoTerminalCapture(urgentAgent.id))) || '';
+      const previewOpts = parseInteractivePromptOptions(previewScreen);
+
+      const phoneBtnsHtml = previewOpts.length >= 2
+        ? previewOpts.slice(0, 3).map(o => {
+            const icon = o.isCancel ? '❌' : o.isPrimary ? '✅' : '🔹';
+            const actId = o.isCancel ? 'cancel_prompt' : 'answer_prompt_option';
+            return `<button type="button" class="action-pill" style="width:100%; justify-content:flex-start; padding:6px 9px; font-size:11px; border-color:${o.isCancel ? 'rgba(255,0,85,0.45)' : o.isPrimary ? 'rgba(0,255,157,0.5)' : 'rgba(56,189,248,0.35)'};" onclick="triggerTelegramPreviewAction('${escapeHtml(urgentAgent.id)}', '${escapeHtml(o.keyStroke)}', '${escapeHtml(o.badge + '. ' + o.shortLabel)}', '${actId}')">${icon} ${escapeHtml(o.badge)}. ${escapeHtml(o.shortLabel)}</button>`;
+          }).join('')
+        : `<div style="font-size:11px; color:#6ee7b7; padding:6px 0;">${escapeHtml(tgPreviewReplyMsg || (en ? '✅ No pending HITL prompts — all seats clear.' : '✅ Нет ожидающих HITL-промптов — все узлы в норме.'))}</div>`;
+
+      const tripsHtml = br.recentTrips.length === 0
+        ? `<div style="font-size:11.5px; color:#6ee7b7; font-family:var(--font-mono); padding:8px; background:rgba(0,255,157,0.06); border:1px solid rgba(0,255,157,0.2); border-radius:6px;">${td('guard.noTrips')}</div>`
+        : br.recentTrips.slice(0, 4).map(t => `
+            <div style="font-family:var(--font-mono); font-size:11px; padding:7px 9px; border-radius:6px; background:rgba(255,0,85,0.1); border:1px solid rgba(255,0,85,0.35); display:flex; flex-direction:column; gap:2px;">
+              <div style="color:#fda4af; font-weight:800;">🛑 ${escapeHtml(t.title)}</div>
+              <div style="color:#cbd5e1; font-size:10.5px;">${escapeHtml(t.detail)} • action: <b>${escapeHtml(t.actionTaken)}</b></div>
+            </div>
+          `).join('');
+
+      body.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(380px, 1fr)); gap:16px;">
+          <!-- LEFT: BUDGET & LOOP CIRCUIT-BREAKER -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.22); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:12px;">
+            <div style="font-family:var(--font-mono); font-size:12px; font-weight:800; color:#fde68a;">${td('guard.breakerTitle')}</div>
+
+            <div style="background:rgba(2,6,23,0.7); border:1px solid rgba(148,163,184,0.18); border-radius:8px; padding:10px;">
+              <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:11.5px; margin-bottom:6px;">
+                <span>${en ? 'Session Spend' : 'Расход сессии'}: <b style="color:#fde68a;">~$${liveUsd.toFixed(2)}</b> / $${cfg.maxSessionUsd.toFixed(2)}</span>
+                <span style="color:#7dd3fc;">${en ? 'Burn' : 'Скорость'}: <b>$${(br.burnUsdPerHour || 0).toFixed(2)}/h</b></span>
+              </div>
+              <div style="height:6px; background:rgba(148,163,184,0.15); border-radius:999px; overflow:hidden;">
+                <div style="width:${pctBudget}%; height:100%; background:${pctBudget >= 85 ? '#ff0055' : pctBudget >= 60 ? '#fbbf24' : '#00ff9d'};"></div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:var(--font-mono); font-size:11px;">
+              <label style="display:flex; flex-direction:column; gap:4px; color:#94a3b8;">
+                ${td('guard.maxSession')}
+                <input id="guardMaxSession" type="number" step="0.5" min="0.5" value="${cfg.maxSessionUsd}" class="ctrl-input" style="background:#020617; border:1px solid rgba(56,189,248,0.28); padding:6px 8px; border-radius:5px;" />
+              </label>
+              <label style="display:flex; flex-direction:column; gap:4px; color:#94a3b8;">
+                ${td('guard.maxSeat')}
+                <input id="guardMaxSeat" type="number" step="0.5" min="0.5" value="${cfg.maxSeatUsd}" class="ctrl-input" style="background:#020617; border:1px solid rgba(56,189,248,0.28); padding:6px 8px; border-radius:5px;" />
+              </label>
+              <label style="display:flex; flex-direction:column; gap:4px; color:#94a3b8;">
+                ${td('guard.maxBurn')}
+                <input id="guardMaxBurn" type="number" step="0.5" min="0.5" value="${cfg.maxUsdPerHour}" class="ctrl-input" style="background:#020617; border:1px solid rgba(56,189,248,0.28); padding:6px 8px; border-radius:5px;" />
+              </label>
+              <label style="display:flex; flex-direction:column; gap:4px; color:#94a3b8;">
+                ${td('guard.maxQa')}
+                <input id="guardMaxQa" type="number" step="1" min="2" max="15" value="${cfg.maxQaRounds}" class="ctrl-input" style="background:#020617; border:1px solid rgba(56,189,248,0.28); padding:6px 8px; border-radius:5px;" />
+              </label>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <select id="guardModeSelect" class="rig-select" style="flex:1; min-width:160px; padding:6px 8px;">
+                <option value="alert_only"${cfg.mode === 'alert_only' ? ' selected' : ''}>${td('guard.modeAlert')}</option>
+                <option value="auto_stop"${cfg.mode === 'auto_stop' ? ' selected' : ''}>${td('guard.modeStop')}</option>
+              </select>
+              <button class="action-pill key-proceed" onclick="saveGuardrailsConfig()">${td('guard.saveBtn')}</button>
+              <button class="action-pill" style="border-color:#fbbf24; color:#fde68a;" onclick="simulateDemoBreakerTrip()">${td('guard.simTripBtn')}</button>
+              ${br.status === 'tripped' ? `<button class="action-pill" style="border-color:#00ff9d; color:#6ee7b7;" onclick="resetGuardrailsBreaker()">${td('guard.resetBtn')}</button>` : ''}
+            </div>
+            <div id="guardActionStatus" style="font-family:var(--font-mono); font-size:11px; color:#6ee7b7; min-height:14px;"></div>
+
+            <div style="display:flex; flex-direction:column; gap:6px;">${tripsHtml}</div>
+          </div>
+
+          <!-- RIGHT: TELEGRAM HITL BRIDGE + LIVE PHONE PREVIEW -->
+          <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.22); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <span style="font-family:var(--font-mono); font-size:12px; font-weight:800; color:var(--cyan);">${td('guard.tgTitle')}</span>
+              <span class="action-pill" style="font-size:10px; border-color:${tg.configured ? '#00ff9d' : '#64748b'}; color:${tg.configured ? '#6ee7b7' : '#94a3b8'};">
+                ${tg.configured ? `🟢 ONLINE (${escapeHtml(tg.chatId)})` : '⚪ STANDBY'}
+              </span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:var(--font-mono); font-size:11px;">
+              <label style="display:flex; flex-direction:column; gap:4px; color:#94a3b8;">
+                ${td('guard.tgToken')}
+                <input id="tgBotTokenInput" type="password" placeholder="${tg.maskedToken || '123456:AAH...'}" class="ctrl-input" style="background:#020617; border:1px solid rgba(56,189,248,0.28); padding:6px 8px; border-radius:5px;" />
+              </label>
+              <label style="display:flex; flex-direction:column; gap:4px; color:#94a3b8;">
+                ${td('guard.tgChat')}
+                <input id="tgChatIdInput" type="text" placeholder="${tg.chatId || 'e.g. 123456789'}" class="ctrl-input" style="background:#020617; border:1px solid rgba(56,189,248,0.28); padding:6px 8px; border-radius:5px;" />
+              </label>
+            </div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="action-pill key-proceed" onclick="handleTelegramAction('connect')">${td('guard.tgConnect')}</button>
+              <button class="action-pill" onclick="handleTelegramAction('test')">${td('guard.tgTest')}</button>
+              ${tg.configured ? `<button class="action-pill key-cancel" onclick="handleTelegramAction('disconnect')">${td('guard.tgDisconnect')}</button>` : ''}
+            </div>
+            <div style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8;">${td('guard.tgCommands')}</div>
+            <div id="tgActionStatus" style="font-family:var(--font-mono); font-size:11px; color:#7dd3fc; min-height:14px;"></div>
+
+            <!-- Interactive Telegram Phone Preview -->
+            <div style="background:#0b1420; border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:7px;">
+              <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10px; color:#7dd3fc; font-weight:800;">
+                <span>🤖 @RigCommanderBot</span>
+                <span style="color:#64748b;">${td('guard.tgPreviewTitle')}</span>
+              </div>
+              <div style="background:#142236; border-radius:8px; padding:8px 10px; font-family:var(--font-mono); font-size:11px; color:#e2e8f0; line-height:1.4;">
+                <div style="color:#fda4af; font-weight:800; margin-bottom:4px;">🚨 RigCommander HITL — ${escapeHtml(urgentAgent ? urgentAgent.shortName : 'dev-check')}</div>
+                <div style="color:#94a3b8; font-size:10.5px;">Allow negative control fault injection &amp; git checkout?</div>
+                ${tgPreviewReplyMsg ? `<div style="margin-top:6px; color:#6ee7b7; border-top:1px dashed rgba(148,163,184,0.2); padding-top:5px;">${escapeHtml(tgPreviewReplyMsg)}</div>` : ''}
+              </div>
+              <div id="tgPreviewInlineBtns" style="display:flex; flex-direction:column; gap:5px;">
+                ${phoneBtnsHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     // ===== Stage 4: Edge X-ray =====
     function selectEdge(idx, ev) {
@@ -4485,6 +4828,8 @@
       renderInspectorAndScorecards(true);
       const adv = document.getElementById('fleetAdvisorModal');
       if (adv && adv.classList.contains('open')) renderFleetAdvisorModal();
+      const grd = document.getElementById('guardrailsModal');
+      if (grd && grd.classList.contains('open')) renderGuardrailsModal();
       if (saTourOpen) renderSaTour();
     }
 
@@ -4617,6 +4962,11 @@
       } else if (track === 'calm') {
         if (!calmMode) toggleCalmMode();
         showTrackToast('🧘 UX-трек: Calm HUD (ISO 11064) • в фокусе только аномалии и работа');
+      } else if (track === 'guardrails' || track === 'telegram' || track === 'breaker') {
+        openGuardrailsModal();
+        showTrackToast(deckLang === 'en'
+          ? '🛡️ UX Track: Budget Circuit-Breaker & Telegram HITL Phone Preview'
+          : '🛡️ UX-трек: Предохранитель бюджета и Telegram HITL-мост');
       } else if (track === 'tour') {
         if (!saTourOpen) toggleSaTour();
       }
