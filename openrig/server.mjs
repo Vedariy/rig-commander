@@ -1181,7 +1181,10 @@ function resolveSafeStaticPath(baseDir, pathname) {
     return null;
   }
   if (decoded.includes('\0')) return null;
-  const rel = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  const rel =
+    decoded === '/' ? 'index.html' :
+    (decoded === '/passport' || decoded === '/passport/') ? 'passport.html' :
+    decoded.replace(/^\/+/, '');
   const segments = rel.split(/[\\/]+/);
   if (segments.some(s => s === '' || s === '.' || s === '..' || s.startsWith('.'))) {
     return null;

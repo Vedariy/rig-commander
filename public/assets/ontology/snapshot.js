@@ -362,6 +362,89 @@ export function getActionRecordsForSeat(snapshot, seatId, limit = 5) {
     .slice(0, Math.max(1, limit));
 }
 
+const MODEL_POOL_SPECS = [
+  { id: 'codex-gpt', name: '🟣 CODEX / GPT', color: '#a855f7' },
+  { id: 'claude', name: '🟠 CLAUDE (Anthropic)', color: '#f59e0b' },
+  { id: 'fast-open', name: '🟢 GLM / DEEPSEEK', color: '#00ff9d' },
+  { id: 'terminal-agy', name: '🔵 TERMINAL / AGY', color: '#00f0ff' },
+  { id: 'other', name: '🌐 OTHER MODELS', color: '#38bdf8' }
+];
+
+/**
+ * Exclusive model-first pool classifier: every seat belongs to exactly one pool.
+ * Model name always wins over harness (e.g. glm-5.3-flash running in claude-code -> fast-open).
+ */
+export function classifyModelPool(seat) {
+  const model = String((seat && seat.model) || '').toLowerCase();
+  const harness = String((seat && seat.harness) || '').toLowerCase();
+
+  if (/glm|deepseek|qwen/i.test(model)) return 'fast-open';
+  if (/claude|sonnet|opus|haiku/i.test(model)) return 'claude';
+  if (/gpt|sol|terra|codex|\bo[134]\b/i.test(model)) return 'codex-gpt';
+  if (/gemini|argon/i.test(model)) return 'terminal-agy';
+
+  if (harness === 'pi') return 'fast-open';
+  if (harness.includes('claude')) return 'claude';
+  if (harness === 'codex') return 'codex-gpt';
+  if (harness === 'terminal' || harness.includes('agy')) return 'terminal-agy';
+  return 'other';
+}
+
+/**
+ * Aggregates exclusive model pools scoped by rigFilter, including peak/avg CTX and session spend.
+ */
+export function computeModelPools(agents = [], rigFilter = 'all') {
+  const scoped = (Array.isArray(agents) ? agents : []).filter(a => {
+    if (!a || !a.id) return false;
+    return !rigFilter || rigFilter === 'all' || String(a.id).endsWith('@' + rigFilter);
+  });
+
+  const buckets = new Map(MODEL_POOL_SPECS.map(spec => [spec.id, []]));
+  for (const a of scoped) {
+    const poolId = classifyModelPool(a);
+    buckets.get(poolId).push(a);
+  }
+
+  const pools = [];
+  for (const spec of MODEL_POOL_SPECS) {
+    const matching = buckets.get(spec.id);
+    if (!matching || matching.length === 0) continue;
+
+    const activeCount = matching.filter(a => a.state === 'working').length;
+    const validCtx = matching.map(a => a.ctxPct).filter(c => typeof c === 'number' && Number.isFinite(c));
+    const hasValidCtx = validCtx.length > 0;
+    const peakCtx = hasValidCtx ? Math.max(...validCtx) : null;
+    const avgCtx = hasValidCtx ? Math.round(validCtx.reduce((sum, v) => sum + v, 0) / validCtx.length) : null;
+    const isOver = hasValidCtx && peakCtx >= CONTEXT_CRIT_PCT;
+
+    let totalTokens = 0;
+    let totalUsd = 0;
+    for (const a of matching) {
+      if (a.usage && typeof a.usage.totalTokens === 'number') {
+        totalTokens += a.usage.totalTokens;
+        totalUsd += Number(a.usage.estUsd) || 0;
+      }
+    }
+
+    const seatText = matching.length === 1 ? '1 SEAT' : `${matching.length} SEATS`;
+    pools.push({
+      ...spec,
+      seatCount: matching.length,
+      activeCount,
+      hasValidCtx,
+      peakCtx,
+      avgCtx,
+      isOver,
+      hasUsage: totalTokens > 0,
+      totalTokens,
+      totalEstUsd: Number(totalUsd.toFixed(2)),
+      seatNames: matching.map(a => a.shortName || a.id),
+      statusLabel: activeCount > 0 ? `${activeCount}/${matching.length} ACTIVE` : seatText
+    });
+  }
+  return pools;
+}
+
 /**
  * Pure selector: returns the primary active (in-progress preferred over pending) obligation for a seat.
  */

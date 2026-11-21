@@ -183,6 +183,10 @@ test('resolveSafeStaticPath blocks path traversal, dotfiles and .mjs server file
   assert.equal(okRoot.rel, 'index.html');
   assert.equal(okRoot.resolved, path.resolve(base, 'index.html'));
 
+  const okPassport = resolveSafeStaticPath(base, '/passport');
+  assert.equal(okPassport.rel, 'passport.html');
+  assert.equal(okPassport.resolved, path.resolve(base, 'passport.html'));
+
   const okDoc = resolveSafeStaticPath(base, '/docs/architecture.md');
   assert.equal(okDoc.ext, '.md');
 

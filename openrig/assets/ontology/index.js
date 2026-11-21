@@ -16,5 +16,7 @@ export {
   getSeatActiveObligation,
   getSituationsForSeat,
   getFleetBudgetRows,
-  getActionRecordsForSeat
+  getActionRecordsForSeat,
+  classifyModelPool,
+  computeModelPools
 } from './snapshot.js';

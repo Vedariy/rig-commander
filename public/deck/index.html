@@ -28,6 +28,9 @@
       <button class="triage-refresh-btn" onclick="copyCmd('rig status')" title="Скопировать команду rig status в буфер">
         📋 <span>rig status</span>
       </button>
+      <a class="triage-refresh-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.45); color:#e9d5ff;" title="Открыть архитектурный паспорт проекта (C4, Онтология, Безопасность, Тесты)">
+        📄 <span>Паспорт</span>
+      </a>
     </div>
   </div>
 
@@ -40,8 +43,8 @@
           <span>RIGCOMMANDER // NEURAL COMMAND DECK v3.1</span>
           <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
           <select id="rigFilterSelect" class="rig-select" onchange="onRigFilterChange(this.value)" title="Выбор активного рига OpenRig">
-            <option value="all">🌐 ВСЕ РИГИ</option>
-            <option value="core-platform" selected>🎯 core-platform</option>
+            <option value="all" selected>🌐 ВСЕ РИГИ (2)</option>
+            <option value="core-platform">🎯 core-platform</option>
             <option value="kernel">⚙️ kernel</option>
           </select>
         </div>
@@ -281,7 +284,7 @@
     // Domain helpers (getContextThermal, computeBurn, formatTokensShort, parseInteractivePromptOptions,
     // getAgentAudioProfile, GANTT_LONG_WAIT_MS, ganttChainColor, ganttRoleRank) are loaded from /assets/domain/index.js.
 
-    // Exact initial snapshot from OpenRig Daemon /api/rigs/01M67K8ARXGTK4NFKC1C0NZP4X/nodes (matches TUI 1:1!)
+    // Demo snapshot aligned with canonical Operational Ontology v2.0 (overwritten automatically when live daemon responds)
     const AGENTS = [
       {
         id: 'operator-agent@kernel',
@@ -289,9 +292,10 @@
         role: 'Диспетчер ядра OpenRig',
         icon: '🛰️',
         harness: 'codex',
-        model: 'gpt-6.1-sol',
+        model: 'gpt-6.2-sol',
         ctxPct: 14,
         ctxWindowSize: 475000,
+        ctxUsedTokens: 66500,
         state: 'idle',
         isAnomaly: false,
         activityLabel: '🔵 IDLE',
@@ -300,6 +304,7 @@
         cwd: '~/.openrig/workspace',
         port: '—',
         x: 11, y: 14,
+        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 185000, uncachedInputTokens: 32000, cachedInputTokens: 153000, outputTokens: 9400, totalTokens: 194400, cachedPct: 83, estUsd: 0.28 },
         details: 'Глобальный оператор ядра OpenRig.'
       },
       {
@@ -308,9 +313,10 @@
         role: 'Оператор рига • Watchdog 15m',
         icon: '🧭',
         harness: 'codex',
-        model: 'gpt-6.1-sol (medium*)',
-        ctxPct: 31, // Exact TUI value: 31%
+        model: 'gpt-6.2-sol (medium*)',
+        ctxPct: 31,
         ctxWindowSize: 475000,
+        ctxUsedTokens: 147250,
         state: 'idle',
         isAnomaly: false,
         activityLabel: '⏳ HELD (1 с wake)',
@@ -320,6 +326,7 @@
         cwd: 'core-platform',
         port: '—',
         x: 89, y: 16,
+        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 460000, uncachedInputTokens: 94000, cachedInputTokens: 366000, outputTokens: 21800, totalTokens: 481800, cachedPct: 80, estUsd: 0.72 },
         details: 'CTX: 31% (из 475K окна Codex). Следит за очередью, Watchdog 75% на dev-check и матрицей выбора чекера (S/M/L).'
       },
       {
@@ -328,11 +335,12 @@
         role: 'Архитектор и Оркестратор',
         icon: '🏛️',
         harness: 'codex',
-        model: 'gpt-6.1-sol',
+        model: 'gpt-6.2-sol',
         ctxPct: 48,
         ctxWindowSize: 475000,
+        ctxUsedTokens: 228000,
         state: 'working',
-        isAnomaly: false,
+        isAnomaly: true,
         activityLabel: '🟢 WORKING (2)',
         assignedWorkCount: 2,
         callsIn: 120, callsOut: 92,
@@ -340,6 +348,7 @@
         cwd: 'core-platform',
         port: '4173 / 4176',
         x: 38, y: 22,
+        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 1120000, uncachedInputTokens: 210000, cachedInputTokens: 910000, outputTokens: 54000, totalTokens: 1174000, cachedPct: 81, estUsd: 1.74 },
         details: 'CTX: 48% (228K / 475K в текущем Codex-рантайме). Активно координирует слайсы tts-strict-chunked и elb-001.'
       },
       {
@@ -347,20 +356,22 @@
         shortName: 'dev-senior-architect',
         role: 'Старший Архитектор (Spec & Arch)',
         icon: '📐',
-        harness: 'codex',
-        model: 'gpt-6.1-sol',
-        ctxPct: 11,
-        ctxWindowSize: 475000,
+        harness: 'claude-code',
+        model: 'claude-sonnet-4',
+        ctxPct: 26,
+        ctxWindowSize: 200000,
+        ctxUsedTokens: 52000,
         state: 'idle',
         isAnomaly: false,
         activityLabel: '🔵 IDLE',
-        callsIn: 1, callsOut: 0,
+        callsIn: 14, callsOut: 11,
         reworkBadge: '📐 Spec & ADR',
         reworkClass: 'chip-rework-good',
         cwd: 'core-platform',
         port: '—',
         x: 68, y: 12,
-        details: 'CTX: 11% (50K / 475K Codex). Старший архитектор: постановки задач (docs/tasks), ADR архитектурных решений и валидация спецификаций.'
+        usage: { model: 'claude-sonnet-4', tier: 'tier2-balanced', source: 'demo', inputTokens: 540000, uncachedInputTokens: 112000, cachedInputTokens: 428000, outputTokens: 34200, totalTokens: 574200, cachedPct: 79, estUsd: 0.98 },
+        details: 'CTX: 26% (52K / 200K Claude Sonnet 4). Старший архитектор: постановки задач (docs/tasks), ADR архитектурных решений и валидация спецификаций.'
       },
       {
         id: 'dev-coder@core-platform',
@@ -369,10 +380,11 @@
         icon: '💻',
         harness: 'claude-code',
         model: 'glm-5.3-flash',
-        ctxPct: 24, // Exact TUI value: 24% (240K / 1000K)
+        ctxPct: 24,
         ctxWindowSize: 1000000,
+        ctxUsedTokens: 240000,
         state: 'working',
-        isAnomaly: false,
+        isAnomaly: true,
         activityLabel: '🟢 WORKING (1)',
         assignedWorkCount: 1,
         callsIn: 25, callsOut: 14,
@@ -385,6 +397,7 @@
         cwd: 'core-platform',
         port: '4173 / 5199',
         x: 16, y: 55,
+        usage: { model: 'glm-5.3-flash', tier: 'tier1-fast', source: 'demo', inputTokens: 690000, uncachedInputTokens: 140000, cachedInputTokens: 550000, outputTokens: 48500, totalTokens: 738500, cachedPct: 80, estUsd: 0.24 },
         details: 'CTX: 24% (из 1M окна). Пишет фикс по слайсу ELB-001 и прогоняет unit-тесты.'
       },
       {
@@ -394,10 +407,12 @@
         icon: '🔧',
         harness: 'pi',
         model: 'deepseek-flash',
-        ctxPct: null, // Exact TUI value: — (Pi has no context reader in daemon)
+        ctxPct: null,
         ctxWindowSize: null,
         state: 'waiting',
         isAnomaly: true,
+        parkedData: { parked: true, openCount: 2, heldCount: 0, reason: 'Обязательства без активного wake-таймера' },
+        parkedReason: 'Обязательства без активного wake-таймера',
         activityLabel: '🟠 PARKED (2)',
         assignedWorkCount: 2,
         callsIn: 10, callsOut: 12,
@@ -418,11 +433,17 @@
         role: 'Кодер 4 (Parallel Worktree)',
         icon: '💻',
         harness: 'codex',
-        model: 'gpt-6.1-sol',
-        ctxPct: 68, // Warm context (approaching 75% threshold)
+        model: 'gpt-6.2-sol',
+        ctxPct: 68,
         ctxWindowSize: 475000,
+        ctxUsedTokens: 323000,
+        ctxHistory: [
+          { t: Date.now() - 28 * 60000, pct: 52 },
+          { t: Date.now() - 14 * 60000, pct: 61 },
+          { t: Date.now(), pct: 68 }
+        ],
         state: 'working',
-        isAnomaly: false,
+        isAnomaly: true,
         activityLabel: '🟢 WORKING (1)',
         assignedWorkCount: 1,
         callsIn: 56, callsOut: 27,
@@ -435,6 +456,7 @@
         cwd: 'core-platform-coder4',
         port: '4175 / 5201',
         x: 61, y: 52,
+        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 1380000, uncachedInputTokens: 310000, cachedInputTokens: 1070000, outputTokens: 67200, totalTokens: 1447200, cachedPct: 78, estUsd: 2.26 },
         details: 'CTX: 68% (из 475K окна Codex). Активно дорабатывает tts-strict-chunked (d81fa52) перед повторной передачей в QA.'
       },
       {
@@ -443,7 +465,7 @@
         role: 'Кодер 5 • Terminal Seat (ELB-003)',
         icon: '🚀',
         harness: 'terminal / agy',
-        model: 'Gemini 4 Argon (medium)',
+        model: 'Gemini 2.5 Pro (medium)',
         ctxPct: null,
         ctxWindowSize: null,
         state: 'idle',
@@ -459,7 +481,7 @@
         cwd: 'core-platform',
         port: '—',
         x: 84, y: 46,
-        details: 'Terminal-сиденье agy (Gemini 4 Argon · medium). Завершил и сдал слайс ELB-003 (d9c8f5d, принят и задеплоен в dev f850705), сейчас ждёт на промпте ">".'
+        details: 'Terminal-сиденье agy (Gemini 2.5 Pro · medium). Завершил и сдал слайс ELB-003 (d9c8f5d, принят и задеплоен в dev f850705), сейчас ждёт на промпте ">".'
       },
       {
         id: 'dev-check@core-platform',
@@ -468,8 +490,14 @@
         icon: '🛡️',
         harness: 'codex',
         model: 'deepseek-v4-pro',
-        ctxPct: 79, // Over 75% watchdog threshold -> triggers thermal alert & Advisor advice
+        ctxPct: 79,
         ctxWindowSize: 258400,
+        ctxUsedTokens: 204136,
+        ctxHistory: [
+          { t: Date.now() - 25 * 60000, pct: 64 },
+          { t: Date.now() - 10 * 60000, pct: 73 },
+          { t: Date.now(), pct: 79 }
+        ],
         state: 'urgent',
         isAnomaly: true,
         needsInputCount: 1,
@@ -482,6 +510,7 @@
         cwd: 'core-platform',
         port: 'check-pw 4178',
         x: 47, y: 83,
+        usage: { model: 'deepseek-v4-pro', tier: 'tier1-fast', source: 'demo', inputTokens: 890000, uncachedInputTokens: 215000, cachedInputTokens: 675000, outputTokens: 52100, totalTokens: 942100, cachedPct: 76, estUsd: 0.41 },
         details: 'CTX: 79% (204K / 258.4K) — превышен порог 75%. Остановлен на permission_prompt: ждёт подтверждения оператора.'
       }
     ];
@@ -826,6 +855,7 @@
 
     function onRigFilterChange(val) {
       currentRigFilter = val;
+      renderReservoirs();
       renderTopology();
       renderInspectorAndScorecards(false);
       refreshTelemetryNow();
@@ -2549,6 +2579,23 @@
         .replace(/'/g, '&#39;');
     }
 
+    const DEMO_SCREEN_OVERRIDES = {};
+
+    function getDemoTerminalCapture(seatId) {
+      if (DEMO_SCREEN_OVERRIDES[seatId]) return DEMO_SCREEN_OVERRIDES[seatId];
+      const a = AGENTS.find(x => x.id === seatId);
+      if (seatId.includes('dev-check')) {
+        return `[${seatId}] ~/openrig-lab/core-platform (check-pw 4178)\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\nRunning 14 tests using 2 workers...\n  ✓  12 passed (9.4s)\n  ✘   2 failed: boundary-chunked-timeout\n----------------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nAllow running negative control fault injection & git checkout -- tools/tts/server.py?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this worktree\n  3. No, cancel and tell agent (esc)`;
+      }
+      if (seatId.includes('dev-coder3')) {
+        return `[${seatId}] ~/openrig-lab/core-platform-coder3 (pi • deepseek-flash)\n$ rig queue list --owned\n  qitem-20261119-01  pending  slice:pre-push-e2e-gate (QA round 2 fix)\n  qitem-20261119-02  pending  slice:editor-load-boundaries (boundary check)\n----------------------------------------\n🟠 PARKED: 2 open obligations without active wake timer.\nНажми «🔔 Разбудить PARKED» или отправь команду ниже.`;
+      }
+      if (seatId.includes('dev-coder4')) {
+        return `[${seatId}] ~/openrig-lab/core-platform-coder4 (codex • gpt-6.2-sol)\n$ npx vitest run tests/tts-strict-chunked.test.ts\n ✓ tests/tts-strict-chunked.test.ts (104 tests) 612ms\n  Test Files  1 passed (1)\n       Tests  104 passed (104)\nCTX: ${a && typeof a.ctxPct === 'number' ? a.ctxPct + '%' : '68%'} (323K / 475K) • Рекомендуется /compact перед новым слайсом.`;
+      }
+      return `[${seatId}] ${a ? a.cwd : 'core-platform'}\nStatus: ${a ? a.activityLabel : 'IDLE'} • Model: ${a ? a.model : 'codex'}\n$ git status --short\n${a && a.state === 'working' ? 'M  src/core/dispatcher.ts\nM  src/core/dispatcher.test.ts\n▶ Running vitest watch...' : 'nothing to commit, working tree clean\n› Waiting on prompt...'}`;
+    }
+
     async function fetchTerminalCapture(seatId, silent = false) {
       const box = document.getElementById('tmuxScreenBox');
       if (box && !silent) box.textContent = `Захват экрана tmux для ${seatId}...`;
@@ -2561,12 +2608,7 @@
         lastScreenBySeat[seatId] = liveScreenCapture;
       } catch {
         if (selectedAgentId !== seatId) return;
-        const a = AGENTS.find(x => x.id === seatId);
-        if (seatId.includes('dev-check')) {
-          liveScreenCapture = `[${seatId}] ~/openrig-lab/core-platform (check-pw 4178)\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\nRunning 14 tests using 2 workers...\n  ✓  12 passed (9.4s)\n  ✘   2 failed: boundary-chunked-timeout\n----------------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nAllow running negative control fault injection & git checkout -- tools/tts/server.py?\n[1] Yes, allow once   [2] Always allow in worktree   [n] Cancel\n› _`;
-        } else {
-          liveScreenCapture = `[${seatId}] ${a ? a.cwd : 'core-platform'}\nStatus: ${a ? a.activityLabel : 'IDLE'} • Model: ${a ? a.model : 'codex'}\n$ git status --short\n${a && a.state === 'working' ? 'M  src/core/dispatcher.ts\nM  src/core/dispatcher.test.ts\n▶ Running vitest watch...' : 'nothing to commit, working tree clean\n› Waiting on prompt...'}`;
-        }
+        liveScreenCapture = getDemoTerminalCapture(seatId);
         lastScreenBySeat[seatId] = liveScreenCapture;
       }
       const updatedBox = document.getElementById('tmuxScreenBox');
@@ -3109,99 +3151,51 @@
       const container = document.getElementById('reservoirsContainer');
       if (!container) return;
 
-      const pools = [
-        {
-          id: 'codex-sol',
-          name: '🟣 CODEX SOL (GPT)',
-          color: '#a855f7',
-          match: a => (a.harness === 'codex') || (a.model && /gpt|sol|terra/i.test(a.model)) || /owner|senior|operator/i.test(a.id)
-        },
-        {
-          id: 'claude-sonnet',
-          name: '🟠 CLAUDE (Anthropic)',
-          color: '#f59e0b',
-          match: a => (a.harness && a.harness.includes('claude')) || (a.model && /claude|sonnet|opus/i.test(a.model))
-        },
-        {
-          id: 'open-weights',
-          name: '🟢 GLM / DEEPSEEK (Fast)',
-          color: '#00ff9d',
-          match: a => (a.harness === 'pi') || (a.model && /glm|deepseek|pi/i.test(a.model)) || /coder3|dev-coder@/i.test(a.id)
-        },
-        {
-          id: 'gemini-frontier',
-          name: '🔵 GEMINI / AGY (Google)',
-          color: '#00f0ff',
-          match: a => (a.harness && /terminal|agy/i.test(a.harness)) || (a.model && /gemini|argon/i.test(a.model)) || /coder5/i.test(a.id)
-        }
-      ];
-
-      const activePools = pools.map(p => {
-        const matching = AGENTS.filter(a => p.match(a));
-        if (matching.length === 0) return null;
-
-        const activeCount = matching.filter(a => a.state === 'working').length;
-        const peakCtx = Math.max(0, ...matching.map(a => typeof a.ctxPct === 'number' ? a.ctxPct : 0));
-        const validCtx = matching.map(a => a.ctxPct).filter(c => typeof c === 'number');
-        const avgCtx = validCtx.length ? Math.round(validCtx.reduce((sum, v) => sum + v, 0) / validCtx.length) : 0;
-        const isOver = peakCtx >= 75;
-
-        const hasValidCtx = validCtx.length > 0;
-        const seatText = matching.length === 1 ? '1 SEAT' : `${matching.length} SEATS`;
-
-        return {
-          ...p,
-          seatCount: matching.length,
-          activeCount,
-          hasValidCtx,
-          peakCtx,
-          avgCtx,
-          isOver,
-          statusLabel: activeCount > 0 ? `${activeCount} ACTIVE` : seatText
-        };
-      }).filter(Boolean);
-
-      if (activePools.length === 0 && AGENTS.length > 0) {
-        const peakCtx = Math.max(0, ...AGENTS.map(a => typeof a.ctxPct === 'number' ? a.ctxPct : 0));
-        const validCtx = AGENTS.map(a => a.ctxPct).filter(c => typeof c === 'number');
-        const avgCtx = validCtx.length ? Math.round(validCtx.reduce((sum, v) => sum + v, 0) / validCtx.length) : 0;
-        const seatText = AGENTS.length === 1 ? '1 SEAT' : `${AGENTS.length} SEATS`;
-        activePools.push({
-          id: 'default-cluster',
-          name: '🌐 OPENRIG MODEL POOL',
-          color: '#00f0ff',
-          seatCount: AGENTS.length,
-          activeCount: AGENTS.filter(a => a.state === 'working').length,
-          hasValidCtx: validCtx.length > 0,
-          peakCtx,
-          avgCtx,
-          isOver: peakCtx >= 75,
-          statusLabel: seatText
-        });
+      const activePools = computeModelPools(AGENTS, currentRigFilter);
+      if (activePools.length === 0) {
+        container.innerHTML = '';
+        return;
       }
 
-      container.innerHTML = activePools.map(pool => `
-        <div class="tank-card" style="--tank-color: ${pool.color}; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
+      container.innerHTML = activePools.map(pool => {
+        const seatListTip = escapeHtml(pool.seatNames.join(', '));
+        const ctxFillWidth = pool.hasValidCtx ? Math.min(100, pool.peakCtx) : 0;
+        const ctxFillBg = pool.isOver
+          ? '#ff0055'
+          : (pool.hasValidCtx && pool.peakCtx >= 65 ? 'linear-gradient(90deg, #3b82f6, #f59e0b)' : pool.color);
+        const ctxRightText = pool.hasValidCtx ? `${pool.peakCtx}%` : 'нет замеров';
+        const secondRowHtml = pool.hasUsage
+          ? `
+          <div class="meter-row" title="Суммарный расход сессий в пуле ${escapeHtml(pool.name)} (ср. CTX: ${pool.hasValidCtx ? pool.avgCtx + '%' : '—'})">
+            <span class="meter-label">💰 Расход:</span>
+            <span style="flex:1; font-family:var(--font-mono); font-size:10.5px; color:#7dd3fc; text-align:right;">${formatTokensShort(pool.totalTokens)} tok</span>
+            <span style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#fde68a; min-width:52px; text-align:right;">~$${pool.totalEstUsd.toFixed(2)}</span>
+          </div>`
+          : `
+          <div class="meter-row" title="Средняя загрузка контекста среди узлов пула ${escapeHtml(pool.name)}">
+            <span class="meter-label">🛢️ Ср. CTX:</span>
+            <div class="meter-track">
+              <div class="meter-fill" style="width: ${pool.hasValidCtx ? Math.min(100, pool.avgCtx) : 0}%; background: ${pool.color}; opacity: 0.85;"></div>
+            </div>
+            <span style="font-family:var(--font-mono); font-size:10.5px; color:${pool.hasValidCtx ? '#cbd5e1' : '#64748b'};">${pool.hasValidCtx ? pool.avgCtx + '%' : '—'}</span>
+          </div>`;
+
+        return `
+        <div class="tank-card" title="Узлы пула (${pool.seatCount}): ${seatListTip}" style="--tank-color: ${pool.color}; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
           <div class="tank-top">
             <span>${pool.name}</span>
             <span style="color:${pool.activeCount > 0 ? '#6ee7b7' : '#e9d5ff'}; font-family:var(--font-mono); font-size:11px;">${pool.statusLabel}</span>
           </div>
-          <div class="meter-row" title="Максимальный нагрев контекста в пуле ${pool.name}">
+          <div class="meter-row" title="Максимальный нагрев контекста в пуле ${escapeHtml(pool.name)} (ср. ${pool.hasValidCtx ? pool.avgCtx + '%' : 'нет замеров'})">
             <span class="meter-label">⚡ Пик CTX:</span>
             <div class="meter-track">
-              <div class="meter-fill" style="width: ${pool.hasValidCtx ? Math.min(100, pool.peakCtx) : 100}%; background: ${pool.hasValidCtx ? (pool.isOver ? '#ff0055' : pool.peakCtx >= 65 ? 'linear-gradient(90deg, #3b82f6, #f59e0b)' : pool.color) : 'rgba(0, 240, 255, 0.25)'};"></div>
+              <div class="meter-fill" style="width: ${ctxFillWidth}%; background: ${ctxFillBg};"></div>
             </div>
-            <span style="color:${pool.isOver ? '#ff0055' : '#e2e8f0'}; font-weight:${pool.isOver ? '800' : '600'}; font-family:var(--font-mono); font-size:10.5px;">${pool.hasValidCtx ? (pool.peakCtx ? pool.peakCtx + '%' : '0%') : 'CLI'}</span>
+            <span style="color:${pool.isOver ? '#ff0055' : pool.hasValidCtx ? '#e2e8f0' : '#64748b'}; font-weight:${pool.isOver ? '800' : '600'}; font-family:var(--font-mono); font-size:10.5px;">${ctxRightText}</span>
           </div>
-          <div class="meter-row" title="Средняя загрузка контекста среди узлов пула ${pool.name}">
-            <span class="meter-label">🛢️ Ср. пул:</span>
-            <div class="meter-track">
-              <div class="meter-fill" style="width: ${pool.hasValidCtx ? Math.min(100, pool.avgCtx) : 100}%; background: ${pool.hasValidCtx ? pool.color : 'rgba(0, 240, 255, 0.2)'}; opacity: 0.85;"></div>
-            </div>
-            <span style="font-family:var(--font-mono); font-size:10.5px; color:#cbd5e1;">${pool.hasValidCtx ? (pool.avgCtx ? pool.avgCtx + '%' : '0%') : 'LIVE'}</span>
-          </div>
-        </div>
-      `).join('');
+          ${secondRowHtml}
+        </div>`;
+      }).join('');
     }
 
     function setHoverAgent(id) {
@@ -3286,6 +3280,75 @@
       }
     }
 
+    function applyDemoAction(seat, text, type, actionId) {
+      const a = AGENTS.find(x => x.id === seat);
+      const act = actionId || (text === '/compact' ? 'compact_context' : type === 'key' ? 'answer_prompt_option' : 'send_command');
+      let detail = 'применено (demo)';
+
+      if (a) {
+        if (act === 'compact_context' || text.startsWith('/compact')) {
+          const prevPct = typeof a.ctxPct === 'number' ? a.ctxPct : 75;
+          a.ctxPct = 18;
+          a.ctxUsedTokens = a.ctxWindowSize ? Math.round(a.ctxWindowSize * 0.18) : 85500;
+          a.ctxHistory = [{ t: Date.now(), pct: 18 }];
+          a.compactionsCount = (a.compactionsCount || 0) + 1;
+          detail = `CTX ${prevPct}% → 18%`;
+          DEMO_SCREEN_OVERRIDES[seat] = `[${seat}] ${a.cwd}\n$ /compact\n✓ Контекст сжат: ${prevPct}% → 18% (${formatTokensShort(a.ctxUsedTokens || 85500)} tok).\n› Готов к продолжению работы.`;
+        } else if (act === 'answer_prompt_option' || act === 'proceed_prompt' || act === 'cancel_prompt') {
+          const cancelled = act === 'cancel_prompt' || /^3\b|^Escape$/i.test(text);
+          a.state = cancelled ? 'idle' : 'working';
+          a.needsInputCount = 0;
+          a.needsInputReason = '';
+          a.isAnomaly = !cancelled;
+          a.activityLabel = cancelled ? '🔵 IDLE (Отменено)' : '🟢 WORKING (1)';
+          a.reworkBadge = cancelled ? '⏸️ Отменено оператором' : '✅ HITL Подтверждён';
+          a.reworkClass = 'chip-rework-good';
+          detail = cancelled ? 'меню закрыто (Esc)' : 'выход из needs-input';
+          DEMO_SCREEN_OVERRIDES[seat] = cancelled
+            ? `[${seat}] ~/openrig-lab/core-platform\nSent key: ${text}\n✕ Промпт отменён оператором. Рабочее дерево сохранено.\n› _`
+            : `[${seat}] ~/openrig-lab/core-platform (check-pw 4178)\nSent key: ${text}\n✓ HITL Authorization принят.\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\n  ✓  14 passed (100% GREEN)\nStatus: READY FOR LOCAL ACCEPTANCE 🟢`;
+        } else if (act === 'wake_parked_seat') {
+          a.state = 'working';
+          a.parkedData = null;
+          a.parkedReason = '';
+          a.isAnomaly = true;
+          a.activityLabel = '🟢 WORKING (2)';
+          detail = 'снят статус PARKED';
+          DEMO_SCREEN_OVERRIDES[seat] = `[${seat}] ~/openrig-lab/core-platform-coder3\n$ rig wake ${seat}\n✓ Сиденье пробуждено. Взята задача qitem-20261119-01 (slice:pre-push-e2e-gate).\n▶ Running targeted tests...`;
+        } else if (act === 'interrupt_execution' || text === 'C-c') {
+          a.state = 'idle';
+          a.needsInputCount = 0;
+          a.isAnomaly = false;
+          a.activityLabel = '🔵 IDLE (Прервано)';
+          detail = 'остановлено (C-c)';
+          DEMO_SCREEN_OVERRIDES[seat] = `[${seat}] ${a.cwd}\n^C\n✓ Выполнение прервано оператором.\n› _`;
+        } else {
+          DEMO_SCREEN_OVERRIDES[seat] = `[${seat}] ${a.cwd}\n$ ${text}\n✓ [DEMO] Команда принята агентом.`;
+        }
+      }
+
+      if (window.ONTOLOGY_SNAPSHOT && Array.isArray(window.ONTOLOGY_SNAPSHOT.actionRecords)) {
+        window.ONTOLOGY_SNAPSHOT.actionRecords.unshift({
+          execId: `demo-${Date.now()}`,
+          actionId: act,
+          seatId: seat,
+          payloadPreview: text.slice(0, 60),
+          executedAt: new Date().toISOString(),
+          postconditionStatus: 'verified',
+          postconditionDetail: detail
+        });
+      }
+
+      renderTriageStrip();
+      renderReservoirs();
+      renderWaitRadarAndDecisions();
+      renderTopology();
+      renderInspectorAndScorecards(false);
+      fetchTerminalCapture(selectedAgentId, true);
+      if (modalSeatId) fetchModalCapture();
+      return detail;
+    }
+
     async function executeApiSend(seat, text, type, statusElId, actionId = '') {
       const statusEl = statusElId ? document.getElementById(statusElId) : null;
       if (statusEl) {
@@ -3324,6 +3387,21 @@
           if (modalSeatId) fetchModalCapture();
         }, 1200);
       } catch (err) {
+        if (!IS_LIVE) {
+          const detail = applyDemoAction(seat, text, type, actionId);
+          if (statusEl) {
+            statusEl.className = 'ctrl-status ok';
+            statusEl.textContent = `✓ [DEMO] Применено (${detail}) • postcondition verified`;
+            setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3800);
+          }
+          const toast = document.getElementById('copyToast');
+          if (toast) {
+            toast.textContent = `✅ [DEMO] ${shortSeat(seat)}: ${detail}`;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2400);
+          }
+          return;
+        }
         if (statusEl) {
           statusEl.className = 'ctrl-status err';
           statusEl.textContent = `✕ Ошибка: ${err.message}`;
@@ -3429,7 +3507,20 @@
         }
       } catch (e) {
         if (modalSeatId !== seat) return;
-        body.textContent = `Не удалось получить экран: ${e.message}\n$ rig capture ${seat} --lines 80`;
+        const screenText = !IS_LIVE
+          ? getDemoTerminalCapture(seat)
+          : `Не удалось получить экран: ${e.message}\n$ rig capture ${seat} --lines 80`;
+        lastScreenBySeat[seat] = screenText;
+        body.textContent = screenText;
+        const modalOpts = document.getElementById('modalPromptOptionsBar');
+        if (modalOpts) {
+          modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seat, screenText, 'modalCmdStatus');
+        }
+        const modalQuick = document.getElementById('modalQuickKeysBar');
+        const modalAgent = AGENTS.find(a => a.id === seat);
+        if (modalQuick && modalAgent) {
+          modalQuick.innerHTML = renderHarnessQuickKeys(modalAgent, 'modalCmdStatus');
+        }
       }
       if (atBottom) body.scrollTop = body.scrollHeight;
     }
@@ -4118,6 +4209,15 @@
         selector: '.swimlanes-section',
         actionLabel: '🕸️ Сбросить фильтры потоков',
         action: () => setSliceFilter('all')
+      },
+      {
+        badge: 'ONTOLOGY v2.0 • GANTT & ACTION AUDIT',
+        title: 'Диаграмма Ганта (клавиша G) и журнал действий с проверкой postcondition',
+        desc: 'Переключите центр в режим Ганта, чтобы увидеть реальное время ожидания vs работы по цепочкам. Каждое write-back действие (HITL, /compact, wake) фиксируется в ActionAuditLog и автоматически проверяет эффект.',
+        meta: 'Эффект: доказательный контроль флота — видны и простои в очереди, и подтверждённый результат каждой команды.',
+        selector: '#panelCenter',
+        actionLabel: '📊 Переключить Граф ⇄ Гант',
+        action: () => setCenterView(centerViewMode === 'gantt' ? 'graph' : 'gantt')
       }
     ];
 
@@ -4187,8 +4287,152 @@
       if (step && typeof step.action === 'function') step.action();
     }
 
+    function seedDemoOntologyState() {
+      const now = Date.now();
+      const seatUsage = {};
+      const sessionsBySeatId = {};
+      let totalInputTokens = 0;
+      let totalCachedInputTokens = 0;
+      let totalOutputTokens = 0;
+      let totalTokens = 0;
+      let totalEstUsd = 0;
+
+      for (const a of AGENTS) {
+        if (a.usage) {
+          seatUsage[a.id] = a.usage;
+          totalInputTokens += a.usage.inputTokens || 0;
+          totalCachedInputTokens += a.usage.cachedInputTokens || 0;
+          totalOutputTokens += a.usage.outputTokens || 0;
+          totalTokens += a.usage.totalTokens || 0;
+          totalEstUsd += a.usage.estUsd || 0;
+        }
+        sessionsBySeatId[a.id] = {
+          sessionKey: `${a.id}:demo`,
+          seatId: a.id,
+          model: a.model,
+          ctxPct: a.ctxPct,
+          ctxWindowSize: a.ctxWindowSize,
+          ctxUsedTokens: a.ctxUsedTokens || null,
+          ctxHistory: a.ctxHistory || [],
+          usage: a.usage || null
+        };
+      }
+
+      const fleetUsageSummary = {
+        totalInputTokens,
+        totalCachedInputTokens,
+        totalOutputTokens,
+        totalTokens,
+        cachedPct: totalInputTokens > 0 ? Math.round((totalCachedInputTokens / totalInputTokens) * 100) : 0,
+        totalEstUsd: Math.round(totalEstUsd * 100) / 100
+      };
+
+      window.LIVE_SEAT_USAGE = seatUsage;
+      window.LIVE_FLEET_USAGE = fleetUsageSummary;
+      window.ONTOLOGY_SNAPSHOT = {
+        timestamp: new Date(now).toISOString(),
+        requestedRig: 'all',
+        hasLiveDaemonData: false,
+        rigs: [
+          { rigId: 'core-platform', name: 'core-platform', status: 'running', nodeCount: 8, runningCount: 4 },
+          { rigId: 'kernel', name: 'kernel', status: 'running', nodeCount: 1, runningCount: 0 }
+        ],
+        seats: [],
+        seatsById: {},
+        sessionsBySeatId,
+        chainsById: {},
+        obligations: [],
+        openObligations: [],
+        situations: [],
+        fleetUsageSummary,
+        actionRecords: [
+          {
+            execId: 'demo-audit-1',
+            actionId: 'compact_context',
+            seatId: 'dev-check@core-platform',
+            payloadPreview: '/compact',
+            executedAt: new Date(now - 24 * 60000).toISOString(),
+            postconditionStatus: 'verified',
+            postconditionDetail: 'CTX 82% → 21%'
+          },
+          {
+            execId: 'demo-audit-2',
+            actionId: 'compact_context',
+            seatId: 'dev-coder4@core-platform',
+            payloadPreview: '/compact',
+            executedAt: new Date(now - 38 * 60000).toISOString(),
+            postconditionStatus: 'verified',
+            postconditionDetail: 'CTX 78% → 19%'
+          },
+          {
+            execId: 'demo-audit-3',
+            actionId: 'wake_parked_seat',
+            seatId: 'dev-coder3@core-platform',
+            payloadPreview: 'Enter',
+            executedAt: new Date(now - 7 * 60000).toISOString(),
+            postconditionStatus: 'pending',
+            postconditionDetail: 'ожидание снятия PARKED'
+          },
+          {
+            execId: 'demo-audit-4',
+            actionId: 'answer_prompt_option',
+            seatId: 'dev-owner@core-platform',
+            payloadPreview: '1 Enter',
+            executedAt: new Date(now - 52 * 60000).toISOString(),
+            postconditionStatus: 'verified',
+            postconditionDetail: 'выход из needs-input'
+          }
+        ]
+      };
+
+      window.LIVE_INTELLIGENCE = {
+        healthScore: 76,
+        counts: { total: 4, p0: 1, p1: 2, p2: 1, p3: 0 },
+        allFindings: [
+          {
+            id: 'demo-f1',
+            detectorId: 'hitl_permission_prompt',
+            severity: 'p0_urgent',
+            category: 'topology',
+            title: 'dev-check (QA) ожидает подтверждения HITL в терминале',
+            summary: 'В tmux распознаны 3 интерактивных варианта permission_prompt. Подтвердите в 1 клик через Инспектор или 80-строчный экран.',
+            actionPlan: { seatTarget: 'dev-check@core-platform', actionLabel: '📺 Открыть экран QA', command: 'open_modal' }
+          },
+          {
+            id: 'demo-f2',
+            detectorId: 'context_saturation',
+            severity: 'p1_high',
+            category: 'context',
+            title: 'Перегрев контекста dev-check (QA): 79% (порог 75%)',
+            summary: 'Использовано 204K / 258.4K токенов. Выполните превентивный /compact после текущего шага, чтобы избежать деградации качества приёмки.',
+            actionPlan: { seatTarget: 'dev-check@core-platform', actionLabel: '🧹 Отправить /compact', command: '/compact' }
+          },
+          {
+            id: 'demo-f3',
+            detectorId: 'parked_seat',
+            severity: 'p1_high',
+            category: 'topology',
+            title: 'dev-coder3 запаркован с 2 открытыми обязательствами',
+            summary: 'Узел на Pi (deepseek-flash) держит slice:pre-push-e2e-gate без активного wake-таймера.',
+            actionPlan: { seatTarget: 'dev-coder3@core-platform', actionLabel: '🔔 Перейти к coder3', command: 'select' }
+          },
+          {
+            id: 'demo-f4',
+            detectorId: 'qa_bounce_back',
+            severity: 'p2_medium',
+            category: 'quality',
+            title: 'Повышенное число кругов QA на dev-coder3 (Avg: 2.3 кр)',
+            summary: '1-й пас прохождения QA составляет 33%. Проверьте граничные тесты до передачи на dev-check.',
+            actionPlan: { seatTarget: 'dev-coder3@core-platform', actionLabel: '🔍 Инспектор coder3', command: 'select' }
+          }
+        ],
+        topRecommendations: []
+      };
+    }
+
     // Initial render + start live polling loop (invoked after /assets/domain/index.js loads)
     window.__initRigCommander = function initRigCommander() {
+      seedDemoOntologyState();
       initSidebarState();
       initDensityMode();
       renderTriageStrip();

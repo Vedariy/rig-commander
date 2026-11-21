@@ -6,7 +6,9 @@ import {
   buildOntologySnapshot,
   getSeatActiveObligation,
   getSituationsForSeat,
-  getFleetBudgetRows
+  getFleetBudgetRows,
+  classifyModelPool,
+  computeModelPools
 } from '../openrig/assets/ontology/index.js';
 
 test('shouldIncludeLiveNode filters internal workers but preserves dynamic terminal agent seats', () => {
@@ -117,4 +119,35 @@ test('buildOntologySnapshot normalizes rigs, seats, sessions, chains, obligation
   raw2.nodes[0].contextUsage.usedPercentage = 81;
   const snap2 = buildOntologySnapshot(raw2, snap, 1_700_000_065_000);
   assert.equal(snap2.sessionsBySeatId['dev-owner@core-platform'].ctxHistory.length, 2);
+});
+
+test('computeModelPools classifies seats exclusively (model-first), respects rigFilter and aggregates usage', () => {
+  const agents = [
+    { id: 'dev-owner@rig-a', shortName: 'dev-owner', harness: 'codex', model: 'gpt-6.2-sol', state: 'idle', ctxPct: 56, usage: { totalTokens: 500_000, estUsd: 12.5 } },
+    { id: 'dev-coder@rig-a', shortName: 'dev-coder', harness: 'claude-code', model: 'glm-5.3-flash', state: 'idle', ctxPct: 22, usage: { totalTokens: 300_000, estUsd: 0.9 } },
+    { id: 'dev-operator@rig-a', shortName: 'dev-operator', harness: 'terminal', model: 'terminal', state: 'working', ctxPct: null },
+    { id: 'dev-coder@rig-b', shortName: 'dev-coder-b', harness: 'claude-code', model: 'claude-sonnet-4', state: 'working', ctxPct: 40 }
+  ];
+
+  assert.equal(classifyModelPool(agents[1]), 'fast-open');
+  assert.equal(classifyModelPool(agents[2]), 'terminal-agy');
+
+  const allPools = computeModelPools(agents, 'all');
+  const totalSeats = allPools.reduce((sum, p) => sum + p.seatCount, 0);
+  assert.equal(totalSeats, agents.length);
+
+  const rigAPools = computeModelPools(agents, 'rig-a');
+  assert.equal(rigAPools.reduce((sum, p) => sum + p.seatCount, 0), 3);
+  assert.equal(rigAPools.some(p => p.id === 'claude'), false);
+
+  const codex = rigAPools.find(p => p.id === 'codex-gpt');
+  assert.equal(codex.activeCount, 0);
+  assert.equal(codex.peakCtx, 56);
+  assert.equal(codex.totalEstUsd, 12.5);
+
+  const term = rigAPools.find(p => p.id === 'terminal-agy');
+  assert.equal(term.activeCount, 1);
+  assert.equal(term.hasValidCtx, false);
+  assert.equal(term.peakCtx, null);
+  assert.equal(term.statusLabel, '1/1 ACTIVE');
 });

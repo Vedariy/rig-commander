@@ -8,7 +8,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const COPIES = [
   ['openrig/index.html', 'public/demo/index.html'],
   ['openrig/index.html', 'public/deck/index.html'],
-  ['landing/index.html', 'public/index.html']
+  ['landing/index.html', 'public/index.html'],
+  ['landing/passport.html', 'public/passport/index.html'],
+  ['landing/passport.html', 'openrig/passport.html']
 ];
 
 for (const [srcRel, dstRel] of COPIES) {

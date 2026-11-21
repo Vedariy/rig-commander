@@ -892,6 +892,167 @@
       display: none;
       z-index: 99999;
     }
+
+    /* SECONDARY HERO CTA & SIMULATOR ENHANCEMENTS */
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.85);
+      color: #e2e8f0;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 13px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      transition: all 0.22s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-secondary:hover {
+      border-color: var(--cyan);
+      color: #fff;
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.28);
+      transform: translateY(-2px);
+    }
+    .sim-pool-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(3, 8, 20, 0.92);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.14);
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+    }
+    @media (max-width: 820px) {
+      .sim-pool-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+    .sim-pool-chip {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 6px;
+      padding: 6px 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      text-align: left;
+    }
+    .sim-gantt-view {
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      z-index: 6;
+    }
+    .sim-gantt-row {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .sim-gantt-track {
+      position: relative;
+      height: 18px;
+      background: rgba(2, 6, 23, 0.8);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .sim-gantt-wait {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      border-radius: 3px;
+      background: repeating-linear-gradient(45deg, rgba(251, 191, 36, 0.35), rgba(251, 191, 36, 0.35) 4px, rgba(251, 191, 36, 0.12) 4px, rgba(251, 191, 36, 0.12) 8px);
+      border: 1px dashed rgba(251, 191, 36, 0.7);
+    }
+    .sim-gantt-work {
+      position: absolute;
+      top: 2px;
+      bottom: 2px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      font-size: 9px;
+      font-weight: 800;
+      color: #020617;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .sim-prompt-pills {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .sim-prompt-pill {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #e2e8f0;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 5px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+    .sim-prompt-pill:hover {
+      border-color: var(--cyan);
+      background: rgba(0, 240, 255, 0.14);
+      color: #fff;
+    }
+    .sim-prompt-pill.primary { border-color: rgba(0, 255, 157, 0.55); color: #6ee7b7; }
+    .sim-prompt-pill.cancel { border-color: rgba(255, 0, 85, 0.45); color: #fda4af; }
+    .sim-audit-box {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 6px;
+      padding: 7px 8px;
+      font-size: 9.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: left;
+    }
+    .passport-callout {
+      margin-top: 28px;
+      background: linear-gradient(135deg, rgba(14, 24, 48, 0.9), rgba(20, 14, 44, 0.85));
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 14px;
+      padding: 24px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+    }
+    .passport-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .passport-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      color: #bae6fd;
+    }
   </style>
 </head>
 <body>
@@ -912,6 +1073,7 @@
         <li><a href="#comparison" data-i18n="nav.why">Why RigCommander</a></li>
         <li><a href="#architecture" data-i18n="nav.arch">Architecture</a></li>
         <li><a href="/demo" data-i18n="nav.demo">Live Demo</a></li>
+        <li><a href="/passport" data-i18n="nav.passport">Passport</a></li>
         <li><a href="#waitlist" data-i18n="nav.waitlist">Waitlist</a></li>
       </ul>
       <div class="nav-actions-right">
@@ -919,8 +1081,8 @@
           <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
           <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
         </div>
-        <a href="#waitlist" class="nav-cta">
-          <span data-i18n="nav.cta">Request Access</span>
+        <a href="/demo" class="nav-cta">
+          <span data-i18n="nav.cta">Open Demo</span>
           <span>→</span>
         </a>
       </div>
@@ -942,14 +1104,17 @@
       </h1>
 
       <p class="hero-subtitle" data-i18n="hero.subtitle">
-        The real-time operational flight deck for autonomous multi-agent engineering teams.
-        Live topological routing, 1-click tmux terminal introspection, token quota thermodynamics, and deterministic human-in-the-loop oversight.
+        The real-time DSS SA command deck for autonomous multi-agent engineering teams.
+        Live Graph ⇄ Task Gantt timelines, Palantir-style Operational Ontology with postcondition audit, clickable tmux HITL prompts, and FinOps token spend tracking.
       </p>
 
       <div class="hero-actions">
-        <a href="#waitlist" class="btn-primary">
-          <span data-i18n="hero.cta">⚡ Join Priority Waitlist</span>
+        <a href="/demo" class="btn-primary">
+          <span data-i18n="hero.demoCta">▶ Launch Interactive Demo</span>
           <span>→</span>
+        </a>
+        <a href="/passport" class="btn-secondary">
+          <span data-i18n="hero.passportCta">📄 Project Passport</span>
         </a>
         <div class="cli-copy-box" onclick="copyCli('npx rig-commander@latest')" title="Click to copy CLI installer" data-i18n-title="hero.cliTitle">
           <span class="cli-prompt">$</span>
@@ -967,19 +1132,41 @@
               <span class="sim-dot yellow"></span>
               <span class="sim-dot green"></span>
             </div>
-            
+
             <div style="font-family:var(--font-mono); font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px;">
               <span style="color:#fff; font-weight:700;">NEURAL DECK v3.1</span>
               <span>•</span>
-              <span style="color:var(--emerald);" data-i18n="sim.liveTelemetry">● LIVE TELEMETRY</span>
+              <span style="color:var(--emerald);" data-i18n="sim.liveTelemetry">● ONTOLOGY v2.0</span>
               <span>•</span>
-              <span data-i18n="sim.agentsConnected">9 AGENTS CONNECTED</span>
+              <span data-i18n="sim.agentsConnected">9 AGENTS • $6.63 SESSION</span>
             </div>
 
             <div class="sim-bar-controls">
+              <button class="sim-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">🕸️ GRAPH</button>
+              <button class="sim-btn" id="simViewGantt" onclick="setSimView('gantt')" data-i18n="sim.viewGantt">📊 GANTT</button>
               <button class="sim-btn" id="simCalmBtn" onclick="toggleSimCalm()" data-i18n="sim.calmOff">🧘 CALM FOCUS</button>
               <button class="sim-btn active" id="simSliceAll" onclick="setSimSlice('all')" data-i18n="sim.allLanes">🌐 ALL LANES</button>
               <button class="sim-btn" id="simSliceUx" onclick="setSimSlice('ux')">🏷️ UX-GATE</button>
+            </div>
+          </div>
+
+          <!-- Exclusive Model Pool Strip -->
+          <div class="sim-pool-strip">
+            <div class="sim-pool-chip">
+              <span style="color:#c084fc; font-weight:700;">🟣 CODEX (4)</span>
+              <span style="color:#e2e8f0;">68% · <b style="color:#fde68a;">~$5.00</b></span>
+            </div>
+            <div class="sim-pool-chip">
+              <span style="color:#fbbf24; font-weight:700;">🟠 CLAUDE (1)</span>
+              <span style="color:#e2e8f0;">26% · <b style="color:#fde68a;">~$0.98</b></span>
+            </div>
+            <div class="sim-pool-chip" style="border-color:rgba(255,0,85,0.45);">
+              <span style="color:#34d399; font-weight:700;">🟢 FAST (3)</span>
+              <span style="color:#fda4af; font-weight:800;">79% ⚠️ · ~$0.65</span>
+            </div>
+            <div class="sim-pool-chip">
+              <span style="color:#38bdf8; font-weight:700;">🔵 GEMINI (1)</span>
+              <span style="color:#64748b;" data-i18n="sim.noMeter">no meter · CLI</span>
             </div>
           </div>
 
@@ -988,130 +1175,184 @@
             <div class="sim-left-col">
               <div class="sim-col-title">
                 <span data-i18n="sim.waitRadar">WAIT RADAR</span>
-                <span style="color:var(--amber);">LIVE TSV</span>
+                <span style="color:var(--amber);">P0–P2</span>
+              </div>
+              <div class="sim-card" style="border-left: 3px solid var(--coral);">
+                <div class="sim-card-header">
+                  <span style="color:var(--coral);">P0 • dev-check (QA)</span>
+                </div>
+                <div class="sim-card-body" data-i18n="sim.card3">
+                  Stopped at terminal permission_prompt: 3 parsed options ready for 1-click HITL.
+                </div>
               </div>
               <div class="sim-card" style="border-left: 3px solid var(--amber);">
                 <div class="sim-card-header">
-                  <span>dev-owner → dev-check</span>
+                  <span>P1 • dev-coder3 (Pi)</span>
                 </div>
                 <div class="sim-card-body" data-i18n="sim.card1">
-                  Stuck sweep: stalled after claim on qitem-20261108. Waiting QA acceptance test.
+                  PARKED (2 open items) without active wake timer. Needs wake signal.
                 </div>
               </div>
               <div class="sim-card" style="border-left: 3px solid var(--emerald);">
                 <div class="sim-card-header">
-                  <span>dev-coder → dev-owner</span>
+                  <span>dev-coder4 → QA</span>
                 </div>
                 <div class="sim-card-body" data-i18n="sim.card2">
-                  UX Core P1 done: workflow + real HTTP TW adapter. Ready for review.
-                </div>
-              </div>
-              <div class="sim-card" style="border-left: 3px solid var(--coral);">
-                <div class="sim-card-header">
-                  <span style="color:var(--coral);">dev-check (QA)</span>
-                </div>
-                <div class="sim-card-body" data-i18n="sim.card3">
-                  Stopped at terminal permission_prompt: needs human HITL authorization.
+                  slice:tts-strict-chunked passed 104/104 probes. CTX at 68% (preemptive /compact ready).
                 </div>
               </div>
             </div>
 
-            <!-- Center Col: Interactive Topology Canvas -->
+            <!-- Center Col: Interactive Topology Canvas + Toggleable Mini Gantt -->
             <div class="sim-canvas" id="simCanvas">
-              <!-- SVG Connection Lines -->
-              <svg style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;" id="simSvgLines">
-                <line x1="20%" y1="20%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" stroke-dasharray="4,4" />
-                <line x1="80%" y1="22%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-                <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="rgba(0, 255, 157, 0.5)" stroke-width="3" />
-                <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-                <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="rgba(251, 191, 36, 0.5)" stroke-width="2" />
-                <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-              </svg>
+              <div id="simGraphView" style="position:absolute; inset:0;">
+                <!-- SVG Connection Lines -->
+                <svg style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;" id="simSvgLines">
+                  <line x1="20%" y1="20%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" stroke-dasharray="4,4" />
+                  <line x1="80%" y1="22%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+                  <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="rgba(0, 255, 157, 0.5)" stroke-width="3" />
+                  <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+                  <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="rgba(251, 191, 36, 0.5)" stroke-width="2" />
+                  <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+                </svg>
 
-              <!-- Node 1: Kernel Operator -->
-              <div class="sim-node" style="top: 14%; left: 8%;" onclick="selectSimNode('kernel-operator', 'Operator', '38% context • 0 alerts', 'healthy')">
-                <div class="sim-node-title">
-                  <span>⚙️ kernel-op</span>
-                  <span style="color:var(--emerald);">Zzz</span>
+                <!-- Node 1: Kernel Operator -->
+                <div class="sim-node" style="top: 10%; left: 6%;" onclick="selectSimNode(this, 'kernel-operator', 'Operator', '14% CTX • ~$0.28 • 0 alerts', 'healthy')">
+                  <div class="sim-node-title">
+                    <span>🛰️ kernel-op</span>
+                    <span style="color:var(--emerald);">Zzz</span>
+                  </div>
+                  <div class="sim-node-meta">CTX: 14% • gpt-6.2-sol</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:14%;"></div></div>
                 </div>
-                <div class="sim-node-meta">CTX: 42% (200K / 475K)</div>
-                <div class="sim-node-meter"><div class="sim-node-fill" style="width:42%;"></div></div>
+
+                <!-- Node 2: Architect -->
+                <div class="sim-node" style="top: 10%; right: 6%;" onclick="selectSimNode(this, 'dev-architect', 'Senior Architect', '26% CTX • claude-sonnet-4 • ~$0.98', 'healthy')">
+                  <div class="sim-node-title">
+                    <span>📐 dev-architect</span>
+                    <span style="color:var(--emerald);">Zzz</span>
+                  </div>
+                  <div class="sim-node-meta">CTX: 26% • claude-sonnet-4</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:26%; background:var(--amber);"></div></div>
+                </div>
+
+                <!-- Node 3: Owner (Hub) -->
+                <div class="sim-node" style="top: 26%; left: 37%; min-width:165px;" onclick="selectSimNode(this, 'dev-owner', 'Dispatch Hub', '48% CTX • ~$1.74 • 2 active chains', 'active')">
+                  <div class="sim-node-title">
+                    <span>🏛️ dev-owner</span>
+                    <span style="color:var(--cyan); font-weight:800;">ACTIVE</span>
+                  </div>
+                  <div class="sim-node-meta">CTX: 48% • 94 calls in flight</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:48%; background:var(--cyan);"></div></div>
+                </div>
+
+                <!-- Node 4: Coder 3 (Parked) -->
+                <div class="sim-node pulse-amber" style="top: 52%; left: 10%;" onclick="selectSimNode(this, 'dev-coder3', 'Pi Isolated Coder', 'PARKED (2) • deepseek-flash', 'parked')">
+                  <div class="sim-node-title">
+                    <span>🔧 dev-coder3</span>
+                    <span style="color:var(--amber); font-weight:800;">PARKED</span>
+                  </div>
+                  <div class="sim-node-meta">2 open items • no wake</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:0%;"></div></div>
+                </div>
+
+                <!-- Node 5: Coder 4 -->
+                <div class="sim-node" style="top: 52%; right: 10%;" onclick="selectSimNode(this, 'dev-coder4', 'Parallel Worktree', '68% CTX • ~$2.26 • 78% cache', 'active')">
+                  <div class="sim-node-title">
+                    <span>⚡ dev-coder4</span>
+                    <span style="color:var(--emerald); font-weight:800;">WORK</span>
+                  </div>
+                  <div class="sim-node-meta">CTX: 68% • gpt-6.2-sol</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:68%; background:var(--amber);"></div></div>
+                </div>
+
+                <!-- Node 6: QA Checker (Alert) -->
+                <div class="sim-node pulse-coral selected" id="simQaNode" style="bottom: 10%; left: 36%;" onclick="selectSimNode(this, 'dev-check (QA)', 'Quality Assurance', '79% CTX • permission_prompt HITL', 'alert')">
+                  <div class="sim-node-title">
+                    <span>🛡️ dev-check (QA)</span>
+                    <span id="simQaBadge" style="color:var(--coral); font-weight:800;">NEED INPUT</span>
+                  </div>
+                  <div class="sim-node-meta">CTX: 79% • Threshold 75% ⚠️</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:79%; background:var(--coral);"></div></div>
+                </div>
               </div>
 
-              <!-- Node 2: Architect -->
-              <div class="sim-node" style="top: 12%; right: 10%;" onclick="selectSimNode('dev-architect', 'Senior Architect', 'Spec authoring • Clean pipeline', 'healthy')">
-                <div class="sim-node-title">
-                  <span>📐 dev-architect</span>
-                  <span style="color:var(--emerald);">Zzz</span>
+              <!-- Toggleable Mini Task Gantt View -->
+              <div class="sim-gantt-view" id="simGanttView">
+                <div style="display:flex; justify-content:space-between; align-items:center; color:#94a3b8; padding-bottom:4px; border-bottom:1px solid rgba(56,189,248,0.18);">
+                  <span style="color:var(--cyan); font-weight:800;" data-i18n="sim.ganttTitle">📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)</span>
+                  <span style="color:#64748b;">opgate noise filtered</span>
                 </div>
-                <div class="sim-node-meta">CTX: 30% (143K / 475K)</div>
-                <div class="sim-node-meter"><div class="sim-node-fill" style="width:30%;"></div></div>
-              </div>
-
-              <!-- Node 3: Owner (Hub) -->
-              <div class="sim-node selected" style="top: 26%; left: 38%; min-width:160px;" onclick="selectSimNode('dev-owner', 'Dispatch Hub', 'Routing 12 tasks across 4 worktrees', 'active')">
-                <div class="sim-node-title">
-                  <span>🏛️ dev-owner</span>
-                  <span style="color:var(--cyan); font-weight:800;">ACTIVE</span>
+                <div class="sim-gantt-row">
+                  <span style="color:#e2e8f0; font-weight:700;">📐 architect</span>
+                  <div class="sim-gantt-track">
+                    <div class="sim-gantt-work" style="left:4%; width:18%; background:#38bdf8;">spec:single-writer</div>
+                  </div>
                 </div>
-                <div class="sim-node-meta">CTX: 34% • 94 calls in flight</div>
-                <div class="sim-node-meter"><div class="sim-node-fill" style="width:34%; background:var(--cyan);"></div></div>
-              </div>
-
-              <!-- Node 4: Coder 3 -->
-              <div class="sim-node" style="top: 52%; left: 16%;" onclick="selectSimNode('dev-coder3', 'PWA Specialist', 'Writing responsive CSS adapters', 'healthy')">
-                <div class="sim-node-title">
-                  <span>💻 dev-coder3</span>
-                  <span style="color:var(--emerald);">Zzz</span>
+                <div class="sim-gantt-row">
+                  <span style="color:#e2e8f0; font-weight:700;">⚡ coder4</span>
+                  <div class="sim-gantt-track">
+                    <div class="sim-gantt-work" style="left:23%; width:24%; background:#38bdf8;">impl + tests</div>
+                    <div class="sim-gantt-work" style="left:60%; width:16%; background:#38bdf8;">fix race</div>
+                  </div>
                 </div>
-                <div class="sim-node-meta">CTX: 22% (220K / 1000K)</div>
-                <div class="sim-node-meter"><div class="sim-node-fill" style="width:22%;"></div></div>
-              </div>
-
-              <!-- Node 5: Coder 5 -->
-              <div class="sim-node" style="top: 52%; right: 18%;" onclick="selectSimNode('dev-coder5', 'Backend Specialist', 'FastAPI & Token Reservoir', 'healthy')">
-                <div class="sim-node-title">
-                  <span>⚡ dev-coder5</span>
-                  <span style="color:var(--emerald);">Zzz</span>
+                <div class="sim-gantt-row">
+                  <span style="color:#e2e8f0; font-weight:700;">💻 coder</span>
+                  <div class="sim-gantt-track">
+                    <div class="sim-gantt-work" style="left:16%; width:32%; background:#00ff9d;">viewer-chat</div>
+                    <div class="sim-gantt-wait" style="left:68%; width:16%;" title="Queue wait 38m"></div>
+                    <div class="sim-gantt-work" style="left:84%; width:14%; background:#c084fc;">ctx-guard</div>
+                  </div>
                 </div>
-                <div class="sim-node-meta">CTX: 39% (185K / 475K)</div>
-                <div class="sim-node-meter"><div class="sim-node-fill" style="width:39%;"></div></div>
-              </div>
-
-              <!-- Node 6: QA Checker (Alert) -->
-              <div class="sim-node pulse-coral" style="bottom: 12%; left: 40%;" onclick="selectSimNode('dev-check (QA)', 'Quality Assurance', 'Awaiting operator permission prompt', 'alert')">
-                <div class="sim-node-title">
-                  <span>🛡️ dev-check (QA)</span>
-                  <span style="color:var(--coral); font-weight:800;">NEED INPUT</span>
+                <div class="sim-gantt-row" style="border-color:rgba(255,0,85,0.35);">
+                  <span style="color:#fda4af; font-weight:700;">🛡️ dev-check</span>
+                  <div class="sim-gantt-track">
+                    <div class="sim-gantt-wait" style="left:47%; width:7%;" title="Wait before claim"></div>
+                    <div class="sim-gantt-work" style="left:54%; width:6%; background:#fbbf24;">QA #1</div>
+                    <div class="sim-gantt-work" style="left:77%; width:11%; background:#00ff9d;">QA GREEN</div>
+                  </div>
                 </div>
-                <div class="sim-node-meta">CTX: 80% • Threshold 75% ⚠️</div>
-                <div class="sim-node-meter"><div class="sim-node-fill" style="width:80%; background:var(--coral);"></div></div>
+                <div class="sim-gantt-row">
+                  <span style="color:#7dd3fc; font-weight:700;">🏛️ owner</span>
+                  <div class="sim-gantt-track">
+                    <div class="sim-gantt-work" style="left:89%; width:10%; background:#38bdf8;">push dev</div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Right Col: Live Terminal & Inspector -->
+            <!-- Right Col: DSS SA Inspector, Clickable HITL Prompt & Audit Trail -->
             <div class="sim-right-col">
               <div class="sim-col-title">
-                <span data-i18n="sim.inspector">INSPECTOR & TMUX</span>
+                <span data-i18n="sim.inspector">DSS INSPECTOR & HITL</span>
                 <span style="color:var(--cyan);" id="simInspectorId">dev-check (QA)</span>
               </div>
-              <div class="sim-terminal-screen" id="simTerminalScreen">
-[dev-check@core-platform]
-$ pytest tests/e2e/test_checkout.py
-Running 14 tests across worktree...
-=============================
-PASSED 13 tests
-FAIL: test_receipt_hash_signature
-AssertionError: Hash mismatch
------------------------------
-⚠️ PERMISSION PROMPT:
-Authorize git reset --hard HEAD~1
-and re-run test runner? [y/N]:
-_
+              <div class="sim-terminal-screen" id="simTerminalScreen">[dev-check@core-platform]
+$ npx playwright test e2e/tts.spec.ts
+  ✓ 12 passed  ✘ 2 boundary-timeout
+--------------------------------
+⚠️ PERMISSION PROMPT (HITL):
+Run negative control fault check?
+› 1. Yes, allow once (y)
+  2. Always allow in worktree
+  3. No, cancel (esc)</div>
+
+              <div class="sim-prompt-pills" id="simPromptPills">
+                <button class="sim-prompt-pill primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Yes, allow once (y)</button>
+                <button class="sim-prompt-pill" onclick="simChoosePrompt(2)" data-i18n="sim.opt2">🔹 2. Always allow in worktree</button>
+                <button class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3">❌ 3. No, cancel (esc)</button>
               </div>
-              <div style="display:flex; gap:6px;">
-                <button class="sim-btn" style="flex:1; border-color:var(--emerald); color:#6ee7b7;" onclick="simAuthorize()" data-i18n="sim.authorize">✓ AUTHORIZE</button>
-                <button class="sim-btn" style="border-color:var(--coral); color:#fda4af;" onclick="simReject()" data-i18n="sim.stop">✕ STOP</button>
+
+              <div class="sim-audit-box" id="simAuditBox">
+                <div style="color:#94a3b8; font-weight:800; letter-spacing:0.3px;" data-i18n="sim.auditTitle">🧾 ACTION AUDIT (POSTCONDITION)</div>
+                <div style="display:flex; justify-content:space-between; gap:4px;">
+                  <span style="color:#e2e8f0;">✅ compact_context</span>
+                  <span style="color:#6ee7b7;">78% → 19%</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:4px;">
+                  <span style="color:#e2e8f0;">⏳ wake_parked_seat</span>
+                  <span style="color:#7dd3fc;">coder3</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1137,19 +1378,19 @@ _
             <ul class="compare-list">
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span data-i18n-html="pain.bad1"><b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked.</span>
+                <span data-i18n-html="pain.bad1"><b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked or waiting in queue.</span>
               </li>
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span data-i18n-html="pain.bad2"><b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a human keypress you never saw.</span>
+                <span data-i18n-html="pain.bad2"><b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a numbered confirmation prompt you never saw.</span>
               </li>
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span data-i18n-html="pain.bad3"><b>Circular Rework Loops:</b> QA rejects coder's PR 5 times in a loop, burning 300,000 tokens on repetitive fixes.</span>
+                <span data-i18n-html="pain.bad3"><b>Circular Rework Loops:</b> QA rejects coder's PR 5 times in a loop, burning 300,000 tokens without anyone noticing wait bottlenecks.</span>
               </li>
               <li>
                 <span style="color:var(--coral);">•</span>
-                <span data-i18n-html="pain.bad4"><b>Overnight Budget Shock:</b> Waking up to a $1,400 API invoice because two agents entered an unmonitored ping-pong loop.</span>
+                <span data-i18n-html="pain.bad4"><b>Blind Token Spend & Unverified Commands:</b> No visibility into per-seat `$` burn, cache-hit rates, or whether `/compact` actually reduced context.</span>
               </li>
             </ul>
           </div>
@@ -1162,19 +1403,19 @@ _
             <ul class="compare-list">
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good1"><b>Single-Pane Topological Radar:</b> Instantly see every agent seat, who called whom, and who is holding the queue.</span>
+                <span data-i18n-html="pain.good1"><b>Single-Pane Graph & Task Gantt:</b> Switch between live SVG call highways and chain-colored Gantt timelines (`G`) separating wait from active work.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good2"><b>1-Click Introspection & HITL:</b> Instant terminal screen streaming with one-click authorization directly on the map.</span>
+                <span data-i18n-html="pain.good2"><b>Clickable HITL & Postcondition Audit:</b> Auto-parsed tmux options, per-seat audio alerts, and automatic postcondition verification (`✅ verified`).</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good3"><b>Bounce-Back Detection:</b> Real-time QA rework counters with automated alerts when bounce count exceeds thresholds.</span>
+                <span data-i18n-html="pain.good3"><b>Operational Ontology v2.0:</b> Reason-driven Action Registry (0 noisy buttons on idle seats) backed by 7 canonical object types and unified P0–P3 triage.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good4"><b>Context Thermodynamics:</b> Live model quota reservoirs with automated /compact warnings before context degrades.</span>
+                <span data-i18n-html="pain.good4"><b>Live FinOps & Exclusive Pools:</b> Incremental JSONL token reader with cache-hit %, per-seat `$` estimates, and non-overlapping model reservoirs.</span>
               </li>
             </ul>
           </div>
@@ -1182,145 +1423,155 @@ _
       </div>
     </section>
 
-    <!-- 2026 ASYMMETRIC BENTO GRID -->
+    <!-- 2026 ASYMMETRIC BENTO GRID (3 BALANCED ROWS: 2+1 / 1+2 / 2+1) -->
     <section class="bento-section" id="features">
       <div class="container">
         <div class="section-eyebrow" data-i18n="bento.eyebrow">ENGINEERING CAPABILITIES</div>
         <h2 class="section-title" data-i18n="bento.title">Built for High-Reliability Fleets</h2>
         <p class="section-desc" data-i18n="bento.desc">
-          Architected on Endsley's Situation Awareness principles and ISO 11064 control room ergonomics.
+          Architected on Endsley's Situation Awareness (SA-DSS L1–L3), ISO 11064 Dark Cockpit ergonomics, and Palantir-style Operational Ontology.
         </p>
 
         <div class="bento-grid">
-          <!-- Bento Tile 1: Wide Topology -->
+          <!-- Bento Tile 1 (Wide): Topology + Task Gantt -->
           <div class="bento-tile bento-wide">
             <div>
-              <span class="bento-badge" data-i18n="bento.t1.badge">🌐 SA-DSS TOPOLOGY</span>
-              <h3 class="bento-title" data-i18n="bento.t1.title">Live Neural Highway & Call Volumes</h3>
+              <span class="bento-badge" data-i18n="bento.t1.badge">🌐 GRAPH ⇄ TASK GANTT</span>
+              <h3 class="bento-title" data-i18n="bento.t1.title">Live Neural Highways & Chain-Colored Gantt</h3>
               <p class="bento-desc" data-i18n="bento.t1.desc">
-                Dynamic SVG graph discovers your rig topology automatically. Edge line widths scale dynamically with real transmission volume. Click any highway to inspect recent envelope exchanges and queue payloads.
+                Flip between dynamic SVG call topology and a time-aligned Task Gantt timeline (key G). Spot queue wait vs. active work hatching, handoff chains, QA bounce-back loops, and clean opgate-filtered history.
               </p>
             </div>
             <div class="bento-widget">
               <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#cbd5e1;">
-                <span>HIGHWAY: dev-owner ⇄ dev-coder4</span>
-                <span style="color:var(--cyan); font-weight:700;" data-i18n="bento.t1.envelopes">31 ENVELOPES</span>
+                <span>CHAIN: slice:single-writer (3 QA rounds)</span>
+                <span style="color:var(--cyan); font-weight:700;" data-i18n="bento.t1.envelopes">WAIT vs WORK • KEY [G]</span>
               </div>
-              <div style="background:rgba(255,255,255,0.06); height:6px; border-radius:3px; overflow:hidden;">
-                <div style="width:68%; height:100%; background:linear-gradient(90deg, var(--cyan), var(--emerald));"></div>
+              <div style="display:flex; gap:4px; align-items:center; height:12px;">
+                <div style="width:16%; height:100%; border-radius:3px; background:#38bdf8;"></div>
+                <div style="width:12%; height:8px; border-radius:3px; background:repeating-linear-gradient(45deg, rgba(251,191,36,0.45), rgba(251,191,36,0.45) 4px, rgba(251,191,36,0.12) 4px, rgba(251,191,36,0.12) 8px); border:1px dashed #fbbf24;"></div>
+                <div style="width:32%; height:100%; border-radius:3px; background:#00ff9d;"></div>
+                <div style="width:18%; height:100%; border-radius:3px; background:#fbbf24;"></div>
+                <div style="width:22%; height:100%; border-radius:3px; background:#00ff9d;"></div>
               </div>
-              <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#64748b; margin-top:6px;">
-                <span>Latency: 420ms</span>
-                <span data-i18n="bento.t1.zeroDrops">Zero Drops • 100% Retries Handled</span>
+              <div style="display:flex; justify-content:space-between; font-size:10.5px; color:#64748b; margin-top:7px;">
+                <span>Union-Find Chains • 1h / 6h / 24h</span>
+                <span data-i18n="bento.t1.zeroDrops">Hatched Wait • Closed Blocked/Held</span>
               </div>
             </div>
           </div>
 
-          <!-- Bento Tile 2: Zero-Latency TMUX -->
+          <!-- Bento Tile 2 (1 col): Clickable HITL Prompts & 80-line TMUX -->
           <div class="bento-tile">
             <div>
-              <span class="bento-badge" data-i18n="bento.t2.badge">⚡ ZERO-LATENCY TMUX</span>
-              <h3 class="bento-title" data-i18n="bento.t2.title">In-Terminal Screen Capture</h3>
+              <span class="bento-badge" data-i18n="bento.t2.badge">⚡ CLICKABLE HITL & TMUX</span>
+              <h3 class="bento-title" data-i18n="bento.t2.title">Auto-Parsed Prompts & 80-Line Screen</h3>
               <p class="bento-desc" data-i18n="bento.t2.desc">
-                Inspect 80-line active terminal captures without switching windows. Safe command dispatching straight from your browser.
+                Codex &amp; Claude numbered confirmation menus are parsed into 1-click buttons. Stream 80-line tmux modals and hear individual per-seat WebAudio alert motifs.
               </p>
             </div>
-            <div class="bento-widget" style="color:#a7f3d0; line-height:1.45;">
-              <div>[core-platform:4175]</div>
-              <div style="color:#38bdf8;">$ git status --short</div>
-              <div>M  lib/payment/router.mjs</div>
-              <div>M  tests/test_router.py</div>
-              <div style="color:var(--emerald);">✓ 4 tests passing in 0.8s</div>
+            <div class="bento-widget" style="display:flex; flex-direction:column; gap:6px;">
+              <div style="color:#fbbf24; font-weight:800; font-size:10.5px;">⚡ PARSED PROMPT OPTIONS:</div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                <span style="padding:3px 7px; border-radius:4px; border:1px solid #00ff9d; color:#6ee7b7;">✅ 1. Allow once</span>
+                <span style="padding:3px 7px; border-radius:4px; border:1px solid #38bdf8; color:#bae6fd;">🔹 2. Always</span>
+                <span style="padding:3px 7px; border-radius:4px; border:1px solid #ff0055; color:#fda4af;">❌ 3. Cancel</span>
+              </div>
+              <div style="color:#64748b; font-size:10px;">Allowlisted tmux keys • Per-seat audio</div>
             </div>
           </div>
 
-          <!-- Bento Tile 3: Quota Thermodynamics -->
+          <!-- Bento Tile 3 (1 col): FinOps Token & Budget Telemetry -->
           <div class="bento-tile">
             <div>
-              <span class="bento-badge" data-i18n="bento.t3.badge">🔥 FINOPS GUARD</span>
-              <h3 class="bento-title" data-i18n="bento.t3.title">Context Thermodynamics</h3>
+              <span class="bento-badge" data-i18n="bento.t3.badge">💰 FINOPS & EXCLUSIVE POOLS</span>
+              <h3 class="bento-title" data-i18n="bento.t3.title">Token Spend & Context Physics</h3>
               <p class="bento-desc" data-i18n="bento.t3.desc">
-                Avoid context saturation crashes. Monitor peak and average pool utilization across Claude, GPT-5, DeepSeek and Gemini seats.
+                Incremental byte-offset JSONL reader tracks cached vs. uncached tokens and live `$` cost per seat inside non-overlapping model pools.
               </p>
             </div>
             <div class="bento-widget">
-              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                <span>CLAUDE 3.7 (1 SEAT)</span>
-                <span style="color:var(--emerald);">18% CTX</span>
+              <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span style="color:#c084fc;">CODEX (4)</span>
+                <span>68% · <b style="color:#fde68a;">~$5.00</b></span>
               </div>
-              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                <span>CODEX SOL (7 SEATS)</span>
-                <span style="color:var(--amber);">80% CTX ⚠️</span>
+              <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span style="color:#fbbf24;">CLAUDE (1)</span>
+                <span>26% · <b style="color:#fde68a;">~$0.98</b></span>
               </div>
-              <div style="display:flex; justify-content:space-between;">
-                <span>DEEPSEEK V3 (4 SEATS)</span>
-                <span style="color:var(--cyan);">35% CTX</span>
+              <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span style="color:#34d399;">FAST (3)</span>
+                <span style="color:#fda4af;">79% ⚠️ · ~$0.65</span>
+              </div>
+              <div style="font-size:10px; color:#6ee7b7; border-top:1px dashed rgba(148,163,184,0.2); padding-top:5px;">
+                Cache Hit: 79% • 5.5M tok read incrementally
               </div>
             </div>
           </div>
 
-          <!-- Bento Tile 4: Fleet Intelligence (Wide) -->
+          <!-- Bento Tile 4 (Wide): Operational Ontology v2.0 -->
           <div class="bento-tile bento-wide">
             <div>
-              <span class="bento-badge" data-i18n="bento.t4.badge">💡 FLEET INTELLIGENCE ADVISOR</span>
-              <h3 class="bento-title" data-i18n="bento.t4.title">Automated Swarm Bottleneck Detection</h3>
+              <span class="bento-badge" data-i18n="bento.t4.badge">🧬 OPERATIONAL ONTOLOGY v2.0</span>
+              <h3 class="bento-title" data-i18n="bento.t4.title">Objects, Links, Reason-Driven Actions &amp; Postcondition Audit</h3>
               <p class="bento-desc" data-i18n="bento.t4.desc">
-                Out-of-band analytical engine evaluates token entropy, ceremony overhead, model mismatches, and QA bounce-back ratios in real time. Receive proactive recommendations before your pipeline stalls.
+                One canonical ontology snapshot drives every surface. Write-back buttons appear strictly from preconditions (0 buttons on healthy idle seats), and every command is logged in ActionAuditLog with automatic postcondition verification.
               </p>
             </div>
-            <div class="bento-widget">
-              <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <span style="background:rgba(251,191,36,0.15); border:1px solid var(--amber); color:var(--amber); border-radius:4px; padding:2px 6px; font-size:10px; font-weight:800;" data-i18n="bento.t4.adviceTag">ADVICE</span>
-                <span style="color:#fff; font-weight:700;" data-i18n="bento.t4.adviceTitle">Trigger preemptive /compact on dev-check (QA)</span>
+            <div class="bento-widget" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.28); border-radius:6px; padding:8px;">
+                <div style="color:#d8b4fe; font-weight:800; margin-bottom:4px;" data-i18n="bento.t4.objTag">7 OBJECTS • 7 ACTIONS</div>
+                <div style="color:#94a3b8; font-size:10.5px; line-height:1.45;">Rig • Seat • OccupantSession • WorkChain • QueueObligation • Situation • ActionRecord</div>
               </div>
-              <div style="color:#94a3b8; font-size:11px; line-height:1.4;" data-i18n="bento.t4.adviceBody">
-                Context utilization is at 80% (380K/475K). Compacting token memory now will prevent token budget exhaustion on subsequent acceptance runs.
+              <div style="background:rgba(0,255,157,0.06); border:1px solid rgba(0,255,157,0.28); border-radius:6px; padding:8px;">
+                <div style="color:#6ee7b7; font-weight:800; margin-bottom:4px;" data-i18n="bento.t4.auditTag">POSTCONDITION AUDIT</div>
+                <div style="color:#cbd5e1; font-size:10.5px; line-height:1.45;">✅ compact_context: 78% → 19%<br>✅ answer_prompt: exit needs-input</div>
               </div>
             </div>
           </div>
 
-          <!-- Bento Tile 5: Calm HUD & Exception Signaling -->
-          <div class="bento-tile">
-            <div>
-              <span class="bento-badge" data-i18n="bento.t5.badge">🧘 CALM HUD · ISO 11064</span>
-              <h3 class="bento-title" data-i18n="bento.t5.title">Exception-Based Signaling</h3>
-              <p class="bento-desc" data-i18n="bento.t5.desc">
-                Healthy sleeping nodes stay silent. Visual noise is suppressed by 70%+ so only real blockers, PARKED seats, and 75%+ context spikes break through.
-              </p>
-            </div>
-            <div class="bento-widget">
-              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                <span style="color:#64748b;">● IDLE / Zzz (7 SEATS)</span>
-                <span style="color:#64748b;" data-i18n="bento.t5.silent">SILENT</span>
-              </div>
-              <div style="display:flex; justify-content:space-between;">
-                <span style="color:var(--coral); font-weight:700;">🚨 NEEDS INPUT (1)</span>
-                <span style="color:var(--coral);" data-i18n="bento.t5.highlighted">SPOTLIGHT</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Bento Tile 6: SA-DSS Levels 1-3 & Progressive Disclosure (Wide) -->
+          <!-- Bento Tile 5 (Wide): Fleet Intelligence & DSS SA L1-L3 -->
           <div class="bento-tile bento-wide">
             <div>
-              <span class="bento-badge" data-i18n="bento.t6.badge">🧠 COGNITIVE ERGONOMICS</span>
-              <h3 class="bento-title" data-i18n="bento.t6.title">Endsley SA (L1–L3) & Progressive Disclosure</h3>
+              <span class="bento-badge" data-i18n="bento.t6.badge">💡 FLEET ADVISOR &amp; ENDSLEY SA (L1–L3)</span>
+              <h3 class="bento-title" data-i18n="bento.t6.title">Automated Bottleneck Detection &amp; Progressive Disclosure</h3>
               <p class="bento-desc" data-i18n="bento.t6.desc">
-                Zero window-switching overhead. Glance at L1 status on the map, inspect L2 role rules and bounce-back metrics on click, and jump straight to L3 live tmux control—with FIT/ZEN modes and [ ] \ D F hotkeys.
+                Out-of-band detectors score fleet health, QA bounce-back loops, burn-rate ETA, and model tier mismatches. Drill cleanly from L1 map status → L2 DSS Inspector &amp; Quality/Budget tabs → L3 live tmux with [ ] \ D F G hotkeys.
               </p>
             </div>
             <div class="bento-widget" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center;">
               <div style="background:rgba(0,240,255,0.08); border:1px solid rgba(0,240,255,0.25); border-radius:6px; padding:8px;">
                 <div style="color:var(--cyan); font-weight:800;">L1 · PERCEPTION</div>
-                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l1">Map & Thermal Rings</div>
+                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l1">Graph, Gantt &amp; Pools</div>
               </div>
               <div style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); border-radius:6px; padding:8px;">
                 <div style="color:#d8b4fe; font-weight:800;">L2 · COMPREHENSION</div>
-                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l2">Wait Radar & Sankey</div>
+                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l2">DSS Inspector &amp; Advisor</div>
               </div>
               <div style="background:rgba(0,255,157,0.08); border:1px solid rgba(0,255,157,0.25); border-radius:6px; padding:8px;">
                 <div style="color:var(--emerald); font-weight:800;">L3 · PROJECTION</div>
-                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l3">Burn-Rate ETA & Tmux</div>
+                <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l3">Burn ETA, Audit &amp; Tmux</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bento Tile 6 (1 col): Calm HUD & Exception Signaling -->
+          <div class="bento-tile">
+            <div>
+              <span class="bento-badge" data-i18n="bento.t5.badge">🧘 CALM HUD · ISO 11064</span>
+              <h3 class="bento-title" data-i18n="bento.t5.title">Exception-Based Signaling</h3>
+              <p class="bento-desc" data-i18n="bento.t5.desc">
+                Healthy sleeping nodes stay silent. Visual noise is suppressed by 70%+ so only real HITL blockers, PARKED seats, and ≥75% context spikes break through.
+              </p>
+            </div>
+            <div class="bento-widget">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <span style="color:#64748b;">● IDLE / Zzz (4 SEATS)</span>
+                <span style="color:#64748b;" data-i18n="bento.t5.silent">SILENT</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:var(--coral); font-weight:700;">🚨 NEEDS INPUT (1)</span>
+                <span style="color:var(--coral);" data-i18n="bento.t5.highlighted">SPOTLIGHT</span>
               </div>
             </div>
           </div>
@@ -1331,39 +1582,65 @@ _
     <!-- ARCHITECTURE BLUEPRINT -->
     <section class="arch-section" id="architecture">
       <div class="container">
-        <div class="section-eyebrow" data-i18n="arch.eyebrow">NON-INVASIVE ARCHITECTURE</div>
-        <h2 class="section-title" data-i18n="arch.title">Zero-Code Instrumentation</h2>
+        <div class="section-eyebrow" data-i18n="arch.eyebrow">HARDENED LOCAL-FIRST ARCHITECTURE</div>
+        <h2 class="section-title" data-i18n="arch.title">Zero Dependencies. Zero-Code Instrumentation.</h2>
         <p class="section-desc" data-i18n="arch.desc">
-          RigCommander connects directly to your existing environment. No vendor lock-in, no rewriting agent logic, zero latency overhead.
+          Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process DECK_TOKEN, Origin checks, and allowlisted tmux keys.
         </p>
 
         <div class="steps-grid">
           <div class="step-card">
             <div class="step-num">01</div>
-            <h3 class="step-title" data-i18n="arch.s1.title">Run Local Bridge</h3>
+            <h3 class="step-title" data-i18n="arch.s1.title">Run Hardened Local Bridge</h3>
             <p class="step-desc" data-i18n="arch.s1.desc">
-              Lightweight Node.js daemon inspects local tmux sockets, worktree git states, and queue logs out-of-band.
+              Loopback-only Node.js BFF (127.0.0.1) reads OpenRig daemon telemetry, queue logs, and tmux sockets out-of-band with zero npm dependencies.
             </p>
             <div class="step-code">$ npx rig-commander@latest</div>
           </div>
 
           <div class="step-card">
             <div class="step-num">02</div>
-            <h3 class="step-title" data-i18n="arch.s2.title">Auto-Discovery</h3>
+            <h3 class="step-title" data-i18n="arch.s2.title">Ontology &amp; FinOps Sync</h3>
             <p class="step-desc" data-i18n="arch.s2.desc">
-              Dynamically maps active agents, harness types, seats, models, and task communication channels in seconds.
+              Builds canonical Objects &amp; Links, cleans opgate noise for Gantt chains, and streams JSONL transcripts by byte offset for real-time `$` tracking.
             </p>
-            <div class="step-code" data-i18n="arch.s2.code">● Discovered 3 rigs, 9 seats</div>
+            <div class="step-code" data-i18n="arch.s2.code">● 7 Objects • Exclusive Pools • Cache %</div>
           </div>
 
           <div class="step-card">
             <div class="step-num">03</div>
-            <h3 class="step-title" data-i18n="arch.s3.title">Command & Optimize</h3>
+            <h3 class="step-title" data-i18n="arch.s3.title">Command, Verify &amp; Audit</h3>
             <p class="step-desc" data-i18n="arch.s3.desc">
-              Monitor live Sankey traffic, authorize HITL requests, and prevent token burn from a single unified glass pane.
+              Authorize HITL prompts in 1 click through the Security Gate (DECK_TOKEN + key allowlist) and verify every postcondition automatically.
             </p>
-            <div class="step-code">HTTP 200 • Deck on :7440</div>
+            <div class="step-code">HTTP 200 • 127.0.0.1:7440 • Audit Verified</div>
           </div>
+        </div>
+
+        <!-- PROJECT PASSPORT CALLOUT -->
+        <div class="passport-callout">
+          <div style="max-width:740px;">
+            <div style="font-family:var(--font-mono); font-size:11px; font-weight:800; color:#d8b4fe; letter-spacing:0.6px; text-transform:uppercase;" data-i18n="passport.eyebrow">
+              ARCHITECTURAL &amp; OPERATIONAL PASSPORT
+            </div>
+            <h3 style="font-size:21px; font-weight:800; color:#fff; margin:6px 0;" data-i18n="passport.title">
+              Inspect C4 Diagrams, Ontology Schema, Security Posture &amp; Test Matrix
+            </h3>
+            <p style="font-size:13.5px; color:#94a3b8; line-height:1.5;" data-i18n="passport.desc">
+              Full engineering blueprint with C4 Level 1 &amp; Level 3 diagrams, 7-object Operational Ontology v2.0 tables, localhost security controls, and all 5 automated test suites.
+            </p>
+            <div class="passport-pills">
+              <span class="passport-pill">0 npm deps</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">26 / 26 node --test PASS</span>
+              <span class="passport-pill">C4 L1 + L3</span>
+              <span class="passport-pill">Ontology v2.0</span>
+              <span class="passport-pill">DECK_TOKEN + Allowlist</span>
+            </div>
+          </div>
+          <a href="/passport" class="btn-primary" style="white-space:nowrap;">
+            <span data-i18n="passport.cta">📄 Open Project Passport</span>
+            <span>→</span>
+          </a>
         </div>
       </div>
     </section>
@@ -1421,7 +1698,7 @@ _
           </div>
 
           <div class="waitlist-meta" data-i18n="waitlist.meta">
-            🔒 100% Local-First Architecture • Zero telemetry leaks • Self-hosted ready
+            🔒 100% Local-First Architecture • 0 npm deps • Self-hosted ready
           </div>
         </div>
       </div>
@@ -1437,10 +1714,15 @@ _
         <span data-i18n="footer.status">ALL SYSTEMS OPERATIONAL</span>
         <span>•</span>
         <span>RigCommander v3.1</span>
+        <span>•</span>
+        <a href="/demo" style="color:var(--cyan); text-decoration:none;" data-i18n="nav.demo">Live Demo</a>
+        <span>·</span>
+        <a href="/passport" style="color:#d8b4fe; text-decoration:none;" data-i18n="nav.passport">Passport</a>
       </div>
 
       <div class="footer-keycaps">
         <span data-i18n="footer.shortcuts">Shortcuts:</span>
+        <span class="keycap">G</span>
         <span class="keycap">[</span>
         <span class="keycap">]</span>
         <span class="keycap">\</span>
@@ -1464,79 +1746,90 @@ _
         'nav.why': 'Why RigCommander',
         'nav.arch': 'Architecture',
         'nav.demo': 'Live Demo',
+        'nav.passport': 'Passport',
         'nav.waitlist': 'Waitlist',
-        'nav.cta': 'Request Access',
+        'nav.cta': 'Open Demo',
         'hero.eyebrow': 'MISSION CONTROL FOR AUTONOMOUS AI SWARMS',
         'hero.title': 'Stop Agent Chaos.<br><span class="accent-cyan">Command Your AI Fleets.</span>',
-        'hero.subtitle': 'The real-time operational flight deck for autonomous multi-agent engineering teams. Live topological routing, 1-click tmux terminal introspection, token quota thermodynamics, and deterministic human-in-the-loop oversight.',
-        'hero.cta': '⚡ Join Priority Waitlist',
+        'hero.subtitle': 'The real-time DSS SA command deck for autonomous multi-agent engineering teams. Live Graph ⇄ Task Gantt timelines, Palantir-style Operational Ontology with postcondition audit, clickable tmux HITL prompts, and FinOps token spend tracking.',
+        'hero.demoCta': '▶ Launch Interactive Demo',
+        'hero.passportCta': '📄 Project Passport',
         'hero.cliTitle': 'Click to copy CLI installer',
-        'sim.liveTelemetry': '● LIVE TELEMETRY',
-        'sim.agentsConnected': '9 AGENTS CONNECTED',
+        'sim.liveTelemetry': '● ONTOLOGY v2.0',
+        'sim.agentsConnected': '9 AGENTS • $6.63 SESSION',
+        'sim.viewGraph': '🕸️ GRAPH',
+        'sim.viewGantt': '📊 GANTT',
         'sim.calmOff': '🧘 CALM FOCUS',
         'sim.calmOn': '🧘 CALM: ON',
         'sim.allLanes': '🌐 ALL LANES',
+        'sim.noMeter': 'no meter · CLI',
         'sim.waitRadar': 'WAIT RADAR',
-        'sim.card1': 'Stuck sweep: stalled after claim on qitem-20261108. Waiting QA acceptance test.',
-        'sim.card2': 'UX Core P1 done: workflow + real HTTP TW adapter. Ready for review.',
-        'sim.card3': 'Stopped at terminal permission_prompt: needs human HITL authorization.',
-        'sim.inspector': 'INSPECTOR & TMUX',
-        'sim.authorize': '✓ AUTHORIZE',
-        'sim.stop': '✕ STOP',
+        'sim.card1': 'PARKED (2 open items) without active wake timer. Needs wake signal.',
+        'sim.card2': 'slice:tts-strict-chunked passed 104/104 probes. CTX at 68% (preemptive /compact ready).',
+        'sim.card3': 'Stopped at terminal permission_prompt: 3 parsed options ready for 1-click HITL.',
+        'sim.ganttTitle': '📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)',
+        'sim.inspector': 'DSS INSPECTOR & HITL',
+        'sim.opt1': '✅ 1. Yes, allow once (y)',
+        'sim.opt2': '🔹 2. Always allow in worktree',
+        'sim.opt3': '❌ 3. No, cancel (esc)',
+        'sim.auditTitle': '🧾 ACTION AUDIT (POSTCONDITION)',
         'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
         'pain.title': 'Why Autonomous Swarms Break Down',
         'pain.desc': 'One AI agent in your editor feels like magic. Ten concurrent agents across separate worktrees create an unobservable, expensive black box.',
         'pain.badTitle': 'Without RigCommander: Chaos',
-        'pain.bad1': '<b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked.',
-        'pain.bad2': '<b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a human keypress you never saw.',
-        'pain.bad3': '<b>Circular Rework Loops:</b> QA rejects coder\'s PR 5 times in a loop, burning 300,000 tokens on repetitive fixes.',
-        'pain.bad4': '<b>Overnight Budget Shock:</b> Waking up to a $1,400 API invoice because two agents entered an unmonitored ping-pong loop.',
+        'pain.bad1': '<b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked or waiting in queue.',
+        'pain.bad2': '<b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a numbered confirmation prompt you never saw.',
+        'pain.bad3': '<b>Circular Rework Loops:</b> QA rejects coder\'s PR 5 times in a loop, burning 300,000 tokens without anyone noticing wait bottlenecks.',
+        'pain.bad4': '<b>Blind Token Spend &amp; Unverified Commands:</b> No visibility into per-seat $ burn, cache-hit rates, or whether /compact actually reduced context.',
         'pain.goodTitle': 'With RigCommander: Deterministic Control',
-        'pain.good1': '<b>Single-Pane Topological Radar:</b> Instantly see every agent seat, who called whom, and who is holding the queue.',
-        'pain.good2': '<b>1-Click Introspection & HITL:</b> Instant terminal screen streaming with one-click authorization directly on the map.',
-        'pain.good3': '<b>Bounce-Back Detection:</b> Real-time QA rework counters with automated alerts when bounce count exceeds thresholds.',
-        'pain.good4': '<b>Context Thermodynamics:</b> Live model quota reservoirs with automated /compact warnings before context degrades.',
+        'pain.good1': '<b>Single-Pane Graph &amp; Task Gantt:</b> Switch between live SVG call highways and chain-colored Gantt timelines (key G) separating wait from active work.',
+        'pain.good2': '<b>Clickable HITL &amp; Postcondition Audit:</b> Auto-parsed tmux options, per-seat audio alerts, and automatic postcondition verification (✅ verified).',
+        'pain.good3': '<b>Operational Ontology v2.0:</b> Reason-driven Action Registry (0 noisy buttons on idle seats) backed by 7 canonical object types and unified P0–P3 triage.',
+        'pain.good4': '<b>Live FinOps &amp; Exclusive Pools:</b> Incremental JSONL token reader with cache-hit %, per-seat $ estimates, and non-overlapping model reservoirs.',
         'bento.eyebrow': 'ENGINEERING CAPABILITIES',
         'bento.title': 'Built for High-Reliability Fleets',
-        'bento.desc': 'Architected on Endsley\'s Situation Awareness principles and ISO 11064 control room ergonomics.',
-        'bento.t1.badge': '🌐 SA-DSS TOPOLOGY',
-        'bento.t1.title': 'Live Neural Highway & Call Volumes',
-        'bento.t1.desc': 'Dynamic SVG graph discovers your rig topology automatically. Edge line widths scale dynamically with real transmission volume. Click any highway to inspect recent envelope exchanges and queue payloads.',
-        'bento.t1.envelopes': '31 ENVELOPES',
-        'bento.t1.zeroDrops': 'Zero Drops • 100% Retries Handled',
-        'bento.t2.badge': '⚡ ZERO-LATENCY TMUX',
-        'bento.t2.title': 'In-Terminal Screen Capture',
-        'bento.t2.desc': 'Inspect 80-line active terminal captures without switching windows. Safe command dispatching straight from your browser.',
-        'bento.t3.badge': '🔥 FINOPS GUARD',
-        'bento.t3.title': 'Context Thermodynamics',
-        'bento.t3.desc': 'Avoid context saturation crashes. Monitor peak and average pool utilization across Claude, GPT-5, DeepSeek and Gemini seats.',
-        'bento.t4.badge': '💡 FLEET INTELLIGENCE ADVISOR',
-        'bento.t4.title': 'Automated Swarm Bottleneck Detection',
-        'bento.t4.desc': 'Out-of-band analytical engine evaluates token entropy, ceremony overhead, model mismatches, and QA bounce-back ratios in real time. Receive proactive recommendations before your pipeline stalls.',
-        'bento.t4.adviceTag': 'ADVICE',
-        'bento.t4.adviceTitle': 'Trigger preemptive /compact on dev-check (QA)',
-        'bento.t4.adviceBody': 'Context utilization is at 80% (380K/475K). Compacting token memory now will prevent token budget exhaustion on subsequent acceptance runs.',
+        'bento.desc': 'Architected on Endsley\'s Situation Awareness (SA-DSS L1–L3), ISO 11064 Dark Cockpit ergonomics, and Palantir-style Operational Ontology.',
+        'bento.t1.badge': '🌐 GRAPH ⇄ TASK GANTT',
+        'bento.t1.title': 'Live Neural Highways & Chain-Colored Gantt',
+        'bento.t1.desc': 'Flip between dynamic SVG call topology and a time-aligned Task Gantt timeline (key G). Spot queue wait vs. active work hatching, handoff chains, QA bounce-back loops, and clean opgate-filtered history.',
+        'bento.t1.envelopes': 'WAIT vs WORK • KEY [G]',
+        'bento.t1.zeroDrops': 'Hatched Wait • Closed Blocked/Held',
+        'bento.t2.badge': '⚡ CLICKABLE HITL & TMUX',
+        'bento.t2.title': 'Auto-Parsed Prompts & 80-Line Screen',
+        'bento.t2.desc': 'Codex & Claude numbered confirmation menus are parsed into 1-click buttons. Stream 80-line tmux modals and hear individual per-seat WebAudio alert motifs.',
+        'bento.t3.badge': '💰 FINOPS & EXCLUSIVE POOLS',
+        'bento.t3.title': 'Token Spend & Context Physics',
+        'bento.t3.desc': 'Incremental byte-offset JSONL reader tracks cached vs. uncached tokens and live $ cost per seat inside non-overlapping model pools.',
+        'bento.t4.badge': '🧬 OPERATIONAL ONTOLOGY v2.0',
+        'bento.t4.title': 'Objects, Links, Reason-Driven Actions & Postcondition Audit',
+        'bento.t4.desc': 'One canonical ontology snapshot drives every surface. Write-back buttons appear strictly from preconditions (0 buttons on healthy idle seats), and every command is logged in ActionAuditLog with automatic postcondition verification.',
+        'bento.t4.objTag': '7 OBJECTS • 7 ACTIONS',
+        'bento.t4.auditTag': 'POSTCONDITION AUDIT',
         'bento.t5.badge': '🧘 CALM HUD · ISO 11064',
         'bento.t5.title': 'Exception-Based Signaling',
-        'bento.t5.desc': 'Healthy sleeping nodes stay silent. Visual noise is suppressed by 70%+ so only real blockers, PARKED seats, and 75%+ context spikes break through.',
+        'bento.t5.desc': 'Healthy sleeping nodes stay silent. Visual noise is suppressed by 70%+ so only real HITL blockers, PARKED seats, and ≥75% context spikes break through.',
         'bento.t5.silent': 'SILENT',
         'bento.t5.highlighted': 'SPOTLIGHT',
-        'bento.t6.badge': '🧠 COGNITIVE ERGONOMICS',
-        'bento.t6.title': 'Endsley SA (L1–L3) & Progressive Disclosure',
-        'bento.t6.desc': 'Zero window-switching overhead. Glance at L1 status on the map, inspect L2 role rules and bounce-back metrics on click, and jump straight to L3 live tmux control—with FIT/ZEN modes and [ ] \\ D F hotkeys.',
-        'bento.t6.l1': 'Map & Thermal Rings',
-        'bento.t6.l2': 'Wait Radar & Sankey',
-        'bento.t6.l3': 'Burn-Rate ETA & Tmux',
-        'arch.eyebrow': 'NON-INVASIVE ARCHITECTURE',
-        'arch.title': 'Zero-Code Instrumentation',
-        'arch.desc': 'RigCommander connects directly to your existing environment. No vendor lock-in, no rewriting agent logic, zero latency overhead.',
-        'arch.s1.title': 'Run Local Bridge',
-        'arch.s1.desc': 'Lightweight Node.js daemon inspects local tmux sockets, worktree git states, and queue logs out-of-band.',
-        'arch.s2.title': 'Auto-Discovery',
-        'arch.s2.desc': 'Dynamically maps active agents, harness types, seats, models, and task communication channels in seconds.',
-        'arch.s2.code': '● Discovered 3 rigs, 9 seats',
-        'arch.s3.title': 'Command & Optimize',
-        'arch.s3.desc': 'Monitor live Sankey traffic, authorize HITL requests, and prevent token burn from a single unified glass pane.',
+        'bento.t6.badge': '💡 FLEET ADVISOR & ENDSLEY SA (L1–L3)',
+        'bento.t6.title': 'Automated Bottleneck Detection & Progressive Disclosure',
+        'bento.t6.desc': 'Out-of-band detectors score fleet health, QA bounce-back loops, burn-rate ETA, and model tier mismatches. Drill cleanly from L1 map status → L2 DSS Inspector & Quality/Budget tabs → L3 live tmux with [ ] \\ D F G hotkeys.',
+        'bento.t6.l1': 'Graph, Gantt & Pools',
+        'bento.t6.l2': 'DSS Inspector & Advisor',
+        'bento.t6.l3': 'Burn ETA, Audit & Tmux',
+        'arch.eyebrow': 'HARDENED LOCAL-FIRST ARCHITECTURE',
+        'arch.title': 'Zero Dependencies. Zero-Code Instrumentation.',
+        'arch.desc': 'Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process DECK_TOKEN, Origin checks, and allowlisted tmux keys.',
+        'arch.s1.title': 'Run Hardened Local Bridge',
+        'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) reads OpenRig daemon telemetry, queue logs, and tmux sockets out-of-band with zero npm dependencies.',
+        'arch.s2.title': 'Ontology & FinOps Sync',
+        'arch.s2.desc': 'Builds canonical Objects & Links, cleans opgate noise for Gantt chains, and streams JSONL transcripts by byte offset for real-time $ tracking.',
+        'arch.s2.code': '● 7 Objects • Exclusive Pools • Cache %',
+        'arch.s3.title': 'Command, Verify & Audit',
+        'arch.s3.desc': 'Authorize HITL prompts in 1 click through the Security Gate (DECK_TOKEN + key allowlist) and verify every postcondition automatically.',
+        'passport.eyebrow': 'ARCHITECTURAL & OPERATIONAL PASSPORT',
+        'passport.title': 'Inspect C4 Diagrams, Ontology Schema, Security Posture & Test Matrix',
+        'passport.desc': 'Full engineering blueprint with C4 Level 1 & Level 3 diagrams, 7-object Operational Ontology v2.0 tables, localhost security controls, and all 5 automated test suites.',
+        'passport.cta': '📄 Open Project Passport',
         'waitlist.badge': '🚀 PRIVATE ACCESS',
         'waitlist.title': 'Deploy RigCommander in Your Fleet',
         'waitlist.desc': 'We are onboarding engineering teams and autonomous AI startups in priority batches. Reserve your spot today.',
@@ -1553,7 +1846,7 @@ _
         'waitlist.submit': 'Claim Priority Access →',
         'waitlist.successTitle': '✓ You are on the priority waitlist!',
         'waitlist.successDesc': 'Access position: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>We have sent a confirmation email with setup instructions.',
-        'waitlist.meta': '🔒 100% Local-First Architecture • Zero telemetry leaks • Self-hosted ready',
+        'waitlist.meta': '🔒 100% Local-First Architecture • 0 npm deps • Self-hosted ready',
         'footer.status': 'ALL SYSTEMS OPERATIONAL',
         'footer.shortcuts': 'Shortcuts:',
         'footer.copy': '© 2026 RigCommander. All rights reserved.',
@@ -1565,79 +1858,90 @@ _
         'nav.why': 'Зачем RigCommander',
         'nav.arch': 'Архитектура',
         'nav.demo': 'Живое демо',
+        'nav.passport': 'Паспорт',
         'nav.waitlist': 'Ранний доступ',
-        'nav.cta': 'Запросить доступ',
+        'nav.cta': 'Открыть демо',
         'hero.eyebrow': 'ЦЕНТР УПРАВЛЕНИЯ АВТОНОМНЫМИ ИИ-РОЯМИ',
         'hero.title': 'Остановите хаос агентов.<br><span class="accent-cyan">Управляйте ИИ-флотом.</span>',
-        'hero.subtitle': 'Операционный командный мостик реального времени для мультиагентных команд разработки. Живая топология вызовов, инспекция tmux-терминалов в 1 клик, термодинамика квот и детерминированный HITL-контроль.',
-        'hero.cta': '⚡ Вступить в Waitlist',
+        'hero.subtitle': 'Операционный DSS SA мостик для автономных ИИ-команд разработки. Переключение Граф ⇄ Гант задач, операционная онтология (Objects • Actions • Postcondition Audit), кликабельные HITL-меню в tmux и FinOps-учёт расхода токенов.',
+        'hero.demoCta': '▶ Открыть интерактивное демо',
+        'hero.passportCta': '📄 Паспорт проекта',
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду установки',
-        'sim.liveTelemetry': '● LIVE ТЕЛЕМЕТРИЯ',
-        'sim.agentsConnected': '9 АГЕНТОВ В КОНТУРЕ',
+        'sim.liveTelemetry': '● ОНТОЛОГИЯ v2.0',
+        'sim.agentsConnected': '9 АГЕНТОВ • ~$6.63 СЕССИЯ',
+        'sim.viewGraph': '🕸️ ГРАФ',
+        'sim.viewGantt': '📊 ГАНТ',
         'sim.calmOff': '🧘 CALM ФОКУС',
         'sim.calmOn': '🧘 CALM: ВКЛ',
         'sim.allLanes': '🌐 ВСЕ ПОТОКИ',
+        'sim.noMeter': 'нет замеров · CLI',
         'sim.waitRadar': 'РАДАР ОЖИДАНИЯ',
-        'sim.card1': 'Зависание: задача qitem-20261108 взята, но ждёт приёмки QA.',
-        'sim.card2': 'UX Core P1 готов: воркфлоу + HTTP-адаптер. Ожидает ревью.',
-        'sim.card3': 'Остановлен на permission_prompt: требуется подтверждение оператора.',
-        'sim.inspector': 'ИНСПЕКТОР & TMUX',
-        'sim.authorize': '✓ РАЗРЕШИТЬ',
-        'sim.stop': '✕ СТОП',
+        'sim.card1': 'PARKED (2 открытые задачи) без активного wake-таймера. Требует пробуждения.',
+        'sim.card2': 'slice:tts-strict-chunked прошёл 104/104 проб. CTX 68% (готов превентивный /compact).',
+        'sim.card3': 'Остановлен на permission_prompt: 3 варианта распарсены для HITL в 1 клик.',
+        'sim.ganttTitle': '📊 ДИАГРАММА ГАНТА • ПОСЛЕДНИЕ 6Ч (ШТРИХОВКА = ОЖИДАНИЕ)',
+        'sim.inspector': 'DSS ИНСПЕКТОР & HITL',
+        'sim.opt1': '✅ 1. Да, разрешить один раз (y)',
+        'sim.opt2': '🔹 2. Всегда разрешать в worktree',
+        'sim.opt3': '❌ 3. Нет, отменить (esc)',
+        'sim.auditTitle': '🧾 ЖУРНАЛ ДЕЙСТВИЙ (POSTCONDITION)',
         'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
         'pain.title': 'Почему автономные рои ломаются',
         'pain.desc': 'Один ИИ-агент в редакторе ощущается как магия. Десять параллельных агентов в отдельных worktree превращаются в неуправляемый и дорогой чёрный ящик.',
         'pain.badTitle': 'Без RigCommander: хаос',
-        'pain.bad1': '<b>Слепые прыжки по терминалам:</b> лихорадочный перебор 12 tmux-панелей в поисках заблокированного агента.',
-        'pain.bad2': '<b>Тихие зависания на промптах:</b> агент простаивает 4 часа, ожидая нажатия клавиши, которое вы не заметили.',
-        'pain.bad3': '<b>Циклы переделок:</b> QA отклоняет PR кодера 5 раз подряд, сжигая 300 000 токенов на однотипные правки.',
-        'pain.bad4': '<b>Ночной шок от счёта:</b> утренний инвойс на $1,400 из-за пинг-понг цикла между двумя агентами без надзора.',
+        'pain.bad1': '<b>Слепые прыжки по терминалам:</b> лихорадочный перебор 12 tmux-панелей в поисках того, кто заблокирован или ждёт в очереди.',
+        'pain.bad2': '<b>Тихие зависания на промптах:</b> агент простаивает 4 часа на нумерованном меню подтверждения, которое вы не заметили.',
+        'pain.bad3': '<b>Циклы переделок и простои:</b> QA возвращает PR 5 раз подряд, сжигая 300 000 токенов без видимости узких мест во времени.',
+        'pain.bad4': '<b>Слепой расход и команды без сверки:</b> не видно расхода $ по сиденьям, % кэша и того, действительно ли /compact снизил контекст.',
         'pain.goodTitle': 'С RigCommander: детерминированный контроль',
-        'pain.good1': '<b>Единый топологический радар:</b> мгновенно видно каждого агента, кто кого вызвал и кто держит очередь.',
-        'pain.good2': '<b>Инспекция и HITL в 1 клик:</b> живой стриминг экрана терминала и подтверждение действий прямо с карты.',
-        'pain.good3': '<b>Детекция возвратов (Bounce-Back):</b> счётчики кругов QA в реальном времени и алерты при превышении порога.',
-        'pain.good4': '<b>Термодинамика контекста:</b> живые шкалы квот моделей с ранним предупреждением до деградации контекста.',
+        'pain.good1': '<b>Граф и Гант в одном окне:</b> переключение между живой топологией и диаграммой Ганта (клавиша G) со штриховкой ожидания vs работы.',
+        'pain.good2': '<b>Кликабельный HITL и аудит эффекта:</b> автопарсинг меню tmux, индивидуальные звуки сидений и автоматическая сверка postcondition (✅ verified).',
+        'pain.good3': '<b>Операционная онтология v2.0:</b> единый реестр действий по причине (0 лишних кнопок у idle-узлов), 7 типов объектов и триаж P0–P3.',
+        'pain.good4': '<b>Живой FinOps и эксклюзивные пулы:</b> инкрементальный ридер JSONL-транскриптов, кэш %, оценка $ и непересекающиеся пулы моделей.',
         'bento.eyebrow': 'ИНЖЕНЕРНЫЕ ВОЗМОЖНОСТИ',
         'bento.title': 'Создан для надёжных ИИ-флотов',
-        'bento.desc': 'Спроектирован по принципам ситуационной осведомлённости Endsley и эргономики диспетчерских ISO 11064.',
-        'bento.t1.badge': '🌐 ТОПОЛОГИЯ SA-DSS',
-        'bento.t1.title': 'Живые магистрали и объёмы вызовов',
-        'bento.t1.desc': 'Динамический SVG-граф автоматически находит топологию рига. Толщина линий отражает реальный трафик. Клик по магистрали открывает историю конвертов.',
-        'bento.t1.envelopes': '31 КОНВЕРТ',
-        'bento.t1.zeroDrops': '0 потерь • 100% ретраев обработано',
-        'bento.t2.badge': '⚡ TMUX БЕЗ ЗАДЕРЖЕК',
-        'bento.t2.title': 'Захват экрана терминала',
-        'bento.t2.desc': 'Просматривайте последние 80 строк активного терминала без переключения окон. Безопасная отправка команд прямо из браузера.',
-        'bento.t3.badge': '🔥 КОНТРОЛЬ FINOPS',
-        'bento.t3.title': 'Термодинамика контекста',
-        'bento.t3.desc': 'Предотвращайте падения из-за переполнения окна. Следите за пиковой и средней нагрузкой пулов Claude, GPT, DeepSeek и Gemini.',
-        'bento.t4.badge': '💡 СОВЕТНИК ФЛОТА',
-        'bento.t4.title': 'Автоматический поиск узких мест',
-        'bento.t4.desc': 'Аналитический движок в реальном времени оценивает энтропию токенов, накладные расходы, несоответствие моделей и возвраты QA до остановки пайплайна.',
-        'bento.t4.adviceTag': 'СОВЕТ',
-        'bento.t4.adviceTitle': 'Запустить превентивный /compact на dev-check (QA)',
-        'bento.t4.adviceBody': 'Заполнение контекста достигло 80% (380K/475K). Сжатие памяти сейчас предотвратит исчерпание бюджета на следующих прогонах приёмки.',
+        'bento.desc': 'Спроектирован по принципам ситуационной осведомлённости Endsley (SA-DSS L1–L3), эргономики Dark Cockpit ISO 11064 и операционной онтологии.',
+        'bento.t1.badge': '🌐 ГРАФ ⇄ ДИАГРАММА ГАНТА',
+        'bento.t1.title': 'Живые магистрали и цепочки задач на Ганте',
+        'bento.t1.desc': 'Мгновенно переключайтесь между SVG-графом вызовов и диаграммой Ганта (клавиша G). Видно штриховку ожидания до взятия задачи, стрелки передач, круги QA и историю без системного шума opgate.',
+        'bento.t1.envelopes': 'ОЖИДАНИЕ vs РАБОТА • [G]',
+        'bento.t1.zeroDrops': 'Штриховка простоя • Закрытые blocked/held',
+        'bento.t2.badge': '⚡ КЛИКАБЕЛЬНЫЙ HITL & TMUX',
+        'bento.t2.title': 'Автопарсинг промптов и экран 80 строк',
+        'bento.t2.desc': 'Нумерованные меню Codex и Claude автоматически превращаются в кнопки. Открывайте живой tmux-модал на 80 строк и различайте узлы по уникальным WebAudio-мотивам.',
+        'bento.t3.badge': '💰 FINOPS И ЭКСКЛЮЗИВНЫЕ ПУЛЫ',
+        'bento.t3.title': 'Расход токенов, кэш % и физика контекста',
+        'bento.t3.desc': 'Инкрементальный ридер JSONL по байтовому offset считает uncached/cached токены и $ по каждому сиденью внутри эксклюзивных модельных пулов.',
+        'bento.t4.badge': '🧬 ОПЕРАЦИОННАЯ ОНТОЛОГИЯ v2.0',
+        'bento.t4.title': 'Объекты, связи, действия по причине и аудит postcondition',
+        'bento.t4.desc': 'Единый снапшот онтологии питает все панели. Кнопки write-back появляются строго по предусловиям (0 кнопок у здорового idle-узла), а каждое действие автоматически проверяется по postcondition в ActionAuditLog.',
+        'bento.t4.objTag': '7 ОБЪЕКТОВ • 7 ДЕЙСТВИЙ',
+        'bento.t4.auditTag': 'АУДИТ POSTCONDITION',
         'bento.t5.badge': '🧘 CALM HUD · ISO 11064',
         'bento.t5.title': 'Сигнализация по исключениям',
-        'bento.t5.desc': 'Штатные спящие узлы не мигают. Визуальный шум снижен на 70%+, поэтому внимание тратится только на блокировки, PARKED и перегрев контекста ≥ 75%.',
+        'bento.t5.desc': 'Штатные спящие узлы не мигают. Визуальный шум снижен на 70%+, поэтому внимание тратится только на HITL-блокировки, PARKED и перегрев контекста ≥ 75%.',
         'bento.t5.silent': 'ТИШИНА',
         'bento.t5.highlighted': 'В ФОКУСЕ',
-        'bento.t6.badge': '🧠 КОГНИТИВНАЯ ЭРГОНОМИКА',
-        'bento.t6.title': 'Endsley SA (L1–L3) и Progressive Disclosure',
-        'bento.t6.desc': 'Ноль переключений между окнами: L1-статус на карте, L2-паспорт и возвраты QA по клику, L3-терминал tmux в 1 клик — плюс режимы FIT/ZEN и клавиши [ ] \\ D F.',
-        'bento.t6.l1': 'Карта и термокольца',
-        'bento.t6.l2': 'Радар и Sankey-потоки',
-        'bento.t6.l3': 'Burn-Rate ETA и Tmux',
-        'arch.eyebrow': 'НЕИНВАЗИВНАЯ АРХИТЕКТУРА',
-        'arch.title': 'Инструментация без правки кода',
-        'arch.desc': 'RigCommander подключается напрямую к текущему окружению. Без привязки к вендору, без переписывания агентов и без накладных задержек.',
+        'bento.t6.badge': '💡 СОВЕТНИК ФЛОТА И ENDSLEY SA (L1–L3)',
+        'bento.t6.title': 'Поиск узких мест и 3 уровня глубины',
+        'bento.t6.desc': 'Внеполосные детекторы считают здоровье флота, возвраты QA, burn-rate ETA и перекос моделей. Переход L1 карта → L2 DSS Инспектор и таблицы Качество/Бюджет → L3 живой tmux с клавишами [ ] \\ D F G.',
+        'bento.t6.l1': 'Граф, Гант и пулы',
+        'bento.t6.l2': 'DSS Инспектор и Советник',
+        'bento.t6.l3': 'Burn ETA, Аудит и Tmux',
+        'arch.eyebrow': 'ЗАЩИЩЁННАЯ LOCAL-FIRST АРХИТЕКТУРА',
+        'arch.title': 'Ноль зависимостей. Ноль правки кода агентов.',
+        'arch.desc': 'Чистый Node.js ESM и нативные ES-модули браузера без npm-зависимостей. Работает локально на 127.0.0.1 с токеном DECK_TOKEN, проверкой Origin и allowlist клавиш tmux.',
         'arch.s1.title': 'Запуск локального моста',
-        'arch.s1.desc': 'Лёгкий Node.js-демон вне полосы читает локальные tmux-сокеты, статус worktree git и журналы очереди.',
-        'arch.s2.title': 'Автообнаружение',
-        'arch.s2.desc': 'За секунды строит карту активных агентов, харнесов, сидений, моделей и каналов передачи задач.',
-        'arch.s2.code': '● Найдено 3 рига, 9 сидений',
-        'arch.s3.title': 'Контроль и оптимизация',
-        'arch.s3.desc': 'Наблюдайте живой трафик, подтверждайте HITL-запросы и экономьте токены из единого окна.',
+        'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) вне полосы читает телеметрию OpenRig, очереди и tmux-сокеты без внешних зависимостей.',
+        'arch.s2.title': 'Онтология и FinOps-синхронизация',
+        'arch.s2.desc': 'Строит канонический граф Objects & Links, очищает opgate-шум для Ганта и дочитывает JSONL-транскрипты по байтовому offset.',
+        'arch.s2.code': '● 7 объектов • Эксклюзивные пулы • Кэш %',
+        'arch.s3.title': 'Управление, сверка и аудит',
+        'arch.s3.desc': 'Подтверждайте HITL-запросы в 1 клик через Security Gate (DECK_TOKEN + allowlist) с автоматической проверкой результата.',
+        'passport.eyebrow': 'АРХИТЕКТУРНЫЙ И ОПЕРАЦИОННЫЙ ПАСПОРТ',
+        'passport.title': 'Изучите C4-диаграммы, схему онтологии, безопасность и матрицу тестов',
+        'passport.desc': 'Полная инженерная документация: C4 Level 1 и Level 3, таблицы операционной онтологии v2.0, контур доверия localhost и все 5 наборов автотестов.',
+        'passport.cta': '📄 Открыть паспорт проекта',
         'waitlist.badge': '🚀 ЗАКРЫТЫЙ ДОСТУП',
         'waitlist.title': 'Разверните RigCommander на своём флоте',
         'waitlist.desc': 'Мы подключаем инженерные команды и AI-стартапы приоритетными волнами. Забронируйте место сейчас.',
@@ -1654,7 +1958,7 @@ _
         'waitlist.submit': 'Получить приоритетный доступ →',
         'waitlist.successTitle': '✓ Вы в списке приоритетного доступа!',
         'waitlist.successDesc': 'Позиция в очереди: <b style="color:var(--cyan);">#482 (Tier 1 Onboarding)</b>.<br>Мы отправили письмо с инструкцией по подключению.',
-        'waitlist.meta': '🔒 100% Local-First архитектура • Без утечек телеметрии • Готово к self-hosted',
+        'waitlist.meta': '🔒 100% Local-First архитектура • 0 npm deps • Готово к self-hosted',
         'footer.status': 'ВСЕ СИСТЕМЫ В ШТАТНОМ РЕЖИМЕ',
         'footer.shortcuts': 'Горячие клавиши:',
         'footer.copy': '© 2026 RigCommander. Все права защищены.',
@@ -1709,6 +2013,16 @@ _
 
     // Interactive Hero Simulator Logic
     let simCalm = false;
+    let simView = 'graph';
+
+    function setSimView(mode) {
+      simView = mode === 'gantt' ? 'gantt' : 'graph';
+      document.getElementById('simViewGraph').classList.toggle('active', simView === 'graph');
+      document.getElementById('simViewGantt').classList.toggle('active', simView === 'gantt');
+      document.getElementById('simGraphView').style.display = simView === 'graph' ? 'block' : 'none';
+      document.getElementById('simGanttView').style.display = simView === 'gantt' ? 'flex' : 'none';
+    }
+
     function toggleSimCalm() {
       simCalm = !simCalm;
       const btn = document.getElementById('simCalmBtn');
@@ -1718,8 +2032,8 @@ _
 
       const nodes = document.querySelectorAll('.sim-node');
       nodes.forEach(n => {
-        if (simCalm && !n.classList.contains('pulse-coral') && !n.classList.contains('selected')) {
-          n.style.opacity = '0.4';
+        if (simCalm && !n.classList.contains('pulse-coral') && !n.classList.contains('pulse-amber') && !n.classList.contains('selected')) {
+          n.style.opacity = '0.35';
         } else {
           n.style.opacity = '1';
         }
@@ -1729,12 +2043,13 @@ _
     function setSimSlice(slice) {
       document.getElementById('simSliceAll').classList.toggle('active', slice === 'all');
       document.getElementById('simSliceUx').classList.toggle('active', slice === 'ux');
+      if (simView !== 'graph') setSimView('graph');
 
       const lines = document.getElementById('simSvgLines');
       if (slice === 'ux') {
         lines.innerHTML = `
-          <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="#00f0ff" stroke-width="4" />
-          <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="#00ff9d" stroke-width="3" />
+          <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="#00f0ff" stroke-width="4" />
+          <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="#00ff9d" stroke-width="3" />
         `;
       } else {
         lines.innerHTML = `
@@ -1748,46 +2063,50 @@ _
       }
     }
 
-    function selectSimNode(id, role, status, mood) {
+    function selectSimNode(el, id, role, status, mood) {
       document.querySelectorAll('.sim-node').forEach(n => n.classList.remove('selected'));
-      event.currentTarget.classList.add('selected');
+      if (el) el.classList.add('selected');
 
       document.getElementById('simInspectorId').textContent = id;
       const screen = document.getElementById('simTerminalScreen');
-      screen.innerHTML = `
-[${id}]
-Role: ${role}
-Status: ${status}
----------------------------------
-$ git status
-On branch feat/${id}
-All 4 local worktree test runners passing.
-Last sync: 2 sec ago • ${mood.toUpperCase()}
-      `;
+      const pills = document.getElementById('simPromptPills');
+      if (mood === 'alert') {
+        screen.textContent = `[dev-check@core-platform]\n$ npx playwright test e2e/tts.spec.ts\n  ✓ 12 passed  ✘ 2 boundary-timeout\n--------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nRun negative control fault check?\n› 1. Yes, allow once (y)\n  2. Always allow in worktree\n  3. No, cancel (esc)`;
+        if (pills) pills.style.display = 'flex';
+      } else {
+        screen.textContent = `[${id}]\nRole: ${role}\nStatus: ${status}\n--------------------------------\n$ git status --short\nOn branch feat/${id.split(' ')[0]}\nPostconditions: verified\nState: ${mood.toUpperCase()}`;
+        if (pills) pills.style.display = 'none';
+      }
     }
 
-    function simAuthorize() {
+    function simChoosePrompt(opt) {
       const screen = document.getElementById('simTerminalScreen');
-      screen.innerHTML = `
-[dev-check@core-platform]
-$ git reset --hard HEAD~1
-HEAD is now at 8f3c1a2 fix(receipt): test suite green
-✓ HITL Authorization received.
-Running validation harness...
-=============================
-PASSED 14 of 14 tests (100%)
-Status: READY FOR LOCAL PUSH 🟢
-      `;
-    }
+      const qaNode = document.getElementById('simQaNode');
+      const qaBadge = document.getElementById('simQaBadge');
+      const auditBox = document.getElementById('simAuditBox');
+      const title = (I18N[currentLang] && I18N[currentLang]['sim.auditTitle']) || '🧾 ACTION AUDIT (POSTCONDITION)';
 
-    function simReject() {
-      const screen = document.getElementById('simTerminalScreen');
-      screen.innerHTML = `
-[dev-check@core-platform]
-✕ STOP SIGNAL RECEIVED FROM OPERATOR.
-Worktree locked for human inspection.
-Session preserved in tmux:4175.
-      `;
+      if (opt === 3) {
+        screen.textContent = `[dev-check@core-platform]\nSent key: 3 Enter (cancel_prompt)\n✕ Prompt cancelled by operator.\nWorktree preserved for manual review.`;
+        if (qaNode) { qaNode.classList.remove('pulse-coral'); qaNode.classList.add('pulse-amber'); }
+        if (qaBadge) { qaBadge.textContent = 'PAUSED'; qaBadge.style.color = 'var(--amber)'; }
+        if (auditBox) {
+          auditBox.innerHTML = `<div style="color:#94a3b8; font-weight:800;">${title}</div>` +
+            `<div style="display:flex; justify-content:space-between;"><span>✅ cancel_prompt</span><span style="color:#6ee7b7;">Esc closed</span></div>` +
+            `<div style="display:flex; justify-content:space-between;"><span>✅ compact_context</span><span style="color:#6ee7b7;">78% → 19%</span></div>`;
+        }
+        return;
+      }
+
+      const modeLabel = opt === 2 ? 'always allow' : 'allow once';
+      screen.textContent = `[dev-check@core-platform]\nSent key: ${opt} Enter (${modeLabel})\n✓ HITL Authorization accepted.\nRunning negative control...\n================================\nPASSED 14 / 14 tests (100%)\nPostcondition: exit needs-input ✅`;
+      if (qaNode) qaNode.classList.remove('pulse-coral');
+      if (qaBadge) { qaBadge.textContent = 'WORKING'; qaBadge.style.color = 'var(--emerald)'; }
+      if (auditBox) {
+        auditBox.innerHTML = `<div style="color:#94a3b8; font-weight:800;">${title}</div>` +
+          `<div style="display:flex; justify-content:space-between;"><span>✅ answer_prompt</span><span style="color:#6ee7b7;">verified</span></div>` +
+          `<div style="display:flex; justify-content:space-between;"><span>✅ compact_context</span><span style="color:#6ee7b7;">78% → 19%</span></div>`;
+      }
     }
 
     // Waitlist Form Submission
