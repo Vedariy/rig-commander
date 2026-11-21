@@ -2485,6 +2485,9 @@
               <div id="cmdSendStatus" class="ctrl-status"></div>
             </div>
 
+            <!-- SA Level 3: Verified Action Audit Trail (Always visible when records exist) -->
+            <div id="inspActionAudit">${renderActionAuditHtml(agent.id)}</div>
+
             <!-- Reference & Rare Metadata Accordion (Collapsed by default) -->
             <details ${inspectorRefOpen ? 'open' : ''} ontoggle="inspectorRefOpen = this.open" style="border-top:1px solid rgba(56,189,248,0.14); padding-top:6px;">
               <summary style="cursor:pointer; font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; user-select:none; display:flex; justify-content:space-between; align-items:center;">
@@ -2495,7 +2498,6 @@
                 <div id="inspTechMeta" style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; background:rgba(15,23,42,0.45); padding:5px 8px; border-radius:5px;">
                   📥 ${agent.callsIn} / 📤 ${agent.callsOut} выз • 📂 ${escapeHtml(agent.cwd)}${agent.assignedWorkCount ? ` • В работе: ${agent.assignedWorkCount}` : ''}${escapeHtml(formatSeatUsageMeta(agent))}
                 </div>
-                <div id="inspActionAudit">${renderActionAuditHtml(agent.id)}</div>
                 <div class="guidance-panel" style="margin-top:0;">
                   <div class="guidance-tabs">
                     <button class="guidance-tab-btn ${activeInspectorTab === 'rules' ? 'active' : ''}" data-tab="rules" onclick="setInspectorTab('rules')">📋 ПРАВИЛА</button>
@@ -3331,7 +3333,7 @@
         window.ONTOLOGY_SNAPSHOT.actionRecords.unshift({
           execId: `demo-${Date.now()}`,
           actionId: act,
-          seatId: seat,
+          targetSeatId: seat,
           payloadPreview: text.slice(0, 60),
           executedAt: new Date().toISOString(),
           postconditionStatus: 'verified',
@@ -3339,6 +3341,7 @@
         });
       }
 
+      rebuildDemoIntelligence();
       renderTriageStrip();
       renderReservoirs();
       renderWaitRadarAndDecisions();
@@ -3346,6 +3349,8 @@
       renderInspectorAndScorecards(false);
       fetchTerminalCapture(selectedAgentId, true);
       if (modalSeatId) fetchModalCapture();
+      const advModal = document.getElementById('fleetAdvisorModal');
+      if (advModal && advModal.classList.contains('open')) renderFleetAdvisorModal();
       return detail;
     }
 
@@ -3800,9 +3805,17 @@
           </table>
         ` : '';
 
+        const livePools = computeModelPools(AGENTS, currentRigFilter);
+        const poolMeta = {
+          'codex-gpt': { tier: 'Tier 3 (Frontier, High $/M)', rec: 'Архитектурные решения, декомпозиция, безопасность' },
+          'claude': { tier: 'Tier 2 (Balanced, Medium $/M)', rec: 'Спецификации, комплексная TDD-реализация, рефакторинг' },
+          'fast-open': { tier: 'Tier 1 (Fast, Low $/M)', rec: 'Независимый QA, фиксы, линтер, массовые проверки' },
+          'terminal-agy': { tier: 'Tier 1 (CLI / AGY)', rec: 'Быстрая терминальная разработка, локальные правки' }
+        };
+
         tabContentHtml = `
           <div style="font-size:12px; color:#94a3b8; margin-bottom:8px; font-family:var(--font-mono);">
-            💰 БЮДЖЕТ И РАСХОД ТОКЕНОВ: Потребление по JSONL-транскриптам и аллокация модельных пулов.
+            💰 БЮДЖЕТ И РАСХОД ТОКЕНОВ: Потребление по JSONL-транскриптам и эксклюзивная аллокация модельных пулов.
           </div>
           ${liveBudgetHtml}
           <table class="fleet-table">
@@ -3810,40 +3823,26 @@
               <tr>
                 <th>ПУЛ МОДЕЛЕЙ</th>
                 <th>КЛАСС СТОИМОСТИ</th>
-                <th>АКТИВНЫЕ УЗЛЫ</th>
+                <th>УЗЛЫ ПУЛА (ЭКСКЛЮЗИВНО)</th>
+                <th>ПИК CTX / РАСХОД</th>
                 <th>РЕКОМЕНДОВАННЫЙ КЛАСС ЗАДАЧ</th>
-                <th>СТАТУС ИСПОЛЬЗОВАНИЯ</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td style="font-weight:700; color:#a855f7;">🟣 CODEX SOL (GPT-6)</td>
-                <td>Tier 3 (Frontier, High $/M)</td>
-                <td>dev-owner, dev-coder4, kernel</td>
-                <td>Архитектурные решения, декомпозиция, безопасность</td>
-                <td><span style="color:#f59e0b;">⚠️ Выявляется расход на линтинг</span></td>
-              </tr>
-              <tr>
-                <td style="font-weight:700; color:#f59e0b;">🟠 CLAUDE (Anthropic)</td>
-                <td>Tier 2 (Balanced, Medium $/M)</td>
-                <td>dev-coder</td>
-                <td>Комплексная TDD-реализация, сложный рефакторинг</td>
-                <td><span style="color:#00ff9d;">🟢 Штатная загрузка</span></td>
-              </tr>
-              <tr>
-                <td style="font-weight:700; color:#00ff9d;">🟢 FAST (DeepSeek / GLM)</td>
-                <td>Tier 1 (Commodity, Low $/M)</td>
-                <td>dev-check, dev-coder3</td>
-                <td>Независимый QA, исправление линтера, доки, мелкие фиксы</td>
-                <td><span style="color:#7dd3fc;">💡 Резерв мощности (недогружен)</span></td>
-              </tr>
-              <tr>
-                <td style="font-weight:700; color:#00f0ff;">🔵 AGY (Antigravity Google)</td>
-                <td>Tier 1 (Fast Flash)</td>
-                <td>dev-coder5</td>
-                <td>Быстрая терминальная разработка, локальные правки</td>
-                <td><span style="color:#00ff9d;">🟢 Штатный режим</span></td>
-              </tr>
+              ${livePools.map(p => {
+                const meta = poolMeta[p.id] || { tier: 'Standard', rec: 'Общие задачи' };
+                const ctxStr = p.hasValidCtx ? `${p.peakCtx}% пик (ср. ${p.avgCtx}%)` : 'нет замеров';
+                const spendStr = p.hasUsage ? ` • ~$${p.totalEstUsd.toFixed(2)}` : '';
+                return `
+                  <tr>
+                    <td style="font-weight:700; color:${p.color};">${escapeHtml(p.name)}</td>
+                    <td>${meta.tier}</td>
+                    <td style="color:#cbd5e1;">${escapeHtml(p.seatNames.join(', '))}</td>
+                    <td style="font-family:var(--font-mono); color:${p.isOver ? '#fda4af' : '#e2e8f0'};">${ctxStr}<b style="color:#fde68a;">${spendStr}</b></td>
+                    <td>${meta.rec}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
         `;
@@ -4349,7 +4348,7 @@
           {
             execId: 'demo-audit-1',
             actionId: 'compact_context',
-            seatId: 'dev-check@core-platform',
+            targetSeatId: 'dev-check@core-platform',
             payloadPreview: '/compact',
             executedAt: new Date(now - 24 * 60000).toISOString(),
             postconditionStatus: 'verified',
@@ -4358,7 +4357,7 @@
           {
             execId: 'demo-audit-2',
             actionId: 'compact_context',
-            seatId: 'dev-coder4@core-platform',
+            targetSeatId: 'dev-coder4@core-platform',
             payloadPreview: '/compact',
             executedAt: new Date(now - 38 * 60000).toISOString(),
             postconditionStatus: 'verified',
@@ -4367,7 +4366,7 @@
           {
             execId: 'demo-audit-3',
             actionId: 'wake_parked_seat',
-            seatId: 'dev-coder3@core-platform',
+            targetSeatId: 'dev-coder3@core-platform',
             payloadPreview: 'Enter',
             executedAt: new Date(now - 7 * 60000).toISOString(),
             postconditionStatus: 'pending',
@@ -4376,7 +4375,7 @@
           {
             execId: 'demo-audit-4',
             actionId: 'answer_prompt_option',
-            seatId: 'dev-owner@core-platform',
+            targetSeatId: 'dev-owner@core-platform',
             payloadPreview: '1 Enter',
             executedAt: new Date(now - 52 * 60000).toISOString(),
             postconditionStatus: 'verified',
@@ -4384,55 +4383,145 @@
           }
         ]
       };
+    }
 
-      window.LIVE_INTELLIGENCE = {
-        healthScore: 76,
-        counts: { total: 4, p0: 1, p1: 2, p2: 1, p3: 0 },
-        allFindings: [
-          {
-            id: 'demo-f1',
+    function rebuildDemoIntelligence() {
+      if (IS_LIVE) return;
+      const findings = [];
+      for (const a of AGENTS) {
+        if (a.state === 'urgent') {
+          findings.push({
+            id: `demo-hitl-${a.id}`,
             detectorId: 'hitl_permission_prompt',
             severity: 'p0_urgent',
             category: 'topology',
-            title: 'dev-check (QA) ожидает подтверждения HITL в терминале',
+            title: `${a.shortName} ожидает подтверждения HITL в терминале`,
             summary: 'В tmux распознаны 3 интерактивных варианта permission_prompt. Подтвердите в 1 клик через Инспектор или 80-строчный экран.',
-            actionPlan: { seatTarget: 'dev-check@core-platform', actionLabel: '📺 Открыть экран QA', command: 'open_modal' }
-          },
-          {
-            id: 'demo-f2',
+            metrics: { roiEstimate: 'Снятие простоя QA', affectedSeats: [a.id] },
+            actionPlan: {
+              kind: 'open_modal',
+              seatTarget: a.id,
+              label: '📺 Открыть экран QA',
+              commandPreview: `rig capture ${a.id} --lines 80`
+            }
+          });
+        }
+        if (typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT) {
+          const isCrit = a.ctxPct >= CONTEXT_CRIT_PCT;
+          findings.push({
+            id: `demo-ctx-${a.id}`,
             detectorId: 'context_saturation',
-            severity: 'p1_high',
-            category: 'context',
-            title: 'Перегрев контекста dev-check (QA): 79% (порог 75%)',
-            summary: 'Использовано 204K / 258.4K токенов. Выполните превентивный /compact после текущего шага, чтобы избежать деградации качества приёмки.',
-            actionPlan: { seatTarget: 'dev-check@core-platform', actionLabel: '🧹 Отправить /compact', command: '/compact' }
-          },
-          {
-            id: 'demo-f3',
+            severity: isCrit ? 'p1_high' : 'p2_medium',
+            category: 'budget',
+            title: `Нагрев контекста ${a.shortName}: ${a.ctxPct}% (порог 75%)`,
+            summary: `Выполните превентивный /compact (${a.ctxUsedTokens ? Math.round(a.ctxUsedTokens / 1000) + 'K' : a.ctxPct + '%'}), чтобы сохранить точность и снизить расход токенов.`,
+            metrics: { roiEstimate: '−60% контекст', affectedSeats: [a.id] },
+            actionPlan: {
+              kind: 'compact_seat',
+              seatTarget: a.id,
+              label: `⚡ Сжать /compact (${a.ctxPct}%)`,
+              commandPreview: `/compact → ${a.shortName}`
+            }
+          });
+        }
+        if (a.parkedData && a.parkedData.parked) {
+          findings.push({
+            id: `demo-parked-${a.id}`,
             detectorId: 'parked_seat',
             severity: 'p1_high',
             category: 'topology',
-            title: 'dev-coder3 запаркован с 2 открытыми обязательствами',
-            summary: 'Узел на Pi (deepseek-flash) держит slice:pre-push-e2e-gate без активного wake-таймера.',
-            actionPlan: { seatTarget: 'dev-coder3@core-platform', actionLabel: '🔔 Перейти к coder3', command: 'select' }
-          },
-          {
-            id: 'demo-f4',
+            title: `${a.shortName} запаркован с открытыми обязательствами`,
+            summary: a.parkedReason || 'Узел держит открытые задачи очереди без активного wake-таймера.',
+            metrics: { roiEstimate: 'Разблокировка 2 задач', affectedSeats: [a.id] },
+            actionPlan: {
+              kind: 'wake_seat',
+              seatTarget: a.id,
+              label: '⚡ Разбудить (Enter)',
+              commandPreview: `tmux send-keys ${a.id} Enter`
+            }
+          });
+        }
+        if (typeof a.reworkAvg === 'number' && a.reworkAvg > 2.1) {
+          findings.push({
+            id: `demo-rework-${a.id}`,
             detectorId: 'qa_bounce_back',
             severity: 'p2_medium',
             category: 'quality',
-            title: 'Повышенное число кругов QA на dev-coder3 (Avg: 2.3 кр)',
-            summary: '1-й пас прохождения QA составляет 33%. Проверьте граничные тесты до передачи на dev-check.',
-            actionPlan: { seatTarget: 'dev-coder3@core-platform', actionLabel: '🔍 Инспектор coder3', command: 'select' }
-          }
-        ],
+            title: `Повышенное число кругов QA на ${a.shortName} (Avg: ${a.reworkAvg} кр)`,
+            summary: `1-й пас прохождения QA составляет ${a.firstPassPct || '33%'}. Проверьте граничные тесты до передачи на dev-check.`,
+            metrics: { roiEstimate: '−1 круг QA', affectedSeats: [a.id] },
+            actionPlan: {
+              kind: 'select_seat',
+              seatTarget: a.id,
+              label: `🔍 Инспектор ${a.shortName}`,
+              commandPreview: `focus ${a.id}`
+            }
+          });
+        }
+      }
+
+      const p0 = findings.filter(f => f.severity === 'p0_urgent').length;
+      const p1 = findings.filter(f => f.severity === 'p1_high').length;
+      const p2 = findings.filter(f => f.severity === 'p2_medium').length;
+      const p3 = findings.filter(f => f.severity === 'p3_info').length;
+      const healthScore = Math.max(40, Math.min(100, 100 - p0 * 14 - p1 * 6 - p2 * 2));
+
+      window.LIVE_INTELLIGENCE = {
+        healthScore,
+        counts: { total: findings.length, p0, p1, p2, p3 },
+        allFindings: findings,
         topRecommendations: []
       };
+    }
+
+    function applyDemoTrackFromUrl() {
+      let track = '';
+      try {
+        const params = new URLSearchParams(window.location.search);
+        track = (params.get('track') || window.location.hash.replace(/^#/, '') || '').toLowerCase().trim();
+      } catch {}
+      if (!track) return;
+
+      const showTrackToast = (msg) => {
+        const t = document.getElementById('copyToast');
+        if (!t) return;
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 3200);
+      };
+
+      if (track === 'gantt') {
+        setCenterView('gantt');
+        ganttFocusChain = 'slice:moderation-single-writer';
+        applyGanttFocus();
+        showTrackToast('📊 UX-трек: Диаграмма Ганта (клавиша G) • подсветка цепочки single-writer');
+      } else if (track === 'hitl') {
+        selectAgent('dev-check@core-platform');
+        openTerminalModal('dev-check@core-platform');
+        showTrackToast('⚡ UX-трек: Кликабельный HITL • 80-строчный TMUX экран');
+      } else if (track === 'finops' || track === 'budget') {
+        openFleetAdvisorModal('budget');
+        showTrackToast('💰 UX-трек: FinOps-бюджет токенов и эксклюзивные пулы моделей');
+      } else if (track === 'ontology' || track === 'audit') {
+        selectAgent('dev-check@core-platform');
+        const auditEl = document.getElementById('inspActionAudit');
+        if (auditEl) auditEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showTrackToast('🧬 UX-трек: Онтология v2.0 • Actions по причине + Журнал postcondition');
+      } else if (track === 'advisor' || track === 'intelligence') {
+        openFleetAdvisorModal('findings');
+        showTrackToast('💡 UX-трек: Советник флота • автоматическая диагностика узких мест');
+      } else if (track === 'calm') {
+        if (!calmMode) toggleCalmMode();
+        showTrackToast('🧘 UX-трек: Calm HUD (ISO 11064) • в фокусе только аномалии и работа');
+      } else if (track === 'tour') {
+        if (!saTourOpen) toggleSaTour();
+      }
     }
 
     // Initial render + start live polling loop (invoked after /assets/domain/index.js loads)
     window.__initRigCommander = function initRigCommander() {
       seedDemoOntologyState();
+      rebuildDemoIntelligence();
       initSidebarState();
       initDensityMode();
       renderTriageStrip();
@@ -4445,6 +4534,7 @@
       fetchTerminalCapture(selectedAgentId);
       setInterval(refreshTelemetryNow, 4000);
       setCenterView(centerViewMode);
+      applyDemoTrackFromUrl();
       window.addEventListener('resize', () => { if (centerViewMode === 'gantt') renderGantt(); });
       document.addEventListener('keydown', (e) => {
         const tag = (e.target && e.target.tagName) || '';

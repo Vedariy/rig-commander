@@ -239,6 +239,42 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
     };
   }
 
+  if (actionPlan.kind === 'open_modal' && seatId) {
+    return {
+      id: 'open_live_terminal',
+      transport: 'modal_terminal',
+      seatId,
+      payload: '',
+      label: actionPlan.label || '📺 Экран',
+      title: actionPlan.commandPreview || `Открыть живой экран tmux для ${seatId}`,
+      tone: 'proceed'
+    };
+  }
+
+  if (actionPlan.kind === 'wake_seat' && seatId) {
+    return {
+      id: 'wake_parked_seat',
+      transport: 'tmux_key',
+      seatId,
+      payload: 'Enter',
+      label: actionPlan.label || '⚡ Разбудить (Enter)',
+      title: actionPlan.commandPreview || `Отправить Enter в запаркованное сиденье ${seatId}`,
+      tone: 'warn'
+    };
+  }
+
+  if (actionPlan.kind === 'select_seat' && seatId) {
+    return {
+      id: 'focus_seat',
+      transport: 'select_seat',
+      seatId,
+      payload: '',
+      label: actionPlan.label || '🔍 Осмотреть',
+      title: actionPlan.commandPreview || `Перейти к инспектору ${seatId}`,
+      tone: 'default'
+    };
+  }
+
   return {
     id: 'copy_command',
     transport: 'clipboard',

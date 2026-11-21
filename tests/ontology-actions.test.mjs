@@ -133,3 +133,28 @@ test('resolveActionFromFinding maps compact_seat safely and protects Pi harness'
   assert.equal(fallbackAct.id, 'copy_command');
   assert.equal(fallbackAct.payload, 'rig queue handoff ...');
 });
+
+test('resolveActionFromFinding maps open_modal, wake_seat and select_seat to live UX transports', () => {
+  const modalAct = resolveActionFromFinding(
+    { kind: 'open_modal', seatTarget: 'dev-check@rig', label: '📺 Открыть экран QA' },
+    null
+  );
+  assert.equal(modalAct.id, 'open_live_terminal');
+  assert.equal(modalAct.transport, 'modal_terminal');
+  assert.equal(modalAct.seatId, 'dev-check@rig');
+
+  const wakeAct = resolveActionFromFinding(
+    { kind: 'wake_seat', seatTarget: 'dev-coder3@rig', label: '⚡ Разбудить' },
+    null
+  );
+  assert.equal(wakeAct.id, 'wake_parked_seat');
+  assert.equal(wakeAct.transport, 'tmux_key');
+  assert.equal(wakeAct.payload, 'Enter');
+
+  const selectAct = resolveActionFromFinding(
+    { kind: 'select_seat', seatTarget: 'dev-coder3@rig', label: '🔍 Осмотреть' },
+    null
+  );
+  assert.equal(selectAct.id, 'focus_seat');
+  assert.equal(selectAct.transport, 'select_seat');
+});
