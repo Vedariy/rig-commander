@@ -147,23 +147,37 @@
       color: #fff;
     }
     .nav-cta {
-      background: #fff;
-      color: #030712;
+      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
+      color: #020617;
       font-size: 12.5px;
-      font-weight: 700;
-      padding: 8px 16px;
+      font-weight: 800;
+      padding: 8px 18px;
       border-radius: 9999px;
       text-decoration: none;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 22px rgba(0, 255, 157, 0.42), 0 0 12px rgba(0, 240, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.55);
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 7px;
+      white-space: nowrap;
     }
     .nav-cta:hover {
-      background: var(--cyan);
-      box-shadow: 0 0 24px rgba(0, 240, 255, 0.6);
-      transform: translateY(-1px);
+      box-shadow: 0 0 32px rgba(0, 255, 157, 0.72), 0 0 22px rgba(0, 240, 255, 0.65);
+      transform: translateY(-1px) scale(1.03);
+      color: #000;
+    }
+    .nav-cta-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #022c22;
+      box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.28);
+      animation: demoDotPulse 2s infinite;
+    }
+    @keyframes demoDotPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.65; }
     }
 
     /* HERO SECTION */
@@ -255,6 +269,74 @@
       box-shadow: 0 0 40px rgba(0, 240, 255, 0.7);
       transform: translateY(-2px);
       color: #000;
+    }
+    .btn-demo-hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 55%, #38bdf8 100%);
+      color: #020617;
+      font-weight: 900;
+      font-size: 15.5px;
+      letter-spacing: -0.01em;
+      padding: 15px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      box-shadow: 0 0 36px rgba(0, 255, 157, 0.48), 0 10px 34px rgba(0, 240, 255, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: demoGlowPulse 3.2s ease-in-out infinite;
+    }
+    .btn-demo-hero::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -75%;
+      width: 45%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+      transform: skewX(-22deg);
+      animation: demoShimmer 4.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .btn-demo-hero:hover {
+      transform: translateY(-3px) scale(1.025);
+      box-shadow: 0 0 52px rgba(0, 255, 157, 0.72), 0 14px 44px rgba(0, 240, 255, 0.52);
+      color: #000;
+    }
+    .btn-demo-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      background: rgba(2, 6, 23, 0.85);
+      color: #6ee7b7;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+    .sim-btn-demo {
+      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      color: #020617;
+      font-weight: 800;
+      box-shadow: 0 0 16px rgba(0, 255, 157, 0.45);
+      text-decoration: none;
+    }
+    .sim-btn-demo:hover {
+      box-shadow: 0 0 24px rgba(0, 255, 157, 0.78);
+      color: #000;
+      transform: translateY(-1px);
+    }
+    @keyframes demoGlowPulse {
+      0%, 100% { box-shadow: 0 0 32px rgba(0, 255, 157, 0.45), 0 10px 30px rgba(0, 240, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.65); }
+      50% { box-shadow: 0 0 46px rgba(0, 255, 157, 0.68), 0 12px 42px rgba(0, 240, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.8); }
+    }
+    @keyframes demoShimmer {
+      0%, 72% { left: -75%; }
+      100% { left: 135%; }
     }
     .cli-copy-box {
       background: rgba(8, 16, 32, 0.9);
@@ -1095,7 +1177,6 @@
         <li><a href="#features" data-i18n="nav.features">Features</a></li>
         <li><a href="#comparison" data-i18n="nav.why">Why RigCommander</a></li>
         <li><a href="#architecture" data-i18n="nav.arch">Architecture</a></li>
-        <li><a href="/demo" data-i18n="nav.demo">Live Demo</a></li>
         <li><a href="/passport" data-i18n="nav.passport">Passport</a></li>
         <li><a href="#waitlist" data-i18n="nav.waitlist">Waitlist</a></li>
       </ul>
@@ -1105,7 +1186,8 @@
           <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
         </div>
         <a href="/demo" class="nav-cta">
-          <span data-i18n="nav.cta">Open Demo</span>
+          <span class="nav-cta-dot"></span>
+          <span data-i18n="nav.cta">Live Demo</span>
           <span>→</span>
         </a>
       </div>
@@ -1132,8 +1214,9 @@
       </p>
 
       <div class="hero-actions">
-        <a href="/demo" class="btn-primary">
+        <a href="/demo" class="btn-demo-hero">
           <span data-i18n="hero.demoCta">▶ Launch Interactive Demo</span>
+          <span class="btn-demo-tag" data-i18n="hero.demoTag">LIVE · 0 SETUP</span>
           <span>→</span>
         </a>
         <a href="/passport" class="btn-secondary">
@@ -1170,7 +1253,7 @@
               <button class="sim-btn" id="simCalmBtn" onclick="toggleSimCalm()" data-i18n="sim.calmOff">🧘 CALM FOCUS</button>
               <button class="sim-btn active" id="simSliceAll" onclick="setSimSlice('all')" data-i18n="sim.allLanes">🌐 ALL LANES</button>
               <button class="sim-btn" id="simSliceUx" onclick="setSimSlice('ux')">🏷️ UX-GATE</button>
-              <a class="sim-btn" id="simDeepLink" href="/demo?track=hitl" style="text-decoration:none; border-color:rgba(0,255,157,0.45); color:#6ee7b7;" data-i18n="sim.openDemo">↗ FULL DEMO</a>
+              <a class="sim-btn sim-btn-demo" id="simDeepLink" href="/demo?track=hitl" data-i18n="sim.openDemo">↗ FULL DEMO</a>
             </div>
           </div>
 
@@ -1785,6 +1868,7 @@ Run negative control fault check?
         'hero.title': 'Stop Agent Chaos.<br><span class="accent-cyan">Command Your AI Fleets.</span>',
         'hero.subtitle': 'The real-time DSS SA command deck for autonomous multi-agent engineering teams. Live Graph ⇄ Task Gantt timelines, Palantir-style Operational Ontology with postcondition audit, clickable tmux HITL prompts, and FinOps token spend tracking.',
         'hero.demoCta': '▶ Launch Interactive Demo',
+        'hero.demoTag': 'LIVE · 0 SETUP',
         'hero.passportCta': '📄 Project Passport',
         'hero.cliTitle': 'Click to copy CLI installer',
         'sim.liveTelemetry': '● ONTOLOGY v2.0',
@@ -1905,6 +1989,7 @@ Run negative control fault check?
         'hero.title': 'Остановите хаос агентов.<br><span class="accent-cyan">Управляйте ИИ-флотом.</span>',
         'hero.subtitle': 'Операционный DSS SA мостик для автономных ИИ-команд разработки. Переключение Граф ⇄ Гант задач, операционная онтология (Objects • Actions • Postcondition Audit), кликабельные HITL-меню в tmux и FinOps-учёт расхода токенов.',
         'hero.demoCta': '▶ Открыть интерактивное демо',
+        'hero.demoTag': 'LIVE · БЕЗ УСТАНОВКИ',
         'hero.passportCta': '📄 Паспорт проекта',
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду установки',
         'sim.liveTelemetry': '● ОНТОЛОГИЯ v2.0',
