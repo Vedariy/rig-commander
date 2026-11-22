@@ -231,7 +231,16 @@ export const DECK_I18N = {
     'finops.projMonth': 'pace: ~${mo}/mo',
     'finops.savedPct': 'saving {pct}% vs API',
     'finops.overpaidPct': 'overpaying vs API',
-    'finops.paygSub': 'billed by token'
+    'finops.paygSub': 'billed by token',
+    'share.btn': 'Share Card',
+    'share.title': '📸 DAILY FLEET RECEIPT // SHARE CARD (1200×630 PNG)',
+    'share.anonymize': '🔒 Anonymize rig & seat names',
+    'share.downloadPng': '⬇ Download PNG',
+    'share.copyPng': '📋 Copy PNG',
+    'share.copyPost': '𝕏 Copy Post Text',
+    'share.downloaded': '✅ PNG Share Card downloaded!',
+    'share.copiedPng': '✅ PNG image copied to clipboard!',
+    'share.copiedPost': '✅ Post summary copied for X / Telegram!'
   },
   ru: {
     'doc.title': 'RIGCOMMANDER // NEURAL COMMAND DECK v3.1',
@@ -465,7 +474,16 @@ export const DECK_I18N = {
     'finops.projMonth': 'темп: ~${mo}/мес',
     'finops.savedPct': 'экономия {pct}% vs API',
     'finops.overpaidPct': 'переплата vs API',
-    'finops.paygSub': 'списание по токенам'
+    'finops.paygSub': 'списание по токенам',
+    'share.btn': 'Карточка дня',
+    'share.title': '📸 КАРТОЧКА СМЕНЫ // SHARE CARD (1200×630 PNG)',
+    'share.anonymize': '🔒 Скрыть названия рига и сидений',
+    'share.downloadPng': '⬇ Скачать PNG',
+    'share.copyPng': '📋 Копировать PNG',
+    'share.copyPost': '𝕏 Текст для X / TG',
+    'share.downloaded': '✅ PNG-карточка скачана!',
+    'share.copiedPng': '✅ PNG скопирован в буфер обмена!',
+    'share.copiedPost': '✅ Текст поста скопирован для X / Telegram!'
   }
 };
 

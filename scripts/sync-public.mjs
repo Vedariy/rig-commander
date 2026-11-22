@@ -26,3 +26,12 @@ const assetsDst = path.join(root, 'public/assets');
 await fs.rm(assetsDst, { recursive: true, force: true });
 await fs.cp(assetsSrc, assetsDst, { recursive: true });
 console.log('synced openrig/assets -> public/assets');
+
+const mediaSrc = path.join(root, 'landing/media');
+const mediaDst = path.join(root, 'public/media');
+try {
+  await fs.access(mediaSrc);
+  await fs.rm(mediaDst, { recursive: true, force: true });
+  await fs.cp(mediaSrc, mediaDst, { recursive: true });
+  console.log('synced landing/media -> public/media');
+} catch {}

@@ -18,6 +18,9 @@
       <button class="triage-refresh-btn" id="btnGuardrails" onclick="openGuardrailsModal()" style="border-color:rgba(0,255,157,0.5); color:#6ee7b7;">
         🛡️ <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
+      <button class="triage-refresh-btn" id="btnShareCard" onclick="openShareCardModal()" style="border-color:rgba(168,85,247,0.5); color:#e9d5ff;">
+        📸 <span data-i18n="share.btn">Карточка дня</span>
+      </button>
       <button class="triage-refresh-btn" id="btnDemoQuest" onclick="toggleDemoQuest()" style="display:none; border-color:rgba(0,240,255,0.55); color:#67e8f9;">
         🎯 <span data-i18n="quest.btn">Миссия 10с</span> <span id="btnDemoQuestCount" style="font-weight:800; color:#00ff9d;">0/3</span>
       </button>
@@ -312,6 +315,23 @@
         </span>
       </div>
       <div class="modal-fleet-body" id="guardrailsModalBody"></div>
+    </div>
+  </div>
+
+  <!-- SHARE CARD / DAILY FLEET RECEIPT PNG MODAL (ITEM 6) -->
+  <div class="modal-overlay" id="shareCardModal" onclick="if (event.target === this) closeShareCardModal()">
+    <div class="modal-fleet-card" style="max-width:980px;">
+      <div class="modal-fleet-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#e9d5ff;" data-i18n="share.title">
+            📸 КАРТОЧКА СМЕНЫ // SHARE CARD (1200×630 PNG)
+          </span>
+        </div>
+        <span style="display:flex; gap:8px;">
+          <button class="action-pill" onclick="closeShareCardModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        </span>
+      </div>
+      <div class="modal-fleet-body" id="shareCardModalBody"></div>
     </div>
   </div>
 
@@ -1198,7 +1218,7 @@
       // P1.5: context overheating >= 65% (unified with Ontology Action Registry + Pi guard)
       for (const a of rigAgents) {
         if (typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT) {
-          const burn = computeBurn(a);
+          const burn = computeBurn(a, deckLang);
           const isCrit = a.ctxPct >= CONTEXT_CRIT_PCT;
           const isPi = isPiHarness(a);
           const ctxAction = isPi
@@ -1857,7 +1877,7 @@
             }
           }
 
-          const burn = computeBurn(agent);
+          const burn = computeBurn(agent, deckLang);
           let urgentThermalHtml = '';
           if (typeof agent.ctxPct === 'number' && agent.ctxPct >= 65) {
             const isCrit = agent.ctxPct >= 75;
@@ -1915,7 +1935,7 @@
             agent.state === 'working' ? 'led-working' :
             agent.state === 'waiting' ? 'led-waiting' : 'led-idle';
 
-          const burn = computeBurn(agent);
+          const burn = computeBurn(agent, deckLang);
           let urgentThermalHtml = '';
           if (typeof agent.ctxPct === 'number' && agent.ctxPct >= 65) {
             const isCrit = agent.ctxPct >= 75;
@@ -2166,7 +2186,7 @@
       if (agent.state === 'urgent') {
         return `
           <div style="background:rgba(255,0,85,0.12); border:1px solid rgba(255,0,85,0.5); border-radius:6px; padding:7px 9px;">
-            <div style="font-family:var(--font-mono); font-size:10.5px; font-weight:800; color:#fda4af;">🚨 ЖДЁТ РЕШЕНИЯ ЧЕЛОВЕКА</div>
+            <div style="font-family:var(--font-mono); font-size:10.5px; font-weight:800; color:#fda4af;">${deckLang === 'en' ? '🚨 WAITING FOR HUMAN INPUT' : '🚨 ЖДЁТ РЕШЕНИЯ ЧЕЛОВЕКА'}</div>
             <div style="font-size:11.5px; color:#ffe4e6; margin-top:2px;">${escapeHtml(agent.needsInputReason || 'Подтвердите действие в терминале ниже')}</div>
           </div>
         `;
@@ -2186,7 +2206,7 @@
         const lastLine = screen.split(/\r?\n/).map(l => l.trim()).filter(l => l && !/^[-─=]+$/.test(l)).slice(-1)[0] || '';
         return `
           <div style="background:rgba(0,255,157,0.06); border:1px solid rgba(0,255,157,0.25); border-radius:6px; padding:6px 9px;">
-            <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#6ee7b7;">⚡ РАБОТАЕТ В ТЕРМИНАЛЕ</div>
+            <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#6ee7b7;">${deckLang === 'en' ? '⚡ WORKING IN TERMINAL' : '⚡ РАБОТАЕТ В ТЕРМИНАЛЕ'}</div>
             ${lastLine ? `<div style="font-family:var(--font-mono); font-size:10.5px; color:#cbd5e1; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(lastLine)}">${escapeHtml(lastLine)}</div>` : ''}
           </div>
         `;
@@ -2215,8 +2235,8 @@
       if (isHot) {
         alerts.push(`
           <div style="background:rgba(255,42,109,0.12); border:1px solid ${isCrit ? '#ff0055' : 'rgba(245,158,11,0.5)'}; border-radius:5px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
-            <span style="font-size:11px; color:${isCrit ? '#fda4af' : '#fde68a'}; font-weight:700;">${isCrit ? '🔥 Порог 75% пройден' : '🌡️ Контекст греется'} (${agent.ctxPct}%)</span>
-            <span style="font-family:var(--font-mono); font-size:10px; color:#cbd5e1;">${computeBurn(agent).label}</span>
+            <span style="font-size:11px; color:${isCrit ? '#fda4af' : '#fde68a'}; font-weight:700;">${isCrit ? (deckLang === 'en' ? '🔥 75% threshold passed' : '🔥 Порог 75% пройден') : (deckLang === 'en' ? '🌡️ Context warming up' : '🌡️ Контекст греется')} (${agent.ctxPct}%)</span>
+            <span style="font-family:var(--font-mono); font-size:10px; color:#cbd5e1;">${computeBurn(agent, deckLang).label}</span>
           </div>
         `);
       }
@@ -2453,7 +2473,7 @@
         ? `${agent.ctxUsedTokens.toLocaleString('ru-RU')} / ${agent.ctxWindowSize.toLocaleString('ru-RU')} tok`
         : thermal.label;
       const attachCmd = agent.tmuxAttachCommand || `rig capture ${agent.id} --lines 40`;
-      const showBurnInline = (typeof agent.ctxPct === 'number' && agent.ctxPct >= 60) || computeBurn(agent).perHour > 0;
+      const showBurnInline = (typeof agent.ctxPct === 'number' && agent.ctxPct >= 60) || computeBurn(agent, deckLang).perHour > 0;
       const quickKeysHtml = renderHarnessQuickKeys(agent, 'cmdSendStatus');
 
       const existingCard = document.getElementById('inspectorBoxCard');
@@ -2479,7 +2499,7 @@
         if (elCtx) {
           elCtx.style.color = thermal.color;
           elCtx.title = exactTokensLine;
-          elCtx.textContent = `${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent).label : ''}`;
+          elCtx.textContent = `${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}`;
         }
 
         const elCtxBar = document.getElementById('inspCtxBarFill');
@@ -2590,7 +2610,7 @@
                 <div style="flex:1; height:5px; background:rgba(148,163,184,0.16); border-radius:999px; overflow:hidden;">
                   <div id="inspCtxBarFill" style="width:${thermal.pct}%; height:100%; background:${thermal.color}; transition:width 0.3s ease;"></div>
                 </div>
-                <span id="inspValContext" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.color}; white-space:nowrap;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent).label : ''}</span>
+                <span id="inspValContext" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.color}; white-space:nowrap;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
               </div>
             </div>
 
@@ -3201,7 +3221,7 @@
       const hotAgents = AGENTS.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT)
         .sort((a, b) => b.ctxPct - a.ctxPct);
       for (const a of hotAgents) {
-        const burn = computeBurn(a);
+        const burn = computeBurn(a, deckLang);
         const isOver = a.ctxPct >= CONTEXT_CRIT_PCT;
         const burnRate = burn.perHour > 0 ? burn.perHour : 20;
         const etaMin = Math.max(1, Math.round(((CONTEXT_CRIT_PCT - a.ctxPct) / burnRate) * 60));
@@ -3753,8 +3773,8 @@
           </div>
           <form class="ctrl-input-form" onsubmit="submitAgentPrompt('${seatId}', event, 'modalCmdInput', 'modalCmdStatus')">
             <div class="ctrl-prompt-tag">&gt;</div>
-            <input type="text" id="modalCmdInput" class="ctrl-input" placeholder="Команда, промпт или /команда в ${seatId}..." autocomplete="off" onkeydown="handleHistoryKey(event, 'modalCmdInput')" />
-            <button type="submit" class="cyber-btn active ctrl-send-btn">🚀 ОТПРАВИТЬ</button>
+            <input type="text" id="modalCmdInput" class="ctrl-input" placeholder="${deckLang === 'en' ? `Command, prompt, or /slash in ${seatId}...` : `Команда, промпт или /команда в ${seatId}...`}" autocomplete="off" onkeydown="handleHistoryKey(event, 'modalCmdInput')" />
+            <button type="submit" class="cyber-btn active ctrl-send-btn">${deckLang === 'en' ? '🚀 SEND' : '🚀 ОТПРАВИТЬ'}</button>
           </form>
           <div id="modalCmdStatus" class="ctrl-status"></div>
         </div>
@@ -3771,7 +3791,7 @@
 
     function openTerminalModal(seatId) {
       modalSeatId = seatId;
-      document.getElementById('terminalModalTitle').textContent = `🖥️ LIVE TMUX • ${seatId} • 80 строк`;
+      document.getElementById('terminalModalTitle').textContent = `🖥️ LIVE TMUX • ${seatId} • ${deckLang === 'en' ? '80 lines' : '80 строк'}`;
       document.getElementById('terminalModalBody').textContent = 'Загрузка rig capture...';
       renderModalCtrl(seatId);
       document.getElementById('terminalModal').classList.add('open');
@@ -4088,6 +4108,7 @@
               ${[['h24', td('finops.win24h')], ['d7', td('finops.win7d')], ['session', td('finops.winSession')]].map(([wk, lbl]) => `
                 <button type="button" class="hud-segment-btn ${budgetWindow === wk ? 'active' : ''}" data-budget-window="${wk}" onclick="setBudgetWindow('${wk}')">${escapeHtml(lbl)}</button>
               `).join('')}
+              <button type="button" class="action-pill" style="margin-left:6px; border-color:rgba(168,85,247,0.55); color:#e9d5ff;" onclick="closeFleetAdvisorModal(); openShareCardModal()">📸 ${escapeHtml(td('share.btn'))}</button>
             </div>
           </div>
         `;
@@ -4271,8 +4292,165 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeSaTour(); }
+      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeSaTour(); }
     });
+
+    // ===== Stage 7: Viral Daily Fleet Receipt / Share Card PNG Export (Item 6) =====
+    let shareCardAnonymize = null; // null = auto (true on live fleet, false on demo)
+    let latestShareCardModel = null;
+    let latestShareCardSvg = '';
+
+    function openShareCardModal() {
+      if (shareCardAnonymize === null) {
+        shareCardAnonymize = Boolean(IS_LIVE);
+      }
+      const modal = document.getElementById('shareCardModal');
+      if (modal) modal.classList.add('open');
+      renderShareCardModal();
+    }
+
+    function closeShareCardModal() {
+      const modal = document.getElementById('shareCardModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function toggleShareAnonymize() {
+      shareCardAnonymize = !shareCardAnonymize;
+      renderShareCardModal();
+    }
+
+    function setShareWindow(wk) {
+      setBudgetWindow(wk);
+      renderShareCardModal();
+    }
+
+    function renderShareCardModal() {
+      const body = document.getElementById('shareCardModalBody');
+      if (!body || typeof buildShareCardModel !== 'function' || typeof renderShareCardSvg !== 'function') return;
+
+      const finops = typeof computeFleetFinOpsReport === 'function'
+        ? computeFleetFinOpsReport({
+            agents: AGENTS,
+            rigFilter: currentRigFilter,
+            billingPlans: getActiveBillingPlans(),
+            windowKey: budgetWindow,
+            classifyPoolFn: classifyModelPool,
+            computePoolsFn: computeModelPools
+          })
+        : null;
+
+      const ganttItems = typeof getGanttItems === 'function'
+        ? getGanttItems()
+        : (Array.isArray(window.LIVE_GANTT) ? window.LIVE_GANTT : []);
+      const health = (window.LIVE_INTELLIGENCE && typeof window.LIVE_INTELLIGENCE.healthScore === 'number')
+        ? window.LIVE_INTELLIGENCE.healthScore
+        : 85;
+
+      latestShareCardModel = buildShareCardModel({
+        agents: AGENTS,
+        rigFilter: currentRigFilter,
+        ganttItems,
+        finopsReport: finops,
+        windowKey: budgetWindow,
+        healthScore: health,
+        anonymize: Boolean(shareCardAnonymize),
+        lang: deckLang
+      });
+      latestShareCardSvg = renderShareCardSvg(latestShareCardModel);
+
+      body.innerHTML = `
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; font-family:var(--font-mono); font-size:11.5px;">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span style="color:#94a3b8;">${td('finops.windowLabel')}</span>
+            ${[['h24', td('finops.win24h')], ['d7', td('finops.win7d')], ['session', td('finops.winSession')]].map(([wk, lbl]) => `
+              <button type="button" class="hud-segment-btn ${budgetWindow === wk ? 'active' : ''}" onclick="setShareWindow('${wk}')">${escapeHtml(lbl)}</button>
+            `).join('')}
+            <button type="button" id="btnShareAnonymize" class="action-pill" style="margin-left:6px; border-color:${shareCardAnonymize ? '#00ff9d' : 'rgba(148,163,184,0.35)'}; color:${shareCardAnonymize ? '#6ee7b7' : '#cbd5e1'};" onclick="toggleShareAnonymize()">
+              ${escapeHtml(td('share.anonymize'))}: <b>${shareCardAnonymize ? 'ON' : 'OFF'}</b>
+            </button>
+          </div>
+          <div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap;">
+            <button type="button" class="action-pill key-proceed" onclick="downloadShareCardPng()">${escapeHtml(td('share.downloadPng'))}</button>
+            <button type="button" class="action-pill" style="border-color:var(--cyan); color:var(--cyan);" onclick="copyShareCardPng()">${escapeHtml(td('share.copyPng'))}</button>
+            <button type="button" class="action-pill" style="border-color:rgba(168,85,247,0.55); color:#e9d5ff;" onclick="copySharePostText()">${escapeHtml(td('share.copyPost'))}</button>
+          </div>
+        </div>
+        <div id="shareCardPreview" style="width:100%; border-radius:12px; overflow:hidden; border:1px solid rgba(56,189,248,0.3); box-shadow:0 16px 40px rgba(0,0,0,0.65); background:#030712; display:flex; justify-content:center;">
+          ${latestShareCardSvg.replace('<svg ', '<svg style="display:block; width:100%; max-height:62vh; height:auto;" ')}
+        </div>
+        <div id="shareCardStatus" style="margin-top:8px; font-family:var(--font-mono); font-size:11px; color:#6ee7b7; min-height:16px;"></div>
+      `;
+    }
+
+    function renderShareCardPngDataUrl() {
+      return new Promise((resolve, reject) => {
+        if (!latestShareCardSvg) return reject(new Error('No card rendered'));
+        const blob = new Blob([latestShareCardSvg], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 630;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 1200, 630);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL('image/png'));
+          } catch (err) {
+            URL.revokeObjectURL(url);
+            reject(err);
+          }
+        };
+        img.onerror = (err) => {
+          URL.revokeObjectURL(url);
+          reject(err || new Error('SVG render error'));
+        };
+        img.src = url;
+      });
+    }
+
+    async function downloadShareCardPng() {
+      const st = document.getElementById('shareCardStatus');
+      try {
+        const dataUrl = await renderShareCardPngDataUrl();
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `rigcommander-receipt-${budgetWindow}-${(latestShareCardModel && latestShareCardModel.dateStr) || 'today'}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        if (st) st.textContent = td('share.downloaded');
+      } catch (err) {
+        if (st) st.textContent = `✕ ${err.message || err}`;
+      }
+    }
+
+    async function copyShareCardPng() {
+      const st = document.getElementById('shareCardStatus');
+      try {
+        const dataUrl = await renderShareCardPngDataUrl();
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          if (st) st.textContent = td('share.copiedPng');
+        } else {
+          await downloadShareCardPng();
+        }
+      } catch {
+        await downloadShareCardPng();
+      }
+    }
+
+    function copySharePostText() {
+      const st = document.getElementById('shareCardStatus');
+      const txt = (latestShareCardModel && latestShareCardModel.shareText) || '';
+      if (!txt) return;
+      navigator.clipboard.writeText(txt).then(() => {
+        if (st) st.textContent = td('share.copiedPost');
+      }).catch(() => {});
+    }
 
     // ===== Stage 6: Guardrails (Budget Circuit-Breaker & Telegram HITL Bridge) =====
     window.GUARDRAILS_STATE = {
@@ -5117,6 +5295,7 @@
              </div>
              <div class="quest-complete-actions">
                <button type="button" class="quest-mini-btn active" onclick="openGuardrailsModal()">${escapeHtml(td('quest.ctaGuardrails'))}</button>
+               <button type="button" class="quest-mini-btn" style="border-color:rgba(168,85,247,0.55); color:#e9d5ff;" onclick="openShareCardModal()">📸 ${escapeHtml(td('share.btn'))}</button>
                <button type="button" class="quest-mini-btn" onclick="dismissDemoQuest(); toggleSaTour()">${escapeHtml(td('quest.ctaTour'))}</button>
                <button type="button" class="quest-mini-btn" onclick="copyCmd('npx rig-commander@latest')">${escapeHtml(td('quest.ctaNpx'))}</button>
              </div>
@@ -5354,6 +5533,8 @@
       if (adv && adv.classList.contains('open')) renderFleetAdvisorModal();
       const grd = document.getElementById('guardrailsModal');
       if (grd && grd.classList.contains('open')) renderGuardrailsModal();
+      const shr = document.getElementById('shareCardModal');
+      if (shr && shr.classList.contains('open')) renderShareCardModal();
       if (saTourOpen) renderSaTour();
       if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
@@ -5492,6 +5673,11 @@
         showTrackToast(deckLang === 'en'
           ? '🛡️ UX Track: Budget Circuit-Breaker & Telegram HITL Phone Preview'
           : '🛡️ UX-трек: Предохранитель бюджета и Telegram HITL-мост');
+      } else if (track === 'share' || track === 'receipt' || track === 'card') {
+        openShareCardModal();
+        showTrackToast(deckLang === 'en'
+          ? '📸 UX Track: Daily Fleet Receipt / 1200×630 PNG Share Card'
+          : '📸 UX-трек: Карточка смены — экспорт в 1200×630 PNG');
       } else if (track === 'tour') {
         if (!saTourOpen) toggleSaTour();
       } else if (track === 'quest' || track === 'mission' || track === 'start') {

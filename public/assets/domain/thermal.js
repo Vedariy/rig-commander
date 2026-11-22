@@ -19,16 +19,19 @@ export function formatTokensShort(n) {
   return String(n);
 }
 
-export function computeBurn(a) {
+export function computeBurn(a, lang = 'ru') {
+  const en = lang === 'en';
   const h = Array.isArray(a && a.ctxHistory) ? a.ctxHistory : [];
-  if (h.length < 2) return { perHour: null, label: 'Темп: копим замеры…' };
+  if (h.length < 2) return { perHour: null, label: en ? 'Pace: sampling…' : 'Темп: копим замеры…' };
   const first = h[0];
   const last = h[h.length - 1];
   const hours = (last.t - first.t) / 3600000;
-  if (hours < 0.02) return { perHour: null, label: 'Темп: копим замеры…' };
+  if (hours < 0.02) return { perHour: null, label: en ? 'Pace: sampling…' : 'Темп: копим замеры…' };
   const perHour = (last.pct - first.pct) / hours;
-  if (perHour <= 0.1) return { perHour: 0, label: 'Темп: ~0%/ч (стабильно).' };
+  if (perHour <= 0.1) return { perHour: 0, label: en ? 'Pace: ~0%/h (stable).' : 'Темп: ~0%/ч (стабильно).' };
   const left = 75 - last.pct;
-  const eta = left > 0 ? ` • до 75%: ~${Math.round((left / perHour) * 60)} мин` : ' • порог 75% пройден';
-  return { perHour, label: `Темп: +${perHour.toFixed(1)}%/ч${eta}.` };
+  const eta = left > 0
+    ? (en ? ` • to 75%: ~${Math.round((left / perHour) * 60)}m` : ` • до 75%: ~${Math.round((left / perHour) * 60)} мин`)
+    : (en ? ' • 75% threshold passed' : ' • порог 75% пройден');
+  return { perHour, label: en ? `Pace: +${perHour.toFixed(1)}%/h${eta}.` : `Темп: +${perHour.toFixed(1)}%/ч${eta}.` };
 }

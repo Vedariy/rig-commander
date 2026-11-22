@@ -22,6 +22,7 @@ RigCommander is a **zero-dependency, local-first DSS SA (L1–L3)** command deck
   - Set hard guardrails (`maxSessionUsd`, `maxSeatUsd`, `maxUsdPerHour`, `maxQaRounds`) in `alert_only` or `auto_stop` (`Ctrl+C`) mode.
   - Connect a Telegram bot (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` or via the `🛡️ Guardrails` modal) to approve parsed HITL prompts from your phone with single-use nonces, plus `/status`, `/budget`, `/stop <seat>`, and `/arm_breaker` commands.
 - **10-Second Interactive Demo Mission:** First-time `/demo` visitors get a non-blocking 3-step live mission (Unblock QA HITL → Inspect Gantt `G` → Audit `$6.63` Spend & Pools) with 1-click Declutter HUD so the full deck makes sense in 10 seconds.
+- **Daily Fleet Receipt / Share Card (`1200×630` PNG):** Export a zero-dependency trophy card showing your Mini Task Gantt, prompt cache hit %, and **SUB vs PAYG ROI** — with 1-click privacy anonymization for sharing on X / Telegram.
 - **Bilingual EN / RU UI:** Full English & Russian support across Landing, Project Passport, and Command Deck.
 - **Hardened Localhost Security:** `0 npm dependencies`, loopback-only `127.0.0.1`, per-process `DECK_TOKEN` (`timingSafeEqual`), strict `Origin` check, allowlisted `tmux` keystrokes, anti-traversal static serving.
 

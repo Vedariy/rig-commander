@@ -212,6 +212,7 @@ export function computeFleetFinOpsReport({
   let totalOutput = 0;
   let monthlySubCommitUsd = 0;
   let projectedMonthlyApiUsd = 0;
+  let maxSpanDays = 1;
 
   for (const p of pools) {
     apiEqUsd += p.apiEqUsd;
@@ -224,6 +225,7 @@ export function computeFleetFinOpsReport({
     totalOutput += p.totalOutput;
     if (p.plan.mode === 'sub') monthlySubCommitUsd += p.plan.monthlyUsd;
     projectedMonthlyApiUsd += p.projectedMonthlyApiUsd;
+    if (p.spanDays > maxSpanDays) maxSpanDays = p.spanDays;
   }
 
   apiEqUsd = Math.round(apiEqUsd * 100) / 100;
@@ -233,6 +235,8 @@ export function computeFleetFinOpsReport({
   const savingsVsApiUsd = Math.round((apiEqUsd - actualUsd) * 100) / 100;
   const savingsPct = apiEqUsd > 0 ? Math.round((savingsVsApiUsd / apiEqUsd) * 100) : 0;
   const cachedPct = totalInput > 0 ? Math.round((totalCached / totalInput) * 100) : 0;
+  const effectiveWindowDays = safeWindow === 'h24' ? 1 : (safeWindow === 'd7' ? 7 : Math.min(30, Math.max(1, maxSpanDays)));
+  const projectedMonthlySavingsUsd = Math.round((savingsVsApiUsd * (30 / effectiveWindowDays)) * 100) / 100;
 
   return {
     windowKey: safeWindow,
@@ -248,8 +252,11 @@ export function computeFleetFinOpsReport({
       totalTokens,
       totalOutput,
       cachedPct,
+      spanDays: maxSpanDays,
+      effectiveWindowDays,
       monthlySubCommitUsd: Math.round(monthlySubCommitUsd * 100) / 100,
-      projectedMonthlyApiUsd: Math.round(projectedMonthlyApiUsd * 100) / 100
+      projectedMonthlyApiUsd: Math.round(projectedMonthlyApiUsd * 100) / 100,
+      projectedMonthlySavingsUsd
     }
   };
 }

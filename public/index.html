@@ -1158,6 +1158,73 @@
       color: #fff;
       transform: translateX(2px);
     }
+    .sim-video-stage {
+      display: none;
+      background: #01040a;
+      padding: 14px;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sim-video-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #020612;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+    }
+    .sim-video-frame video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      background: #020612;
+    }
+    .sim-video-chapters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .sim-chapter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .sim-chapter-btn {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .sim-chapter-btn:hover {
+      border-color: var(--cyan);
+      color: #fff;
+      background: rgba(0, 240, 255, 0.14);
+    }
+    .sim-btn-video {
+      background: rgba(168, 85, 247, 0.16);
+      border-color: rgba(168, 85, 247, 0.55);
+      color: #e9d5ff;
+    }
+    .sim-btn-video:hover, .sim-btn-video.active {
+      background: rgba(168, 85, 247, 0.32);
+      border-color: #c084fc;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
+    }
   </style>
 </head>
 <body>
@@ -1220,6 +1287,9 @@
           <span class="btn-demo-tag" data-i18n="hero.demoTag">LIVE · 0 SETUP</span>
           <span>→</span>
         </a>
+        <button type="button" class="btn-secondary" style="cursor:pointer; border-color:rgba(168,85,247,0.55); color:#e9d5ff;" onclick="watchDemoVideo()">
+          <span data-i18n="hero.videoCta">🎬 Watch 20s Demo</span>
+        </button>
         <a href="/passport" class="btn-secondary">
           <span data-i18n="hero.passportCta">📄 Project Passport</span>
         </a>
@@ -1251,6 +1321,7 @@
             <div class="sim-bar-controls">
               <button class="sim-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">🕸️ GRAPH</button>
               <button class="sim-btn" id="simViewGantt" onclick="setSimView('gantt')" data-i18n="sim.viewGantt">📊 GANTT</button>
+              <button class="sim-btn sim-btn-video" id="simViewVideo" onclick="setSimView('video')" data-i18n="sim.viewVideo">🎬 20s VIDEO</button>
               <button class="sim-btn" id="simCalmBtn" onclick="toggleSimCalm()" data-i18n="sim.calmOff">🧘 CALM FOCUS</button>
               <button class="sim-btn active" id="simSliceAll" onclick="setSimSlice('all')" data-i18n="sim.allLanes">🌐 ALL LANES</button>
               <button class="sim-btn" id="simSliceUx" onclick="setSimSlice('ux')">🏷️ UX-GATE</button>
@@ -1278,7 +1349,7 @@
             </div>
           </div>
 
-          <div class="sim-body">
+          <div class="sim-body" id="simBodyGrid">
             <!-- Left Col: Wait Radar -->
             <div class="sim-left-col">
               <div class="sim-col-title">
@@ -1462,6 +1533,24 @@ Run negative control fault check?
                   <span style="color:#7dd3fc;">coder3</span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Real 1280x720 Live Walkthrough Recording Stage -->
+          <div class="sim-video-stage" id="simVideoStage">
+            <div class="sim-video-frame">
+              <video id="demoWalkthroughVideo" controls muted playsinline loop preload="none" poster="/media/demo-poster.jpg">
+                <source src="/media/demo-walkthrough.mp4" type="video/mp4">
+              </video>
+            </div>
+            <div class="sim-video-chapters">
+              <div class="sim-chapter-pills">
+                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(0)" data-i18n="sim.ch1">0:00 ⚡ HITL Unblock</button>
+                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(6.5)" data-i18n="sim.ch2">0:07 📊 Task Gantt</button>
+                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(11)" data-i18n="sim.ch3">0:11 💰 SUB vs PAYG</button>
+                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(15)" data-i18n="sim.ch4">0:15 📸 Share Card PNG</button>
+              </div>
+              <a href="/demo?track=share" style="color:var(--cyan); text-decoration:none; font-weight:700;" data-i18n="sim.tryYourself">Try live in /demo →</a>
             </div>
           </div>
         </div>
@@ -1745,11 +1834,11 @@ Run negative control fault check?
             </p>
             <div class="passport-pills">
               <span class="passport-pill">0 npm deps • MIT</span>
-              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">49 / 49 node --test PASS</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">52 / 52 node --test PASS</span>
               <span class="passport-pill">10s 3-Step Demo Mission</span>
+              <span class="passport-pill">SUB vs PAYG FinOps + PNG Card</span>
               <span class="passport-pill">Telegram HITL + Breaker</span>
               <span class="passport-pill">Universal Claude/Codex/tmux</span>
-              <span class="passport-pill">DECK_TOKEN + Allowlist</span>
             </div>
           </div>
           <div style="display:flex; flex-direction:column; gap:10px; align-items:stretch;">
@@ -1895,12 +1984,19 @@ Run negative control fault check?
         'hero.subtitle': 'The real-time DSS SA command deck for autonomous multi-agent engineering teams. Live Graph ⇄ Task Gantt timelines, Palantir-style Operational Ontology with postcondition audit, clickable tmux HITL prompts, and FinOps token spend tracking.',
         'hero.demoCta': '▶ Launch Interactive Demo',
         'hero.demoTag': 'LIVE · 0 SETUP',
+        'hero.videoCta': '🎬 Watch 20s Demo',
         'hero.passportCta': '📄 Project Passport',
         'hero.cliTitle': 'Click to copy CLI installer',
         'sim.liveTelemetry': '● ONTOLOGY v2.0',
         'sim.agentsConnected': '9 AGENTS • $6.63 SESSION',
         'sim.viewGraph': '🕸️ GRAPH',
         'sim.viewGantt': '📊 GANTT',
+        'sim.viewVideo': '🎬 20s VIDEO',
+        'sim.ch1': '0:00 ⚡ HITL Unblock',
+        'sim.ch2': '0:07 📊 Task Gantt',
+        'sim.ch3': '0:11 💰 SUB vs PAYG',
+        'sim.ch4': '0:15 📸 Share Card PNG',
+        'sim.tryYourself': 'Try live in /demo →',
         'sim.calmOff': '🧘 CALM FOCUS',
         'sim.calmOn': '🧘 CALM: ON',
         'sim.allLanes': '🌐 ALL LANES',
@@ -2024,12 +2120,19 @@ Run negative control fault check?
         'hero.subtitle': 'Операционный DSS SA мостик для автономных ИИ-команд разработки. Переключение Граф ⇄ Гант задач, операционная онтология (Objects • Actions • Postcondition Audit), кликабельные HITL-меню в tmux и FinOps-учёт расхода токенов.',
         'hero.demoCta': '▶ Открыть интерактивное демо',
         'hero.demoTag': 'LIVE · БЕЗ УСТАНОВКИ',
+        'hero.videoCta': '🎬 Видео-демо (20 сек)',
         'hero.passportCta': '📄 Паспорт проекта',
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду установки',
         'sim.liveTelemetry': '● ОНТОЛОГИЯ v2.0',
         'sim.agentsConnected': '9 АГЕНТОВ • ~$6.63 СЕССИЯ',
         'sim.viewGraph': '🕸️ ГРАФ',
         'sim.viewGantt': '📊 ГАНТ',
+        'sim.viewVideo': '🎬 ВИДЕО 20с',
+        'sim.ch1': '0:00 ⚡ HITL-разблокировка',
+        'sim.ch2': '0:07 📊 Гант задач',
+        'sim.ch3': '0:11 💰 SUB vs PAYG',
+        'sim.ch4': '0:15 📸 Карточка PNG',
+        'sim.tryYourself': 'Попробовать в /demo →',
         'sim.calmOff': '🧘 CALM ФОКУС',
         'sim.calmOn': '🧘 CALM: ВКЛ',
         'sim.allLanes': '🌐 ВСЕ ПОТОКИ',
@@ -2194,17 +2297,51 @@ Run negative control fault check?
       const link = document.getElementById('simDeepLink');
       if (!link) return;
       if (simView === 'gantt') link.setAttribute('href', '/demo?track=gantt');
+      else if (simView === 'video') link.setAttribute('href', '/demo?track=share');
       else if (simCalm) link.setAttribute('href', '/demo?track=calm');
       else link.setAttribute('href', '/demo?track=hitl');
     }
 
     function setSimView(mode) {
-      simView = mode === 'gantt' ? 'gantt' : 'graph';
+      simView = mode === 'gantt' ? 'gantt' : (mode === 'video' ? 'video' : 'graph');
       document.getElementById('simViewGraph').classList.toggle('active', simView === 'graph');
       document.getElementById('simViewGantt').classList.toggle('active', simView === 'gantt');
-      document.getElementById('simGraphView').style.display = simView === 'graph' ? 'block' : 'none';
-      document.getElementById('simGanttView').style.display = simView === 'gantt' ? 'flex' : 'none';
+      const vBtn = document.getElementById('simViewVideo');
+      if (vBtn) vBtn.classList.toggle('active', simView === 'video');
+      const bodyGrid = document.getElementById('simBodyGrid');
+      const videoStage = document.getElementById('simVideoStage');
+      const videoEl = document.getElementById('demoWalkthroughVideo');
+      if (simView === 'video') {
+        if (bodyGrid) bodyGrid.style.display = 'none';
+        if (videoStage) videoStage.style.display = 'flex';
+        if (videoEl) {
+          videoEl.play().catch(() => {});
+        }
+      } else {
+        if (videoEl) {
+          try { videoEl.pause(); } catch {}
+        }
+        if (videoStage) videoStage.style.display = 'none';
+        if (bodyGrid) bodyGrid.style.display = '';
+        document.getElementById('simGraphView').style.display = simView === 'graph' ? 'block' : 'none';
+        document.getElementById('simGanttView').style.display = simView === 'gantt' ? 'flex' : 'none';
+      }
       syncSimDeepLink();
+    }
+
+    function watchDemoVideo() {
+      setSimView('video');
+      const wrap = document.querySelector('.hero-simulator-wrapper');
+      if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function seekDemoChapter(sec) {
+      const v = document.getElementById('demoWalkthroughVideo');
+      if (!v) return;
+      try {
+        v.currentTime = Number(sec) || 0;
+        v.play().catch(() => {});
+      } catch {}
     }
 
     function toggleSimCalm() {
