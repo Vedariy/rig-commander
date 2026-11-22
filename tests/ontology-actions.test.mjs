@@ -157,4 +157,12 @@ test('resolveActionFromFinding maps open_modal, wake_seat and select_seat to liv
   );
   assert.equal(selectAct.id, 'focus_seat');
   assert.equal(selectAct.transport, 'select_seat');
+
+  const ganttAct = resolveActionFromFinding(
+    { kind: 'open_gantt_slice', params: { slice: 'auth-flow' }, label: '📊 Разобрать на Ганте' },
+    null
+  );
+  assert.equal(ganttAct.id, 'open_gantt_slice');
+  assert.equal(ganttAct.transport, 'gantt_slice');
+  assert.equal(ganttAct.payload, 'auth-flow');
 });

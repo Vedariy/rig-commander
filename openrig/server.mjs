@@ -1365,14 +1365,16 @@ const server = http.createServer(async (req, res) => {
         breaker: circuitBreaker.getState(),
         telegram: telegramBridge.getStatus()
       },
-      intelligence: fleetIntelligence.getLatestReport(requestedRig)
+      intelligence: null
     };
 
+    // Synchronously compute fresh Fleet Intelligence report (in-memory, fault-isolated, <1ms)
+    fleetIntelligence.ingestSnapshot(payload);
+    payload.intelligence = fleetIntelligence.getLatestReport(requestedRig);
     latestFleetSnapshot = payload;
 
-    // Asynchronously ingest snapshot into Fleet Intelligence, Budget Circuit-Breaker & Telegram HITL (zero blocking!)
+    // Asynchronously evaluate Budget Circuit-Breaker & Telegram HITL notifications (zero blocking!)
     setImmediate(async () => {
-      fleetIntelligence.ingestSnapshot(payload);
       try {
         await circuitBreaker.evaluate({
           nodes,
@@ -1642,6 +1644,7 @@ const server = http.createServer(async (req, res) => {
       ext === '.md' ? 'text/markdown; charset=utf-8' :
       ext === '.js' ? 'text/javascript; charset=utf-8' :
       ext === '.json' ? 'application/json; charset=utf-8' :
+      ext === '.webmanifest' ? 'application/manifest+json; charset=utf-8' :
       ext === '.svg' ? 'image/svg+xml' :
       ext === '.png' ? 'image/png' :
       'text/plain; charset=utf-8';
@@ -1654,7 +1657,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 const ALLOWED_TMUX_KEY_RE = /^([1-9]|[a-zA-Z]|Enter|Escape|Tab|Space|BSpace|Up|Down|Left|Right|C-c|C-u|C-d|C-z|C-l)$/;
-const ALLOWED_STATIC_EXTS = new Set(['.html', '.css', '.js', '.json', '.svg', '.png', '.ico', '.md', '.txt']);
+const ALLOWED_STATIC_EXTS = new Set(['.html', '.css', '.js', '.json', '.webmanifest', '.svg', '.png', '.ico', '.md', '.txt']);
 
 function parseAllowedTmuxKeys(text) {
   const keys = String(text || '').trim().split(/\s+/).filter(Boolean);

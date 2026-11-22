@@ -2,7 +2,15 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#030712" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RigCommander" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
   <title>RigCommander // Neural Command Deck v3.1</title>
   <meta name="description" content="Interactive Neural Command Deck for autonomous AI coding fleets (Claude Code, Codex CLI, tmux & OpenRig). Live Graph ⇄ Task Gantt, 1-click HITL, SUB vs PAYG FinOps & Share Card PNG export." />
   <meta property="og:type" content="website" />
@@ -34,8 +42,14 @@
       <button class="triage-refresh-btn" id="btnShareCard" onclick="openShareCardModal()" style="border-color:rgba(168,85,247,0.5); color:#e9d5ff;">
         📸 <span data-i18n="share.btn">Карточка дня</span>
       </button>
+      <button class="triage-refresh-btn" id="btnMobileQr" onclick="openMobileQrModal()" style="border-color:rgba(56,189,248,0.5); color:#7dd3fc;">
+        📱 <span data-i18n="qr.btn">QR на телефон</span>
+      </button>
       <button class="triage-refresh-btn" id="btnDemoQuest" onclick="toggleDemoQuest()" style="display:none; border-color:rgba(0,240,255,0.55); color:#67e8f9;">
         🎯 <span data-i18n="quest.btn">Миссия 10с</span> <span id="btnDemoQuestCount" style="font-weight:800; color:#00ff9d;">0/3</span>
+      </button>
+      <button class="triage-refresh-btn" id="btnPwaInstall" onclick="triggerPwaInstall()" style="display:none; border-color:rgba(0,255,157,0.65); color:#6ee7b7;">
+        📲 <span data-i18n="pwa.installBtn">Установить</span>
       </button>
     </div>
     <div class="triage-cards-container" id="triageCardsContainer">
@@ -345,6 +359,23 @@
         </span>
       </div>
       <div class="modal-fleet-body" id="shareCardModalBody"></div>
+    </div>
+  </div>
+
+  <!-- MOBILE PWA QR HANDOFF MODAL (ZERO-DEP LOCAL SVG QR) -->
+  <div class="modal-overlay" id="mobileQrModal" onclick="if (event.target === this) closeMobileQrModal()">
+    <div class="modal-fleet-card" style="max-width:540px;">
+      <div class="modal-fleet-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#7dd3fc;" data-i18n="qr.title">
+            📱 ОТКРЫТЬ RIGCOMMANDER НА ТЕЛЕФОНЕ (PWA)
+          </span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="action-pill" onclick="closeMobileQrModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        </div>
+      </div>
+      <div class="modal-fleet-body" id="mobileQrModalBody"></div>
     </div>
   </div>
 
@@ -2434,12 +2465,40 @@
         openTerminalModal(seatId);
       } else if (transport === 'select_seat' && seatId) {
         selectAgent(seatId);
+      } else if (transport === 'gantt_slice') {
+        openSliceOnGantt(payload);
       } else if (transport === 'clipboard' && payload) {
         copyCmd(payload);
       }
 
       if (closeModal === 'fleet' && typeof closeFleetAdvisorModal === 'function') {
         closeFleetAdvisorModal();
+      }
+    }
+
+    function openSliceOnGantt(sliceName = '') {
+      const clean = String(sliceName || '').replace(/^slice:/, '').trim();
+      const targetChain = clean ? `slice:${clean}` : null;
+      if (targetChain && ganttWindowH < 24) {
+        const items = typeof getGanttItems === 'function' ? getGanttItems() : [];
+        const cutoff = Date.now() - ganttWindowH * 3600 * 1000;
+        const inCurWindow = items.some(it =>
+          (it.chain === targetChain || it.slice === clean) &&
+          new Date(it.endAt || it.claimedAt || it.createdAt || 0).getTime() >= cutoff
+        );
+        if (!inCurWindow) {
+          ganttWindowH = 24;
+          document.querySelectorAll('[data-gantt-window]').forEach(b => {
+            b.classList.toggle('active', Number(b.getAttribute('data-gantt-window')) === 24);
+          });
+        }
+      }
+      setCenterView('gantt');
+      if (targetChain) {
+        setGanttFocus(targetChain);
+      }
+      if (typeof showToast === 'function') {
+        showToast(td('advisor.ganttOpened', { slice: clean || '24h' }));
       }
     }
 
@@ -3966,8 +4025,15 @@
       const p1Count = intel.counts?.p1 || 0;
       const p2Count = intel.counts?.p2 || 0;
       const p3Count = intel.counts?.p3 || 0;
+      const bd = intel.scoreBreakdown || {
+        base: 100,
+        p0Penalty: Math.min(55, p0Count * 22),
+        p1Penalty: Math.min(30, p1Count * 10),
+        p2Penalty: Math.min(15, p2Count * 3),
+        p3Penalty: Math.min(5, p3Count * 1)
+      };
 
-      // Summary Bar with Health Gauge & KPIs
+      // Summary Bar with Health Gauge, KPIs & Transparent Score Breakdown
       let summaryHtml = `
         <div class="fleet-summary-bar">
           <div class="fleet-gauge-box">
@@ -4007,8 +4073,116 @@
               <span class="fleet-kpi-val">${AGENTS.length} ${td('advisor.seatsUnit')}</span>
             </div>
           </div>
+          <div class="fleet-score-breakdown">
+            <span style="font-weight:700; color:#e2e8f0;">${td('advisor.breakdownLabel')}</span>
+            <span class="fleet-score-chip">100%</span>
+            <span class="fleet-score-chip ${bd.p0Penalty > 0 ? 'has-penalty-p0' : ''}">−${bd.p0Penalty} (P0)</span>
+            <span class="fleet-score-chip ${bd.p1Penalty > 0 ? 'has-penalty-p1' : ''}">−${bd.p1Penalty} (P1)</span>
+            <span class="fleet-score-chip ${bd.p2Penalty > 0 ? 'has-penalty-p2' : ''}">−${bd.p2Penalty} (P2, ${td('advisor.breakdownCap')} −15)</span>
+            <span class="fleet-score-chip ${bd.p3Penalty > 0 ? 'has-penalty-p3' : ''}">−${bd.p3Penalty} (P3, ${td('advisor.breakdownCap')} −5)</span>
+            <span style="font-weight:800; color:${scoreColor};">= ${score}%</span>
+          </div>
         </div>
       `;
+
+      // Actionable Resolution Playbook Banner (tells operator exactly what to do right now!)
+      const urgentFindings = findings.filter(f => f.severity === 'p0_urgent' || f.severity === 'p1_high');
+      const playbookSteps = [];
+      const seenStepKeys = new Set();
+
+      for (const f of urgentFindings) {
+        const seatId = f.actionPlan?.seatTarget || f.metrics?.affectedSeats?.[0] || '';
+        const seatObj = seatId ? (AGENTS.find(x => x.id === seatId) || null) : null;
+        const resolvedDesc = f.actionPlan ? resolveActionFromFinding(f.actionPlan, seatObj) : null;
+        const stepKey = `${f.detectorId || f.id}:${seatId}`;
+        if (seenStepKeys.has(stepKey)) continue;
+        seenStepKeys.add(stepKey);
+        playbookSteps.push({
+          severity: f.severity,
+          impactPts: f.severity === 'p0_urgent' ? 22 : 10,
+          title: f.title,
+          desc: f.summary,
+          actionDesc: resolvedDesc
+        });
+      }
+
+      // Also include any live urgent/hot/parked seats not yet present in intelligence findings
+      for (const a of AGENTS) {
+        if (a.state === 'urgent' && !playbookSteps.some(s => s.actionDesc?.seatId === a.id && s.severity === 'p0_urgent')) {
+          playbookSteps.unshift({
+            severity: 'p0_urgent',
+            impactPts: 22,
+            title: `🚨 ${a.shortName}: ${td('triage.waitingHuman')}`,
+            desc: a.needsInputReason || td('triage.waitingDefault'),
+            actionDesc: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: td('radar.waitingHumanBtn'), tone: 'proceed' }
+          });
+        } else if (typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_CRIT_PCT && !playbookSteps.some(s => s.actionDesc?.seatId === a.id && s.actionDesc?.id === 'compact_context')) {
+          const isPi = isPiHarness(a);
+          playbookSteps.push({
+            severity: 'p1_high',
+            impactPts: 10,
+            title: `🔥 ${a.shortName}: CTX ${a.ctxPct}%`,
+            desc: td('triage.ctxOver'),
+            actionDesc: isPi
+              ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('radar.rotateBtn'), tone: 'warn' }
+              : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: td('radar.compactBtn'), tone: 'critical' }
+          });
+        }
+      }
+
+      const topSliceFinding = findings.find(f => f.actionPlan?.kind === 'open_gantt_slice' && f.actionPlan?.params?.slice);
+      const topSliceName = topSliceFinding?.actionPlan?.params?.slice || '';
+
+      let actionPlanHtml = '';
+      if (playbookSteps.length > 0) {
+        const stepRowsHtml = playbookSteps.slice(0, 4).map((step, i) => {
+          const isP0 = step.severity === 'p0_urgent';
+          const pillColor = isP0 ? '#ff0055' : '#f59e0b';
+          const pillText = isP0 ? 'P0' : 'P1';
+          const btnHtml = step.actionDesc
+            ? renderOntologyActionBtn(step.actionDesc, { className: 'action-pill key-proceed', style: 'font-weight:700; white-space:nowrap;', closeModal: 'fleet' })
+            : '';
+          return `
+            <div class="fleet-action-step">
+              <div class="fleet-action-step-meta">
+                <div class="fleet-action-step-top">
+                  <span style="color:${pillColor}; border:1px solid ${pillColor}; border-radius:4px; padding:1px 6px; font-size:10px;">#${i + 1} ${pillText}</span>
+                  <span>${escapeHtml(step.title)}</span>
+                  <span style="color:#00ff9d; font-size:10.5px; font-weight:700;">${td('advisor.stepImpact', { pts: step.impactPts })}</span>
+                </div>
+                <div class="fleet-action-step-sub">${escapeHtml(step.desc)}</div>
+              </div>
+              ${btnHtml}
+            </div>
+          `;
+        }).join('');
+
+        actionPlanHtml = `
+          <div class="fleet-action-plan is-alert" id="fleetActionPlanBanner">
+            <div class="fleet-action-plan-head">
+              <div class="fleet-action-plan-title" style="color:${p0Count > 0 ? '#fda4af' : '#fde68a'};">${td('advisor.actionPlanTitle')}</div>
+              <div class="fleet-action-plan-desc">${td('advisor.actionPlanDesc')}</div>
+            </div>
+            <div class="fleet-action-steps">${stepRowsHtml}</div>
+          </div>
+        `;
+      } else {
+        actionPlanHtml = `
+          <div class="fleet-action-plan is-clear" id="fleetActionPlanBanner">
+            <div class="fleet-action-plan-head">
+              <div class="fleet-action-plan-title" style="color:#6ee7b7;">${td('advisor.allClearTitle')}</div>
+              <div class="fleet-action-plan-desc">${td('advisor.allClearDesc')}</div>
+            </div>
+            <div class="fleet-action-quick-row">
+              <button type="button" class="action-pill key-proceed" style="font-weight:700;" onclick="openSliceOnGantt('${escapeHtml(topSliceName)}'); closeFleetAdvisorModal();">${td('advisor.ctaOpenGantt')}</button>
+              <button type="button" class="action-pill" onclick="setFleetAdvisorTab('budget')">${td('advisor.ctaOpenBudget')}</button>
+              <button type="button" class="action-pill" onclick="closeFleetAdvisorModal(); openGuardrailsModal();">${td('advisor.ctaOpenGuardrails')}</button>
+            </div>
+          </div>
+        `;
+      }
+
+      summaryHtml += actionPlanHtml;
 
       // Navigation Tabs
       let tabsHtml = `
@@ -4056,24 +4230,33 @@
         if (visibleFindings.length === 0) {
           tabContentHtml = filterPills + `
             <div style="padding:28px; text-align:center; color:#94a3b8; font-family:var(--font-mono); background:rgba(15,23,42,0.5); border-radius:8px;">
-              ✅ В этой категории аномалий не обнаружено. Все параметры в пределах нормы.
+              ${td('advisor.noFindings')}
             </div>
           `;
         } else {
           const cardsHtml = visibleFindings.map(f => {
             const sevClass = f.severity;
-            const sevLabel = f.severity === 'p0_urgent' ? 'P0 • КРИТИЧНО' : f.severity === 'p1_high' ? 'P1 • ВЫСОКИЙ' : f.severity === 'p2_medium' ? 'P2 • СРЕДНИЙ' : 'P3 • ИНФО';
+            const sevLabel = f.severity === 'p0_urgent'
+              ? td('advisor.sevP0')
+              : f.severity === 'p1_high'
+                ? td('advisor.sevP1')
+                : f.severity === 'p2_medium'
+                  ? td('advisor.sevP2')
+                  : td('advisor.sevP3');
             const action = f.actionPlan;
             let actionBtn = '';
             if (action) {
               const targetSeatObj = AGENTS.find(x => x.id === (action.seatTarget || f.metrics?.affectedSeats?.[0])) || null;
               const resolvedDesc = resolveActionFromFinding(action, targetSeatObj);
+              const cmdHtml = action.commandPreview
+                ? `<span style="font-family:var(--font-mono); font-size:11px; color:#64748b;">
+                    ${td('advisor.cmdLabel')} <code style="color:#7dd3fc; background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px;">${escapeHtml(action.commandPreview)}</code>
+                  </span>`
+                : '';
               actionBtn = `
                 <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
                   ${renderOntologyActionBtn(resolvedDesc, { className: 'action-pill key-proceed', style: 'font-weight:700;', closeModal: 'fleet' })}
-                  <span style="font-family:var(--font-mono); font-size:11px; color:#64748b;">
-                    Команда: <code style="color:#7dd3fc; background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px;">${escapeHtml(action.commandPreview || '')}</code>
-                  </span>
+                  ${cmdHtml}
                 </div>
               `;
             }
@@ -4081,7 +4264,7 @@
             return `
               <div class="finding-card ${sevClass}">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                  <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:${sevClass === 'p0_urgent' ? '#ff0055' : sevClass === 'p1_high' ? '#f59e0b' : '#00f0ff'};">
+                  <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:${sevClass === 'p0_urgent' ? '#ff0055' : sevClass === 'p1_high' ? '#f59e0b' : sevClass === 'p2_medium' ? '#00f0ff' : '#94a3b8'};">
                     ${sevLabel} • ${f.category.toUpperCase()}
                   </span>
                   ${f.metrics?.roiEstimate ? `<span style="font-family:var(--font-mono); font-size:11px; color:#00ff9d; font-weight:600;">🎯 ROI: ${escapeHtml(f.metrics.roiEstimate)}</span>` : ''}
@@ -4352,7 +4535,7 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeSaTour(); }
+      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeSaTour(); }
     });
 
     // ===== Stage 7: Viral Daily Fleet Receipt / Share Card PNG Export (Item 6) =====
@@ -5595,6 +5778,8 @@
       if (grd && grd.classList.contains('open')) renderGuardrailsModal();
       const shr = document.getElementById('shareCardModal');
       if (shr && shr.classList.contains('open')) renderShareCardModal();
+      const qrm = document.getElementById('mobileQrModal');
+      if (qrm && qrm.classList.contains('open')) renderMobileQrModal();
       if (saTourOpen) renderSaTour();
       if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
@@ -5679,10 +5864,16 @@
       const p1 = findings.filter(f => f.severity === 'p1_high').length;
       const p2 = findings.filter(f => f.severity === 'p2_medium').length;
       const p3 = findings.filter(f => f.severity === 'p3_info').length;
-      const healthScore = Math.max(40, Math.min(100, 100 - p0 * 14 - p1 * 6 - p2 * 2));
+      const p0Penalty = Math.min(55, p0 * 22);
+      const p1Penalty = Math.min(30, p1 * 10);
+      const p2Penalty = Math.min(15, p2 * 3);
+      const p3Penalty = Math.min(5, p3 * 1);
+      const totalPenalty = Math.min(85, p0Penalty + p1Penalty + p2Penalty + p3Penalty);
+      const healthScore = Math.max(15, Math.min(100, 100 - totalPenalty));
 
       window.LIVE_INTELLIGENCE = {
         healthScore,
+        scoreBreakdown: { base: 100, p0Penalty, p1Penalty, p2Penalty, p3Penalty, totalPenalty },
         counts: { total: findings.length, p0, p1, p2, p3 },
         allFindings: findings,
         topRecommendations: []
@@ -5738,6 +5929,11 @@
         showTrackToast(deckLang === 'en'
           ? '📸 UX Track: Daily Fleet Receipt / 1200×630 PNG Share Card'
           : '📸 UX-трек: Карточка смены — экспорт в 1200×630 PNG');
+      } else if (track === 'qr' || track === 'mobile' || track === 'phone') {
+        openMobileQrModal();
+        showTrackToast(deckLang === 'en'
+          ? '📱 Scan QR with your phone camera to open Mobile PWA'
+          : '📱 Наведи камеру телефона на QR, чтобы открыть Mobile PWA');
       } else if (track === 'tour') {
         if (!saTourOpen) toggleSaTour();
       } else if (track === 'quest' || track === 'mission' || track === 'start') {
@@ -5830,6 +6026,8 @@
       setCenterView(centerViewMode, true);
       const activeTrack = applyDemoTrackFromUrl();
       initDemoQuest(activeTrack);
+      initPwaSupport();
+      setMobileTab('map', true);
       window.addEventListener('resize', () => { if (centerViewMode === 'gantt') renderGantt(); });
       document.addEventListener('keydown', (e) => {
         const tag = (e.target && e.target.tagName) || '';
@@ -5840,7 +6038,213 @@
       });
       window.addEventListener('resize', () => renderTopology());
     };
+
+    // ===== Mobile PWA Bottom Navigation, QR Handoff & Install Support =====
+    let currentMobileTab = 'map';
+    let deferredPwaPrompt = null;
+    let mobileQrTargetMode = 'demo'; // 'demo' | 'landing' | 'share'
+    let mobileQrCustomUrl = '';
+
+    function resolveMobileQrUrl() {
+      const custom = String(mobileQrCustomUrl || '').trim();
+      if (custom && /^https?:\/\//i.test(custom)) return custom;
+      const isLoopback = /^(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\])$/i.test(window.location.hostname || '');
+      const baseOrigin = isLoopback ? 'https://rig-commander.vercel.app' : window.location.origin;
+      const langParam = deckLang === 'ru' ? 'ru' : 'en';
+      if (mobileQrTargetMode === 'landing') return `${baseOrigin}/?lang=${langParam}`;
+      if (mobileQrTargetMode === 'share') return `${baseOrigin}/demo?track=share&source=qr&lang=${langParam}`;
+      return `${baseOrigin}/demo?source=qr&lang=${langParam}`;
+    }
+
+    function openMobileQrModal() {
+      const modal = document.getElementById('mobileQrModal');
+      if (modal) modal.classList.add('open');
+      renderMobileQrModal();
+    }
+
+    function closeMobileQrModal() {
+      const modal = document.getElementById('mobileQrModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function setMobileQrTarget(mode) {
+      mobileQrTargetMode = mode === 'landing' ? 'landing' : (mode === 'share' ? 'share' : 'demo');
+      mobileQrCustomUrl = '';
+      renderMobileQrModal();
+    }
+
+    function onMobileQrCustomInput(val) {
+      mobileQrCustomUrl = String(val || '').trim();
+      const box = document.getElementById('mobileQrSvgBox');
+      const linkEl = document.getElementById('mobileQrUrlText');
+      const targetUrl = resolveMobileQrUrl();
+      if (linkEl) linkEl.textContent = targetUrl;
+      if (box && typeof renderQrSvg === 'function') {
+        try {
+          box.innerHTML = renderQrSvg(targetUrl, { size: 224, margin: 4 });
+        } catch (err) {
+          box.innerHTML = `<div style="color:#fda4af; font-size:11px; padding:16px;">${escapeHtml(err.message)}</div>`;
+        }
+      }
+    }
+
+    function copyMobileQrUrl() {
+      const url = resolveMobileQrUrl();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).catch(() => {});
+      }
+      const st = document.getElementById('mobileQrStatus');
+      if (st) st.textContent = td('qr.copied');
+      if (typeof showToast === 'function') showToast(td('qr.copied'), false);
+    }
+
+    function renderMobileQrModal() {
+      const body = document.getElementById('mobileQrModalBody');
+      if (!body || typeof renderQrSvg !== 'function') return;
+      const isLoopback = /^(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\])$/i.test(window.location.hostname || '');
+      const targetUrl = resolveMobileQrUrl();
+      let qrSvg = '';
+      try {
+        qrSvg = renderQrSvg(targetUrl, { size: 224, margin: 4 });
+      } catch (err) {
+        qrSvg = `<div style="color:#fda4af; padding:16px;">${escapeHtml(err.message)}</div>`;
+      }
+
+      body.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; gap:12px; font-family:var(--font-mono);">
+          <div style="font-size:12px; color:#cbd5e1; text-align:center; line-height:1.45;">
+            ${escapeHtml(td('qr.scanHint'))}
+          </div>
+          <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px;">
+            <button type="button" class="hud-segment-btn ${!mobileQrCustomUrl && mobileQrTargetMode === 'demo' ? 'active' : ''}" onclick="setMobileQrTarget('demo')">${escapeHtml(td('qr.targetDemo'))}</button>
+            <button type="button" class="hud-segment-btn ${!mobileQrCustomUrl && mobileQrTargetMode === 'landing' ? 'active' : ''}" onclick="setMobileQrTarget('landing')">${escapeHtml(td('qr.targetLanding'))}</button>
+            <button type="button" class="hud-segment-btn ${!mobileQrCustomUrl && mobileQrTargetMode === 'share' ? 'active' : ''}" onclick="setMobileQrTarget('share')">${escapeHtml(td('qr.targetShare'))}</button>
+          </div>
+          <div id="mobileQrSvgBox" style="background:#ffffff; padding:10px; border-radius:16px; box-shadow:0 0 34px rgba(0,240,255,0.28), 0 12px 30px rgba(0,0,0,0.65); border:2px solid rgba(0,240,255,0.55); line-height:0;">
+            ${qrSvg}
+          </div>
+          <div style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.28); border-radius:8px; padding:8px 10px;">
+            <code id="mobileQrUrlText" style="font-size:11px; color:#67e8f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(targetUrl)}</code>
+            <button type="button" class="action-pill" style="flex-shrink:0; border-color:var(--cyan); color:var(--cyan);" onclick="copyMobileQrUrl()">${escapeHtml(td('qr.copyUrl'))}</button>
+          </div>
+          <input type="url" id="mobileQrCustomInput" class="ctrl-input" style="width:100%; font-size:11.5px;" value="${escapeHtml(mobileQrCustomUrl)}" placeholder="${escapeHtml(td('qr.customPlaceholder'))}" oninput="onMobileQrCustomInput(this.value)" />
+          ${isLoopback ? `<div style="width:100%; font-size:11px; color:#fde68a; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:8px 10px; line-height:1.45;">💡 ${escapeHtml(td('qr.localNote'))}</div>` : ''}
+          <div style="width:100%; display:flex; flex-direction:column; gap:4px; font-size:11px; color:#94a3b8; background:rgba(15,23,42,0.6); border:1px solid rgba(148,163,184,0.18); border-radius:8px; padding:8px 10px;">
+            <div>🍏 ${escapeHtml(td('qr.iosStep'))}</div>
+            <div>🤖 ${escapeHtml(td('qr.androidStep'))}</div>
+          </div>
+          <div id="mobileQrStatus" style="font-size:11px; color:#6ee7b7; min-height:14px;"></div>
+        </div>
+      `;
+    }
+
+    function setMobileTab(tab, silent = false) {
+      const next = (tab === 'radar' || tab === 'tmux') ? tab : 'map';
+      currentMobileTab = next;
+      document.body.classList.remove('mobile-tab-map', 'mobile-tab-radar', 'mobile-tab-tmux');
+      document.body.classList.add(`mobile-tab-${next}`);
+      document.querySelectorAll('#mobileBottomNav .mobile-nav-btn[data-mobile-tab]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-mobile-tab') === next);
+      });
+      if (!silent) {
+        if (next === 'map') {
+          if (centerViewMode === 'gantt') renderGantt();
+          else renderTopology();
+        } else if (next === 'tmux') {
+          renderInspectorAndScorecards();
+          fetchTerminalCapture(selectedAgentId);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function syncMobileRadarBadge() {
+      const badge = document.getElementById('mobileRadarBadge');
+      if (!badge) return;
+      const urgentCount = AGENTS.filter(a => a.state === 'urgent' || a.isAnomaly).length;
+      if (urgentCount > 0) {
+        badge.textContent = String(urgentCount > 9 ? '9+' : urgentCount);
+        badge.classList.add('show');
+      } else {
+        badge.classList.remove('show');
+      }
+    }
+
+    function triggerPwaInstall() {
+      if (deferredPwaPrompt) {
+        const promptEvt = deferredPwaPrompt;
+        deferredPwaPrompt = null;
+        promptEvt.prompt().catch(() => {});
+        promptEvt.userChoice.then(choice => {
+          if (choice && choice.outcome === 'accepted') {
+            const btn = document.getElementById('btnPwaInstall');
+            if (btn) btn.style.display = 'none';
+            if (typeof showToast === 'function') showToast(td('pwa.installed'), false);
+          }
+        }).catch(() => {});
+        return;
+      }
+      if (typeof showToast === 'function') {
+        showToast(td('pwa.iosHint'), false);
+      }
+    }
+
+    function initPwaSupport() {
+      const isStandalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+      const installBtn = document.getElementById('btnPwaInstall');
+      if (installBtn && isIos && !isStandalone) {
+        installBtn.style.display = 'inline-flex';
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        if (installBtn && !isStandalone) installBtn.style.display = 'inline-flex';
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredPwaPrompt = null;
+        if (installBtn) installBtn.style.display = 'none';
+      });
+
+      if ('serviceWorker' in navigator) {
+        const proto = window.location.protocol;
+        const host = window.location.hostname;
+        if (proto === 'https:' || host === '127.0.0.1' || host === 'localhost') {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+      }
+      syncMobileRadarBadge();
+      setInterval(syncMobileRadarBadge, 4000);
+    }
   </script>
+
+  <!-- MOBILE PWA BOTTOM TAB DOCK (<= 768px) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile navigation">
+    <button type="button" class="mobile-nav-btn active" data-mobile-tab="map" onclick="setMobileTab('map')">
+      <span class="mnav-ico">🕸️</span>
+      <span data-i18n="mobile.tabMap">Карта</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" data-mobile-tab="radar" onclick="setMobileTab('radar')">
+      <span class="mnav-ico">⏳</span>
+      <span data-i18n="mobile.tabRadar">Радар</span>
+      <span class="mobile-nav-badge" id="mobileRadarBadge"></span>
+    </button>
+    <button type="button" class="mobile-nav-btn" data-mobile-tab="tmux" onclick="setMobileTab('tmux')">
+      <span class="mnav-ico">🖥️</span>
+      <span data-i18n="mobile.tabTmux">TMUX</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" onclick="openFleetAdvisorModal('budget')">
+      <span class="mnav-ico">💰</span>
+      <span data-i18n="mobile.tabBudget">Бюджет</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" onclick="openShareCardModal()">
+      <span class="mnav-ico">📸</span>
+      <span data-i18n="mobile.tabCard">Карточка</span>
+    </button>
+  </nav>
+
   <script type="module">
     import * as RigDomain from '/assets/domain/index.js';
     import * as RigOntology from '/assets/ontology/index.js';

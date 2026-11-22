@@ -42,14 +42,14 @@ export class BottleneckDetector {
             affectedSlices: []
           },
           actionPlan: {
-            actionId: `scale-${seat}`,
-            kind: 'scale_role',
-            label: isCheck ? '⚡ Подключить dev-check2' : '⚡ Сбалансировать очередь',
+            actionId: `inspect-bottleneck-${seat}`,
+            kind: 'select_seat',
+            label: isCheck ? '🔍 Осмотреть очередь QA' : '🔍 Осмотреть узел',
             seatTarget: seat,
-            commandPreview: isCheck ? `rig grow core-platform dev.check2` : `rig queue balance ${seat}`,
+            commandPreview: '',
             params: { targetSeat: seat, role: isCheck ? 'qa' : 'orchestrator' },
             reversibility: 'fully_reversible',
-            safetyLevel: 'requires_operator_ack'
+            safetyLevel: 'safe_auto'
           },
           detectedAt: new Date().toISOString()
         });

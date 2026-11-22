@@ -269,3 +269,24 @@ test('applyTerminalPromptProbes demotes false working terminal seat sitting idle
   // Seat with assigned queue work must NOT be demoted prematurely
   assert.equal(enriched[1].activityState.display, 'working');
 });
+
+test('PWA manifest.webmanifest, sw.js and icons are valid and allowed by static path guard', async () => {
+  const openrigDir = path.resolve(process.cwd(), 'openrig');
+  const manifestGuard = resolveSafeStaticPath(openrigDir, '/manifest.webmanifest');
+  assert.ok(manifestGuard && manifestGuard.ext === '.webmanifest');
+  const swGuard = resolveSafeStaticPath(openrigDir, '/sw.js');
+  assert.ok(swGuard && swGuard.ext === '.js');
+
+  const manifest = JSON.parse(await fs.readFile(manifestGuard.resolved, 'utf8'));
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.short_name, 'RigCommander');
+  assert.ok(Array.isArray(manifest.icons) && manifest.icons.some(i => i.sizes === '192x192') && manifest.icons.some(i => i.sizes === '512x512'));
+  for (const icon of manifest.icons) {
+    const iconGuard = resolveSafeStaticPath(openrigDir, icon.src);
+    assert.ok(iconGuard, `Manifest icon must be statically servable: ${icon.src}`);
+    const st = await fs.stat(iconGuard.resolved);
+    assert.ok(st.size > 1000, `Icon file must be non-empty: ${icon.src}`);
+  }
+  const swText = await fs.readFile(swGuard.resolved, 'utf8');
+  assert.ok(swText.includes("startsWith('/api/')"), 'Service Worker must never cache /api/* routes');
+});

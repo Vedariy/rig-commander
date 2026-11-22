@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#030712">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RigCommander">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <title>RigCommander // Mission Control for Autonomous AI Fleets</title>
   <meta name="description" content="The real-time operational command deck for autonomous multi-agent coding swarms. Live neural topology, 1-click tmux terminal introspection, token quota thermodynamics, and deterministic human-in-the-loop oversight.">
   <meta property="og:type" content="website">
@@ -1302,6 +1310,9 @@
         <button type="button" class="btn-secondary" style="cursor:pointer; border-color:rgba(168,85,247,0.55); color:#e9d5ff;" onclick="watchDemoVideo()">
           <span data-i18n="hero.videoCta">🎬 Watch 20s Demo</span>
         </button>
+        <button type="button" id="landingQrBtn" class="btn-secondary" style="cursor:pointer; border-color:rgba(0,255,157,0.45); color:#a7f3d0;" onclick="openLandingQrModal()">
+          <span data-i18n="hero.qrCta">📱 Phone QR</span>
+        </button>
         <a href="/passport" class="btn-secondary">
           <span data-i18n="hero.passportCta">📄 Project Passport</span>
         </a>
@@ -1846,7 +1857,7 @@ Run negative control fault check?
             </p>
             <div class="passport-pills">
               <span class="passport-pill">0 npm deps • MIT</span>
-              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">54 / 54 node --test PASS</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">60 / 60 node --test PASS</span>
               <span class="passport-pill">10s 3-Step Demo Mission</span>
               <span class="passport-pill">SUB vs PAYG FinOps + PNG Card</span>
               <span class="passport-pill">Telegram HITL + Breaker</span>
@@ -1980,6 +1991,28 @@ Run negative control fault check?
 
   <div class="toast" id="copyToast">Copied to clipboard!</div>
 
+  <!-- LANDING PHONE QR MODAL (ZERO-DEP LOCAL SVG QR) -->
+  <div id="landingQrModal" onclick="if (event.target === this) closeLandingQrModal()" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(2,6,23,0.82); backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px;">
+    <div style="width:100%; max-width:430px; background:rgba(8,15,32,0.98); border:1px solid rgba(0,240,255,0.45); border-radius:18px; padding:22px; box-shadow:0 24px 64px rgba(0,0,0,0.85), 0 0 40px rgba(0,240,255,0.16); font-family:var(--font-mono); text-align:center;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <span style="font-size:13px; font-weight:800; color:#67e8f9;" data-i18n="qr.title">📱 Open RigCommander Mobile PWA</span>
+        <button type="button" onclick="closeLandingQrModal()" style="background:transparent; border:1px solid rgba(148,163,184,0.35); color:#cbd5e1; border-radius:8px; padding:4px 10px; cursor:pointer; font-family:var(--font-mono); font-size:11px;">✕</button>
+      </div>
+      <div style="font-size:12px; color:#cbd5e1; line-height:1.45; margin-bottom:14px;" data-i18n="qr.sub">
+        Point your iPhone or Android camera at the QR code to launch the mobile Command Deck:
+      </div>
+      <div id="landingQrSvgBox" style="display:inline-block; background:#ffffff; padding:10px; border-radius:16px; border:2px solid rgba(0,240,255,0.55); box-shadow:0 0 32px rgba(0,240,255,0.24); line-height:0; margin-bottom:14px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:8px; padding:8px 10px; margin-bottom:12px; text-align:left;">
+        <code id="landingQrUrlText" style="font-size:10.5px; color:#67e8f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></code>
+        <button type="button" onclick="copyLandingQrUrl()" style="flex-shrink:0; background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.45); color:#67e8f9; border-radius:6px; padding:5px 9px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; cursor:pointer;" data-i18n="qr.copy">📋 Copy URL</button>
+      </div>
+      <div style="font-size:11px; color:#94a3b8; text-align:left; display:flex; flex-direction:column; gap:4px; background:rgba(15,23,42,0.6); border:1px solid rgba(148,163,184,0.18); border-radius:8px; padding:8px 10px;">
+        <div>🍏 <span data-i18n="qr.ios">iOS: Safari → Share ⬆ → "Add to Home Screen"</span></div>
+        <div>🤖 <span data-i18n="qr.android">Android: Chrome → "Install app"</span></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const I18N = {
       en: {
@@ -1997,6 +2030,12 @@ Run negative control fault check?
         'hero.demoCta': '▶ Launch Interactive Demo',
         'hero.demoTag': 'LIVE · 0 SETUP',
         'hero.videoCta': '🎬 Watch 20s Demo',
+        'hero.qrCta': '📱 Phone QR',
+        'qr.title': '📱 Open RigCommander Mobile PWA',
+        'qr.sub': 'Point your iPhone or Android camera at the QR code to launch the mobile Command Deck:',
+        'qr.ios': 'iOS: Safari → Share ⬆ → "Add to Home Screen"',
+        'qr.android': 'Android: Chrome → "Install app"',
+        'qr.copy': '📋 Copy URL',
         'hero.passportCta': '📄 Project Passport',
         'hero.cliTitle': 'Click to copy CLI installer',
         'sim.liveTelemetry': '● ONTOLOGY v2.0',
@@ -2133,6 +2172,12 @@ Run negative control fault check?
         'hero.demoCta': '▶ Открыть интерактивное демо',
         'hero.demoTag': 'LIVE · БЕЗ УСТАНОВКИ',
         'hero.videoCta': '🎬 Видео-демо (20 сек)',
+        'hero.qrCta': '📱 QR на телефон',
+        'qr.title': '📱 Открыть мобильную PWA-версию',
+        'qr.sub': 'Наведи камеру iPhone или Android на QR-код — откроется мобильный Command Deck:',
+        'qr.ios': 'iOS: Safari → «Поделиться» ⬆ → «На экран „Домой“»',
+        'qr.android': 'Android: Chrome → «Установить приложение»',
+        'qr.copy': '📋 Скопировать ссылку',
         'hero.passportCta': '📄 Паспорт проекта',
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду установки',
         'sim.liveTelemetry': '● ОНТОЛОГИЯ v2.0',
@@ -2502,6 +2547,49 @@ Run negative control fault check?
       } catch {}
       setLang(initial);
     })();
+
+    // Register installable PWA Service Worker (strictly HTTPS or localhost)
+    if ('serviceWorker' in navigator) {
+      const p = window.location.protocol;
+      const h = window.location.hostname;
+      if (p === 'https:' || h === '127.0.0.1' || h === 'localhost') {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
+    }
+
+    // Zero-dep local SVG QR modal for instant desktop -> phone PWA handoff
+    let qrModPromise = null;
+    function getLandingQrUrl() {
+      const isLoop = /^(127\.0\.0\.1|localhost|0\.0\.0\.0)$/i.test(window.location.hostname || '');
+      const origin = isLoop ? 'https://rig-commander.vercel.app' : window.location.origin;
+      return `${origin}/demo?source=qr&lang=${currentLang === 'ru' ? 'ru' : 'en'}`;
+    }
+    async function openLandingQrModal() {
+      const modal = document.getElementById('landingQrModal');
+      const box = document.getElementById('landingQrSvgBox');
+      const urlEl = document.getElementById('landingQrUrlText');
+      if (!modal || !box) return;
+      const url = getLandingQrUrl();
+      if (urlEl) urlEl.textContent = url;
+      modal.style.display = 'flex';
+      try {
+        if (!qrModPromise) qrModPromise = import('/assets/domain/qr.js');
+        const { renderQrSvg } = await qrModPromise;
+        box.innerHTML = renderQrSvg(url, { size: 224, margin: 4 });
+      } catch (err) {
+        box.textContent = String(err);
+      }
+    }
+    function closeLandingQrModal() {
+      const modal = document.getElementById('landingQrModal');
+      if (modal) modal.style.display = 'none';
+    }
+    function copyLandingQrUrl() {
+      copyCli(getLandingQrUrl());
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLandingQrModal();
+    });
   </script>
 </body>
 </html>

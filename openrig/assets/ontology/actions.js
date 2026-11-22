@@ -263,6 +263,19 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
     };
   }
 
+  if (actionPlan.kind === 'open_gantt_slice') {
+    const slice = (actionPlan.params && actionPlan.params.slice) || '';
+    return {
+      id: 'open_gantt_slice',
+      transport: 'gantt_slice',
+      seatId,
+      payload: slice,
+      label: actionPlan.label || '📊 Разобрать на Ганте',
+      title: slice ? `Открыть слайс ${slice} на Ганте задач` : 'Открыть Гант задач',
+      tone: 'proceed'
+    };
+  }
+
   if (actionPlan.kind === 'select_seat' && seatId) {
     return {
       id: 'focus_seat',
@@ -271,6 +284,18 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
       payload: '',
       label: actionPlan.label || '🔍 Осмотреть',
       title: actionPlan.commandPreview || `Перейти к инспектору ${seatId}`,
+      tone: 'default'
+    };
+  }
+
+  if (!actionPlan.commandPreview && seatId) {
+    return {
+      id: 'focus_seat',
+      transport: 'select_seat',
+      seatId,
+      payload: '',
+      label: actionPlan.label || '🔍 Осмотреть',
+      title: `Перейти к инспектору ${seatId}`,
       tone: 'default'
     };
   }

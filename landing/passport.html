@@ -2,7 +2,15 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#030712">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RigCommander">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <title>RigCommander // Паспорт проекта (Project Passport)</title>
   <meta name="description" content="Архитектурный и операционный паспорт RigCommander: DSS SA методология, C4-контекст и компоненты, операционная онтология (Objects, Links, Actions, Audit), безопасность и покрытие тестами.">
   <meta property="og:type" content="website">
@@ -445,7 +453,7 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">54 / 54 PASS</div>
+        <div class="kpi-val" style="color:var(--emerald);">60 / 60 PASS</div>
         <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 8 наборов (~0.2s)</div>
       </div>
       <div class="kpi-card">
@@ -684,7 +692,7 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 54/54</span>
+        <span class="sec-tag">NODE --TEST • 60/60</span>
       </div>
       <table>
         <thead>

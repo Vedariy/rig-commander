@@ -5,6 +5,7 @@
 
 import { TelemetryRingBuffer } from './ring-buffer.mjs';
 import { compileAdvisoryReport } from './advisory.mjs';
+import { LiveBlockerDetector } from './detectors/live-blocker.mjs';
 import { BottleneckDetector } from './detectors/bottleneck.mjs';
 import { ContextEntropyDetector } from './detectors/context-entropy.mjs';
 import { ModelMismatchDetector } from './detectors/model-mismatch.mjs';
@@ -15,6 +16,7 @@ export class FleetIntelligenceEngine {
   constructor(options = {}) {
     this.buffer = new TelemetryRingBuffer(options.maxSnapshots || 300);
     this.detectors = [
+      new LiveBlockerDetector(),
       new ContextEntropyDetector(),
       new BottleneckDetector(),
       new ModelMismatchDetector(),
@@ -59,6 +61,7 @@ export class FleetIntelligenceEngine {
         : (Array.isArray(snapshot.history?.ganttItems) ? snapshot.history.ganttItems : []),
       usageSeries: snapshot.usageSeries || [],
       healthFindings: snapshot.healthFindings || [],
+      parkedSeats: snapshot.parkedSeats || {},
       rigId: snapshot.requestedRig || 'all'
     };
 

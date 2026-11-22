@@ -14,6 +14,7 @@ export {
   computeFleetFinOpsReport
 } from './finops.js';
 export { buildShareCardModel, renderShareCardSvg } from './share-card.js';
+export { encodeQrMatrix, renderQrSvg } from './qr.js';
 export {
   PREFS_STORAGE_KEY,
   DEFAULT_DECK_PREFS,

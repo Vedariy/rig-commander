@@ -8,6 +8,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const COPIES = [
   ['openrig/index.html', 'public/demo/index.html'],
   ['openrig/index.html', 'public/deck/index.html'],
+  ['openrig/manifest.webmanifest', 'public/manifest.webmanifest'],
+  ['openrig/sw.js', 'public/sw.js'],
   ['landing/index.html', 'public/index.html'],
   ['landing/passport.html', 'public/passport/index.html'],
   ['landing/passport.html', 'openrig/passport.html']

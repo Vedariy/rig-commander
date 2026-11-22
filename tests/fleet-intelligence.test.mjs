@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FleetIntelligenceEngine } from '../openrig/lib/fleet-intelligence/index.mjs';
+import { compileAdvisoryReport, computeHealthScore } from '../openrig/lib/fleet-intelligence/advisory.mjs';
+import { CeremonyAmplifierDetector } from '../openrig/lib/fleet-intelligence/detectors/ceremony.mjs';
+import { LiveBlockerDetector } from '../openrig/lib/fleet-intelligence/detectors/live-blocker.mjs';
 import {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
@@ -232,4 +235,102 @@ test('detectTerminalIdleAtPrompt catches Antigravity/CLI empty prompt while reje
     '↑/↓ navigate • Enter to confirm • Esc to cancel'
   ].join('\n');
   assert.equal(detectTerminalIdleAtPrompt(hitlMenu).idle, false);
+});
+
+test('compileAdvisoryReport caps P2/P3 penalties so retrospective findings never trigger false Critical Risk', () => {
+  const manyP2 = Array.from({ length: 29 }, (_, i) => ({
+    id: `ceremony-${i}`,
+    detectorId: 'workflow.ceremony',
+    category: 'ceremony',
+    severity: 'p2_medium',
+    confidence: 0.8,
+    metrics: { riskScore: 55, affectedSeats: [], affectedSlices: [`slice-${i}`] }
+  }));
+  const repP2 = compileAdvisoryReport(manyP2, 'rig-a');
+  assert.equal(repP2.healthScore, 85);
+  assert.equal(repP2.scoreBreakdown.p2Penalty, 15);
+  assert.equal(repP2.scoreBreakdown.p0Penalty, 0);
+
+  const manyP3 = Array.from({ length: 29 }, (_, i) => ({
+    id: `retro-${i}`,
+    detectorId: 'workflow.ceremony',
+    category: 'ceremony',
+    severity: 'p3_info',
+    confidence: 0.78,
+    metrics: { riskScore: 30, affectedSeats: [], affectedSlices: [`hist-${i}`] }
+  }));
+  const repP3 = compileAdvisoryReport(manyP3, 'rig-a');
+  assert.equal(repP3.healthScore, 95);
+  assert.equal(repP3.scoreBreakdown.p3Penalty, 5);
+  assert.equal(repP3.topRecommendations.length, 0);
+
+  const critical = computeHealthScore({ p0: 1, p1: 2, p2: 2, p3: 1 });
+  assert.equal(critical.healthScore, 51);
+  assert.equal(critical.scoreBreakdown.p0Penalty, 22);
+  assert.equal(critical.scoreBreakdown.p1Penalty, 20);
+  assert.equal(critical.scoreBreakdown.p2Penalty, 6);
+  assert.equal(critical.scoreBreakdown.p3Penalty, 1);
+});
+
+test('CeremonyAmplifierDetector caps to Top-5, separates active vs retro slices, and emits real Gantt actions (no fake CLI)', () => {
+  const det = new CeremonyAmplifierDetector();
+  const activeQueue = Array.from({ length: 10 }, (_, i) => ({
+    qitemId: `act-${i}`,
+    state: 'in-progress',
+    tags: ['slice:active-hot']
+  }));
+  const recentQueue = [
+    // Duplicate active items must NOT double-count
+    ...activeQueue.map(x => ({ id: x.qitemId, slice: 'active-hot', state: 'in-progress' })),
+    // 12 historical completed slices with 9..20 hops each
+    ...Array.from({ length: 12 }, (_, s) =>
+      Array.from({ length: 9 + s }, (_, j) => ({
+        id: `hist-${s}-${j}`,
+        slice: `done-slice-${s}`,
+        state: 'done'
+      }))
+    ).flat()
+  ];
+
+  const findings = det.evaluate({ activeQueue, recentQueue, healthFindings: [] });
+  assert.equal(findings.length, 5);
+  // Active slice must come first as p2_medium; completed slices must be p3_info
+  assert.equal(findings[0].metrics.affectedSlices[0], 'active-hot');
+  assert.equal(findings[0].severity, 'p2_medium');
+  assert.equal(findings[1].severity, 'p3_info');
+  // Every action must open Task Gantt with zero fabricated CLI commands
+  for (const f of findings) {
+    assert.equal(f.actionPlan.kind, 'open_gantt_slice');
+    assert.equal(f.actionPlan.commandPreview, '');
+  }
+});
+
+test('LiveBlockerDetector surfaces real HITL P0 and parked-with-work P1 findings with direct actions', () => {
+  const det = new LiveBlockerDetector();
+  const findings = det.evaluate({
+    nodes: [
+      {
+        canonicalSessionName: 'dev-check@demo',
+        activityState: { display: 'needs-input', activity: 'waiting-human', needsInput: { count: 1, reason: 'Run tests?' } }
+      },
+      {
+        canonicalSessionName: 'dev-coder3@demo',
+        assignedWorkCount: 2,
+        activityState: { display: 'idle' }
+      }
+    ],
+    activeQueue: [],
+    parkedSeats: {
+      'dev-coder3@demo': { parked: true, reason: 'No live wake timer' }
+    }
+  });
+  assert.equal(findings.length, 2);
+  const hitl = findings.find(f => f.severity === 'p0_urgent');
+  const parked = findings.find(f => f.severity === 'p1_high');
+  assert.ok(hitl);
+  assert.equal(hitl.actionPlan.kind, 'open_modal');
+  assert.equal(hitl.actionPlan.seatTarget, 'dev-check@demo');
+  assert.ok(parked);
+  assert.equal(parked.actionPlan.kind, 'wake_seat');
+  assert.equal(parked.actionPlan.seatTarget, 'dev-coder3@demo');
 });

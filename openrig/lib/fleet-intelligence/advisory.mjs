@@ -1,7 +1,41 @@
 /**
  * Advisory Engine: Deduplicates, scores, and ranks intelligence findings.
- * Compiles composite FleetIntelligenceReport with health score and Top-3 recommendations.
+ * Compiles composite FleetIntelligenceReport with severity-capped health score,
+ * transparent scoreBreakdown, and actionable Top-3 recommendations.
  */
+
+export const HEALTH_WEIGHTS = {
+  p0: { perItem: 22, cap: 55 },
+  p1: { perItem: 10, cap: 30 },
+  p2: { perItem: 3, cap: 15 },
+  p3: { perItem: 1, cap: 5 }
+};
+
+export function computeHealthScore(counts = {}) {
+  const p0 = Math.max(0, Number(counts.p0) || 0);
+  const p1 = Math.max(0, Number(counts.p1) || 0);
+  const p2 = Math.max(0, Number(counts.p2) || 0);
+  const p3 = Math.max(0, Number(counts.p3) || 0);
+
+  const p0Penalty = Math.min(HEALTH_WEIGHTS.p0.cap, p0 * HEALTH_WEIGHTS.p0.perItem);
+  const p1Penalty = Math.min(HEALTH_WEIGHTS.p1.cap, p1 * HEALTH_WEIGHTS.p1.perItem);
+  const p2Penalty = Math.min(HEALTH_WEIGHTS.p2.cap, p2 * HEALTH_WEIGHTS.p2.perItem);
+  const p3Penalty = Math.min(HEALTH_WEIGHTS.p3.cap, p3 * HEALTH_WEIGHTS.p3.perItem);
+  const totalPenalty = Math.min(85, p0Penalty + p1Penalty + p2Penalty + p3Penalty);
+  const healthScore = Math.max(15, Math.min(100, 100 - totalPenalty));
+
+  return {
+    healthScore,
+    scoreBreakdown: {
+      base: 100,
+      p0Penalty,
+      p1Penalty,
+      p2Penalty,
+      p3Penalty,
+      totalPenalty
+    }
+  };
+}
 
 export function compileAdvisoryReport(findings = [], rigId = 'all') {
   // 1. Deduplicate findings by target seat / slice and detector ID
@@ -30,32 +64,29 @@ export function compileAdvisoryReport(findings = [], rigId = 'all') {
     return (b.metrics?.riskScore || 0) - (a.metrics?.riskScore || 0);
   });
 
-  // 3. Compute Composite Fleet Health Score (0 - 100)
-  // 100 is pristine; deductions for critical and high findings
-  let penalty = 0;
-  for (const f of deduped) {
-    if (f.severity === 'p0_urgent') penalty += 25;
-    else if (f.severity === 'p1_high') penalty += 12;
-    else if (f.severity === 'p2_medium') penalty += 5;
-    else penalty += 1;
-  }
-  const healthScore = Math.max(15, Math.min(100, 100 - penalty));
+  // 3. Compute Composite Fleet Health Score (0 - 100) with severity caps
+  // Low/medium retrospective findings can NEVER falsely drag a healthy fleet into Critical Risk.
+  const counts = {
+    total: deduped.length,
+    p0: deduped.filter(x => x.severity === 'p0_urgent').length,
+    p1: deduped.filter(x => x.severity === 'p1_high').length,
+    p2: deduped.filter(x => x.severity === 'p2_medium').length,
+    p3: deduped.filter(x => x.severity === 'p3_info').length
+  };
+  const { healthScore, scoreBreakdown } = computeHealthScore(counts);
 
-  // 4. Extract Top-3 high-impact recommendations for the top strip
-  const topRecommendations = deduped.slice(0, 3);
+  // 4. Extract Top-3 high-impact live recommendations for the top strip (exclude pure P3 retro info)
+  const topRecommendations = deduped
+    .filter(x => x.severity !== 'p3_info')
+    .slice(0, 3);
 
   return {
     generatedAt: new Date().toISOString(),
     rigId,
     healthScore,
+    scoreBreakdown,
     topRecommendations,
     allFindings: deduped,
-    counts: {
-      total: deduped.length,
-      p0: deduped.filter(x => x.severity === 'p0_urgent').length,
-      p1: deduped.filter(x => x.severity === 'p1_high').length,
-      p2: deduped.filter(x => x.severity === 'p2_medium').length,
-      p3: deduped.filter(x => x.severity === 'p3_info').length
-    }
+    counts
   };
 }
