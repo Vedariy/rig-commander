@@ -238,3 +238,34 @@ test('applyTerminalPromptProbes promotes working terminal seat to needs-input wh
   assert.equal(rawNodes[0].activityState.display, 'working');
   assert.equal(enriched[1].activityState.display, 'working');
 });
+
+test('applyTerminalPromptProbes demotes false working terminal seat sitting idle at empty prompt with 0 queue work', () => {
+  const rawNodes = [
+    {
+      canonicalSessionName: 'dev-coder5@rig',
+      runtime: 'terminal',
+      inProgressWorkCount: 0,
+      assignedWorkCount: 0,
+      activityState: { display: 'working', needsInput: { count: 0, reason: null }, decidedBy: 'window-sampling' },
+      agentActivity: { state: 'running' }
+    },
+    {
+      canonicalSessionName: 'dev-check-argon@rig',
+      runtime: 'terminal',
+      inProgressWorkCount: 0,
+      assignedWorkCount: 1,
+      activityState: { display: 'working', needsInput: { count: 0, reason: null } }
+    }
+  ];
+  const probes = new Map([
+    ['dev-coder5@rig', { blocked: false, idleAtPrompt: true }],
+    ['dev-check-argon@rig', { blocked: false, idleAtPrompt: true }]
+  ]);
+
+  const enriched = applyTerminalPromptProbes(rawNodes, probes);
+  assert.equal(enriched[0].activityState.display, 'idle');
+  assert.equal(enriched[0].activityState.source, 'tmux-idle-probe');
+  assert.equal(enriched[0].agentActivity.state, 'idle');
+  // Seat with assigned queue work must NOT be demoted prematurely
+  assert.equal(enriched[1].activityState.display, 'working');
+});

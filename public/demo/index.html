@@ -3,7 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RIGCOMMANDER // NEURAL COMMAND DECK v3.1 LIVE [core-platform]</title>
+  <title>RigCommander // Neural Command Deck v3.1</title>
+  <meta name="description" content="Interactive Neural Command Deck for autonomous AI coding fleets (Claude Code, Codex CLI, tmux & OpenRig). Live Graph ⇄ Task Gantt, 1-click HITL, SUB vs PAYG FinOps & Share Card PNG export." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="RigCommander" />
+  <meta property="og:title" content="RigCommander // Interactive AI Fleet Command Deck" />
+  <meta property="og:description" content="Try the 10-second live AI fleet mission in your browser: unblock a stuck QA agent in 1 click, inspect Task Gantt wait bottlenecks, and compare SUB vs PAYG ROI." />
+  <meta property="og:url" content="https://rig-commander.vercel.app/demo" />
+  <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="RigCommander // Interactive AI Fleet Command Deck" />
+  <meta name="twitter:description" content="10-second browser demo: 1-click TMUX HITL unblock, Task Gantt, SUB vs PAYG FinOps & 1200×630 Share Card." />
+  <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png" />
   <link rel="stylesheet" href="/assets/styles/deck.css" />
 </head>
 <body>
@@ -934,6 +947,9 @@
       if (currentRigFilter && currentRigFilter !== 'all') {
         if (!rigPart || rigPart === currentRigFilter) return seatPart;
       }
+      if (window.LIVE_DISCOVERY_MODE === 'universal') {
+        return seatPart;
+      }
       if (!IS_LIVE && agent.shortName) {
         return agent.shortName;
       }
@@ -1070,6 +1086,24 @@
           defaultY = 66;
           defaultX = slotX[tier3Coders.length] || 24;
         }
+      } else if (liveNode.runtime === 'claude-code' || /claude/i.test(id)) {
+        icon = '🟠';
+        role = liveNode.resolvedSpecName || 'Claude Code';
+        const idx = AGENTS.length;
+        defaultX = [16, 39, 62, 84][idx % 4] || 50;
+        defaultY = [24, 52, 78][Math.floor(idx / 4) % 3] || 52;
+      } else if (liveNode.runtime === 'codex' || /codex/i.test(id)) {
+        icon = '🟣';
+        role = liveNode.resolvedSpecName || 'Codex CLI';
+        const idx = AGENTS.length;
+        defaultX = [16, 39, 62, 84][idx % 4] || 50;
+        defaultY = [24, 52, 78][Math.floor(idx / 4) % 3] || 52;
+      } else {
+        icon = '💻';
+        role = liveNode.resolvedSpecName || (deckLang === 'en' ? `Local Agent (${shortName})` : `Локальный агент (${shortName})`);
+        const idx = AGENTS.length;
+        defaultX = [16, 39, 62, 84][idx % 4] || 50;
+        defaultY = [24, 52, 78][Math.floor(idx / 4) % 3] || 52;
       }
 
       // Safe collision avoidance if any edge-case coordinate overlap occurs
@@ -2105,6 +2139,11 @@
     function renderSwimlanes() {
       renderFilterButtons();
       const container = document.getElementById('swimlanesContainer');
+      const section = container ? container.closest('.swimlanes-section') : null;
+      if (section) {
+        section.style.display = SLICES_LANES.length > 0 ? '' : 'none';
+      }
+      if (!container) return;
       container.innerHTML = SLICES_LANES.map(lane => {
         const isSelectedSlice = currentSliceFilter === lane.id;
         const stagesHtml = STAGE_NAMES.map((stName, idx) => {
@@ -2822,6 +2861,7 @@
           if (gm && gm.classList.contains('open')) renderGuardrailsModal();
         }
 
+        window.LIVE_DISCOVERY_MODE = data.discoveryMode || 'none';
         const hasLiveDaemonData = snapshot.hasLiveDaemonData;
         const badge = document.getElementById('liveConnectionBadge');
         if (hasLiveDaemonData) {
@@ -2829,7 +2869,7 @@
           badge.textContent = `● ${modeTag} :${location.port || '7440'}`;
           badge.classList.remove('offline');
         } else {
-          badge.textContent = '⚠️ NO DAEMON (DEMO)';
+          badge.textContent = deckLang === 'en' ? `✨ DEMO SANDBOX :${location.port || '7440'}` : `✨ ДЕМО-ПЕСОЧНИЦА :${location.port || '7440'}`;
           badge.classList.add('offline');
         }
 
@@ -2993,6 +3033,26 @@
 
         // Ensure structural topology highways exist for multi-seat rigs even when system noise crowds queue history
         syncStructuralRigEdges();
+
+        // In Universal Mode (no OpenRig queue): clear demo-only slice swimlanes and arrange discovered sessions in a clean non-overlapping grid
+        if (data.discoveryMode === 'universal') {
+          if (openQueue.length === 0) {
+            SLICES_LANES = [];
+            currentSliceFilter = 'all';
+          }
+          const visibleUniv = AGENTS.filter(a => currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter));
+          const cols = visibleUniv.length <= 2 ? Math.max(1, visibleUniv.length) : (visibleUniv.length <= 4 ? 2 : 3);
+          const rows = Math.max(1, Math.ceil(visibleUniv.length / cols));
+          const xSlots = cols === 1 ? [50] : (cols === 2 ? [28, 72] : [18, 50, 82]);
+          const yMin = rows <= 2 ? 28 : 16;
+          const yMax = rows <= 2 ? 68 : 84;
+          visibleUniv.forEach((a, idx) => {
+            const c = idx % cols;
+            const r = Math.floor(idx / cols);
+            a.x = xSlots[c] ?? 50;
+            a.y = rows === 1 ? 48 : Math.round(yMin + (r * (yMax - yMin)) / Math.max(1, rows - 1));
+          });
+        }
 
         // Sync EDGES semantics strictly with live node states & activeQueue:
         // Only in-progress / actively-worked tasks animate green; blocked (🚧), parked (🅿️), held (⏸️), pending (⏳) stay static!

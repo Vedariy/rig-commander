@@ -118,3 +118,41 @@ export function detectLiveHitlPrompt(screenText) {
 
   return { blocked: false, reason: '', options: [] };
 }
+
+const ACTIVE_TERMINAL_WORK_RE = /(?:[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|esc to interrupt|ctrl\+c to (?:interrupt|stop|cancel)|(?:thinking|reasoning|generating|streaming|searching|evaluating)\.{2,3}|running\s+\d+\s+test|working\s*\(\d+|⏳\s*running)/i;
+const IDLE_FOOTER_MARKER_RE = /(?:^\?\s*for shortcuts\b|^>\s*accept-edits mode\b|shift\+tab\s+to\s+cycle|bypass permissions on\b|auto-accept edits on\b|enter to send\b.*shortcuts|type your message|ask anything|send a message)/i;
+const IDLE_BARE_PROMPT_RE = /^\s*[›❯>]\s*(?:$|try\s+"|\/help\b|accept-edits\b)/i;
+
+/**
+ * High-precision detector for a terminal AI agent (Antigravity/agy, Claude Code, Codex, Gemini)
+ * sitting idle at its empty input prompt — prevents OpenRig terminal-motion false 'working' states.
+ * Never returns idle when a live HITL prompt or active spinner/working marker is visible.
+ */
+export function detectTerminalIdleAtPrompt(screenText) {
+  if (!screenText || typeof screenText !== 'string') {
+    return { idle: false, reason: '' };
+  }
+  if (detectLiveHitlPrompt(screenText).blocked) {
+    return { idle: false, reason: '' };
+  }
+  const nonEmpty = screenText.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim().length > 0);
+  if (nonEmpty.length === 0) {
+    return { idle: false, reason: '' };
+  }
+
+  const tail12 = nonEmpty.slice(-12);
+  const tail12Text = tail12.join('\n');
+  if (ACTIVE_TERMINAL_WORK_RE.test(tail12Text)) {
+    return { idle: false, reason: '' };
+  }
+
+  const bottom6 = nonEmpty.slice(-6);
+  const hasFooterMarker = bottom6.some(l => IDLE_FOOTER_MARKER_RE.test(l.trim()));
+  const hasBarePrompt = bottom6.some(l => IDLE_BARE_PROMPT_RE.test(l));
+
+  if (hasFooterMarker || hasBarePrompt) {
+    return { idle: true, reason: 'idle_at_prompt' };
+  }
+
+  return { idle: false, reason: '' };
+}

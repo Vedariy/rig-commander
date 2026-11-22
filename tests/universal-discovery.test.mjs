@@ -7,6 +7,7 @@ import {
   parseTmuxPaneLines,
   detectUniversalPaneState,
   discoverUniversalFleet,
+  buildUniversalGanttItems,
   isValidTmuxTarget
 } from '../openrig/lib/universal-discovery.mjs';
 
@@ -108,5 +109,10 @@ test('discoverUniversalFleet matches tmux panes to Claude/Codex JSONL and includ
   assert.equal(standaloneCodex.contextUsage.transcriptPath, codexFile);
 
   assert.equal(result.availableRigs.length, 2);
+
+  const gantt = buildUniversalGanttItems(result.nodes);
+  assert.equal(gantt.length, 2, 'Universal Mode must synthesize Gantt bars for discovered sessions');
+  assert.ok(gantt.every(it => it.to && it.createdAt && it.chain.startsWith('session:')));
+
   await fs.rm(root, { recursive: true, force: true });
 });

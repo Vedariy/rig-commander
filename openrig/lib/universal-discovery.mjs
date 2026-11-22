@@ -126,6 +126,7 @@ export async function inspectTranscriptMetadata(filePath, runtimeHint = '') {
     const headText = headBuf.toString('utf-8');
     let cwd = '';
     let model = '';
+    let firstTsMs = null;
     let lastContextTokens = null;
     let runtime = runtimeHint || 'terminal';
 
@@ -133,6 +134,10 @@ export async function inspectTranscriptMetadata(filePath, runtimeHint = '') {
       if (!line.trim().startsWith('{')) continue;
       try {
         const obj = JSON.parse(line);
+        if (firstTsMs === null && typeof obj.timestamp === 'string') {
+          const parsedTs = Date.parse(obj.timestamp);
+          if (Number.isFinite(parsedTs)) firstTsMs = parsedTs;
+        }
         if (!cwd && typeof obj.cwd === 'string') cwd = obj.cwd;
         if (!cwd && obj.payload && typeof obj.payload.cwd === 'string') cwd = obj.payload.cwd;
         if (!model && obj.message && typeof obj.message.model === 'string') model = obj.message.model;
@@ -186,6 +191,7 @@ export async function inspectTranscriptMetadata(filePath, runtimeHint = '') {
 
     return {
       filePath,
+      firstTsMs: firstTsMs || Math.max(0, stat.mtimeMs - 30 * 60_000),
       mtimeMs: stat.mtimeMs,
       size: stat.size,
       runtime,
@@ -203,7 +209,7 @@ export async function inspectTranscriptMetadata(filePath, runtimeHint = '') {
 }
 
 async function collectJsonlFiles(dir, maxDepth, maxAgeMs, nowMs, out, depth = 0) {
-  if (depth > maxDepth || out.length >= 40) return;
+  if (depth > maxDepth || out.length >= 80) return;
   let entries;
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
@@ -211,7 +217,7 @@ async function collectJsonlFiles(dir, maxDepth, maxAgeMs, nowMs, out, depth = 0)
     return;
   }
   for (const ent of entries) {
-    if (out.length >= 40) break;
+    if (out.length >= 80) break;
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
       await collectJsonlFiles(full, maxDepth, maxAgeMs, nowMs, out, depth + 1);
@@ -230,11 +236,13 @@ async function collectJsonlFiles(dir, maxDepth, maxAgeMs, nowMs, out, depth = 0)
 
 /**
  * Scans ~/.claude/projects and ~/.codex/sessions for recent active JSONL transcripts.
+ * Default window is 7 days so FinOps 24h/7d comparisons and Share Cards immediately populate
+ * even if the user ran Claude Code or Codex yesterday.
  */
 export async function discoverRecentTranscripts({
   claudeDir = path.join(os.homedir(), '.claude', 'projects'),
   codexDir = path.join(os.homedir(), '.codex', 'sessions'),
-  maxAgeMs = 6 * 3600 * 1000,
+  maxAgeMs = 7 * 24 * 3600 * 1000,
   nowMs = Date.now(),
   limit = 16
 } = {}) {
@@ -263,7 +271,7 @@ export async function discoverUniversalFleet({
   tmuxBin = 'tmux',
   claudeDir = path.join(os.homedir(), '.claude', 'projects'),
   codexDir = path.join(os.homedir(), '.codex', 'sessions'),
-  maxAgeMs = 6 * 3600 * 1000,
+  maxAgeMs = 7 * 24 * 3600 * 1000,
   nowMs = Date.now(),
   execTmux = null
 } = {}) {
@@ -312,7 +320,10 @@ export async function discoverUniversalFleet({
 
     const runtime = (matchingTr && matchingTr.runtime) || inferredRuntime || 'terminal';
     const rigName = sanitizeIdPart(path.basename(pane.cwd || pane.sessionName || 'local-tmux'), 'local-tmux');
-    const baseSeat = sanitizeIdPart(`${pane.sessionName}-${pane.winIdx}-${pane.paneIdx}`, 'pane');
+    const cleanSess = sanitizeIdPart(pane.sessionName, 'pane');
+    const baseSeat = (pane.winIdx === '0' && pane.paneIdx === '0')
+      ? cleanSess.slice(0, 26)
+      : sanitizeIdPart(`${cleanSess.slice(0, 20)}-${pane.winIdx}-${pane.paneIdx}`, 'pane');
     let seatId = `${baseSeat}@${rigName}`;
     let suffix = 2;
     while (usedSeatIds.has(seatId)) {
@@ -339,6 +350,7 @@ export async function discoverUniversalFleet({
       modelObservation: { model },
       activityState: actState,
       assignedWorkCount: actState.display === 'working' ? 1 : 0,
+      firstActivityAt: new Date(matchingTr ? matchingTr.firstTsMs : nowMs - 15 * 60_000).toISOString(),
       lastActivityAt: new Date(matchingTr ? matchingTr.mtimeMs : nowMs).toISOString(),
       tmuxAttachCommand: `tmux attach -t ${pane.sessionName}`,
       contextUsage: matchingTr ? {
@@ -356,10 +368,12 @@ export async function discoverUniversalFleet({
   const seenStandaloneByDir = new Set();
   for (const tr of transcripts) {
     if (matchedTranscriptPaths.has(tr.filePath)) continue;
-    const repoName = sanitizeIdPart(
-      tr.cwd ? path.basename(tr.cwd) : path.basename(path.dirname(tr.filePath)),
-      'local'
-    );
+    let rawRepo = tr.cwd ? path.basename(tr.cwd) : path.basename(path.dirname(tr.filePath));
+    if (!tr.cwd && /^\d{2}$/.test(rawRepo)) {
+      const parentMonth = path.basename(path.dirname(path.dirname(tr.filePath)));
+      rawRepo = /^\d{2}$/.test(parentMonth) ? `${parentMonth}-${rawRepo}` : `day-${rawRepo}`;
+    }
+    const repoName = sanitizeIdPart(rawRepo, 'local');
     const dedupKey = `${tr.runtime}:${repoName}`;
     if (seenStandaloneByDir.has(dedupKey)) continue;
     seenStandaloneByDir.add(dedupKey);
@@ -391,6 +405,7 @@ export async function discoverUniversalFleet({
         needsInput: { count: 0, reason: '' }
       },
       assignedWorkCount: isWorking ? 1 : 0,
+      firstActivityAt: new Date(tr.firstTsMs).toISOString(),
       lastActivityAt: new Date(tr.mtimeMs).toISOString(),
       tmuxAttachCommand: `ls -la ${tr.filePath}`,
       contextUsage: {
@@ -415,4 +430,35 @@ export async function discoverUniversalFleet({
   }));
 
   return { availableRigs, nodes, tmuxTargets };
+}
+
+/**
+ * Synthesizes clean Task Gantt session bars for Universal Mode fleets (where no OpenRig queue exists)
+ * so the Task Gantt view (G) and Share Card Mini Gantt show real local session timelines.
+ */
+export function buildUniversalGanttItems(nodes = [], nowMs = Date.now()) {
+  if (!Array.isArray(nodes) || nodes.length === 0) return [];
+  const items = [];
+  for (const n of nodes) {
+    const seatId = n && n.canonicalSessionName;
+    if (!seatId) continue;
+    const endMs = Date.parse(n.lastActivityAt || '') || nowMs;
+    const rawStart = Date.parse(n.firstActivityAt || '') || (endMs - 20 * 60_000);
+    const startMs = Math.min(rawStart, endMs - 60_000);
+    const isWorking = n.activityState && (n.activityState.display === 'working' || n.activityState.display === 'needs-input');
+    const repoTag = sanitizeIdPart(path.basename(n.cwd || n.rigId || 'session'), 'session');
+    items.push({
+      id: `univ-${seatId}`,
+      from: n.rigId || 'local',
+      to: seatId,
+      chain: `session:${repoTag}`,
+      slice: `session:${repoTag}`,
+      summary: `${n.model || n.runtime || 'agent'} · ${repoTag}`,
+      state: isWorking ? 'in-progress' : 'done',
+      createdAt: new Date(startMs).toISOString(),
+      claimedAt: new Date(startMs).toISOString(),
+      endAt: isWorking ? null : new Date(endMs).toISOString()
+    });
+  }
+  return items.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
 }

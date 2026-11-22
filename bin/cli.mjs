@@ -18,6 +18,7 @@ Usage:
 
 Options:
   -p, --port <number>   Specify telemetry bridge port (default: 7440)
+  --universal           Force Universal Mode (Claude Code / Codex / tmux without OpenRig)
   --no-open             Do not automatically open browser on startup
   -v, --version         Show version
   -h, --help            Show this help manual
@@ -34,7 +35,7 @@ Keyboard Shortcuts in Deck:
 }
 
 if (args.includes('-v') || args.includes('--version')) {
-  console.log('rig-commander v3.1.0');
+  console.log('rig-commander v3.1.1');
   process.exit(0);
 }
 
@@ -47,6 +48,7 @@ if (portIdx !== -1 && args[portIdx + 1]) {
 }
 
 const noOpen = args.includes('--no-open');
+const forceUniversal = args.includes('--universal');
 const serverPath = path.resolve(__dirname, '../openrig/server.mjs');
 const url = `http://127.0.0.1:${port}`;
 
@@ -62,7 +64,11 @@ console.log(`
 
 // Launch Server Process
 const serverProc = spawn(process.execPath, [serverPath], {
-  env: { ...process.env, PORT: String(port) },
+  env: {
+    ...process.env,
+    PORT: String(port),
+    ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {})
+  },
   stdio: 'inherit'
 });
 

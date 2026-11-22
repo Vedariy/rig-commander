@@ -9,10 +9,10 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { FleetIntelligenceEngine } from './lib/fleet-intelligence/index.mjs';
 import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
-import { discoverUniversalFleet, isValidTmuxTarget } from './lib/universal-discovery.mjs';
+import { discoverUniversalFleet, buildUniversalGanttItems, isValidTmuxTarget } from './lib/universal-discovery.mjs';
 import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
 import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
-import { detectLiveHitlPrompt } from './assets/domain/prompt-parser.js';
+import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt } from './assets/domain/prompt-parser.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
@@ -51,8 +51,9 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
 }
 
 /**
- * Pure helper: overlays live tmux prompt probe results onto OpenRig daemon nodes
- * (catches terminal/agy/Gemini prompts where OpenRig window-sampling still reports 'working').
+ * Pure helper: overlays live tmux prompt & idle probe results onto OpenRig daemon nodes.
+ * 1) Catches terminal/agy/Gemini confirmation prompts where daemon still reports 'working'.
+ * 2) Demotes false 'working' terminal seats (e.g. Antigravity CLI idle at empty prompt with 0 queue work) to 'idle'.
  */
 function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
   if (!Array.isArray(nodes) || !probeResultsBySeat) return nodes;
@@ -60,22 +61,43 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
     const seatId = node && node.canonicalSessionName;
     if (!seatId) return node;
     const probe = probeResultsBySeat instanceof Map ? probeResultsBySeat.get(seatId) : probeResultsBySeat[seatId];
-    if (!probe || !probe.blocked) return node;
+    if (!probe) return node;
     const curNeeds = (node.activityState && node.activityState.needsInput && node.activityState.needsInput.count) || 0;
     const curDisp = (node.activityState && node.activityState.display) || '';
-    if (curNeeds > 0 || curDisp === 'needs-input') return node;
-    return {
-      ...node,
-      activityState: {
-        ...(node.activityState || {}),
-        display: 'needs-input',
-        needsInput: {
-          count: 1,
-          reason: probe.reason || 'permission_prompt',
-          source: 'tmux-prompt-probe'
+
+    if (probe.blocked) {
+      if (curNeeds > 0 || curDisp === 'needs-input') return node;
+      return {
+        ...node,
+        activityState: {
+          ...(node.activityState || {}),
+          display: 'needs-input',
+          needsInput: {
+            count: 1,
+            reason: probe.reason || 'permission_prompt',
+            source: 'tmux-prompt-probe'
+          }
         }
+      };
+    }
+
+    if (probe.idleAtPrompt && node.runtime === 'terminal') {
+      const hasWork = (Number(node.inProgressWorkCount) || 0) > 0 || (Number(node.assignedWorkCount) || 0) > 0;
+      const looksWorking = curDisp === 'working' || curDisp === 'running' || (node.agentActivity && node.agentActivity.state === 'running');
+      if (!hasWork && looksWorking && curNeeds === 0) {
+        return {
+          ...node,
+          activityState: {
+            ...(node.activityState || {}),
+            display: 'idle',
+            source: 'tmux-idle-probe'
+          },
+          agentActivity: node.agentActivity ? { ...node.agentActivity, state: 'idle' } : node.agentActivity
+        };
       }
-    };
+    }
+
+    return node;
   });
 }
 
@@ -112,15 +134,16 @@ async function enrichOpenRigTerminalPrompts(nodes) {
       const seatId = n.canonicalSessionName;
       const cached = terminalPromptProbeCache.get(seatId);
       if (cached && now - cached.ts < TERMINAL_PROMPT_PROBE_TTL_MS) {
-        if (cached.blocked) probeMap.set(seatId, cached);
+        if (cached.blocked || cached.idleAtPrompt) probeMap.set(seatId, cached);
         return;
       }
       try {
         const screen = await captureSeatScreen(seatId, 34);
         const res = detectLiveHitlPrompt(screen || '');
-        const entry = { ts: now, blocked: res.blocked, reason: res.reason };
+        const idleRes = res.blocked ? { idle: false } : detectTerminalIdleAtPrompt(screen || '');
+        const entry = { ts: now, blocked: res.blocked, reason: res.reason, idleAtPrompt: Boolean(idleRes.idle) };
         boundedMapSet(terminalPromptProbeCache, seatId, entry, MAX_GUIDANCE_CACHE);
-        if (entry.blocked) probeMap.set(seatId, entry);
+        if (entry.blocked || entry.idleAtPrompt) probeMap.set(seatId, entry);
       } catch {
         // non-blocking probe failure
       }
@@ -1222,8 +1245,9 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    const nodesPromises = effectiveRigs.map(r => fetchDaemonJson(`/api/rigs/${r.rigId}/nodes`));
-    const parkedPromises = effectiveRigs.map(r => safeJsonExec(RIG_BIN, ['parked', '--rig', r.name || r.rigName, '--json']));
+    const forceUniversal = process.env.RIGCOMMANDER_FORCE_UNIVERSAL === '1';
+    const nodesPromises = forceUniversal ? [] : effectiveRigs.map(r => fetchDaemonJson(`/api/rigs/${r.rigId}/nodes`));
+    const parkedPromises = forceUniversal ? [] : effectiveRigs.map(r => safeJsonExec(RIG_BIN, ['parked', '--rig', r.name || r.rigName, '--json']));
 
     const [
       nodesArrays,
@@ -1234,14 +1258,14 @@ const server = http.createServer(async (req, res) => {
     ] = await Promise.all([
       Promise.all(nodesPromises),
       Promise.all(parkedPromises),
-      safeJsonExec(RIG_BIN, ['queue', 'list', '-A', '--json']),
-      getHistoryStats(),
-      readSeatCompactions()
+      forceUniversal ? Promise.resolve([]) : safeJsonExec(RIG_BIN, ['queue', 'list', '-A', '--json']),
+      forceUniversal ? Promise.resolve({ pairCounts: {}, pairEnvelopes: {}, sliceStats: {}, ganttItems: [] }) : getHistoryStats(),
+      forceUniversal ? Promise.resolve({}) : readSeatCompactions()
     ]);
 
     let nodes = nodesArrays.flatMap(arr => Array.isArray(arr) ? arr : []);
     let discoveryMode = nodes.length > 0 ? 'openrig' : 'none';
-    let resolvedAvailableRigs = allRigs.map(r => ({
+    let resolvedAvailableRigs = forceUniversal ? [] : allRigs.map(r => ({
       id: r.rigId,
       name: r.name || r.rigName,
       status: r.status,
@@ -1251,8 +1275,9 @@ const server = http.createServer(async (req, res) => {
       hasWorkCount: r.hasWorkCount
     }));
 
-    // Universal Auto-Discovery fallback when OpenRig daemon has 0 nodes:
+    // Universal Auto-Discovery fallback when OpenRig daemon has 0 nodes (or --universal is enabled):
     // discovers plain tmux panes (Claude Code / Codex / Gemini) + recent ~/.claude & ~/.codex JSONL transcripts.
+    let resolvedHistory = history || { pairCounts: {}, pairEnvelopes: {}, sliceStats: {}, ganttItems: [] };
     if (nodes.length === 0) {
       const universal = await discoverUniversalFleet({ tmuxBin: TMUX_BIN });
       if (universal.nodes.length > 0) {
@@ -1267,6 +1292,12 @@ const server = http.createServer(async (req, res) => {
         nodes = (requestedRig === 'all' || !requestedRig)
           ? universal.nodes
           : universal.nodes.filter(n => n.rigId === requestedRig);
+        if (!Array.isArray(resolvedHistory.ganttItems) || resolvedHistory.ganttItems.length === 0) {
+          resolvedHistory = {
+            ...resolvedHistory,
+            ganttItems: buildUniversalGanttItems(nodes)
+          };
+        }
       }
     }
 
@@ -1323,7 +1354,7 @@ const server = http.createServer(async (req, res) => {
       nodes,
       activeQueue: Array.isArray(activeQueue) ? activeQueue : [],
       decisions,
-      history,
+      history: resolvedHistory,
       parkedSeats,
       seatCompactions: seatCompactions || {},
       seatGuidance: guidanceMap,

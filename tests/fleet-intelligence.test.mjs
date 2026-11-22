@@ -4,6 +4,7 @@ import { FleetIntelligenceEngine } from '../openrig/lib/fleet-intelligence/index
 import {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
+  detectTerminalIdleAtPrompt,
   classifyEdgeQueueStatus,
   getContextThermal,
   formatTokensShort,
@@ -203,4 +204,32 @@ test('DECK_I18N maintains full EN/RU key parity and interpolation', () => {
   assert.equal(resolveDeckLang('', '', 'ru-RU'), 'ru');
   assert.equal(tDeck('en', 'triage.ctxEta', { min: 12 }), '~12m to 75%');
   assert.equal(tDeck('ru', 'triage.ctxEta', { min: 12 }), '~12 мин до 75%');
+});
+
+test('detectTerminalIdleAtPrompt catches Antigravity/CLI empty prompt while rejecting active spinners and HITL menus', () => {
+  const agyIdle = [
+    ' ┃ Introducing Gemini 4',
+    ' ┃ esc to dismiss',
+    '───────────────────────────',
+    '> Accept-edits mode: fi...',
+    '───────────────────────────',
+    '? for shortcuts'
+  ].join('\n');
+  assert.equal(detectTerminalIdleAtPrompt(agyIdle).idle, true);
+
+  const activeWork = [
+    '⠋ Thinking through auth refactor...',
+    'Esc to interrupt',
+    '> Accept-edits mode'
+  ].join('\n');
+  assert.equal(detectTerminalIdleAtPrompt(activeWork).idle, false);
+
+  const hitlMenu = [
+    'Requesting permission for: run_command',
+    '› 1. Allow once',
+    '  2. Always allow',
+    '  3. Cancel',
+    '↑/↓ navigate • Enter to confirm • Esc to cancel'
+  ].join('\n');
+  assert.equal(detectTerminalIdleAtPrompt(hitlMenu).idle, false);
 });

@@ -1,6 +1,6 @@
 {
   "name": "@openrig/deck",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "Neural Command Deck — Standalone Control Plane and Operator Dashboard for OpenRig Multi-Agent Clusters",
   "type": "module",
   "main": "server.mjs",
