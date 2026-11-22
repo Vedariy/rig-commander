@@ -11,8 +11,8 @@
     "LICENSE"
   ],
   "bin": {
-    "rig-commander": "./bin/cli.mjs",
-    "rig-cmd": "./bin/cli.mjs"
+    "rig-commander": "bin/cli.mjs",
+    "rig-cmd": "bin/cli.mjs"
   },
   "scripts": {
     "start": "node bin/cli.mjs",
