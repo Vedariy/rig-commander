@@ -18,6 +18,9 @@
       <button class="triage-refresh-btn" id="btnGuardrails" onclick="openGuardrailsModal()" style="border-color:rgba(0,255,157,0.5); color:#6ee7b7;">
         🛡️ <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
+      <button class="triage-refresh-btn" id="btnDemoQuest" onclick="toggleDemoQuest()" style="display:none; border-color:rgba(0,240,255,0.55); color:#67e8f9;">
+        🎯 <span data-i18n="quest.btn">Миссия 10с</span> <span id="btnDemoQuestCount" style="font-weight:800; color:#00ff9d;">0/3</span>
+      </button>
     </div>
     <div class="triage-cards-container" id="triageCardsContainer">
       <div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
@@ -179,6 +182,12 @@
             <marker id="arr-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
               <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
             </marker>
+            <marker id="arr-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#f97316"/>
+            </marker>
+            <marker id="arr-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#a78bfa"/>
+            </marker>
             <marker id="arr-crimson" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
               <path d="M 0 1 L 10 5 L 0 9 z" fill="#ff0055"/>
             </marker>
@@ -247,6 +256,7 @@
   </main>
 
   <div class="sa-tour-card" id="saTourCard" role="dialog" aria-label="SA-DSS & Cognitive Ergonomics Tour"></div>
+  <div class="quest-dock" id="demoQuestDock" role="region" aria-label="10-Second Interactive Demo Mission"></div>
   <div class="toast" id="copyToast">Copied!</div>
 
   <div class="modal-overlay" id="terminalModal" onclick="if (event.target === this) closeTerminalModal()">
@@ -868,6 +878,8 @@
     let lastRenderedInspectorSeatId = null;
     let calmMode = false;
     let hideIdleNodes = false;
+    let budgetWindow = 'h24'; // 'h24' | 'd7' | 'session'
+    let billingPlans = null;
     let centerViewMode = localStorage.getItem('openrig_center_view') === 'gantt' ? 'gantt' : 'graph';
     let ganttWindowH = [1, 6, 24].includes(Number(localStorage.getItem('openrig_gantt_window')))
       ? Number(localStorage.getItem('openrig_gantt_window'))
@@ -878,8 +890,15 @@
     let liveScreenCapture = 'Нажми «🔄 Обновить экран tmux» или выбери узел для живого захвата rig capture...';
     let activeInspectorTab = 'rules'; // 'rules' | 'fallback' | 'memory'
 
+    function persistDeckPref(patch) {
+      if (typeof saveDeckPrefs === 'function') {
+        try { saveDeckPrefs(localStorage, patch); } catch {}
+      }
+    }
+
     function onRigFilterChange(val) {
       currentRigFilter = val;
+      persistDeckPref({ rigFilter: val });
       renderReservoirs();
       renderTopology();
       renderInspectorAndScorecards(false);
@@ -887,19 +906,29 @@
     }
 
     function getNodeDisplayTitle(agent) {
-      const base = String((agent && (agent.shortName || agent.id)) || '');
+      if (!agent) return '';
+      const rawId = String(agent.id || '');
+      const atIdx = rawId.lastIndexOf('@');
+      const seatPart = atIdx > 0 ? rawId.slice(0, atIdx) : String(agent.shortName || rawId);
+      const rigPart = atIdx > 0 ? rawId.slice(atIdx + 1) : '';
       if (currentRigFilter && currentRigFilter !== 'all') {
-        const suffix = `@${currentRigFilter}`;
-        if (base.endsWith(suffix)) {
-          return base.slice(0, -suffix.length);
-        }
+        if (!rigPart || rigPart === currentRigFilter) return seatPart;
       }
-      return base;
+      if (!IS_LIVE && agent.shortName) {
+        return agent.shortName;
+      }
+      return rigPart ? `${seatPart}@${rigPart}` : seatPart;
     }
 
     function setInspectorTab(tab) {
       activeInspectorTab = tab;
+      persistDeckPref({ inspectorTab: tab });
       renderInspectorAndScorecards(false);
+    }
+
+    function setInspectorRefOpen(isOpen) {
+      inspectorRefOpen = Boolean(isOpen);
+      persistDeckPref({ inspectorRefOpen });
     }
 
     function isEdgeInSlice(edge) {
@@ -908,7 +937,7 @@
       const lane = SLICES_LANES.find(l => l.id === currentSliceFilter);
       if (lane && Array.isArray(lane.coderIds) && lane.coderIds.length > 0) {
         if (lane.coderIds.includes(edge.from) || lane.coderIds.includes(edge.to)) return true;
-        if (edge.from === 'dev-check@core-platform' && edge.to === 'dev-owner@core-platform') return true;
+        if (edge.from.startsWith('dev-check') && edge.to.startsWith('dev-owner')) return true;
       }
       return false;
     }
@@ -998,9 +1027,9 @@
         icon = '🛡️';
         role = 'Доказательный QA';
         const existingCheckers = AGENTS.filter(a => a.id.includes('check') || a.id.includes('qa'));
-        const checkerSlots = [47, 70, 24];
-        defaultX = checkerSlots[existingCheckers.length] ?? 47;
-        defaultY = 83;
+        const checkerSlots = [36, 66, 18];
+        defaultX = checkerSlots[existingCheckers.length] ?? 50;
+        defaultY = 86;
       } else if (id.includes('operator')) {
         icon = '🧭';
         role = 'Оператор рига';
@@ -1009,19 +1038,16 @@
       } else if (id.includes('coder')) {
         icon = '💻';
         role = `Кодер (${shortName})`;
-        // Multi-tier coder distribution:
-        // Tier 2 (primary core-platform coders): y = 50%, slots = [11, 37, 63, 89]
-        // Tier 3 (auxiliary / cross-rig, e.g. payment-gateway): y = 84%, slots = [24, 76]
-        const tier2Coders = AGENTS.filter(a => Math.abs(a.y - 50) < 6);
-        const tier3Coders = AGENTS.filter(a => Math.abs(a.y - 84) < 6 && !a.id.startsWith('dev-check@'));
+        // Balanced 2-tier coder distribution (y=46% and y=66%) well above QA row (y=86%)
+        const tier2Coders = AGENTS.filter(a => Math.abs(a.y - 46) < 6 && /coder/i.test(a.id));
+        const tier3Coders = AGENTS.filter(a => Math.abs(a.y - 66) < 6 && /coder/i.test(a.id));
         if (tier2Coders.length < 4) {
-          const slotX = [11, 37, 63, 89];
-          defaultY = 50;
-          defaultX = slotX[tier2Coders.length] || 89;
+          const slotX = [13, 37, 63, 87];
+          defaultY = 46;
+          defaultX = slotX[tier2Coders.length] || 87;
         } else {
-          // Bottom row, flanking dev-check (x: 50) at 24% and 76%
-          const slotX = [24, 76];
-          defaultY = 84;
+          const slotX = [24, 50, 76];
+          defaultY = 66;
           defaultX = slotX[tier3Coders.length] || 24;
         }
       }
@@ -1064,17 +1090,67 @@
 
       AGENTS.push(agent);
 
-      if (id.includes('senior') || id.includes('architector')) {
-        ensureEdge('dev-owner@core-platform', id, 1, 'all', '📐 Arch Sync (Owner ⇄ Senior)', '#a855f7');
+      const rigSuffix = id.includes('@') ? id.slice(id.lastIndexOf('@')) : '';
+      if ((id.includes('senior') || id.includes('architector') || id.includes('architect')) && rigSuffix) {
+        const rigOwner = AGENTS.find(a => a.id === `dev-owner${rigSuffix}` || (a.id.endsWith(rigSuffix) && a.id.includes('owner')));
+        if (rigOwner) {
+          ensureEdge(rigOwner.id, id, 0, 'all', '📐 Arch Sync (Owner ⇄ Senior)', '#a855f7');
+        }
       }
 
       return agent;
+    }
+
+    function syncStructuralRigEdges() {
+      const byRig = new Map();
+      for (const a of AGENTS) {
+        const at = a.id.lastIndexOf('@');
+        const rig = at > 0 ? a.id.slice(at + 1) : 'default';
+        if (!byRig.has(rig)) byRig.set(rig, []);
+        byRig.get(rig).push(a);
+      }
+
+      const kernelOp = AGENTS.find(a => a.id === 'operator-agent@kernel');
+
+      for (const [rig, seats] of byRig.entries()) {
+        if (seats.length < 2) continue;
+        const owner = seats.find(s => /(^|-)owner@/.test(s.id)) || seats.find(s => /(^|-)lead@/.test(s.id));
+        const ops = seats.filter(s => /(^|-)operator@/.test(s.id));
+        const seniors = seats.filter(s => /(senior|architect)/i.test(s.id));
+        const coders = seats.filter(s => /coder/i.test(s.id));
+        const checkers = seats.filter(s => /(check|qa)/i.test(s.id));
+
+        if (owner) {
+          if (kernelOp && rig !== 'kernel') {
+            ensureEdge(kernelOp.id, owner.id, 0, 'all', 'Kernel ⇄ Owner', '#475569');
+          }
+          for (const op of ops) {
+            ensureEdge(op.id, owner.id, 0, 'all', 'Ops ⇄ Owner', '#38bdf8');
+          }
+          for (const sr of seniors) {
+            ensureEdge(owner.id, sr.id, 0, 'all', 'Arch Sync', '#a855f7');
+          }
+          for (const c of coders) {
+            ensureEdge(owner.id, c.id, 0, 'all', 'Dispatch', '#475569');
+          }
+          for (const qa of checkers) {
+            ensureEdge(qa.id, owner.id, 0, 'all', 'QA Verdict', '#475569');
+          }
+        }
+        const primaryQa = checkers[0];
+        if (primaryQa) {
+          for (const c of coders) {
+            ensureEdge(c.id, primaryQa.id, 0, 'all', 'QA Handoff', '#475569');
+          }
+        }
+      }
     }
 
     let currentRadarFilter = 'all'; // 'all' | 'blockers' | 'tasks'
 
     function setRadarFilter(tab) {
       currentRadarFilter = tab;
+      persistDeckPref({ radarFilter: tab });
       document.querySelectorAll('#radarFilterBar .radar-tab').forEach(b => {
         b.classList.toggle('active', b.getAttribute('data-radar-tab') === tab);
       });
@@ -1372,24 +1448,29 @@
     }
 
     function getBottomBadgeText(agent, thermal) {
+      const hasCalls = Boolean((agent.callsIn || 0) > 0 || (agent.callsOut || 0) > 0);
+      const qSuffix = hasCalls ? ` • 📥${agent.callsIn}/📤${agent.callsOut}` : '';
       if (typeof agent.ctxPct === 'number') {
         if (agent.ctxPct >= 75) {
-          return `🔥 ${agent.ctxPct}% • ПОРОГ 75%`;
+          return `🔥 ${agent.ctxPct}% • ${deckLang === 'en' ? '75% LIMIT' : 'ПОРОГ 75%'}`;
         }
         if (agent.ctxPct >= 65) {
-          return `🌡️ ${agent.ctxPct}% • 📥${agent.callsIn}/📤${agent.callsOut}`;
+          return `🌡️ ${agent.ctxPct}%${qSuffix}`;
         }
-        return `${thermal.label} • 📥${agent.callsIn}/📤${agent.callsOut}`;
+        const compactLabel = String(thermal.label || '').replace(/\s*\/\s*/g, '/');
+        return `${compactLabel}${qSuffix}`;
       }
-      return `(live) • 📥${agent.callsIn}/📤${agent.callsOut}`;
+      return hasCalls ? `(live)${qSuffix}` : '● live';
     }
 
     // ===== GANTT VIEW: one chain = one color =====
     // GANTT_LONG_WAIT_MS, ganttChainColor, ganttRoleRank imported from /assets/domain/gantt-model.js
 
-    function setCenterView(mode) {
+    function setCenterView(mode, fromInit = false, skipPersist = false) {
       centerViewMode = mode === 'gantt' ? 'gantt' : 'graph';
-      localStorage.setItem('openrig_center_view', centerViewMode);
+      if (!fromInit && !skipPersist) {
+        persistDeckPref({ centerView: centerViewMode });
+      }
       const isGantt = centerViewMode === 'gantt';
       const canvas = document.querySelector('#panelCenter .canvas-wrap');
       const gantt = document.getElementById('ganttWrap');
@@ -1406,13 +1487,17 @@
       document.querySelectorAll('[data-gantt-window]').forEach(b => {
         b.classList.toggle('active', Number(b.getAttribute('data-gantt-window')) === ganttWindowH);
       });
-      if (isGantt) renderGantt();
-      else renderTopology();
+      if (isGantt) {
+        renderGantt();
+        if (!fromInit && typeof markDemoQuestStep === 'function') markDemoQuestStep('gantt');
+      } else {
+        renderTopology();
+      }
     }
 
     function setGanttWindow(hours) {
       ganttWindowH = hours;
-      localStorage.setItem('openrig_gantt_window', String(hours));
+      persistDeckPref({ ganttWindowH: hours });
       document.querySelectorAll('[data-gantt-window]').forEach(b => {
         b.classList.toggle('active', Number(b.getAttribute('data-gantt-window')) === hours);
       });
@@ -1702,6 +1787,7 @@
       const collapsedIdleNames = [];
       if (hideIdleNodes) {
         AGENTS.forEach(a => {
+          if (currentRigFilter !== 'all' && !a.id.endsWith('@' + currentRigFilter)) return;
           const isHotCtx = typeof a.ctxPct === 'number' && a.ctxPct >= 75;
           const isPureIdle = a.state === 'idle' && !a.isAnomaly && !isHotCtx && a.id !== selectedAgentId && !activeEndpointIds.has(a.id);
           if (isPureIdle) {
@@ -1730,13 +1816,13 @@
         AGENTS.forEach(agent => {
           const el = nodesLayer.querySelector(`.agent-node[data-agent-id="${agent.id}"]`);
           if (!el) return;
-          const isCollapsed = collapsedIdleIds.has(agent.id);
-          el.style.display = isCollapsed ? 'none' : '';
-          if (isCollapsed) return;
+          const isRigMatch = currentRigFilter === 'all' || agent.id.endsWith('@' + currentRigFilter);
+          const isHidden = collapsedIdleIds.has(agent.id) || !isRigMatch;
+          el.style.display = isHidden ? 'none' : '';
+          if (isHidden) return;
           const thermal = getContextThermal(agent.ctxPct, agent.ctxWindowSize);
           const isSelected = agent.id === selectedAgentId;
-          const isRigMatch = currentRigFilter === 'all' || agent.id.endsWith('@' + currentRigFilter);
-          const isDimmed = Boolean(!isRigMatch || ((hoveredAgentId || currentSliceFilter !== 'all') && !connectedNodeIds.has(agent.id)));
+          const isDimmed = Boolean((hoveredAgentId || currentSliceFilter !== 'all') && !connectedNodeIds.has(agent.id));
           const calmClass = agent.isAnomaly ? 'calm-anomaly' : 'calm-normal';
           const ledClass =
             agent.state === 'urgent' ? 'led-urgent' :
@@ -1765,7 +1851,10 @@
           const nameEl = el.querySelector('.node-name');
           if (nameEl) {
             const nextTitle = getNodeDisplayTitle(agent);
-            if (nameEl.textContent !== nextTitle) nameEl.textContent = nextTitle;
+            if (nameEl.textContent !== nextTitle) {
+              nameEl.textContent = nextTitle;
+              nameEl.title = nextTitle;
+            }
           }
 
           const burn = computeBurn(agent);
@@ -1818,7 +1907,8 @@
           const thermal = getContextThermal(agent.ctxPct, agent.ctxWindowSize);
           const isSelected = agent.id === selectedAgentId;
           const isRigMatch = currentRigFilter === 'all' || agent.id.endsWith('@' + currentRigFilter);
-          const isDimmed = Boolean(!isRigMatch || (hoveredAgentId && !connectedNodeIds.has(agent.id)));
+          const isHidden = collapsedIdleIds.has(agent.id) || !isRigMatch;
+          const isDimmed = Boolean(hoveredAgentId && !connectedNodeIds.has(agent.id));
           const calmClass = agent.isAnomaly ? 'calm-anomaly' : 'calm-normal';
           const ledClass =
             agent.state === 'urgent' ? 'led-urgent' :
@@ -1838,7 +1928,7 @@
           return `
             <div class="agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}"
                  data-agent-id="${escapeHtml(agent.id)}"
-                 style="left:${agent.x}%; top:${agent.y}%; ${collapsedIdleIds.has(agent.id) ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow};"
+                 style="left:${agent.x}%; top:${agent.y}%; ${isHidden ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow};"
                  onmouseenter="setHoverAgent(this.getAttribute('data-agent-id'))"
                  onmouseleave="setHoverAgent(null)"
                  onmousedown="selectAgent(this.getAttribute('data-agent-id'), event)"
@@ -1846,9 +1936,9 @@
               <div class="node-top">
                 <div class="node-identity">
                   <div class="node-icon">${agent.icon}</div>
-                  <div>
-                    <div class="node-name">${getNodeDisplayTitle(agent)}</div>
-                    <div class="node-role">${agent.role}</div>
+                  <div class="node-title-wrap">
+                    <div class="node-name" title="${escapeHtml(getNodeDisplayTitle(agent))}">${escapeHtml(getNodeDisplayTitle(agent))}</div>
+                    <div class="node-role">${escapeHtml(agent.role)}</div>
                   </div>
                 </div>
                 <span class="status-led ${ledClass}" data-state-key="${agent.state}:${agent.activityLabel}">${renderStateIndicatorHtml(agent)}</span>
@@ -1915,6 +2005,7 @@
         const n2 = nodeMap[edge.to];
         if (!n1 || !n2) return '';
         if (collapsedIdleIds.has(edge.from) || collapsedIdleIds.has(edge.to)) return '';
+        if (currentRigFilter !== 'all' && (!edge.from.endsWith('@' + currentRigFilter) || !edge.to.endsWith('@' + currentRigFilter))) return '';
 
         const cx1 = (n1.x / 100) * cw;
         const cy1 = (n1.y / 100) * ch;
@@ -1937,32 +2028,55 @@
         const my = (p1.y + p2.y) / 2;
         const pathD = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
 
-        const isLive = Boolean(edge.liveActive);
-        const segClass = isLive ? 'is-live' : 'is-ghost';
-        const trunkWidth = isLive ? Math.max(4, Math.round(Math.log2(1 + edge.calls) * 2.4)) : 2;
+        const statusKey = edge.queueStatus || (edge.liveActive ? 'live' : 'ghost');
+        const isLive = statusKey === 'live';
+        const isQueuedStatic = statusKey === 'blocked' || statusKey === 'parked' || statusKey === 'held' || statusKey === 'pending';
+        const segClass = isLive ? 'is-live' : (isQueuedStatic ? `is-${statusKey}` : 'is-ghost');
+        const trunkWidth = isLive
+          ? Math.max(4, Math.round(Math.log2(1 + (edge.calls || 1)) * 2.4))
+          : (isQueuedStatic ? 2.6 : 2);
         const streamWidth = Math.max(2, Math.round(trunkWidth * 0.45));
 
         const isVisibleSlice = isEdgeInSlice(edge);
         const isHoveredMatch = !hoveredAgentId || edge.from === hoveredAgentId || edge.to === hoveredAgentId;
         const dimmedClass = (!isVisibleSlice || !isHoveredMatch) ? 'dimmed' : '';
 
-        // Live edge: prominent active task badge; Ghost edge: subtle historical call count
-        const badgeText = isLive
-          ? `📨 ${edge.slice && edge.slice !== 'all' ? edge.slice : 'В работе'}`
-          : `⚡ ${edge.calls} выз.`;
-        const badgeWidth = Math.max(82, badgeText.length * 7.4 + 14);
+        // Semantic badges:
+        //  - live (in-progress):        📨 <slice> (animated emerald flow)
+        //  - blocked:                   🚧 <slice> (static orange dashed)
+        //  - parked (no active wake):   🅿️ <slice> (static amber dashed)
+        //  - held (with wake):          ⏸️ <slice> (static purple dotted)
+        //  - pending (waiting claim):   ⏳ <slice> (static sky dashed)
+        //  - ghost (historical >0):     ⚡ N calls (subtle slate)
+        const showBadge = isLive || isQueuedStatic || (edge.calls && edge.calls > 0);
+        const sliceLabel = edge.slice && edge.slice !== 'all' ? edge.slice : '';
+        let badgeText = '';
+        if (isLive) {
+          badgeText = `📨 ${sliceLabel || (deckLang === 'en' ? 'Active' : 'В работе')}`;
+        } else if (isQueuedStatic) {
+          const icon = edge.statusIcon || (statusKey === 'blocked' ? '🚧' : statusKey === 'parked' ? '🅿️' : statusKey === 'held' ? '⏸️' : '⏳');
+          const fallbackWord = edge.statusLabel || statusKey;
+          badgeText = sliceLabel ? `${icon} ${sliceLabel}` : `${icon} ${fallbackWord}`;
+        } else {
+          badgeText = `⚡ ${edge.calls} ${deckLang === 'en' ? 'calls' : 'выз.'}`;
+        }
+        const badgeWidth = Math.max(76, badgeText.length * 7.2 + 16);
         const badgeX = mx - badgeWidth / 2;
+        const tooltipText = edge.statusTooltip || `${badgeText} (${shortSeat(edge.from)} → ${shortSeat(edge.to)})`;
 
         return `
-          <g class="edge-group ${segClass} ${dimmedClass}" data-from="${edge.from}" data-to="${edge.to}" data-slice="${edge.slice}" onclick="selectEdge(${edgeIdx}, event)">
+          <g class="edge-group ${segClass} ${dimmedClass}" style="--edge-stroke:${edge.color};" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-slice="${escapeHtml(edge.slice)}" data-edge-status="${escapeHtml(statusKey)}" onclick="selectEdge(${edgeIdx}, event)">
+            <title>${escapeHtml(tooltipText)}</title>
             <path d="${pathD}" stroke="transparent" stroke-width="18" fill="none" style="pointer-events:stroke;" />
-            <path d="${pathD}" class="edge-trunk" stroke="${isLive ? edge.color : '#334155'}" stroke-width="${trunkWidth}" />
+            <path d="${pathD}" class="edge-trunk" stroke="${isLive || isQueuedStatic ? edge.color : '#334155'}" stroke-width="${trunkWidth}"${isQueuedStatic ? ` marker-end="url(#${edge.marker || 'arr-amber'})"` : ''} />
             ${isLive ? `
               <path d="${pathD}" class="edge-stream live-active" stroke="${edge.color}" stroke-width="${streamWidth}"
                     style="--stream-speed:${edge.speed}; --edge-glow:${edge.color};" marker-end="url(#${edge.marker})" />
             ` : ''}
-            <rect x="${badgeX}" y="${my - 9}" width="${badgeWidth}" height="18" rx="4" class="edge-badge-bg" />
-            <text x="${mx}" y="${my + 3.5}" text-anchor="middle" class="edge-badge-text">${badgeText}</text>
+            ${showBadge ? `
+              <rect x="${badgeX}" y="${my - 9}" width="${badgeWidth}" height="18" rx="4" class="edge-badge-bg" />
+              <text x="${mx}" y="${my + 3.5}" text-anchor="middle" class="edge-badge-text">${escapeHtml(badgeText)}</text>
+            ` : ''}
           </g>
         `;
       }).join('');
@@ -2513,7 +2627,7 @@
             <div id="inspActionAudit">${renderActionAuditHtml(agent.id)}</div>
 
             <!-- Reference & Rare Metadata Accordion (Collapsed by default) -->
-            <details ${inspectorRefOpen ? 'open' : ''} ontoggle="inspectorRefOpen = this.open" style="border-top:1px solid rgba(56,189,248,0.14); padding-top:6px;">
+            <details ${inspectorRefOpen ? 'open' : ''} ontoggle="setInspectorRefOpen(this.open)" style="border-top:1px solid rgba(56,189,248,0.14); padding-top:6px;">
               <summary style="cursor:pointer; font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; user-select:none; display:flex; justify-content:space-between; align-items:center;">
                 <span>${td('insp.refSummary')}</span>
                 <span style="font-size:10px; color:#64748b;">${td('insp.expand')}</span>
@@ -2648,6 +2762,19 @@
       }
       const quickKeysBar = document.getElementById('ctrlQuickKeysBar');
       const curAgent = AGENTS.find(x => x.id === seatId);
+      if (IS_LIVE && curAgent && typeof detectLiveHitlPrompt === 'function') {
+        const liveHitl = detectLiveHitlPrompt(liveScreenCapture);
+        if (liveHitl.blocked && curAgent.state !== 'urgent') {
+          curAgent.state = 'urgent';
+          curAgent.needsInputCount = 1;
+          curAgent.needsInputReason = liveHitl.reason || 'permission_prompt';
+          curAgent.activityLabel = `🚨 NEEDS INPUT (${curAgent.needsInputReason})`;
+          curAgent.isAnomaly = true;
+          renderTriageStrip();
+          renderWaitRadarAndDecisions();
+          renderTopology();
+        }
+      }
       if (quickKeysBar && curAgent) {
         const qHtml = renderHarnessQuickKeys(curAgent, 'cmdSendStatus');
         if (quickKeysBar.getAttribute('data-cache-key') !== qHtml) {
@@ -2687,6 +2814,15 @@
         }
 
         if (snapshot.rigs.length > 0) {
+          const rigNames = snapshot.rigs.map(r => r.name);
+          const effectiveRig = typeof resolveEffectiveRigFilter === 'function'
+            ? resolveEffectiveRigFilter(currentRigFilter, rigNames)
+            : currentRigFilter;
+          const rigChangedFallback = effectiveRig !== currentRigFilter;
+          if (rigChangedFallback) {
+            currentRigFilter = effectiveRig;
+            persistDeckPref({ rigFilter: effectiveRig });
+          }
           const sel = document.getElementById('rigFilterSelect');
           if (sel) {
             const curVal = currentRigFilter;
@@ -2700,6 +2836,10 @@
               sel.innerHTML = optionsHtml;
               sel.setAttribute('data-rigs-key', optionsHtml);
             }
+            if (sel.value !== curVal) sel.value = curVal;
+          }
+          if (rigChangedFallback) {
+            setTimeout(() => refreshTelemetryNow(), 50);
           }
         }
 
@@ -2784,6 +2924,7 @@
         const openQueue = Array.isArray(data.activeQueue) ? data.activeQueue : [];
         LIVE_OPEN_QUEUE = openQueue;
         IS_LIVE = true;
+        if (typeof syncDemoQuestVisibility === 'function') syncDemoQuestVisibility();
         if (data.history && data.history.pairEnvelopes) PAIR_ENVELOPES = data.history.pairEnvelopes;
         window.LIVE_GANTT = (data.history && Array.isArray(data.history.ganttItems)) ? data.history.ganttItems : [];
 
@@ -2830,29 +2971,49 @@
           }
         }
 
-        // Sync EDGES liveActive strictly with live node states & activeQueue:
-        // If both endpoints are sleeping (idle) and have no open queue row between them, never animate the edge!
+        // Ensure structural topology highways exist for multi-seat rigs even when system noise crowds queue history
+        syncStructuralRigEdges();
+
+        // Sync EDGES semantics strictly with live node states & activeQueue:
+        // Only in-progress / actively-worked tasks animate green; blocked (🚧), parked (🅿️), held (⏸️), pending (⏳) stay static!
+        const seatStatesById = Object.fromEntries(AGENTS.map(a => [a.id, a.state]));
         for (const edge of EDGES) {
-          const nFrom = AGENTS.find(a => a.id === edge.from);
           const nTo = AGENTS.find(a => a.id === edge.to);
-          const hasDirectOpenRow = openQueue.some(q =>
+          const directRows = openQueue.filter(q =>
             (q.sourceSession === edge.from && q.destinationSession === edge.to) ||
             (q.sourceSession === edge.to && q.destinationSession === edge.from)
           );
+          const fromRig = edge.from.includes('@') ? edge.from.slice(edge.from.lastIndexOf('@')) : '';
+          const toRig = edge.to.includes('@') ? edge.to.slice(edge.to.lastIndexOf('@')) : '';
           const isDispatchToWorkingCoder =
-            (edge.from === 'dev-owner@core-platform' || edge.from === 'dev-operator@core-platform') &&
-            edge.to.startsWith('dev-coder') &&
+            fromRig && fromRig === toRig &&
+            (/(^|-)(owner|operator)@/.test(edge.from)) &&
+            /coder/i.test(edge.to) &&
             ((nTo && nTo.state === 'working') || openQueue.some(q => q.destinationSession === edge.to && q.state === 'in-progress'));
 
-          if (hasDirectOpenRow || isDispatchToWorkingCoder) {
-            edge.liveActive = true;
-            edge.color = hasDirectOpenRow ? '#00ff9d' : '#00f0ff';
-            edge.marker = hasDirectOpenRow ? 'arr-emerald' : 'arr-cyan';
-          } else {
-            edge.liveActive = false;
-            edge.color = '#475569';
-            edge.marker = 'arr-cyan';
+          const classified = typeof classifyEdgeQueueStatus === 'function'
+            ? classifyEdgeQueueStatus(directRows, { seatStatesById, isDispatchToWorkingCoder })
+            : { status: directRows.length || isDispatchToWorkingCoder ? 'live' : 'ghost', icon: '📨', color: '#00ff9d', marker: 'arr-emerald', animated: true, tag: '', summary: '', rowState: '', pickupState: '' };
+
+          edge.queueStatus = classified.status;
+          edge.liveActive = Boolean(classified.animated);
+          edge.color = classified.color;
+          edge.marker = classified.marker;
+          edge.statusIcon = classified.icon;
+          edge.statusLabel = deckLang === 'en' ? (classified.labelEn || classified.status) : (classified.labelRu || classified.status);
+          if (classified.tag) edge.slice = classified.tag;
+          // Align arrow direction with the authoritative queue row (source -> destination)
+          if (classified.sourceSession && classified.destinationSession &&
+              classified.sourceSession === edge.to && classified.destinationSession === edge.from) {
+            edge.from = classified.sourceSession;
+            edge.to = classified.destinationSession;
           }
+          const stateMeta = classified.rowState
+            ? `${classified.rowState}${classified.pickupState ? ` / ${classified.pickupState}` : ''}`
+            : edge.statusLabel;
+          edge.statusTooltip = classified.summary
+            ? `${classified.icon} ${stateMeta.toUpperCase()} — ${classified.summary}`
+            : `${classified.icon} ${stateMeta.toUpperCase()} (${shortSeat(edge.from)} → ${shortSeat(edge.to)})`;
         }
 
         // Update recent decisions from TSV
@@ -3180,6 +3341,34 @@
       }
     }
 
+    function getActiveBillingPlans() {
+      if (billingPlans) return billingPlans;
+      if (typeof sanitizeBillingPlans === 'function') {
+        billingPlans = sanitizeBillingPlans({});
+        return billingPlans;
+      }
+      return {};
+    }
+
+    function setBudgetWindow(winKey) {
+      budgetWindow = (winKey === 'h24' || winKey === 'd7' || winKey === 'session') ? winKey : 'h24';
+      persistDeckPref({ budgetWindow });
+      renderReservoirs();
+      const adv = document.getElementById('fleetAdvisorModal');
+      if (adv && adv.classList.contains('open')) renderFleetAdvisorModal();
+    }
+
+    function setPoolBillingPlan(poolId, patch) {
+      const cur = getActiveBillingPlans();
+      const prev = cur[poolId] || { mode: 'payg', monthlyUsd: 0 };
+      const merged = { ...cur, [poolId]: { ...prev, ...patch } };
+      billingPlans = typeof sanitizeBillingPlans === 'function' ? sanitizeBillingPlans(merged) : merged;
+      persistDeckPref({ billingPlans });
+      renderReservoirs();
+      const adv = document.getElementById('fleetAdvisorModal');
+      if (adv && adv.classList.contains('open')) renderFleetAdvisorModal();
+    }
+
     function renderReservoirs() {
       const container = document.getElementById('reservoirsContainer');
       if (!container) return;
@@ -3190,23 +3379,50 @@
         return;
       }
 
+      const finops = typeof computeFleetFinOpsReport === 'function'
+        ? computeFleetFinOpsReport({
+            agents: AGENTS,
+            rigFilter: currentRigFilter,
+            billingPlans: getActiveBillingPlans(),
+            windowKey: budgetWindow,
+            classifyPoolFn: classifyModelPool,
+            computePoolsFn: computeModelPools
+          })
+        : null;
+      const finopsByPool = finops ? Object.fromEntries(finops.pools.map(p => [p.poolId, p])) : {};
+      const winTag = budgetWindow === 'h24' ? td('finops.win24h') : (budgetWindow === 'd7' ? td('finops.win7d') : td('finops.winSession'));
+
       container.innerHTML = activePools.map(pool => {
         const seatListTip = escapeHtml(pool.seatNames.join(', '));
+        const fp = finopsByPool[pool.id] || null;
+        const planMode = (fp && fp.plan && fp.plan.mode) || 'payg';
+        const winTokens = fp ? fp.totalTokens : pool.totalTokens;
+        const winApiUsd = fp ? fp.apiEqUsd : pool.totalEstUsd;
         const ctxFillWidth = pool.hasValidCtx ? Math.min(100, pool.peakCtx) : 0;
         const ctxFillBg = pool.isOver
           ? '#ff0055'
           : (pool.hasValidCtx && pool.peakCtx >= 65 ? 'linear-gradient(90deg, #3b82f6, #f59e0b)' : pool.color);
         const ctxRightText = pool.hasValidCtx ? `${pool.peakCtx}%` : td('pool.noMeter');
-        const secondRowHtml = pool.hasUsage
+
+        const modePill = planMode === 'sub'
+          ? `<span style="padding:0 4px; border-radius:3px; background:rgba(0,240,255,0.14); border:1px solid rgba(0,240,255,0.35); color:#67e8f9; font-size:9px; font-weight:800;">SUB</span>`
+          : `<span style="padding:0 4px; border-radius:3px; background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.35); color:#fde68a; font-size:9px; font-weight:800;">API</span>`;
+
+        const roiSuffix = (fp && planMode === 'sub' && fp.roiRatio !== null)
+          ? `<span style="color:${fp.verdict === 'sub_wins' ? '#6ee7b7' : '#fbbf24'}; font-weight:800; font-size:9.5px;">${fp.roiRatio.toFixed(1)}×</span>`
+          : '';
+
+        const secondRowHtml = (pool.hasUsage || (fp && fp.hasUsage))
           ? `
-          <div class="meter-row" title="${escapeHtml(pool.name)} (avg CTX: ${pool.hasValidCtx ? pool.avgCtx + '%' : '—'})">
-            <span class="meter-label">${td('pool.spend')}</span>
-            <span style="flex:1; font-family:var(--font-mono); font-size:10.5px; color:#7dd3fc; text-align:right;">${formatTokensShort(pool.totalTokens)} tok</span>
-            <span style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#fde68a; min-width:52px; text-align:right;">~$${pool.totalEstUsd.toFixed(2)}</span>
+          <div class="meter-row" title="${escapeHtml(pool.name)} • ${escapeHtml(winTag)} API-equiv ~$${winApiUsd.toFixed(2)}${fp && planMode === 'sub' ? ` vs SUB $${fp.subWindowUsd.toFixed(2)}` : ''}">
+            <span class="meter-label" style="display:inline-flex; align-items:center; gap:4px;">${modePill}<span>${escapeHtml(winTag)}</span></span>
+            <span style="flex:1; font-family:var(--font-mono); font-size:10px; color:#7dd3fc; text-align:right;">${formatTokensShort(winTokens)}</span>
+            <span style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#fde68a; text-align:right;">~$${winApiUsd.toFixed(2)}</span>
+            ${roiSuffix}
           </div>`
           : `
           <div class="meter-row" title="${escapeHtml(pool.name)}">
-            <span class="meter-label">${td('pool.avgCtx')}</span>
+            <span class="meter-label" style="display:inline-flex; align-items:center; gap:4px;">${modePill}<span>${td('pool.avgCtx')}</span></span>
             <div class="meter-track">
               <div class="meter-fill" style="width: ${pool.hasValidCtx ? Math.min(100, pool.avgCtx) : 0}%; background: ${pool.color}; opacity: 0.85;"></div>
             </div>
@@ -3214,7 +3430,7 @@
           </div>`;
 
         return `
-        <div class="tank-card" title="Seats (${pool.seatCount}): ${seatListTip}" style="--tank-color: ${pool.color}; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
+        <div class="tank-card" onclick="openFleetAdvisorModal('budget')" title="Seats (${pool.seatCount}): ${seatListTip} • Click for SUB vs API Budget" style="cursor:pointer; --tank-color: ${pool.color}; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
           <div class="tank-top">
             <span>${pool.name}</span>
             <span style="color:${pool.activeCount > 0 ? '#6ee7b7' : '#e9d5ff'}; font-family:var(--font-mono); font-size:11px;">${pool.statusLabel}</span>
@@ -3241,6 +3457,7 @@
       if (ev && ev.stopPropagation) ev.stopPropagation();
       const changed = selectedAgentId !== id;
       selectedAgentId = id;
+      persistDeckPref({ selectedAgentId: id });
       applyHoverClasses();
       renderInspectorAndScorecards(true);
       if (changed) {
@@ -3259,18 +3476,21 @@
       renderSwimlanes();
     }
 
-    function toggleCalmMode() {
+    function toggleCalmMode(skipPersist = false) {
       calmMode = !calmMode;
       document.body.classList.toggle('calm-mode', calmMode);
+      if (!skipPersist) persistDeckPref({ calmMode });
       const b = document.getElementById('btnCalmMode');
       if (b) {
         b.classList.toggle('active', calmMode);
         b.innerHTML = calmMode ? td('hud.calmOn') : td('hud.calmOff');
       }
+      if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
 
     function toggleHideIdle() {
       hideIdleNodes = !hideIdleNodes;
+      persistDeckPref({ hideIdleNodes });
       const b = document.getElementById('btnHideIdle');
       if (b) {
         b.classList.toggle('active', hideIdleNodes);
@@ -3340,6 +3560,7 @@
           DEMO_SCREEN_OVERRIDES[seat] = cancelled
             ? `[${seat}] ~/openrig-lab/core-platform\nSent key: ${text}\n✕ Промпт отменён оператором. Рабочее дерево сохранено.\n› _`
             : `[${seat}] ~/openrig-lab/core-platform (check-pw 4178)\nSent key: ${text}\n✓ HITL Authorization принят.\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\n  ✓  14 passed (100% GREEN)\nStatus: READY FOR LOCAL ACCEPTANCE 🟢`;
+          if (!cancelled && typeof markDemoQuestStep === 'function') markDemoQuestStep('hitl');
         } else if (act === 'wake_parked_seat') {
           a.state = 'working';
           a.parkedData = null;
@@ -3385,6 +3606,54 @@
       return detail;
     }
 
+    function getDeckToken() {
+      const m = document.querySelector('meta[name="deck-token"]');
+      return (m && m.content) ? m.content : '';
+    }
+
+    async function refreshDeckTokenFromShell() {
+      try {
+        const res = await fetch('/', { cache: 'no-store' });
+        if (!res.ok) return '';
+        const html = await res.text();
+        const match = html.match(/<meta\s+name=["']deck-token["']\s+content=["']([a-f0-9]+)["']/i);
+        if (!match) return '';
+        let meta = document.querySelector('meta[name="deck-token"]');
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('name', 'deck-token');
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', match[1]);
+        return match[1];
+      } catch {
+        return '';
+      }
+    }
+
+    async function deckPostJson(endpoint, payload) {
+      const doPost = async (tok) => {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Deck-Token': tok
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        return { res, data };
+      };
+      let result = await doPost(getDeckToken());
+      if (result.res.status === 403 && /deck token/i.test(String(result.data && result.data.error || ''))) {
+        const freshTok = await refreshDeckTokenFromShell();
+        if (freshTok) {
+          result = await doPost(freshTok);
+        }
+      }
+      return result;
+    }
+
     async function executeApiSend(seat, text, type, statusElId, actionId = '') {
       const statusEl = statusElId ? document.getElementById(statusElId) : null;
       if (statusEl) {
@@ -3392,15 +3661,7 @@
         statusEl.textContent = `Отправка в ${shortSeat(seat)} (${type})...`;
       }
       try {
-        const res = await fetch('/api/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Deck-Token': (document.querySelector('meta[name="deck-token"]') || {}).content || ''
-          },
-          body: JSON.stringify({ seat, text, type, actionId })
-        });
-        const data = await res.json();
+        const { data } = await deckPostJson('/api/send', { seat, text, type, actionId });
         if (!data.ok) throw new Error(data.error || 'Ошибка отправки');
         if (statusEl) {
           statusEl.className = 'ctrl-status ok';
@@ -3413,15 +3674,17 @@
           toast.style.display = 'block';
           setTimeout(() => { toast.style.display = 'none'; }, 2200);
         }
-        // Immediate updates
+        // Immediate updates (terminal + telemetry reconciliation)
         setTimeout(() => {
           fetchTerminalCapture(selectedAgentId, true);
           if (modalSeatId) fetchModalCapture();
-        }, 300);
+          refreshTelemetryNow();
+        }, 450);
         setTimeout(() => {
           fetchTerminalCapture(selectedAgentId, true);
           if (modalSeatId) fetchModalCapture();
-        }, 1200);
+          refreshTelemetryNow();
+        }, 1400);
       } catch (err) {
         if (!IS_LIVE) {
           const detail = applyDemoAction(seat, text, type, actionId);
@@ -3501,8 +3764,9 @@
     // ===== Stage 3: Auto-follow & 80-line terminal modal =====
     function toggleAutoFollow() {
       autoFollow = !autoFollow;
+      persistDeckPref({ autoFollow });
       const b = document.getElementById('btnAutoFollow');
-      if (b) b.textContent = autoFollow ? '🔴 AUTO-FOLLOW' : '⚪ FOLLOW OFF';
+      if (b) b.textContent = autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff');
     }
 
     function openTerminalModal(seatId) {
@@ -3570,6 +3834,7 @@
       const modal = document.getElementById('fleetAdvisorModal');
       if (modal) modal.classList.add('open');
       renderFleetAdvisorModal();
+      if (activeFleetTab === 'budget' && typeof markDemoQuestStep === 'function') markDemoQuestStep('budget');
     }
 
     function closeFleetAdvisorModal() {
@@ -3580,6 +3845,7 @@
     function setFleetAdvisorTab(tab) {
       activeFleetTab = tab;
       renderFleetAdvisorModal();
+      if (activeFleetTab === 'budget' && typeof markDemoQuestStep === 'function') markDemoQuestStep('budget');
     }
 
     function setFleetCategoryFilter(cat) {
@@ -3797,87 +4063,164 @@
           </table>
         `;
       } else if (activeFleetTab === 'budget') {
-        const snap = window.ONTOLOGY_SNAPSHOT;
-        const fleetSum = (snap && snap.fleetUsageSummary) || window.LIVE_FLEET_USAGE;
-        const usageRows = snap
-          ? getFleetBudgetRows(snap).map(u => [u.seatId, u])
-          : Object.entries(window.LIVE_SEAT_USAGE || {}).sort((a, b) => (b[1].estUsd || 0) - (a[1].estUsd || 0));
+        const en = deckLang === 'en';
+        const plans = getActiveBillingPlans();
+        const finops = typeof computeFleetFinOpsReport === 'function'
+          ? computeFleetFinOpsReport({
+              agents: AGENTS,
+              rigFilter: currentRigFilter,
+              billingPlans: plans,
+              windowKey: budgetWindow,
+              classifyPoolFn: classifyModelPool,
+              computePoolsFn: computeModelPools
+            })
+          : null;
 
-        const liveBudgetHtml = usageRows.length > 0 ? `
-          <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; background:rgba(15,23,42,0.7); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:8px 12px; margin-bottom:10px; font-family:var(--font-mono); font-size:11.5px;">
-            <span>${td('advisor.sessionTotal')} <b style="color:#fde68a;">~$${(fleetSum?.totalEstUsd || 0).toFixed(2)}</b> <span style="color:#64748b;">${td('advisor.estNote')}</span></span>
-            <span>${td('advisor.tokens')} <b style="color:#7dd3fc;">${formatTokensShort(fleetSum?.totalTokens || 0)}</b> (${td('advisor.cache')} <b style="color:#6ee7b7;">${fleetSum?.cachedPct || 0}%</b> • out: ${formatTokensShort(fleetSum?.totalOutputTokens || 0)})</span>
+        const totals = finops ? finops.totals : { apiEqUsd: 0, subShareUsd: 0, paygCashUsd: 0, actualUsd: 0, savingsVsApiUsd: 0, savingsPct: 0, totalTokens: 0, totalOutput: 0, cachedPct: 0, monthlySubCommitUsd: 0, projectedMonthlyApiUsd: 0 };
+        const winLabel = budgetWindow === 'h24' ? td('finops.win24h') : (budgetWindow === 'd7' ? td('finops.win7d') : td('finops.winSession'));
+        const savingsPositive = totals.savingsVsApiUsd >= 0;
+
+        const winBtnsHtml = `
+          <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+            <div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono);">${td('advisor.budgetDesc')}</div>
+            <div style="display:inline-flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11px;">
+              <span style="color:#94a3b8;">${td('finops.windowLabel')}</span>
+              ${[['h24', td('finops.win24h')], ['d7', td('finops.win7d')], ['session', td('finops.winSession')]].map(([wk, lbl]) => `
+                <button type="button" class="hud-segment-btn ${budgetWindow === wk ? 'active' : ''}" data-budget-window="${wk}" onclick="setBudgetWindow('${wk}')">${escapeHtml(lbl)}</button>
+              `).join('')}
+            </div>
           </div>
+        `;
+
+        const kpiCardsHtml = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(175px, 1fr)); gap:8px; margin-bottom:12px; font-family:var(--font-mono);">
+            <div style="background:rgba(15,23,42,0.78); border:1px solid rgba(56,189,248,0.28); border-radius:8px; padding:9px 11px;">
+              <div style="font-size:10px; color:#94a3b8;">${td('finops.kpiActual')} (${escapeHtml(winLabel)})</div>
+              <div style="font-size:17px; font-weight:800; color:#e2e8f0; margin:2px 0;">$${totals.actualUsd.toFixed(2)}</div>
+              <div style="font-size:10px; color:#64748b;">SUB $${totals.subShareUsd.toFixed(2)} + PAYG $${totals.paygCashUsd.toFixed(2)}</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.78); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:9px 11px;">
+              <div style="font-size:10px; color:#94a3b8;">${td('finops.kpiApiEq')} (${escapeHtml(winLabel)})</div>
+              <div style="font-size:17px; font-weight:800; color:#fde68a; margin:2px 0;">~$${totals.apiEqUsd.toFixed(2)}</div>
+              <div style="font-size:10px; color:#7dd3fc;">${td('finops.projMonth', { mo: totals.projectedMonthlyApiUsd.toFixed(0) })} • ${formatTokensShort(totals.totalTokens)} (${totals.cachedPct}% ${td('advisor.cache').replace(':', '')})</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.78); border:1px solid ${savingsPositive ? 'rgba(0,255,157,0.35)' : 'rgba(249,115,22,0.4)'}; border-radius:8px; padding:9px 11px;">
+              <div style="font-size:10px; color:#94a3b8;">${td('finops.kpiSavings')}</div>
+              <div style="font-size:17px; font-weight:800; color:${savingsPositive ? '#6ee7b7' : '#fdba74'}; margin:2px 0;">${savingsPositive ? '+' : '−'}$${Math.abs(totals.savingsVsApiUsd).toFixed(2)}</div>
+              <div style="font-size:10px; color:${savingsPositive ? '#6ee7b7' : '#fdba74'};">${savingsPositive ? td('finops.savedPct', { pct: Math.max(0, totals.savingsPct) }) : td('finops.overpaidPct')}</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.78); border:1px solid rgba(168,85,247,0.3); border-radius:8px; padding:9px 11px;">
+              <div style="font-size:10px; color:#94a3b8;">${td('finops.kpiPayg')}</div>
+              <div style="font-size:17px; font-weight:800; color:${totals.paygCashUsd > 0 ? '#fda4af' : '#6ee7b7'}; margin:2px 0;">$${totals.paygCashUsd.toFixed(2)}</div>
+              <div style="font-size:10px; color:#94a3b8;">${td('finops.paygSub')} • SUB $${totals.monthlySubCommitUsd.toFixed(0)}/mo</div>
+            </div>
+          </div>
+        `;
+
+        const formatVerdictHtml = (p) => {
+          if (p.verdict === 'sub_wins') {
+            return `<span class="action-pill" style="font-size:10.5px; border-color:#00ff9d; color:#6ee7b7;">${escapeHtml(td('finops.subWins', { roi: (p.roiRatio || 0).toFixed(1), saved: Math.max(0, p.savingsVsApiUsd).toFixed(2) }))}</span>`;
+          }
+          if (p.verdict === 'sub_underused') {
+            return `<span class="action-pill" style="font-size:10.5px; border-color:#f59e0b; color:#fde68a;">${escapeHtml(td('finops.subUnderused', { diff: Math.abs(p.savingsVsApiUsd).toFixed(2) }))}</span>`;
+          }
+          if (p.verdict === 'switch_to_sub') {
+            const potential = Math.max(0, p.apiEqUsd - p.subWindowUsd);
+            return `<span class="action-pill" style="font-size:10.5px; border-color:#38bdf8; color:#7dd3fc;">${escapeHtml(td('finops.switchToSub', { saved: potential.toFixed(2) }))}</span>`;
+          }
+          if (p.verdict === 'payg_optimal') {
+            return `<span class="action-pill" style="font-size:10.5px; border-color:#6ee7b7; color:#6ee7b7;">${escapeHtml(td('finops.paygOptimal'))}</span>`;
+          }
+          return `<span style="color:#64748b; font-size:11px;">${escapeHtml(td('finops.noMeter'))}</span>`;
+        };
+
+        const poolsTableHtml = finops ? `
           <table class="fleet-table" style="margin-bottom:14px;">
             <thead>
               <tr>
-                <th>${td('advisor.colSeat')}</th>
-                <th>${td('advisor.colHarness')}</th>
-                <th>UNCACHED IN</th>
-                <th>CACHED IN</th>
-                <th>OUTPUT</th>
-                <th>TOTAL TOK</th>
-                <th>EST $</th>
+                <th>${td('advisor.colPool')}</th>
+                <th>${td('advisor.colPoolSeats')}</th>
+                <th>${td('finops.colBilling')}</th>
+                <th>${td('finops.colMonthly')}</th>
+                <th>${td('finops.colSubShare')} (${escapeHtml(winLabel)})</th>
+                <th>${td('finops.colApiEq')} (${escapeHtml(winLabel)})</th>
+                <th>${td('finops.colVerdict')}</th>
               </tr>
             </thead>
             <tbody>
-              ${usageRows.map(([seatId, u]) => `
-                <tr>
-                  <td style="font-weight:700; color:#e2e8f0;">${escapeHtml(shortSeat(seatId))}</td>
-                  <td style="font-size:11px; color:#cbd5e1;">${escapeHtml(u.model)} <span style="color:#64748b;">(${escapeHtml(u.tier)})</span></td>
-                  <td>${formatTokensShort(u.uncachedInputTokens)}</td>
-                  <td style="color:#6ee7b7;">${formatTokensShort(u.cachedInputTokens)} (${u.cachedPct}%)</td>
-                  <td>${formatTokensShort(u.outputTokens)}</td>
-                  <td style="font-weight:700; color:#7dd3fc;">${formatTokensShort(u.totalTokens)}</td>
-                  <td style="font-weight:800; color:${u.estUsd >= 5 ? '#fda4af' : u.estUsd >= 1 ? '#fde68a' : '#6ee7b7'};">~$${u.estUsd.toFixed(2)}</td>
+              ${finops.pools.map(p => `
+                <tr data-finops-pool="${escapeHtml(p.poolId)}">
+                  <td style="font-weight:700; color:${p.color};">${escapeHtml(p.poolName)}</td>
+                  <td style="color:#cbd5e1; font-size:11px;">${escapeHtml(p.seatNames.join(', '))}</td>
+                  <td>
+                    <div style="display:inline-flex; gap:3px; background:rgba(2,6,23,0.75); border:1px solid rgba(56,189,248,0.22); border-radius:5px; padding:2px;">
+                      <button type="button" class="hud-segment-btn ${p.plan.mode === 'sub' ? 'active' : ''}" style="padding:2px 6px; font-size:10px;" onclick="setPoolBillingPlan('${escapeHtml(p.poolId)}', { mode: 'sub' })">SUB</button>
+                      <button type="button" class="hud-segment-btn ${p.plan.mode === 'payg' ? 'active' : ''}" style="padding:2px 6px; font-size:10px;" onclick="setPoolBillingPlan('${escapeHtml(p.poolId)}', { mode: 'payg' })">PAYG</button>
+                    </div>
+                  </td>
+                  <td>
+                    <input type="number" min="0" max="10000" step="5" value="${p.plan.monthlyUsd}"
+                           onchange="setPoolBillingPlan('${escapeHtml(p.poolId)}', { monthlyUsd: Number(this.value) })"
+                           style="width:72px; background:#020617; color:#e2e8f0; border:1px solid rgba(56,189,248,0.3); border-radius:4px; padding:3px 6px; font-family:var(--font-mono); font-size:11px;" />
+                  </td>
+                  <td style="font-family:var(--font-mono); color:${p.plan.mode === 'sub' ? '#7dd3fc' : '#64748b'};">
+                    $${p.subWindowUsd.toFixed(2)}
+                  </td>
+                  <td style="font-family:var(--font-mono);">
+                    <b style="color:#fde68a;">~$${p.apiEqUsd.toFixed(2)}</b>
+                    ${p.hasUsage ? `<div style="font-size:9.5px; color:#64748b;">~${p.projectedMonthlyApiUsd.toFixed(0)}/mo</div>` : ''}
+                  </td>
+                  <td>${formatVerdictHtml(p)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
         ` : '';
 
-        const livePools = computeModelPools(AGENTS, currentRigFilter);
-        const en = deckLang === 'en';
-        const poolMeta = {
-          'codex-gpt': { tier: 'Tier 3 (Frontier, High $/M)', rec: en ? 'Architecture, decomposition, security audits' : 'Архитектурные решения, декомпозиция, безопасность' },
-          'claude': { tier: 'Tier 2 (Balanced, Medium $/M)', rec: en ? 'Specs, complex TDD implementation, refactoring' : 'Спецификации, комплексная TDD-реализация, рефакторинг' },
-          'fast-open': { tier: 'Tier 1 (Fast, Low $/M)', rec: en ? 'Independent QA, lint/fixes, bulk checks' : 'Независимый QA, фиксы, линтер, массовые проверки' },
-          'terminal-agy': { tier: 'Tier 1 (CLI / AGY)', rec: en ? 'Fast terminal tasks, scoped edits' : 'Быстрая терминальная разработка, локальные правки' }
-        };
+        const scopedSeatRows = AGENTS
+          .filter(a => a && a.usage && (currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter)))
+          .map(a => {
+            const w = typeof getUsageForWindow === 'function' ? getUsageForWindow(a.usage, budgetWindow) : a.usage;
+            const pid = typeof classifyModelPool === 'function' ? classifyModelPool(a) : 'other';
+            const pMode = (plans[pid] && plans[pid].mode) || 'payg';
+            return { seatId: a.id, model: a.usage.model || a.model || 'unknown', tier: a.usage.tier || 'Tier 2', planMode: pMode, ...w };
+          })
+          .sort((a, b) => (b.estUsd || 0) - (a.estUsd || 0));
 
-        tabContentHtml = `
-          <div style="font-size:12px; color:#94a3b8; margin-bottom:8px; font-family:var(--font-mono);">
-            ${td('advisor.budgetDesc')}
-          </div>
-          ${liveBudgetHtml}
+        const seatsTableHtml = scopedSeatRows.length > 0 ? `
           <table class="fleet-table">
             <thead>
               <tr>
-                <th>${td('advisor.colPool')}</th>
-                <th>${td('advisor.colTier')}</th>
-                <th>${td('advisor.colPoolSeats')}</th>
-                <th>${td('advisor.colPeakSpend')}</th>
-                <th>${td('advisor.colRecommended')}</th>
+                <th>${td('advisor.colSeat')}</th>
+                <th>${td('advisor.colHarness')}</th>
+                <th>PLAN</th>
+                <th>UNCACHED IN</th>
+                <th>CACHED IN</th>
+                <th>OUTPUT</th>
+                <th>TOTAL TOK</th>
+                <th>API EQ $</th>
+                <th>PAYG CASH $</th>
               </tr>
             </thead>
             <tbody>
-              ${livePools.map(p => {
-                const meta = poolMeta[p.id] || { tier: 'Standard', rec: en ? 'General workload' : 'Общие задачи' };
-                const ctxStr = p.hasValidCtx ? `${p.peakCtx}% (${en ? 'avg' : 'ср.'} ${p.avgCtx}%)` : td('pool.noMeter');
-                const spendStr = p.hasUsage ? ` • ~$${p.totalEstUsd.toFixed(2)}` : '';
-                return `
-                  <tr>
-                    <td style="font-weight:700; color:${p.color};">${escapeHtml(p.name)}</td>
-                    <td>${meta.tier}</td>
-                    <td style="color:#cbd5e1;">${escapeHtml(p.seatNames.join(', '))}</td>
-                    <td style="font-family:var(--font-mono); color:${p.isOver ? '#fda4af' : '#e2e8f0'};">${ctxStr}<b style="color:#fde68a;">${spendStr}</b></td>
-                    <td>${meta.rec}</td>
-                  </tr>
-                `;
-              }).join('')}
+              ${scopedSeatRows.map(u => `
+                <tr>
+                  <td style="font-weight:700; color:#e2e8f0;">${escapeHtml(shortSeat(u.seatId))}</td>
+                  <td style="font-size:11px; color:#cbd5e1;">${escapeHtml(u.model)} <span style="color:#64748b;">(${escapeHtml(u.tier)})</span></td>
+                  <td><span style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:${u.planMode === 'sub' ? '#67e8f9' : '#fde68a'};">${u.planMode.toUpperCase()}</span></td>
+                  <td>${formatTokensShort(u.uncachedInputTokens)}</td>
+                  <td style="color:#6ee7b7;">${formatTokensShort(u.cachedInputTokens)} (${u.cachedPct}%)</td>
+                  <td>${formatTokensShort(u.outputTokens)}</td>
+                  <td style="font-weight:700; color:#7dd3fc;">${formatTokensShort(u.totalTokens)}</td>
+                  <td style="font-weight:800; color:#fde68a;">~$${u.estUsd.toFixed(2)}</td>
+                  <td style="font-weight:800; color:${u.planMode === 'payg' && u.estUsd > 0 ? '#fda4af' : '#6ee7b7'};">${u.planMode === 'sub' ? '$0.00' : `$${u.estUsd.toFixed(2)}`}</td>
+                </tr>
+              `).join('')}
             </tbody>
           </table>
-        `;
+        ` : '';
+
+        tabContentHtml = `${winBtnsHtml}${kpiCardsHtml}${poolsTableHtml}${seatsTableHtml}`;
       } else if (activeFleetTab === 'topology') {
         tabContentHtml = `
           <div style="font-size:12px; color:#94a3b8; margin-bottom:8px; font-family:var(--font-mono);">
@@ -3984,15 +4327,7 @@
     }
 
     async function guardrailsPost(endpoint, payload) {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Deck-Token': (document.querySelector('meta[name="deck-token"]') || {}).content || ''
-        },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
+      const { res, data } = await deckPostJson(endpoint, payload);
       if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
       return data;
     }
@@ -4300,14 +4635,23 @@
     }
 
     // ===== Stage 5: Audio radar & tab title =====
-    function toggleAudioRadar() {
-      audioRadarOn = !audioRadarOn;
-      if (audioRadarOn && !audioCtx) {
+    function ensureAudioCtxUnlocked() {
+      if (!audioRadarOn) return;
+      if (!audioCtx) {
         try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch { audioCtx = null; }
       }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+
+    function toggleAudioRadar() {
+      audioRadarOn = !audioRadarOn;
+      persistDeckPref({ audioRadarOn });
+      if (audioRadarOn) ensureAudioCtxUnlocked();
       const b = document.getElementById('btnAudioRadar');
       if (b) {
-        b.innerHTML = audioRadarOn ? '🔔 АУДИО: ON' : '🔕 АУДИО: ВЫКЛ';
+        b.innerHTML = audioRadarOn ? td('hud.audioOn') : td('hud.audioOff');
         b.classList.toggle('active', audioRadarOn);
       }
       if (audioRadarOn) playBeep([660, 990]);
@@ -4373,10 +4717,10 @@
       if (!layout) return;
       if (side === 'left') {
         layout.classList.toggle('left-collapsed');
-        localStorage.setItem('openrig_sidebar_left', layout.classList.contains('left-collapsed') ? '1' : '0');
+        persistDeckPref({ sidebarLeftCollapsed: layout.classList.contains('left-collapsed') });
       } else if (side === 'right') {
         layout.classList.toggle('right-collapsed');
-        localStorage.setItem('openrig_sidebar_right', layout.classList.contains('right-collapsed') ? '1' : '0');
+        persistDeckPref({ sidebarRightCollapsed: layout.classList.contains('right-collapsed') });
       }
       updateSidebarUi();
       window.requestAnimationFrame(() => renderTopology());
@@ -4388,12 +4732,10 @@
       const bothNow = layout.classList.contains('left-collapsed') && layout.classList.contains('right-collapsed');
       if (bothNow) {
         layout.classList.remove('left-collapsed', 'right-collapsed');
-        localStorage.setItem('openrig_sidebar_left', '0');
-        localStorage.setItem('openrig_sidebar_right', '0');
+        persistDeckPref({ sidebarLeftCollapsed: false, sidebarRightCollapsed: false });
       } else {
         layout.classList.add('left-collapsed', 'right-collapsed');
-        localStorage.setItem('openrig_sidebar_left', '1');
-        localStorage.setItem('openrig_sidebar_right', '1');
+        persistDeckPref({ sidebarLeftCollapsed: true, sidebarRightCollapsed: true });
       }
       updateSidebarUi();
       window.requestAnimationFrame(() => renderTopology());
@@ -4460,7 +4802,7 @@
 
     function toggleDensityMode() {
       const isDetailed = document.body.classList.toggle('density-detailed');
-      localStorage.setItem('openrig_density_mode', isDetailed ? 'detailed' : 'fit');
+      persistDeckPref({ density: isDetailed ? 'detailed' : 'fit' });
       updateDensityUi();
       window.requestAnimationFrame(() => renderTopology());
     }
@@ -4617,12 +4959,14 @@
       saTourOpen = !saTourOpen;
       if (saTourOpen) saTourIdx = 0;
       renderSaTour();
+      if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
 
     function closeSaTour() {
       if (!saTourOpen) return;
       saTourOpen = false;
       renderSaTour();
+      if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
 
     function moveSaTour(delta) {
@@ -4634,6 +4978,186 @@
     function runSaTourAction() {
       const step = getSaTourSteps()[saTourIdx];
       if (step && typeof step.action === 'function') step.action();
+    }
+
+    // ===== FIRST-CONTACT 10-SECOND DEMO MISSION (ITEM 5) =====
+    let demoQuestState = { steps: { hitl: false, gantt: false, budget: false }, dismissed: false, minimized: false };
+    let demoQuestOpen = false;
+
+    function loadDemoQuestDismissed() {
+      try { return sessionStorage.getItem('rigcommander_quest_dismissed') === '1'; } catch { return false; }
+    }
+
+    function saveDemoQuestDismissed(val) {
+      try {
+        if (val) sessionStorage.setItem('rigcommander_quest_dismissed', '1');
+        else sessionStorage.removeItem('rigcommander_quest_dismissed');
+      } catch {}
+    }
+
+    function initDemoQuest(activeTrack = '') {
+      const dismissed = loadDemoQuestDismissed();
+      demoQuestState = typeof createQuestState === 'function'
+        ? createQuestState({ dismissed })
+        : { steps: { hitl: false, gantt: false, budget: false }, dismissed, minimized: false };
+      demoQuestOpen = typeof shouldAutoOpenQuest === 'function'
+        ? shouldAutoOpenQuest({ isLive: IS_LIVE, track: activeTrack, dismissed })
+        : (!IS_LIVE && !activeTrack && !dismissed);
+      if (demoQuestOpen) {
+        demoQuestState.dismissed = false;
+        saveDemoQuestDismissed(false);
+      }
+      syncDemoQuestVisibility();
+    }
+
+    function syncDemoQuestVisibility() {
+      const btn = document.getElementById('btnDemoQuest');
+      if (IS_LIVE) {
+        demoQuestOpen = false;
+        if (btn) btn.style.display = 'none';
+      } else if (btn) {
+        btn.style.display = 'inline-flex';
+      }
+      renderDemoQuest();
+    }
+
+    function markDemoQuestStep(stepId) {
+      if (IS_LIVE) return;
+      if (typeof completeQuestStep !== 'function') return;
+      const res = completeQuestStep(demoQuestState, stepId);
+      demoQuestState = res.state;
+      renderDemoQuest();
+      if (res.newlyCompleted) {
+        const labelMap = {
+          hitl: td('quest.step1Title'),
+          gantt: td('quest.step2Title'),
+          budget: td('quest.step3Title')
+        };
+        const t = document.getElementById('copyToast');
+        if (t) {
+          t.textContent = td('quest.toastStep', { done: res.completed, label: labelMap[stepId] || stepId });
+          t.style.display = 'block';
+          setTimeout(() => { t.style.display = 'none'; }, 2600);
+        }
+      }
+    }
+
+    function runDemoQuestStep(stepId) {
+      if (stepId === 'hitl') {
+        if (centerViewMode === 'gantt') setCenterView('graph', true);
+        selectAgent('dev-check@core-platform');
+        openTerminalModal('dev-check@core-platform');
+      } else if (stepId === 'gantt') {
+        setCenterView('gantt');
+        ganttFocusChain = 'slice:moderation-single-writer';
+        applyGanttFocus();
+      } else if (stepId === 'budget') {
+        openFleetAdvisorModal('budget');
+      }
+    }
+
+    function toggleDemoQuest() {
+      if (IS_LIVE) return;
+      demoQuestOpen = !demoQuestOpen;
+      demoQuestState.dismissed = !demoQuestOpen;
+      saveDemoQuestDismissed(!demoQuestOpen);
+      if (demoQuestOpen && saTourOpen) closeSaTour();
+      renderDemoQuest();
+    }
+
+    function dismissDemoQuest() {
+      demoQuestOpen = false;
+      demoQuestState.dismissed = true;
+      saveDemoQuestDismissed(true);
+      renderDemoQuest();
+    }
+
+    function resetDemoQuest() {
+      demoQuestState = typeof resetQuestState === 'function'
+        ? resetQuestState()
+        : { steps: { hitl: false, gantt: false, budget: false }, dismissed: false, minimized: false };
+      demoQuestOpen = true;
+      saveDemoQuestDismissed(false);
+      renderDemoQuest();
+    }
+
+    function renderDemoQuest() {
+      const dock = document.getElementById('demoQuestDock');
+      const countEl = document.getElementById('btnDemoQuestCount');
+      const btn = document.getElementById('btnDemoQuest');
+      const prog = typeof getQuestProgress === 'function'
+        ? getQuestProgress(demoQuestState)
+        : { completed: 0, total: 3, pct: 0, allDone: false };
+      const nextStep = typeof getNextQuestStep === 'function' ? getNextQuestStep(demoQuestState) : 'hitl';
+
+      if (countEl) {
+        countEl.textContent = prog.allDone ? '3/3 ✓' : `${prog.completed}/${prog.total}`;
+      }
+      if (btn) {
+        btn.style.borderColor = prog.allDone ? 'rgba(0,255,157,0.75)' : (demoQuestOpen ? 'rgba(0,240,255,0.85)' : 'rgba(0,240,255,0.45)');
+      }
+      if (!dock) return;
+
+      if (IS_LIVE || !demoQuestOpen || saTourOpen) {
+        dock.classList.remove('open');
+        return;
+      }
+
+      const steps = [
+        { id: 'hitl', title: td('quest.step1Title'), desc: td('quest.step1Desc'), cta: td('quest.step1Cta') },
+        { id: 'gantt', title: td('quest.step2Title'), desc: td('quest.step2Desc'), cta: td('quest.step2Cta') },
+        { id: 'budget', title: td('quest.step3Title'), desc: td('quest.step3Desc'), cta: td('quest.step3Cta') }
+      ];
+
+      const bodyHtml = prog.allDone
+        ? `<div class="quest-complete-banner">
+             <div>
+               <div style="font-size:12.5px; font-weight:800; color:#6ee7b7;">${escapeHtml(td('quest.completeTitle'))}</div>
+               <div style="font-size:11px; color:#94a3b8; margin-top:2px;">${escapeHtml(td('quest.completeSub'))}</div>
+             </div>
+             <div class="quest-complete-actions">
+               <button type="button" class="quest-mini-btn active" onclick="openGuardrailsModal()">${escapeHtml(td('quest.ctaGuardrails'))}</button>
+               <button type="button" class="quest-mini-btn" onclick="dismissDemoQuest(); toggleSaTour()">${escapeHtml(td('quest.ctaTour'))}</button>
+               <button type="button" class="quest-mini-btn" onclick="copyCmd('npx rig-commander@latest')">${escapeHtml(td('quest.ctaNpx'))}</button>
+             </div>
+           </div>`
+        : `<div class="quest-steps-grid">
+             ${steps.map(s => {
+               const done = Boolean(demoQuestState.steps && demoQuestState.steps[s.id]);
+               const isNext = !done && nextStep === s.id;
+               const cls = done ? 'is-done' : (isNext ? 'is-next' : '');
+               const pill = done
+                 ? `<span class="quest-step-pill done">✓ ${escapeHtml(td('quest.doneTag'))}</span>`
+                 : (isNext ? `<span class="quest-step-pill next">${escapeHtml(td('quest.nextTag'))}</span>` : '');
+               return `
+                 <button type="button" class="quest-step-card ${cls}" data-quest-step="${s.id}" onclick="runDemoQuestStep('${s.id}')">
+                   <div class="quest-step-head">
+                     <span>${done ? '✅ ' : ''}${escapeHtml(s.title)}</span>
+                     ${pill}
+                   </div>
+                   <div class="quest-step-desc">${escapeHtml(s.desc)}</div>
+                   <div class="quest-step-cta">${done ? '✓ ' : ''}${escapeHtml(s.cta)}</div>
+                 </button>`;
+             }).join('')}
+           </div>`;
+
+      dock.innerHTML = `
+        <div class="quest-top">
+          <div class="quest-top-left">
+            <span class="quest-badge">${escapeHtml(td('quest.badge'))}</span>
+            <span class="quest-counter ${prog.allDone ? 'all-done' : ''}" id="questProgressCounter">${prog.completed} / ${prog.total}</span>
+            <span class="quest-sub">${escapeHtml(td('quest.subtitle'))}</span>
+          </div>
+          <div class="quest-top-actions">
+            <button type="button" class="quest-mini-btn ${calmMode ? 'active' : ''}" onclick="toggleCalmMode()">${escapeHtml(calmMode ? td('quest.cleanOn') : td('quest.cleanOff'))}</button>
+            ${prog.completed > 0 ? `<button type="button" class="quest-mini-btn" onclick="resetDemoQuest()">${escapeHtml(td('quest.reset'))}</button>` : ''}
+            <button type="button" class="quest-mini-btn" onclick="dismissDemoQuest()" aria-label="${escapeHtml(td('quest.hide'))}">✕</button>
+          </div>
+        </div>
+        <div class="quest-progress-rail"><div class="quest-progress-fill" style="width:${prog.pct}%"></div></div>
+        ${bodyHtml}
+      `;
+      dock.classList.add('open');
     }
 
     function seedDemoOntologyState() {
@@ -4831,6 +5355,7 @@
       const grd = document.getElementById('guardrailsModal');
       if (grd && grd.classList.contains('open')) renderGuardrailsModal();
       if (saTourOpen) renderSaTour();
+      if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
 
     function rebuildDemoIntelligence() {
@@ -4929,7 +5454,7 @@
         const params = new URLSearchParams(window.location.search);
         track = (params.get('track') || window.location.hash.replace(/^#/, '') || '').toLowerCase().trim();
       } catch {}
-      if (!track) return;
+      if (!track) return '';
 
       const showTrackToast = (msg) => {
         const t = document.getElementById('copyToast');
@@ -4940,7 +5465,7 @@
       };
 
       if (track === 'gantt') {
-        setCenterView('gantt');
+        setCenterView('gantt', false, true);
         ganttFocusChain = 'slice:moderation-single-writer';
         applyGanttFocus();
         showTrackToast('📊 UX-трек: Диаграмма Ганта (клавиша G) • подсветка цепочки single-writer');
@@ -4960,7 +5485,7 @@
         openFleetAdvisorModal('findings');
         showTrackToast('💡 UX-трек: Советник флота • автоматическая диагностика узких мест');
       } else if (track === 'calm') {
-        if (!calmMode) toggleCalmMode();
+        if (!calmMode) toggleCalmMode(true);
         showTrackToast('🧘 UX-трек: Calm HUD (ISO 11064) • в фокусе только аномалии и работа');
       } else if (track === 'guardrails' || track === 'telegram' || track === 'breaker') {
         openGuardrailsModal();
@@ -4969,7 +5494,71 @@
           : '🛡️ UX-трек: Предохранитель бюджета и Telegram HITL-мост');
       } else if (track === 'tour') {
         if (!saTourOpen) toggleSaTour();
+      } else if (track === 'quest' || track === 'mission' || track === 'start') {
+        showTrackToast(deckLang === 'en'
+          ? '🎯 10-Second Mission: 3 clicks to experience full fleet control'
+          : '🎯 Мини-квест за 10 сек: 3 шага, чтобы прочувствовать контроль флота');
       }
+      return track;
+    }
+
+    function restoreDeckPreferences() {
+      if (typeof loadDeckPrefs !== 'function') return;
+      const prefs = loadDeckPrefs(localStorage);
+      currentRigFilter = prefs.rigFilter;
+      calmMode = prefs.calmMode;
+      hideIdleNodes = prefs.hideIdleNodes;
+      currentRadarFilter = prefs.radarFilter;
+      centerViewMode = prefs.centerView;
+      ganttWindowH = prefs.ganttWindowH;
+      autoFollow = prefs.autoFollow;
+      audioRadarOn = prefs.audioRadarOn;
+      activeInspectorTab = prefs.inspectorTab;
+      inspectorRefOpen = prefs.inspectorRefOpen;
+      budgetWindow = prefs.budgetWindow || 'h24';
+      billingPlans = prefs.billingPlans || (typeof sanitizeBillingPlans === 'function' ? sanitizeBillingPlans({}) : null);
+      if (prefs.selectedAgentId) {
+        selectedAgentId = prefs.selectedAgentId;
+      }
+
+      document.body.classList.toggle('calm-mode', calmMode);
+      const bCalm = document.getElementById('btnCalmMode');
+      if (bCalm) {
+        bCalm.classList.toggle('active', calmMode);
+        bCalm.innerHTML = calmMode ? td('hud.calmOn') : td('hud.calmOff');
+      }
+      const bIdle = document.getElementById('btnHideIdle');
+      if (bIdle) {
+        bIdle.classList.toggle('active', hideIdleNodes);
+        bIdle.innerHTML = hideIdleNodes ? td('hud.idleHidden') : td('hud.idleShown');
+      }
+      const bAudio = document.getElementById('btnAudioRadar');
+      if (bAudio) {
+        bAudio.classList.toggle('active', audioRadarOn);
+        bAudio.innerHTML = audioRadarOn ? td('hud.audioOn') : td('hud.audioOff');
+      }
+      if (audioRadarOn) {
+        const unlockOnce = () => {
+          ensureAudioCtxUnlocked();
+          window.removeEventListener('pointerdown', unlockOnce);
+          window.removeEventListener('keydown', unlockOnce);
+        };
+        window.addEventListener('pointerdown', unlockOnce, { passive: true });
+        window.addEventListener('keydown', unlockOnce, { passive: true });
+      }
+      document.querySelectorAll('#radarFilterBar .radar-tab').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-radar-tab') === currentRadarFilter);
+      });
+      const sel = document.getElementById('rigFilterSelect');
+      if (sel && [...sel.options].some(o => o.value === currentRigFilter)) {
+        sel.value = currentRigFilter;
+      }
+      const layout = document.getElementById('mainLayout');
+      if (layout) {
+        layout.classList.toggle('left-collapsed', prefs.sidebarLeftCollapsed);
+        layout.classList.toggle('right-collapsed', prefs.sidebarRightCollapsed);
+      }
+      document.body.classList.toggle('density-detailed', prefs.density === 'detailed');
     }
 
     // Initial render + start live polling loop (invoked after /assets/domain/index.js loads)
@@ -4978,10 +5567,11 @@
         ? resolveDeckLang(window.location.search, localStorage.getItem('rigcommander_lang') || '', navigator.language || '')
         : 'en';
       setDeckLang(initialLang, true);
+      restoreDeckPreferences();
       seedDemoOntologyState();
       rebuildDemoIntelligence();
-      initSidebarState();
-      initDensityMode();
+      updateSidebarUi();
+      updateDensityUi();
       renderTriageStrip();
       renderReservoirs();
       renderWaitRadarAndDecisions();
@@ -4991,8 +5581,9 @@
       refreshTelemetryNow();
       fetchTerminalCapture(selectedAgentId);
       setInterval(refreshTelemetryNow, 4000);
-      setCenterView(centerViewMode);
-      applyDemoTrackFromUrl();
+      setCenterView(centerViewMode, true);
+      const activeTrack = applyDemoTrackFromUrl();
+      initDemoQuest(activeTrack);
       window.addEventListener('resize', () => { if (centerViewMode === 'gantt') renderGantt(); });
       document.addEventListener('keydown', (e) => {
         const tag = (e.target && e.target.tagName) || '';

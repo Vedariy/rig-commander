@@ -12,6 +12,7 @@ import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
 import { discoverUniversalFleet, isValidTmuxTarget } from './lib/universal-discovery.mjs';
 import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
 import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
+import { detectLiveHitlPrompt } from './assets/domain/prompt-parser.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
@@ -19,6 +20,8 @@ const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalT
 const actionAudit = new ActionAuditLog({ maxRecords: 100 });
 const latestSeatBaselines = new Map();
 const universalTmuxTargets = new Map();
+const terminalPromptProbeCache = new Map(); // seatId -> { ts, blocked, reason }
+const TERMINAL_PROMPT_PROBE_TTL_MS = 3500;
 let latestFleetSnapshot = null;
 
 async function captureSeatScreen(seat, lines = 38) {
@@ -42,8 +45,89 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
   const universalTarget = universalTmuxTargets.get(seatId);
   const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
   const output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
+  terminalPromptProbeCache.delete(seatId);
   const rec = actionAudit.record({ actionId, seatId, type: 'key', payload: keyStroke, httpStatus: 200, ok: true, baseline });
   return { ok: true, execId: rec.execId, output: (output || '').trim() };
+}
+
+/**
+ * Pure helper: overlays live tmux prompt probe results onto OpenRig daemon nodes
+ * (catches terminal/agy/Gemini prompts where OpenRig window-sampling still reports 'working').
+ */
+function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
+  if (!Array.isArray(nodes) || !probeResultsBySeat) return nodes;
+  return nodes.map(node => {
+    const seatId = node && node.canonicalSessionName;
+    if (!seatId) return node;
+    const probe = probeResultsBySeat instanceof Map ? probeResultsBySeat.get(seatId) : probeResultsBySeat[seatId];
+    if (!probe || !probe.blocked) return node;
+    const curNeeds = (node.activityState && node.activityState.needsInput && node.activityState.needsInput.count) || 0;
+    const curDisp = (node.activityState && node.activityState.display) || '';
+    if (curNeeds > 0 || curDisp === 'needs-input') return node;
+    return {
+      ...node,
+      activityState: {
+        ...(node.activityState || {}),
+        display: 'needs-input',
+        needsInput: {
+          count: 1,
+          reason: probe.reason || 'permission_prompt',
+          source: 'tmux-prompt-probe'
+        }
+      }
+    };
+  });
+}
+
+async function enrichOpenRigTerminalPrompts(nodes) {
+  if (!Array.isArray(nodes) || nodes.length === 0) return nodes;
+  const now = Date.now();
+  const candidates = nodes
+    .filter(n => {
+      const id = n && n.canonicalSessionName;
+      if (!id || id.includes('operator-human') || id.includes('queue-worker') || id.includes('context-guardian')) return false;
+      const curNeeds = (n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
+      const curDisp = (n.activityState && n.activityState.display) || '';
+      if (curNeeds > 0 || curDisp === 'needs-input') return false;
+      const isTerminalRuntime = n.runtime === 'terminal';
+      const isActive = curDisp === 'working' || curDisp === 'running' || (n.agentActivity && n.agentActivity.state === 'running');
+      return isTerminalRuntime || isActive;
+    })
+    .sort((a, b) => {
+      const score = n => {
+        const d = (n.activityState && n.activityState.display) || '';
+        const act = (d === 'working' || d === 'running' || (n.agentActivity && n.agentActivity.state === 'running')) ? 2 : 0;
+        const term = n.runtime === 'terminal' ? 1 : 0;
+        return act + term;
+      };
+      return score(b) - score(a);
+    })
+    .slice(0, 16);
+
+  if (candidates.length === 0) return nodes;
+
+  const probeMap = new Map();
+  await Promise.all(
+    candidates.map(async n => {
+      const seatId = n.canonicalSessionName;
+      const cached = terminalPromptProbeCache.get(seatId);
+      if (cached && now - cached.ts < TERMINAL_PROMPT_PROBE_TTL_MS) {
+        if (cached.blocked) probeMap.set(seatId, cached);
+        return;
+      }
+      try {
+        const screen = await captureSeatScreen(seatId, 34);
+        const res = detectLiveHitlPrompt(screen || '');
+        const entry = { ts: now, blocked: res.blocked, reason: res.reason };
+        boundedMapSet(terminalPromptProbeCache, seatId, entry, MAX_GUIDANCE_CACHE);
+        if (entry.blocked) probeMap.set(seatId, entry);
+      } catch {
+        // non-blocking probe failure
+      }
+    })
+  );
+
+  return probeMap.size > 0 ? applyTerminalPromptProbes(nodes, probeMap) : nodes;
 }
 
 function formatTelegramFleetSummary(kind = 'status') {
@@ -305,63 +389,137 @@ function getModelPricing(modelName) {
   return MODEL_PRICING_PER_M.find(p => p.match.test(m)) || { in: 2.0, cached: 0.2, out: 10.0, tier: 'Tier 2' };
 }
 
+function parseLineTimestampMs(obj) {
+  const raw = (obj && (obj.timestamp || (obj.payload && obj.payload.timestamp))) || null;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw > 1e12 ? raw : raw * 1000;
+  if (typeof raw === 'string' && raw) {
+    const ms = Date.parse(raw);
+    if (Number.isFinite(ms)) return ms;
+  }
+  return null;
+}
+
 function ingestTranscriptLine(line, state) {
   if (!line) return;
   if (!line.includes('token_count') && !line.includes('"usage"')) return;
   try {
     const obj = JSON.parse(line);
+    const tsMs = parseLineTimestampMs(obj);
+    if (tsMs) {
+      if (!state.firstTsMs || tsMs < state.firstTsMs) state.firstTsMs = tsMs;
+      if (!state.lastTsMs || tsMs > state.lastTsMs) state.lastTsMs = tsMs;
+    }
     if (obj.type === 'event_msg' && obj.payload && obj.payload.type === 'token_count' && obj.payload.info && obj.payload.info.total_token_usage) {
-      state.codexTotals = obj.payload.info.total_token_usage;
+      const tot = obj.payload.info.total_token_usage;
+      state.codexTotals = tot;
+      if (tsMs) {
+        const sample = {
+          t: tsMs,
+          in: Number(tot.input_tokens) || 0,
+          cached: Number(tot.cached_input_tokens) || 0,
+          out: Number(tot.output_tokens) || 0
+        };
+        const samples = state.codexSamples;
+        const prev = samples[samples.length - 1];
+        if (!prev || tsMs - prev.t >= 300_000) {
+          samples.push(sample);
+          if (samples.length > 400) samples.shift();
+        } else {
+          samples[samples.length - 1] = sample;
+        }
+      }
     } else if (obj.message && obj.message.usage) {
       const msgId = obj.message.id || `line-${state.claudeByMsgId.size}`;
       if (obj.message.model) state.lastModel = obj.message.model;
-      state.claudeByMsgId.set(msgId, obj.message.usage);
+      state.claudeByMsgId.set(msgId, { ...obj.message.usage, _tsMs: tsMs });
     }
   } catch {
     // ignore malformed JSONL line
   }
 }
 
-function summarizeTranscriptState(state) {
+function computeCodexWindowDelta(totals, samples, cutoffMs) {
+  const curIn = Number(totals.input_tokens) || 0;
+  const curCached = Number(totals.cached_input_tokens) || 0;
+  const curOut = Number(totals.output_tokens) || 0;
+  if (!Array.isArray(samples) || samples.length === 0) {
+    const uncached = Math.max(0, curIn - curCached);
+    return { inputTokens: curIn, uncachedInputTokens: uncached, cachedInputTokens: curCached, outputTokens: curOut, totalTokens: curIn + curOut };
+  }
+  const latest = samples[samples.length - 1];
+  if (latest.t < cutoffMs) {
+    return { inputTokens: 0, uncachedInputTokens: 0, cachedInputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  }
+  let base = null;
+  for (let i = samples.length - 1; i >= 0; i--) {
+    if (samples[i].t < cutoffMs) {
+      base = samples[i];
+      break;
+    }
+  }
+  const dIn = base ? Math.max(0, curIn - base.in) : curIn;
+  const dCached = base ? Math.max(0, Math.min(dIn, curCached - base.cached)) : curCached;
+  const dUncached = Math.max(0, dIn - dCached);
+  const dOut = base ? Math.max(0, curOut - base.out) : curOut;
+  return { inputTokens: dIn, uncachedInputTokens: dUncached, cachedInputTokens: dCached, outputTokens: dOut, totalTokens: dIn + dOut };
+}
+
+function summarizeTranscriptState(state, nowMs = Date.now()) {
+  const cut24h = nowMs - 86_400_000;
+  const cut7d = nowMs - 7 * 86_400_000;
+  const spanDays = (state.firstTsMs && state.lastTsMs && state.lastTsMs > state.firstTsMs)
+    ? Math.max(1, Math.round(((state.lastTsMs - state.firstTsMs) / 86_400_000) * 10) / 10)
+    : 1;
+
   if (state.codexTotals) {
     const totalInput = Number(state.codexTotals.input_tokens) || 0;
     const cachedInput = Number(state.codexTotals.cached_input_tokens) || 0;
     const uncachedInput = Math.max(0, totalInput - cachedInput);
     const output = Number(state.codexTotals.output_tokens) || 0;
+    const sessionWin = { inputTokens: totalInput, uncachedInputTokens: uncachedInput, cachedInputTokens: cachedInput, outputTokens: output, totalTokens: totalInput + output };
     return {
       source: 'codex_jsonl',
       model: state.lastModel,
-      inputTokens: totalInput,
-      uncachedInputTokens: uncachedInput,
-      cachedInputTokens: cachedInput,
-      outputTokens: output,
-      totalTokens: totalInput + output
+      ...sessionWin,
+      spanDays,
+      windows: {
+        h24: computeCodexWindowDelta(state.codexTotals, state.codexSamples, cut24h),
+        d7: computeCodexWindowDelta(state.codexTotals, state.codexSamples, cut7d),
+        session: sessionWin
+      }
     };
   }
   if (state.claudeByMsgId.size > 0) {
-    let uncachedInput = 0;
-    let cachedInput = 0;
-    let output = 0;
-    for (const u of state.claudeByMsgId.values()) {
-      uncachedInput += (Number(u.input_tokens) || 0) + (Number(u.cache_creation_input_tokens) || 0);
-      cachedInput += Number(u.cache_read_input_tokens) || 0;
-      output += Number(u.output_tokens) || 0;
-    }
-    const totalInput = uncachedInput + cachedInput;
+    const sumClaude = (minTs) => {
+      let uncachedInput = 0;
+      let cachedInput = 0;
+      let output = 0;
+      for (const u of state.claudeByMsgId.values()) {
+        if (minTs > 0 && u._tsMs && u._tsMs < minTs) continue;
+        uncachedInput += (Number(u.input_tokens) || 0) + (Number(u.cache_creation_input_tokens) || 0);
+        cachedInput += Number(u.cache_read_input_tokens) || 0;
+        output += Number(u.output_tokens) || 0;
+      }
+      const totalInput = uncachedInput + cachedInput;
+      return { inputTokens: totalInput, uncachedInputTokens: uncachedInput, cachedInputTokens: cachedInput, outputTokens: output, totalTokens: totalInput + output };
+    };
+    const sessionWin = sumClaude(0);
     return {
       source: 'claude_jsonl',
       model: state.lastModel,
-      inputTokens: totalInput,
-      uncachedInputTokens: uncachedInput,
-      cachedInputTokens: cachedInput,
-      outputTokens: output,
-      totalTokens: totalInput + output
+      ...sessionWin,
+      spanDays,
+      windows: {
+        h24: sumClaude(cut24h),
+        d7: sumClaude(cut7d),
+        session: sessionWin
+      }
     };
   }
   return null;
 }
 
-async function readTranscriptTokenUsage(transcriptPath) {
+async function readTranscriptTokenUsage(transcriptPath, nowMs = Date.now()) {
   if (!transcriptPath) return null;
   let fh = null;
   try {
@@ -375,13 +533,19 @@ async function readTranscriptTokenUsage(transcriptPath) {
     const state = canResume
       ? {
           codexTotals: cached.codexTotals,
+          codexSamples: Array.isArray(cached.codexSamples) ? cached.codexSamples : [],
           claudeByMsgId: cached.claudeByMsgId,
-          lastModel: cached.lastModel
+          lastModel: cached.lastModel,
+          firstTsMs: cached.firstTsMs || null,
+          lastTsMs: cached.lastTsMs || null
         }
       : {
           codexTotals: null,
+          codexSamples: [],
           claudeByMsgId: new Map(),
-          lastModel: null
+          lastModel: null,
+          firstTsMs: null,
+          lastTsMs: null
         };
     let readOffset = canResume ? cached.offset : 0;
     const bytesToRead = stat.size - readOffset;
@@ -409,13 +573,16 @@ async function readTranscriptTokenUsage(transcriptPath) {
     if (tailLine) {
       const snapState = {
         codexTotals: state.codexTotals,
+        codexSamples: state.codexSamples.slice(),
         claudeByMsgId: new Map(state.claudeByMsgId),
-        lastModel: state.lastModel
+        lastModel: state.lastModel,
+        firstTsMs: state.firstTsMs,
+        lastTsMs: state.lastTsMs
       };
       ingestTranscriptLine(tailLine, snapState);
-      data = summarizeTranscriptState(snapState);
+      data = summarizeTranscriptState(snapState, nowMs);
     } else {
-      data = summarizeTranscriptState(state);
+      data = summarizeTranscriptState(state, nowMs);
     }
 
     boundedMapSet(transcriptUsageCache, transcriptPath, {
@@ -423,8 +590,11 @@ async function readTranscriptTokenUsage(transcriptPath) {
       size: stat.size,
       offset: readOffset,
       codexTotals: state.codexTotals,
+      codexSamples: state.codexSamples,
       claudeByMsgId: state.claudeByMsgId,
       lastModel: state.lastModel,
+      firstTsMs: state.firstTsMs,
+      lastTsMs: state.lastTsMs,
       data
     }, MAX_TRANSCRIPT_CACHE);
     return data;
@@ -435,12 +605,36 @@ async function readTranscriptTokenUsage(transcriptPath) {
   }
 }
 
+function priceWindowUsage(win, pricing) {
+  const uncached = Number(win && win.uncachedInputTokens) || 0;
+  const cached = Number(win && win.cachedInputTokens) || 0;
+  const output = Number(win && win.outputTokens) || 0;
+  const totalInput = uncached + cached;
+  const totalTokens = totalInput + output;
+  const cachedPct = totalInput > 0 ? Math.round((cached / totalInput) * 100) : 0;
+  const estUsd = (uncached / 1e6) * pricing.in + (cached / 1e6) * pricing.cached + (output / 1e6) * pricing.out;
+  return {
+    inputTokens: totalInput,
+    uncachedInputTokens: uncached,
+    cachedInputTokens: cached,
+    outputTokens: output,
+    totalTokens,
+    cachedPct,
+    estUsd: Number(estUsd.toFixed(4))
+  };
+}
+
 async function buildSeatUsageReport(nodes) {
   const seatUsage = {};
   let totalUncached = 0;
   let totalCached = 0;
   let totalOutput = 0;
   let totalUsd = 0;
+  const fleetWinAcc = {
+    h24: { uncached: 0, cached: 0, output: 0, usd: 0 },
+    d7: { uncached: 0, cached: 0, output: 0, usd: 0 },
+    session: { uncached: 0, cached: 0, output: 0, usd: 0 }
+  };
 
   await Promise.all((nodes || []).map(async (node) => {
     const seatId = node.canonicalSessionName || node.logicalId;
@@ -454,12 +648,16 @@ async function buildSeatUsageReport(nodes) {
     let cached = 0;
     let output = 0;
     let source = 'none';
+    let spanDays = 1;
+    let rawWindows = null;
 
     if (parsed) {
       uncached = parsed.uncachedInputTokens;
       cached = parsed.cachedInputTokens;
       output = parsed.outputTokens;
       source = parsed.source;
+      spanDays = parsed.spanDays || 1;
+      rawWindows = parsed.windows || null;
     } else if (typeof cu.totalInputTokens === 'number' || typeof cu.totalOutputTokens === 'number') {
       uncached = Number(cu.totalInputTokens) || 0;
       output = Number(cu.totalOutputTokens) || 0;
@@ -468,29 +666,51 @@ async function buildSeatUsageReport(nodes) {
       return;
     }
 
-    const totalInput = uncached + cached;
-    const totalTokens = totalInput + output;
-    const cachedPct = totalInput > 0 ? Math.round((cached / totalInput) * 100) : 0;
-    const estUsd = (uncached / 1e6) * pricing.in + (cached / 1e6) * pricing.cached + (output / 1e6) * pricing.out;
+    const sessionPriced = priceWindowUsage({ uncachedInputTokens: uncached, cachedInputTokens: cached, outputTokens: output }, pricing);
+    const h24Priced = rawWindows ? priceWindowUsage(rawWindows.h24, pricing) : sessionPriced;
+    const d7Priced = rawWindows ? priceWindowUsage(rawWindows.d7, pricing) : sessionPriced;
+
+    const profStr = `${node.codexConfigProfile || ''} ${node.profile || ''}`.toLowerCase();
+    const inferredBillingMode = /(apiko|payg|direct|api-key)/i.test(profStr) ? 'payg' : 'sub';
 
     seatUsage[seatId] = {
       model: modelName || 'unknown',
       tier: pricing.tier,
       source,
-      inputTokens: totalInput,
-      uncachedInputTokens: uncached,
-      cachedInputTokens: cached,
-      outputTokens: output,
-      totalTokens,
-      cachedPct,
-      estUsd: Number(estUsd.toFixed(4))
+      spanDays,
+      inferredBillingMode,
+      ...sessionPriced,
+      windows: {
+        h24: h24Priced,
+        d7: d7Priced,
+        session: sessionPriced
+      }
     };
 
     totalUncached += uncached;
     totalCached += cached;
     totalOutput += output;
-    totalUsd += estUsd;
+    totalUsd += sessionPriced.estUsd;
+    for (const [wk, wObj] of [['h24', h24Priced], ['d7', d7Priced], ['session', sessionPriced]]) {
+      fleetWinAcc[wk].uncached += wObj.uncachedInputTokens;
+      fleetWinAcc[wk].cached += wObj.cachedInputTokens;
+      fleetWinAcc[wk].output += wObj.outputTokens;
+      fleetWinAcc[wk].usd += wObj.estUsd;
+    }
   }));
+
+  const summarizeFleetWin = (a) => {
+    const inp = a.uncached + a.cached;
+    return {
+      totalTokens: inp + a.output,
+      totalInputTokens: inp,
+      totalUncachedInputTokens: a.uncached,
+      totalCachedInputTokens: a.cached,
+      totalOutputTokens: a.output,
+      cachedPct: inp > 0 ? Math.round((a.cached / inp) * 100) : 0,
+      totalEstUsd: Number(a.usd.toFixed(2))
+    };
+  };
 
   const totalInput = totalUncached + totalCached;
   const fleetUsageSummary = {
@@ -501,7 +721,12 @@ async function buildSeatUsageReport(nodes) {
     totalOutputTokens: totalOutput,
     cachedPct: totalInput > 0 ? Math.round((totalCached / totalInput) * 100) : 0,
     totalEstUsd: Number(totalUsd.toFixed(2)),
-    seatCount: Object.keys(seatUsage).length
+    seatCount: Object.keys(seatUsage).length,
+    windows: {
+      h24: summarizeFleetWin(fleetWinAcc.h24),
+      d7: summarizeFleetWin(fleetWinAcc.d7),
+      session: summarizeFleetWin(fleetWinAcc.session)
+    }
   };
 
   return { seatUsage, fleetUsageSummary };
@@ -960,7 +1185,7 @@ async function getHistoryStats() {
   if (Date.now() - cachedHistory.ts < 20000 && cachedHistory.data) {
     return cachedHistory.data;
   }
-  const allQueue = await safeJsonExec(RIG_BIN, ['queue', 'list', '-a', '-A', '--limit', '800', '--json']);
+  const allQueue = await safeJsonExec(RIG_BIN, ['queue', 'list', '-a', '-A', '--limit', '2500', '--json']);
   const data = computeHistoryStats(allQueue);
   cachedHistory = { ts: Date.now(), data };
   return data;
@@ -1043,6 +1268,12 @@ const server = http.createServer(async (req, res) => {
           ? universal.nodes
           : universal.nodes.filter(n => n.rigId === requestedRig);
       }
+    }
+
+    // For OpenRig seats (especially runtime: 'terminal' / agy / Gemini where daemon only sees window motion),
+    // probe active tmux panes for live confirmation prompts so blocked seats never masquerade as 'working'.
+    if (discoveryMode === 'openrig' && nodes.length > 0) {
+      nodes = await enrichOpenRigTerminalPrompts(nodes);
     }
 
     const [decisions, usageReport] = await Promise.all([
@@ -1303,6 +1534,7 @@ const server = http.createServer(async (req, res) => {
               return;
             }
             output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
+            terminalPromptProbeCache.delete(seat);
           } else if (type === 'raw') {
             // Harness-aware hygiene and deduplication:
             // 1. Normalize and deduplicate repeated slash commands (e.g. /compact/compact -> /compact)
@@ -1436,6 +1668,7 @@ export {
   boundedMapSet,
   parseAllowedTmuxKeys,
   resolveSafeStaticPath,
+  applyTerminalPromptProbes,
   transcriptUsageCache,
   seatGuidanceCache
 };

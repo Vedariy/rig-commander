@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { FleetIntelligenceEngine } from '../openrig/lib/fleet-intelligence/index.mjs';
 import {
   parseInteractivePromptOptions,
+  detectLiveHitlPrompt,
+  classifyEdgeQueueStatus,
   getContextThermal,
   formatTokensShort,
   computeBurn,
@@ -66,6 +68,108 @@ test('parseInteractivePromptOptions extracts Codex and inline options cleanly', 
   const inlineParsed = parseInteractivePromptOptions(inlineSample);
   assert.equal(inlineParsed.length, 3);
   assert.equal(inlineParsed[2].isCancel, true);
+});
+
+test('detectLiveHitlPrompt catches terminal/agy & Codex prompts while rejecting normal markdown lists and stale scrollback', () => {
+  const agyCapture = [
+    'Requesting permission for:',
+    '  git -C /tmp/repo cat-file -t abc123',
+    'Run this command?',
+    '  1. Yes, run command',
+    '  2. Yes, and always allow in this',
+    'conversation for commands that start with git',
+    '> 3. Yes, and always allow for',
+    'commands (Persist to settings.json)',
+    '  4. No, cancel',
+    '  ↑/↓ Navigate · tab Amend · ctrl+g ed',
+    'esc to cancel'
+  ].join('\n');
+  const resAgy = detectLiveHitlPrompt(agyCapture);
+  assert.equal(resAgy.blocked, true);
+  assert.equal(resAgy.reason, 'permission_prompt');
+  assert.equal(resAgy.options.length, 4);
+
+  const markdownSummary = [
+    'Completed all changes:',
+    '1. Updated node card padding',
+    '2. Added unit tests for circuit breaker',
+    '3. Synced public directory',
+    'Waiting for next task.'
+  ].join('\n');
+  assert.equal(detectLiveHitlPrompt(markdownSummary).blocked, false);
+
+  const staleScrolledMenu = [
+    'Run this command?',
+    '1. Yes, run command',
+    '2. No, cancel',
+    'line 1 after',
+    'line 2 after',
+    'line 3 after',
+    'line 4 after',
+    'line 5 after',
+    'line 6 after',
+    'line 7 after',
+    'line 8 after',
+    'line 9 after',
+    'All 40 tests passed.'
+  ].join('\n');
+  assert.equal(detectLiveHitlPrompt(staleScrolledMenu).blocked, false);
+});
+
+test('classifyEdgeQueueStatus differentiates live, blocked, parked, held, pending and ghost highways', () => {
+  // 1. Blocked + parked between sleeping seats -> static orange 🚧 blocked (NOT animated green!)
+  const blk = classifyEdgeQueueStatus([
+    {
+      qitemId: 'q-1',
+      sourceSession: 'dev-coder4@rig',
+      destinationSession: 'dev-owner@rig',
+      state: 'blocked',
+      pickup: { state: 'parked' },
+      tags: ['ultraplan', 'track-B'],
+      summary: 'Waiting for QA GO'
+    }
+  ], { seatStatesById: { 'dev-coder4@rig': 'idle', 'dev-owner@rig': 'idle' } });
+  assert.equal(blk.status, 'blocked');
+  assert.equal(blk.icon, '🚧');
+  assert.equal(blk.animated, false);
+  assert.equal(blk.tag, 'ultraplan');
+
+  // 2. Parked without hard block -> static amber 🅿️ parked
+  const prk = classifyEdgeQueueStatus([
+    { sourceSession: 'a@rig', destinationSession: 'b@rig', state: 'open', pickup: { state: 'parked' }, tags: ['slice:auth'] }
+  ]);
+  assert.equal(prk.status, 'parked');
+  assert.equal(prk.icon, '🅿️');
+  assert.equal(prk.animated, false);
+  assert.equal(prk.tag, 'auth');
+
+  // 3. Held with wake condition -> static purple ⏸️ held
+  const hld = classifyEdgeQueueStatus([
+    { sourceSession: 'a@rig', destinationSession: 'b@rig', state: 'held', pickup: { state: 'held' }, tags: ['slice:deploy'] }
+  ]);
+  assert.equal(hld.status, 'held');
+  assert.equal(hld.icon, '⏸️');
+  assert.equal(hld.animated, false);
+
+  // 4. Pending on idle recipient -> static sky ⏳ pending; on working recipient -> animated emerald 📨 live
+  const pendIdle = classifyEdgeQueueStatus([
+    { sourceSession: 'dev-owner@rig', destinationSession: 'dev-check@rig', state: 'pending', tags: ['gate:qa'] }
+  ], { seatStatesById: { 'dev-check@rig': 'idle' } });
+  assert.equal(pendIdle.status, 'pending');
+  assert.equal(pendIdle.icon, '⏳');
+  assert.equal(pendIdle.animated, false);
+
+  const pendWorking = classifyEdgeQueueStatus([
+    { sourceSession: 'dev-owner@rig', destinationSession: 'dev-check@rig', state: 'pending', tags: ['gate:qa'] }
+  ], { seatStatesById: { 'dev-check@rig': 'working' } });
+  assert.equal(pendWorking.status, 'live');
+  assert.equal(pendWorking.icon, '📨');
+  assert.equal(pendWorking.animated, true);
+
+  // 5. No rows -> ghost
+  const ghost = classifyEdgeQueueStatus([]);
+  assert.equal(ghost.status, 'ghost');
+  assert.equal(ghost.animated, false);
 });
 
 test('domain thermal, audio and gantt helpers work deterministically', () => {

@@ -52,3 +52,69 @@ export function parseInteractivePromptOptions(screenText) {
 
   return [];
 }
+
+const HITL_NAV_FOOTER_RE = /(?:↑\/↓\s*navigate|esc to cancel|enter to confirm|press enter to|tab\s+amend|ctrl\+g\s+ed|use arrow keys|select an option)/i;
+const HITL_HEADER_RE = /(?:requesting permission for:|run this command\?|allow this command\?|allow running\b|do you want to (?:proceed|run|allow|continue)\?|would you like to (?:run|allow|proceed)|permission prompt|waiting for (?:human|approval)|approve\?\s*\(y\/n\)|\[y\/n\]|\(y\/n\)\s*$)/i;
+const HITL_CONFIRM_OPT_RE = /^(?:yes\b|no,?\s*(?:cancel|and tell)|allow\b|always allow|deny\b|reject\b|approve\b|cancel\b|разрешить|отмен)/i;
+const HITL_BOTTOM_YN_RE = /(?:\[Y\/n\]|\[y\/N\]|\(y\/n\)|run this command\?|allow this command\?|do you want to proceed\?)\s*$/i;
+
+/**
+ * High-precision detector for an active, blocking interactive confirmation prompt
+ * at the bottom of a tmux screen (Antigravity/agy, Claude Code, Codex CLI, Gemini, Pi).
+ * Rejects normal numbered markdown lists and stale scrolled-up prompts.
+ */
+export function detectLiveHitlPrompt(screenText) {
+  if (!screenText || typeof screenText !== 'string') {
+    return { blocked: false, reason: '', options: [] };
+  }
+  const nonEmpty = screenText.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim().length > 0);
+  if (nonEmpty.length === 0) {
+    return { blocked: false, reason: '', options: [] };
+  }
+
+  const tail = nonEmpty.slice(-26);
+  const tailText = tail.join('\n');
+  const bottom4 = tail.slice(-4).join('\n');
+  const bottom3 = tail.slice(-3).join('\n');
+
+  const options = parseInteractivePromptOptions(tailText);
+  const hasNavFooter = HITL_NAV_FOOTER_RE.test(bottom4);
+  const hasPromptHeader = HITL_HEADER_RE.test(tail.slice(-20).join('\n'));
+  const hasConfirmOpt = options.some(o => HITL_CONFIRM_OPT_RE.test(o.fullText || '') || o.isCancel);
+
+  // Locate the last option line in tail so scrolled-up historical menus never false-trigger
+  let lastOptionIdx = -1;
+  if (options.length >= 2) {
+    const lastOpt = options[options.length - 1];
+    const numRe = new RegExp(`^\\s*(?:[›❯>*•]\\s*)?${lastOpt.badge}[.)]\\s+`);
+    for (let i = tail.length - 1; i >= 0; i--) {
+      if (numRe.test(tail[i])) {
+        lastOptionIdx = i;
+        break;
+      }
+    }
+    // Inline bracketed prompt fallback: options live on one of the bottom 4 lines
+    if (lastOptionIdx === -1 && /\[[1-9a-zA-Z]\]/.test(bottom4)) {
+      lastOptionIdx = tail.length - 1;
+    }
+  }
+  const nearBottom = lastOptionIdx !== -1 && (tail.length - 1 - lastOptionIdx) <= 7;
+
+  if (options.length >= 2 && nearBottom && (hasNavFooter || hasPromptHeader || hasConfirmOpt)) {
+    return {
+      blocked: true,
+      reason: hasPromptHeader ? 'permission_prompt' : `menu (${options.length} options)`,
+      options
+    };
+  }
+
+  if (hasNavFooter && hasPromptHeader) {
+    return { blocked: true, reason: 'permission_prompt', options };
+  }
+
+  if (HITL_BOTTOM_YN_RE.test(bottom3)) {
+    return { blocked: true, reason: 'permission_prompt', options };
+  }
+
+  return { blocked: false, reason: '', options: [] };
+}

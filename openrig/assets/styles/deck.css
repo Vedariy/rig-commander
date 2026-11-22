@@ -1021,6 +1021,50 @@
       letter-spacing: 0.3px;
     }
 
+    /* STATIC QUEUE STATES: BLOCKED (🚧), PARKED (🅿️), HELD (⏸️), PENDING (⏳) — NO FAKE FLOW ANIMATION */
+    .edge-group.is-blocked .edge-trunk {
+      fill: none;
+      stroke: #f97316 !important;
+      stroke-dasharray: 6 4;
+      stroke-linecap: round;
+      opacity: 0.85;
+    }
+    .edge-group.is-parked .edge-trunk {
+      fill: none;
+      stroke: #f59e0b !important;
+      stroke-dasharray: 8 5;
+      stroke-linecap: round;
+      opacity: 0.78;
+    }
+    .edge-group.is-held .edge-trunk {
+      fill: none;
+      stroke: #a78bfa !important;
+      stroke-dasharray: 3 5;
+      stroke-linecap: round;
+      opacity: 0.72;
+    }
+    .edge-group.is-pending .edge-trunk {
+      fill: none;
+      stroke: #38bdf8 !important;
+      stroke-dasharray: 5 5;
+      stroke-linecap: round;
+      opacity: 0.75;
+    }
+    .edge-group.is-blocked .edge-badge-bg,
+    .edge-group.is-parked .edge-badge-bg,
+    .edge-group.is-held .edge-badge-bg,
+    .edge-group.is-pending .edge-badge-bg {
+      fill: rgba(8, 14, 28, 0.96);
+      stroke: var(--edge-stroke, #f59e0b);
+      stroke-width: 1.3;
+      rx: 5;
+      opacity: 0.96;
+    }
+    .edge-group.is-blocked .edge-badge-text { font-family: var(--font-mono); font-size: 10.5px; fill: #fdba74; font-weight: 800; }
+    .edge-group.is-parked .edge-badge-text  { font-family: var(--font-mono); font-size: 10.5px; fill: #fde68a; font-weight: 800; }
+    .edge-group.is-held .edge-badge-text    { font-family: var(--font-mono); font-size: 10.5px; fill: #ddd6fe; font-weight: 700; }
+    .edge-group.is-pending .edge-badge-text { font-family: var(--font-mono); font-size: 10.5px; fill: #bae6fd; font-weight: 700; }
+
     /* AGENT NODES */
     .nodes-layer {
       position: absolute;
@@ -1160,56 +1204,67 @@
       50% { border-color: var(--amber); box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
     }
 
-    /* CONTEXT BORDER PROGRESS BAR & FLOATING BOTTOM BADGE (USER REQUEST 2) */
+    /* CONTEXT BORDER PROGRESS BAR & FLOATING BOTTOM BADGE */
     .node-bottom-meter {
       position: absolute;
-      bottom: -1px;
+      bottom: 0;
       left: 0;
       right: 0;
-      height: 3px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 0 0 8px 8px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 0 0 7px 7px;
       overflow: hidden;
       z-index: 5;
     }
 
     .node-bottom-meter-fill {
       height: 100%;
-      border-radius: 0 0 8px 8px;
+      border-radius: 0 0 7px 7px;
       transition: width 0.35s ease;
       box-shadow: 0 0 8px var(--ctx-color);
     }
 
     .node-bottom-badge {
       position: absolute;
-      bottom: 0;
+      top: calc(100% + 4px);
+      bottom: auto;
       left: 50%;
-      transform: translate(-50%, 50%); /* Сдвинут на полкорпуса вниз точно по запросу */
+      transform: translateX(-50%);
       z-index: 8;
       background: rgba(6, 12, 24, 0.96);
-      border: 1.2px solid var(--ctx-color);
+      border: 1px solid var(--ctx-color);
       border-radius: 9px;
       padding: 1px 7px;
       font-family: var(--font-mono);
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 700;
       color: var(--ctx-color);
       white-space: nowrap;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.85), 0 0 10px var(--ctx-glow);
+      text-align: center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.85), 0 0 8px var(--ctx-glow);
       backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      display: inline-block;
       pointer-events: none;
-      line-height: 1.2;
+      line-height: 1.25;
     }
 
-    /* FIT DENSITY MODE (КОМПАКТ) - СНИЖАЕТ ВЫСОТУ КАРТОЧКИ С 105PX ДО ~44PX */
+    /* FIT DENSITY MODE (КОМПАКТ) - ПОЛНОЕ ИМЯ SEAT БЕЗ ОБРЕЗКИ И БЕЗ ЛИШНЕЙ ИКОНКИ */
     body:not(.density-detailed) .agent-node {
-      width: 172px;
-      padding: 5px 8px 7px 8px;
+      width: max-content;
+      min-width: 118px;
+      max-width: none;
+      padding: 6px 12px 10px 12px;
       border-radius: 8px;
-      min-height: 42px;
+      min-height: 36px;
+    }
+    body:not(.density-detailed) .agent-node .node-icon {
+      display: none;
+    }
+    body:not(.density-detailed) .agent-node .node-name {
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
     }
     body:not(.density-detailed) .agent-node .node-top {
       margin-bottom: 0;
@@ -1276,17 +1331,22 @@
       min-width: 0;
     }
 
+    .node-title-wrap {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
     .node-icon {
-      width: 27px;
-      height: 27px;
+      width: 26px;
+      height: 26px;
       border-radius: 5px;
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.14);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 15px;
-      flex-shrink: 0;
+      font-size: 14px;
+      flex: 0 0 26px;
     }
 
     .node-name {
@@ -2263,9 +2323,14 @@
 
       /* 5. AGENT NODE CARDS: COMPACT GEOMETRY PREVENTS OVERLAP */
       .agent-node {
-        width: 165px;
-        padding: 4px 6px 6px 6px;
+        width: max-content;
+        min-width: 112px;
+        max-width: none;
+        padding: 5px 10px 9px 10px;
         border-radius: 7px;
+      }
+      body.density-detailed .agent-node {
+        width: 224px;
       }
       .node-top {
         gap: 4px;
@@ -2360,8 +2425,13 @@
         padding: 5px 8px;
       }
       .agent-node {
-        width: 165px;
-        padding: 5px 6px;
+        width: max-content;
+        min-width: 108px;
+        max-width: none;
+        padding: 5px 10px 9px 10px;
+      }
+      body.density-detailed .agent-node {
+        width: 210px;
       }
       .node-name {
         font-size: 10.5px;
@@ -2455,4 +2525,214 @@
       color: #67e8f9;
       background: rgba(0, 240, 255, 0.16);
       box-shadow: 0 0 14px rgba(0, 240, 255, 0.32);
+    }
+
+    /* ===== FIRST-CONTACT 10-SECOND DEMO MISSION DOCK ===== */
+    .quest-dock {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(860px, calc(100vw - 28px));
+      background: linear-gradient(135deg, rgba(6, 13, 28, 0.96), rgba(11, 20, 42, 0.96));
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(0, 255, 157, 0.42);
+      border-radius: 13px;
+      padding: 11px 14px 12px;
+      box-shadow: 0 18px 46px rgba(0, 0, 0, 0.78), 0 0 28px rgba(0, 255, 157, 0.16);
+      z-index: 9400;
+      display: none;
+      flex-direction: column;
+      gap: 9px;
+      animation: questSlideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .quest-dock.open { display: flex; }
+    @keyframes questSlideUp {
+      from { opacity: 0; transform: translate(-50%, 14px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .quest-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .quest-top-left {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+    .quest-badge {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(0, 255, 157, 0.18), rgba(0, 240, 255, 0.18));
+      border: 1px solid rgba(0, 255, 157, 0.55);
+      color: #6ee7b7;
+      white-space: nowrap;
+    }
+    .quest-counter {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      color: #38bdf8;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .quest-counter.all-done {
+      color: #04130c;
+      background: #00ff9d;
+      border-color: #00ff9d;
+    }
+    .quest-sub {
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
+    .quest-top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .quest-mini-btn {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .quest-mini-btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0, 240, 255, 0.12);
+    }
+    .quest-mini-btn.active {
+      border-color: #00ff9d;
+      color: #6ee7b7;
+      background: rgba(0, 255, 157, 0.14);
+    }
+    .quest-progress-rail {
+      height: 3px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.18);
+      overflow: hidden;
+    }
+    .quest-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #00ff9d, #00f0ff);
+      transition: width 0.3s ease;
+    }
+    .quest-steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    @media (max-width: 760px) {
+      .quest-steps-grid { grid-template-columns: 1fr; }
+    }
+    .quest-step-card {
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      color: #e2e8f0;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      font-family: inherit;
+    }
+    .quest-step-card:hover {
+      border-color: rgba(0, 240, 255, 0.65);
+      background: rgba(20, 34, 62, 0.92);
+      transform: translateY(-1px);
+    }
+    .quest-step-card.is-next {
+      border-color: rgba(0, 240, 255, 0.75);
+      background: rgba(8, 30, 52, 0.88);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.16), inset 0 0 0 1px rgba(0, 240, 255, 0.18);
+    }
+    .quest-step-card.is-done {
+      border-color: rgba(0, 255, 157, 0.5);
+      background: rgba(6, 32, 24, 0.62);
+    }
+    .quest-step-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .quest-step-card.is-done .quest-step-head {
+      color: #6ee7b7;
+    }
+    .quest-step-pill {
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+      font-weight: 800;
+    }
+    .quest-step-pill.next {
+      background: rgba(0, 240, 255, 0.2);
+      color: #67e8f9;
+      border: 1px solid rgba(0, 240, 255, 0.45);
+    }
+    .quest-step-pill.done {
+      background: rgba(0, 255, 157, 0.2);
+      color: #6ee7b7;
+      border: 1px solid rgba(0, 255, 157, 0.45);
+    }
+    .quest-step-desc {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.35;
+    }
+    .quest-step-cta {
+      margin-top: auto;
+      padding-top: 2px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .quest-step-card.is-done .quest-step-cta {
+      color: #6ee7b7;
+    }
+    .quest-complete-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(0, 255, 157, 0.09);
+      border: 1px solid rgba(0, 255, 157, 0.35);
+    }
+    .quest-complete-actions {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
     }

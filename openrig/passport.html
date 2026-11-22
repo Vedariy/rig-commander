@@ -433,7 +433,7 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">37 / 37 PASS</div>
+        <div class="kpi-val" style="color:var(--emerald);">49 / 49 PASS</div>
         <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 8 наборов (~0.2s)</div>
       </div>
       <div class="kpi-card">
@@ -672,21 +672,24 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 37/37</span>
+        <span class="sec-tag">NODE --TEST • 49/49</span>
       </div>
       <table>
         <thead>
           <tr><th>Test Suite</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, инкрементальный JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code></td><td><span class="badge-ok">7 PASS</span></td></tr>
+          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, инкрементальный JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>applyTerminalPromptProbes</code></td><td><span class="badge-ok">8 PASS</span></td></tr>
           <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, инвариант 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi, маппинг UX-транспортов <code>resolveActionFromFinding</code></td><td><span class="badge-ok">9 PASS</span></td></tr>
           <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">4 PASS</span></td></tr>
           <tr><td><code>tests/ontology-snapshot.test.mjs</code></td><td><code>shouldIncludeLiveNode</code>, сброс <code>ctxHistory</code> при свапе, <code>buildOntologySnapshot</code>, чистые селекторы и эксклюзивные пулы <code>computeModelPools</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш), <code>parseInteractivePromptOptions</code>, <code>thermal/audio/gantt</code>, паритет <code>DECK_I18N</code> EN/RU</td><td><span class="badge-ok">4 PASS</span></td></tr>
+          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш), <code>parseInteractivePromptOptions</code>, <code>detectLiveHitlPrompt</code>, <code>classifyEdgeQueueStatus</code>, <code>thermal/audio/gantt</code>, паритет <code>DECK_I18N</code> EN/RU</td><td><span class="badge-ok">6 PASS</span></td></tr>
           <tr><td><code>tests/universal-discovery.test.mjs</code></td><td>Универсальное автообнаружение Claude Code / Codex JSONL + <code>tmux</code> панелей (без OpenRig), HITL-детектор и валидация target</td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/circuit-breaker.test.mjs</code></td><td><code>BudgetCircuitBreaker</code>: лимиты сессии и сиденья, burn-rate <code>$/ч</code>, QA bounce-back петли, режим <code>auto_stop (C-c)</code>, fleet cooldown и сброс</td><td><span class="badge-ok">4 PASS</span></td></tr>
           <tr><td><code>tests/telegram-bridge.test.mjs</code></td><td><code>TelegramHitlBridge</code>: inline-клавиатура, одноразовые nonces, блокировка чужих чатов, команды <code>/status /budget /stop /arm_breaker</code></td><td><span class="badge-ok">2 PASS</span></td></tr>
+          <tr><td><code>tests/quest.test.mjs</code></td><td><code>openrig/assets/domain/quest.js</code>: конечный автомат 10-сек мини-квеста (идемпотентность, прогресс 3 шагов, gating live vs demo/tracks, сброс)</td><td><span class="badge-ok">3 PASS</span></td></tr>
+          <tr><td><code>tests/preferences.test.mjs</code></td><td><code>openrig/assets/domain/preferences.js</code>: сохранение и санитизация всех настроек UI в <code>localStorage</code>, миграция legacy-ключей, fallback рига</td><td><span class="badge-ok">3 PASS</span></td></tr>
+          <tr><td><code>tests/finops.test.mjs</code></td><td><code>openrig/assets/domain/finops.js</code> + оконный JSONL-парсер: амортизация подписок <code>24ч/7д/сессия</code>, сравнение <code>SUB vs PAYG</code>, ROI и рекомендации</td><td><span class="badge-ok">3 PASS</span></td></tr>
         </tbody>
       </table>
 

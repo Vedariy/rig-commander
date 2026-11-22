@@ -3,13 +3,12 @@ import path from 'node:path';
 import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { parseInteractivePromptOptions } from '../assets/domain/prompt-parser.js';
+import { detectLiveHitlPrompt } from '../assets/domain/prompt-parser.js';
 
 const execFileAsync = promisify(execFile);
 
 const AGENT_CMD_RE = /(claude|codex|aider|gemini|agy|pi|opencode|goose)/i;
 const SPINNER_RE = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|(?:Thinking|Reasoning|Running|Working|Searching|Executing)\.{0,3}\s*$/im;
-const PROMPT_CONFIRM_RE = /(?:allow\b.*\?|proceed\?|\[y\/n\]|\(y\/n\)|press enter to confirm|permission prompt)/i;
 
 export function sanitizeIdPart(raw, fallback = 'seat') {
   const clean = String(raw || '')
@@ -76,16 +75,15 @@ export function parseTmuxPaneLines(stdout) {
  * Classifies a universal tmux pane screen capture + transcript age into OpenRig-compatible activityState.
  */
 export function detectUniversalPaneState(screenText = '', transcriptAgeMs = Infinity) {
-  const parsedOptions = parseInteractivePromptOptions(screenText);
+  const hitl = detectLiveHitlPrompt(screenText);
   const tail = String(screenText || '').split(/\r?\n/).slice(-10).join('\n');
-  const hasPrompt = parsedOptions.length >= 2 || PROMPT_CONFIRM_RE.test(tail);
 
-  if (hasPrompt) {
+  if (hitl.blocked) {
     return {
       display: 'needs-input',
       needsInput: {
         count: 1,
-        reason: parsedOptions.length >= 2 ? `menu (${parsedOptions.length} options)` : 'permission_prompt'
+        reason: hitl.reason || 'permission_prompt'
       }
     };
   }

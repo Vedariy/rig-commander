@@ -10,6 +10,7 @@ import {
   boundedMapSet,
   parseAllowedTmuxKeys,
   resolveSafeStaticPath,
+  applyTerminalPromptProbes,
   transcriptUsageCache
 } from '../openrig/server.mjs';
 
@@ -208,4 +209,32 @@ test('parseAllowedTmuxKeys accepts valid keystrokes and rejects flags/injection'
   assert.equal(parseAllowedTmuxKeys('-l rm'), null);
   assert.equal(parseAllowedTmuxKeys('1; ls'), null);
   assert.equal(parseAllowedTmuxKeys('1 2 3 4 5 6 7'), null);
+});
+
+test('applyTerminalPromptProbes promotes working terminal seat to needs-input when live prompt is detected', () => {
+  const rawNodes = [
+    {
+      canonicalSessionName: 'dev-check-argon@rig',
+      runtime: 'terminal',
+      activityState: { display: 'working', needsInput: { count: 0, reason: null }, decidedBy: 'window-sampling' }
+    },
+    {
+      canonicalSessionName: 'dev-coder@rig',
+      runtime: 'codex',
+      activityState: { display: 'working', needsInput: { count: 0, reason: null } }
+    }
+  ];
+  const probes = new Map([
+    ['dev-check-argon@rig', { blocked: true, reason: 'permission_prompt' }],
+    ['dev-coder@rig', { blocked: false, reason: '' }]
+  ]);
+
+  const enriched = applyTerminalPromptProbes(rawNodes, probes);
+  assert.equal(enriched[0].activityState.display, 'needs-input');
+  assert.equal(enriched[0].activityState.needsInput.count, 1);
+  assert.equal(enriched[0].activityState.needsInput.reason, 'permission_prompt');
+  assert.equal(enriched[0].activityState.needsInput.source, 'tmux-prompt-probe');
+  // Original node was not mutated and unblocked seat stayed working
+  assert.equal(rawNodes[0].activityState.display, 'working');
+  assert.equal(enriched[1].activityState.display, 'working');
 });
