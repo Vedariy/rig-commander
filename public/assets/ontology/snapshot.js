@@ -183,6 +183,7 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
       isParked: fsm.isParked,
       parkedReason: fsm.parkedReason,
       parkedData,
+      shellExited: Boolean(liveNode && liveNode.shellExited),
       isAttentionRequired: fsm.isAttentionRequired,
       isCalmVisible: fsm.isCalmVisible,
       assignedWorkCount: liveNode.assignedWorkCount || 0,

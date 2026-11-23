@@ -33,17 +33,19 @@
   <div class="triage-strip" id="triageStrip">
     <div class="triage-meta">
       <span class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal()" style="cursor:pointer;" title="Fleet Intelligence">🟢 LIVE TELEMETRY</span>
-      <button class="triage-refresh-btn" onclick="openFleetAdvisorModal()" style="border-color:var(--cyan); color:var(--cyan);">
-        💡 <span data-i18n="triage.advisor">Советник флота</span>
+      <button class="triage-refresh-btn" onclick="openFleetAdvisorModal()" style="border-color:rgba(0,240,255,0.45); color:var(--cyan);" title="Fleet Intelligence & Advisory Radar">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+        <span data-i18n="triage.advisor">Советник флота</span>
       </button>
-      <button class="triage-refresh-btn" id="btnGuardrails" onclick="openGuardrailsModal()" style="border-color:rgba(0,255,157,0.5); color:#6ee7b7;">
-        🛡️ <span data-i18n="guard.btn">Авто-тормоз / TG</span>
+      <button class="triage-refresh-btn" id="btnGuardrails" onclick="openGuardrailsModal()" style="border-color:rgba(0,255,157,0.42); color:#6ee7b7;" title="Budget Circuit-Breaker & Telegram HITL">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
-      <button class="triage-refresh-btn" id="btnShareCard" onclick="openShareCardModal()" style="border-color:rgba(168,85,247,0.5); color:#e9d5ff;">
-        📸 <span data-i18n="share.btn">Карточка дня</span>
+      <button class="triage-refresh-btn triage-icon-btn" id="btnShareCard" onclick="openShareCardModal()" style="border-color:rgba(168,85,247,0.45); color:#e9d5ff;" title="Daily Fleet Receipt // Share Card PNG">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </button>
-      <button class="triage-refresh-btn" id="btnMobileQr" onclick="openMobileQrModal()" style="border-color:rgba(56,189,248,0.5); color:#7dd3fc;">
-        📱 <span data-i18n="qr.btn">QR на телефон</span>
+      <button class="triage-refresh-btn triage-icon-btn" id="btnMobileQr" onclick="openMobileQrModal()" style="border-color:rgba(56,189,248,0.45); color:#7dd3fc;" title="Phone QR (Mobile PWA)">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3h-3M14 20h7"/></svg>
       </button>
       <button class="triage-refresh-btn" id="btnDemoQuest" onclick="toggleDemoQuest()" style="display:none; border-color:rgba(0,240,255,0.55); color:#67e8f9;">
         🎯 <span data-i18n="quest.btn">Миссия 10с</span> <span id="btnDemoQuestCount" style="font-weight:800; color:#00ff9d;">0/3</span>
@@ -57,19 +59,19 @@
         <span data-i18n="triage.init">🔄 Инициализация оперативной обстановки...</span>
       </div>
     </div>
-    <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-      <button class="triage-refresh-btn" onclick="refreshTelemetryNow()">
-        🔄 <span data-i18n="triage.refresh">Обновить</span>
+    <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
+      <button class="triage-refresh-btn triage-icon-btn" onclick="refreshTelemetryNow()" title="Обновить телеметрию">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       </button>
-      <button class="triage-refresh-btn" onclick="copyCmd('rig status')">
-        📋 <span>rig status</span>
+      <button class="triage-refresh-btn" onclick="copyCmd('rig status')" title="rig status">
+        <span class="cmd-copy-label">Cmd <svg class="cmd-copy-ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.6"/><path d="M3 11H2.4A1.4 1.4 0 0 1 1 9.6V2.4A1.4 1.4 0 0 1 2.4 1h7.2A1.4 1.4 0 0 1 11 2.4V3"/></svg></span>
       </button>
-      <a class="triage-refresh-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.45); color:#e9d5ff;">
-        📄 <span data-i18n="triage.passport">Паспорт</span>
+      <a class="triage-refresh-btn triage-icon-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.42); color:#e9d5ff;" title="Инженерный паспорт">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       </a>
-      <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.3); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
-        <button type="button" id="deckLangEn" class="triage-refresh-btn" style="padding:2px 7px; border:none; font-size:10.5px;" onclick="setDeckLang('en')">EN</button>
-        <button type="button" id="deckLangRu" class="triage-refresh-btn" style="padding:2px 7px; border:none; font-size:10.5px;" onclick="setDeckLang('ru')">RU</button>
+      <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
+        <button type="button" id="deckLangEn" class="triage-refresh-btn" style="padding:2px 6px; border:none; font-size:10px;" onclick="setDeckLang('en')">EN</button>
+        <button type="button" id="deckLangRu" class="triage-refresh-btn" style="padding:2px 6px; border:none; font-size:10px;" onclick="setDeckLang('ru')">RU</button>
       </div>
     </div>
   </div>
@@ -99,11 +101,11 @@
     <div class="hud-controls" id="hudControlsBar">
       <!-- CLUSTER 1: SENSORY & ALARM HYGIENE -->
       <div class="hud-cluster hud-cluster-sensory">
-        <button class="cyber-btn calm-toggle" id="btnCalmMode" onclick="toggleCalmMode()" data-i18n="hud.calmOff">
-          🧘 CALM FOCUS
+        <button class="cyber-btn calm-toggle" id="btnCalmMode" onclick="toggleCalmMode()" data-i18n="hud.calmOff" title="Calm Focus: приглушает спокойные узлы">
+          CALM
         </button>
-        <button class="cyber-btn audio-toggle" id="btnAudioRadar" onclick="toggleAudioRadar()" data-i18n="hud.audioOff">
-          🔕 АУДИО: ВЫКЛ
+        <button class="cyber-btn audio-toggle" id="btnAudioRadar" onclick="toggleAudioRadar()" data-i18n="hud.audioOff" title="Звуковые алерты для P0/P1">
+          ЗВУК: ВЫКЛ
         </button>
       </div>
 
@@ -114,19 +116,19 @@
         <span class="hud-cluster-label" data-i18n="hud.sliceLabel">СРЕЗ:</span>
         <div class="hud-segmented-group" id="sliceSegmentedGroup">
           <button class="hud-segment-btn active" id="btnFilterAll" onclick="setSliceFilter('all')" data-i18n="hud.allFlows">
-            🌐 ВСЕ ПОТОКИ
+            ВСЕ ПОТОКИ
           </button>
-          <div id="dynamicSliceButtons" style="display:inline-flex; gap:2px;"></div>
+          <div id="dynamicSliceButtons" style="display:inline-flex; gap:2px; min-width:0;"></div>
         </div>
       </div>
 
       <!-- CLUSTER 3: WORKSPACE DOCKING & VIEWPORT TOOLS -->
       <div class="hud-cluster hud-cluster-dock" style="margin-left:auto;">
-        <button class="cyber-btn" id="btnHideIdle" onclick="toggleHideIdle()" data-i18n="hud.idleShown">
-          💤 СПЯЩИЕ: ВИДНЫ
+        <button class="cyber-btn" id="btnHideIdle" onclick="toggleHideIdle()" data-i18n="hud.idleShown" title="Скрыть или показать спящие узлы">
+          СПЯЩИЕ: ВИДНЫ
         </button>
-        <button class="cyber-btn" id="btnDensityMode" onclick="toggleDensityMode()" data-i18n="hud.fitCompact">
-          📐 FIT: КОМПАКТ
+        <button class="cyber-btn" id="btnDensityMode" onclick="toggleDensityMode()" data-i18n="hud.fitCompact" title="Компактный / детальный вид карточек узлов">
+          КОМПАКТ
         </button>
 
         <div class="hud-cluster-subdivider"></div>
@@ -137,7 +139,7 @@
             <span class="dock-glyph">◧</span> РАДАР
           </button>
           <button class="hud-dock-btn" id="btnMaximizeCanvas" onclick="toggleBothSidebars()">
-            <span class="dock-glyph">⛶</span> ТОЛЬКО ГРАФ
+            <span class="dock-glyph">⛶</span> ГРАФ
           </button>
           <button class="hud-dock-btn active" id="btnToggleRight" onclick="toggleSidebar('right')">
             ИНСПЕКТОР <span class="dock-glyph">◨</span>
@@ -146,12 +148,13 @@
 
         <div class="hud-cluster-subdivider"></div>
 
-        <button class="cyber-btn" id="btnSaTour" onclick="toggleSaTour()">
-          🧠 SA-DSS / UX
+        <button class="cyber-btn" id="btnSaTour" onclick="toggleSaTour()" title="6-шаговый тур SA-DSS / UX">
+          <svg class="ui-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          SA-DSS
         </button>
 
-        <button class="cyber-btn" id="btnFullscreen" onclick="toggleFullscreen()" data-i18n="hud.fullscreen">
-          📺 FULLSCREEN
+        <button class="cyber-btn" id="btnFullscreen" onclick="toggleFullscreen()" data-i18n="hud.fullscreen" title="Полный экран (F)">
+          FS
         </button>
       </div>
     </div>
@@ -171,7 +174,10 @@
     <section class="panel" id="panelLeft">
       <div class="panel-header">
         <span data-i18n="radar.title">⏳ КТО → КОГО → ЗАЧЕМ ЖДЁТ</span>
-        <span id="waitCountBadge" style="color:#fbbf24">LIVE</span>
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span id="waitCountBadge" style="color:#fbbf24">LIVE</span>
+          <button type="button" class="widget-hint" data-hint-key="hint.radar" aria-label="Info">?</button>
+        </span>
       </div>
       <div class="radar-filter-bar" id="radarFilterBar">
         <button class="radar-tab active" data-radar-tab="all" onclick="setRadarFilter('all')" data-i18n="radar.all">Все</button>
@@ -181,9 +187,12 @@
       <div class="panel-body">
         <div id="waitListContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
 
-        <div style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#e9d5ff; margin-top:6px; display:flex; justify-content:space-between;">
+        <div style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#e9d5ff; margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
           <span id="decisionsJournalTitle">📜 ЖУРНАЛ РЕШЕНИЙ (decisions/latest.tsv)</span>
-          <span style="color:#a855f7">LIVE TSV</span>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span style="color:#a855f7">LIVE TSV</span>
+            <button type="button" class="widget-hint" data-hint-key="hint.decisions" aria-label="Info">?</button>
+          </span>
         </div>
         <div id="decisionsListContainer" style="display:flex; flex-direction:column; gap:7px;"></div>
       </div>
@@ -197,6 +206,7 @@
           <span id="activeFilterLabel" style="color:#00ff9d" data-i18n="center.allHighways">ВСЕ МАГИСТРАЛИ</span>
           <button class="hud-segment-btn active" id="btnViewGraph" onclick="setCenterView('graph')" data-i18n="center.btnGraph">🕸️ ГРАФ</button>
           <button class="hud-segment-btn" id="btnViewGantt" onclick="setCenterView('gantt')" data-i18n="center.btnGantt">📊 ГАНТ</button>
+          <button type="button" class="widget-hint" data-hint-key="hint.graph" aria-label="Info">?</button>
         </span>
       </div>
 
@@ -255,7 +265,10 @@
       <div class="swimlanes-section">
         <div class="swimlanes-title">
           <span data-i18n="swim.title">🛤️ ДОРОЖКИ СЛАЙСОВ (ШИРИНА ДОРОЖКИ = ЧИСЛО ВЫЗОВОВ И КРУГОВ ДОРАБОТКИ)</span>
-          <span style="color:#94a3b8; font-weight:400;" data-i18n="swim.stages">Станции: Spec/Dev → Код → QA Границы → Сверка/Фикс → Приёмка → Push</span>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span style="color:#94a3b8; font-weight:400;" data-i18n="swim.stages">Станции: Spec/Dev → Код → QA Границы → Сверка/Фикс → Приёмка → Push</span>
+            <button type="button" class="widget-hint" data-hint-key="hint.swimlanes" aria-label="Info">?</button>
+          </span>
         </div>
         <div id="swimlanesContainer" style="display:flex; flex-direction:column; gap:7px;"></div>
       </div>
@@ -265,19 +278,26 @@
     <section class="panel" id="panelRight">
       <div class="panel-header">
         <span data-i18n="insp.header">🔬 ПАСПОРТ УЗЛА, ЭКРАН TMUX & КОНВЕРТЫ L3</span>
-        <span id="selectedNodeHeaderBadge" style="color:var(--emerald)">SELECTED</span>
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span id="selectedNodeHeaderBadge" style="color:var(--emerald)">SELECTED</span>
+          <button type="button" class="widget-hint" data-hint-key="hint.inspector" aria-label="Info">?</button>
+        </span>
       </div>
       <div class="panel-body" id="inspectorPanelBody">
         <div id="nodeInspector"></div>
 
-        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between;">
+        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
           <span data-i18n="insp.activeQueue">📦 АКТИВНЫЕ КОНВЕРТЫ В ОЧЕРЕДИ</span>
-          <span id="queueCountBadge" style="color:#00ff9d">4</span>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <span id="queueCountBadge" style="color:#00ff9d">4</span>
+            <button type="button" class="widget-hint" data-hint-key="hint.queue" aria-label="Info">?</button>
+          </span>
         </div>
         <div id="queuePacketsList" style="display:flex; flex-direction:column; gap:7px;"></div>
 
-        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px;" data-i18n="insp.scorecardTitle">
-          🪃 РЕЙТИНГ КОДЕРОВ ПО ВОЗВРАТАМ НА ДОРАБОТКУ (QA PING-PONG)
+        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+          <span data-i18n="insp.scorecardTitle">🪃 РЕЙТИНГ КОДЕРОВ ПО ВОЗВРАТАМ НА ДОРАБОТКУ (QA PING-PONG)</span>
+          <button type="button" class="widget-hint" data-hint-key="hint.scorecards" aria-label="Info">?</button>
         </div>
         <div id="coderScorecards" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
@@ -287,6 +307,7 @@
 
   <div class="sa-tour-card" id="saTourCard" role="dialog" aria-label="SA-DSS & Cognitive Ergonomics Tour"></div>
   <div class="quest-dock" id="demoQuestDock" role="region" aria-label="10-Second Interactive Demo Mission"></div>
+  <div class="widget-hint-popover" id="widgetHintPopover" role="tooltip"></div>
   <div class="toast" id="copyToast">Copied!</div>
 
   <div class="modal-overlay" id="terminalModal" onclick="if (event.target === this) closeTerminalModal()">
@@ -963,9 +984,12 @@
     function onRigFilterChange(val) {
       currentRigFilter = val;
       persistDeckPref({ rigFilter: val });
+      renderTriageStrip();
       renderReservoirs();
+      renderWaitRadarAndDecisions();
       renderTopology();
-      renderInspectorAndScorecards(false);
+      renderInspectorAndScorecards(true);
+      renderEdgeXray();
       refreshTelemetryNow();
     }
 
@@ -1009,6 +1033,24 @@
       return false;
     }
 
+    function updateActiveFilterLabel() {
+      const el = document.getElementById('activeFilterLabel');
+      if (!el) return;
+      if (currentSliceFilter === 'all') {
+        el.className = '';
+        el.style.color = '#00ff9d';
+        el.removeAttribute('title');
+        el.onclick = null;
+        el.textContent = td('center.allHighways');
+      } else {
+        el.className = 'active-filter-chip';
+        el.style.color = '';
+        el.title = deckLang === 'en' ? 'Click to reset slice filter' : 'Нажмите, чтобы сбросить фильтр потока';
+        el.onclick = () => setSliceFilter('all');
+        el.innerHTML = `<span>${escapeHtml(td('center.flowFocus', { slice: currentSliceFilter.toUpperCase() }))}</span><span style="font-weight:900;">✕</span>`;
+      }
+    }
+
     function renderFilterButtons() {
       const btnAll = document.getElementById('btnFilterAll');
       if (btnAll) btnAll.classList.toggle('active', currentSliceFilter === 'all');
@@ -1017,22 +1059,108 @@
       if (!container) return;
 
       const topSlices = SLICES_LANES.slice(0, 3);
+      if (currentSliceFilter !== 'all' && !topSlices.some(l => l.id === currentSliceFilter)) {
+        const extra = SLICES_LANES.find(l => l.id === currentSliceFilter) || {
+          id: currentSliceFilter,
+          name: currentSliceFilter
+        };
+        topSlices.push(extra);
+      }
       container.innerHTML = topSlices.map(lane => {
         const isActive = currentSliceFilter === lane.id;
         return `
           <button class="hud-segment-btn ${isActive ? 'active' : ''}"
                   title="${escapeHtml(lane.name)}"
                   data-slice="${escapeHtml(lane.id === currentSliceFilter ? 'all' : lane.id)}"
-                  style="max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                  style="max-width: 142px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;"
                   onclick="setSliceFilter(this.getAttribute('data-slice'))">
-            🏷️ ${escapeHtml(lane.name)}
+            ${escapeHtml(String(lane.name || '').replace(/^🏷️\s*/, ''))}${isActive ? ' ✕' : ''}
           </button>
         `;
       }).join('');
     }
 
     function shortSeat(id) {
-      return String(id || '').replace('@core-platform', '').replace('@kernel', ' (kernel)');
+      const raw = String(id || '');
+      if (currentRigFilter && currentRigFilter !== 'all') {
+        const suffix = '@' + currentRigFilter;
+        if (raw.endsWith(suffix)) return raw.slice(0, -suffix.length);
+      }
+      return raw.replace('@core-platform', '').replace('@kernel', ' (kernel)');
+    }
+
+    function formatRoleForRig(roleText) {
+      const raw = String(roleText || '');
+      if (currentRigFilter && currentRigFilter !== 'all') {
+        return raw.split('@' + currentRigFilter).join('');
+      }
+      return raw;
+    }
+
+    function formatEnvelopeClock(iso) {
+      if (!iso) return '';
+      const t = Date.parse(iso);
+      if (!Number.isFinite(t)) return '';
+      const d = new Date(t);
+      const sameDay = d.toDateString() === new Date().toDateString();
+      const loc = deckLang === 'en' ? 'en-US' : 'ru-RU';
+      if (sameDay) {
+        return d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      }
+      return d.toLocaleString(loc, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function initWidgetHints() {
+      const pop = document.getElementById('widgetHintPopover');
+      if (!pop) return;
+      let activeTarget = null;
+      const showFor = (btn) => {
+        const key = btn.getAttribute('data-hint-key');
+        const text = key ? td(key) : (btn.getAttribute('data-hint-text') || '');
+        if (!text) return;
+        activeTarget = btn;
+        pop.textContent = text;
+        pop.classList.add('visible');
+        const r = btn.getBoundingClientRect();
+        const pw = pop.offsetWidth || 280;
+        const ph = pop.offsetHeight || 72;
+        const margin = 10;
+        let left = r.right - pw;
+        if (left < margin) left = Math.min(window.innerWidth - pw - margin, r.left);
+        if (left + pw > window.innerWidth - margin) left = window.innerWidth - pw - margin;
+        let top = r.bottom + 8;
+        if (top + ph > window.innerHeight - margin) {
+          top = Math.max(margin, r.top - ph - 8);
+        }
+        pop.style.left = `${Math.max(margin, Math.round(left))}px`;
+        pop.style.top = `${Math.max(margin, Math.round(top))}px`;
+      };
+      const hide = () => {
+        activeTarget = null;
+        pop.classList.remove('visible');
+      };
+      document.addEventListener('mouseover', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('.widget-hint') : null;
+        if (btn) showFor(btn);
+        else if (activeTarget && (!e.target || !activeTarget.contains(e.target))) hide();
+      });
+      document.addEventListener('focusin', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('.widget-hint') : null;
+        if (btn) showFor(btn);
+      });
+      document.addEventListener('focusout', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('widget-hint')) hide();
+      });
+      document.addEventListener('click', (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('.widget-hint') : null;
+        if (btn) {
+          e.stopPropagation();
+          if (activeTarget === btn && pop.classList.contains('visible')) hide();
+          else showFor(btn);
+        } else if (activeTarget) {
+          hide();
+        }
+      });
     }
 
     function ageLabel(iso) {
@@ -1303,16 +1431,20 @@
         }
       }
 
-      // P1.2: OpenRig native parked seats (or snapshot PARKED seats)
+      // P1.2: OpenRig native parked seats (or snapshot PARKED seats) — distinguish bare OS shell exit vs live parked agent
       for (const a of rigAgents) {
         const isParked = (a.parkedData && a.parkedData.parked) || (a.activityLabel || '').includes('PARKED');
-        if (isParked) {
+        if (isParked || a.shellExited) {
+          const isShell = Boolean(a.shellExited);
           items.push({
-            prio: 1.1, category: 'blocker', seatId: a.id, actionKind: 'focus',
-            action: { id: 'wake_parked_seat', transport: 'tmux_key', seatId: a.id, payload: 'Enter', label: td('radar.wakeBtn'), title: td('radar.wakeBtn'), tone: 'warn' },
-            color: '#f59e0b', from: getNodeDisplayTitle(a), to: '⏸️ HOLD / PARK',
-            slice: 'parked: no live wake', state: td('radar.parkedState'),
-            summary: escapeHtml(a.parkedReason || a.details || td('triage.parkedDesc'))
+            prio: 1.1, category: 'blocker', seatId: a.id, actionKind: isShell ? 'restart' : 'focus',
+            action: isShell
+              ? { id: 'copy_restart_shell', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: '🔄 Restart (shell)', title: `rig restart ${a.id}`, tone: 'warn' }
+              : { id: 'wake_parked_seat', transport: 'tmux_key', seatId: a.id, payload: 'Enter', label: td('radar.wakeBtn'), title: td('radar.wakeBtn'), tone: 'warn' },
+            color: '#f59e0b', from: getNodeDisplayTitle(a), to: isShell ? '⚠️ SHELL' : '⏸️ HOLD / PARK',
+            slice: isShell ? 'agent process exited' : 'parked: no live wake',
+            state: isShell ? td('radar.shellExitedState') : td('radar.parkedState'),
+            summary: escapeHtml(isShell ? `${td('radar.shellExitedDesc')}${a.parkedReason ? ' ' + a.parkedReason : ''}` : (a.parkedReason || a.details || td('triage.parkedDesc')))
           });
         }
       }
@@ -1363,6 +1495,14 @@
         }
       }
       return items.sort((x, y) => x.prio - y.prio);
+    }
+
+    const expandedRadarDescs = new Set();
+
+    function toggleRadarDesc(descKey) {
+      if (expandedRadarDescs.has(descKey)) expandedRadarDescs.delete(descKey);
+      else expandedRadarDescs.add(descKey);
+      renderWaitRadarAndDecisions();
     }
 
     function toggleRadarGroup(groupKey) {
@@ -1437,8 +1577,18 @@
                   stopPropagation: true
                 })
               : '';
+            const descKey = `${g.key}|${idx}`;
+            const isLongDesc = String(w.summary || '').length > 125;
+            const isDescOpen = expandedRadarDescs.has(descKey);
+            const washColor = w.color === '#ff0055' || w.color === '#ff2a6d'
+              ? 'rgba(255, 0, 85, 0.14)'
+              : w.color === '#00ff9d' || w.color === '#10b981'
+                ? 'rgba(0, 255, 157, 0.10)'
+                : w.color === '#00f0ff' || w.color === '#38bdf8'
+                  ? 'rgba(0, 240, 255, 0.10)'
+                  : 'rgba(245, 158, 11, 0.11)';
             return `
-        <div class="wait-card" style="--wait-color:${w.color}"
+        <div class="wait-card" style="--wait-color:${w.color}; --wait-wash:${washColor};"
              data-seat="${safeSeat}"
              onmouseenter="if (this.getAttribute('data-seat')) setHoverAgent(this.getAttribute('data-seat'))"
              onmouseleave="if (this.getAttribute('data-seat')) setHoverAgent(null)"
@@ -1449,11 +1599,12 @@
             <span class="actor-pill">${w.to}</span>
             ${groupBtn}
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-            <span style="font-family:var(--font-mono); font-size:11px; color:var(--cyan);">🏷️ ${w.slice}</span>
-            <span style="font-family:var(--font-mono); font-size:10.5px; font-weight:800; color:${w.color};">${w.state}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:6px;">
+            <span style="font-family:var(--font-mono); font-size:10.5px; color:var(--cyan); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🏷️ ${w.slice}</span>
+            <span style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:${w.color}; white-space:nowrap;">${w.state}</span>
           </div>
-          <div style="font-size:12.5px; line-height:1.4; color:#cbd5e1;">${w.summary}</div>
+          <div class="${isLongDesc ? `wait-desc-clamped${isDescOpen ? ' expanded' : ''}` : ''}" style="${isLongDesc ? '' : 'font-size:12px; line-height:1.4; color:#cbd5e1;'}">${w.summary}</div>
+          ${isLongDesc ? `<button type="button" class="wait-desc-toggle" data-desc-key="${escapeHtml(descKey)}" onclick="event.stopPropagation(); toggleRadarDesc(this.getAttribute('data-desc-key'))">${isDescOpen ? td('radar.collapseDesc') : td('radar.expandDesc')}</button>` : ''}
           ${quickActionBtn}
         </div>
       `;
@@ -1494,9 +1645,12 @@
         activeEdges.forEach(e => { connectedNodeIds.add(e.from); connectedNodeIds.add(e.to); });
       }
 
+      const hasSliceMatch = currentSliceFilter !== 'all' && activeEdges.length > 0;
+      const shouldDimByContext = Boolean(hoveredAgentId || hasSliceMatch);
+
       document.querySelectorAll('#nodesLayer .agent-node').forEach(el => {
         const id = el.getAttribute('data-agent-id');
-        const isDimmed = Boolean((hoveredAgentId || currentSliceFilter !== 'all') && !connectedNodeIds.has(id));
+        const isDimmed = Boolean(shouldDimByContext && !connectedNodeIds.has(id));
         el.classList.toggle('dimmed', isDimmed);
         el.classList.toggle('selected', id === selectedAgentId);
       });
@@ -1505,7 +1659,7 @@
         const from = el.getAttribute('data-from');
         const to = el.getAttribute('data-to');
         const slice = el.getAttribute('data-slice');
-        const isVisibleSlice = isEdgeInSlice({ from, to, slice });
+        const isVisibleSlice = !hasSliceMatch || isEdgeInSlice({ from, to, slice });
         const isHoveredMatch = !hoveredAgentId || from === hoveredAgentId || to === hoveredAgentId;
         el.classList.toggle('dimmed', !isVisibleSlice || !isHoveredMatch);
       });
@@ -1524,7 +1678,9 @@
         return `<span class="zzz-anim" title="Спит (Idle)"><span>Z</span><span>z</span><span>z...</span></span>`;
       }
       if (agent.state === 'waiting') {
-        return `<span>🟠 PARKED (${agent.assignedWorkCount || 1})</span>`;
+        return agent.shellExited
+          ? `<span>⚠️ SHELL (${agent.assignedWorkCount || 1})</span>`
+          : `<span>🟠 PARKED (${agent.assignedWorkCount || 1})</span>`;
       }
       if (agent.state === 'urgent') {
         return `<span>🚨 NEEDS INPUT</span>`;
@@ -1532,12 +1688,19 @@
       return `<span>${agent.activityLabel || 'IDLE'}</span>`;
     }
 
+    function getNodeThermalFillGrad(ctxPct) {
+      if (typeof ctxPct !== 'number' || ctxPct <= 0) return 'transparent';
+      if (ctxPct >= 75) return 'linear-gradient(90deg, rgba(255, 0, 85, 0.24), rgba(255, 0, 85, 0.08))';
+      if (ctxPct >= 65) return 'linear-gradient(90deg, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0.06))';
+      return 'linear-gradient(90deg, rgba(56, 189, 248, 0.16), rgba(0, 240, 255, 0.04))';
+    }
+
     function getBottomBadgeText(agent, thermal) {
       const hasCalls = Boolean((agent.callsIn || 0) > 0 || (agent.callsOut || 0) > 0);
-      const qSuffix = hasCalls ? ` • 📥${agent.callsIn}/📤${agent.callsOut}` : '';
+      const qSuffix = hasCalls ? ` · ↓${agent.callsIn} ↑${agent.callsOut}` : '';
       if (typeof agent.ctxPct === 'number') {
         if (agent.ctxPct >= 75) {
-          return `🔥 ${agent.ctxPct}% • ${deckLang === 'en' ? '75% LIMIT' : 'ПОРОГ 75%'}`;
+          return `🔥 ${agent.ctxPct}% · ${deckLang === 'en' ? '75% LIMIT' : 'ПОРОГ 75%'}`;
         }
         if (agent.ctxPct >= 65) {
           return `🌡️ ${agent.ctxPct}%${qSuffix}`;
@@ -1545,7 +1708,7 @@
         const compactLabel = String(thermal.label || '').replace(/\s*\/\s*/g, '/');
         return `${compactLabel}${qSuffix}`;
       }
-      return hasCalls ? `(live)${qSuffix}` : '● live';
+      return hasCalls ? `live${qSuffix}` : '● live';
     }
 
     // ===== GANTT VIEW: one chain = one color =====
@@ -1893,6 +2056,8 @@
         }
       }
 
+      const hasSliceMatch = currentSliceFilter !== 'all' && activeEdges.length > 0;
+      const shouldDimByContext = Boolean(hoveredAgentId || hasSliceMatch);
       const existingNodes = nodesLayer.querySelectorAll('.agent-node');
       const allNodesMatch = existingNodes.length === AGENTS.length &&
         AGENTS.every(a => nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`));
@@ -1907,7 +2072,7 @@
           if (isHidden) return;
           const thermal = getContextThermal(agent.ctxPct, agent.ctxWindowSize);
           const isSelected = agent.id === selectedAgentId;
-          const isDimmed = Boolean((hoveredAgentId || currentSliceFilter !== 'all') && !connectedNodeIds.has(agent.id));
+          const isDimmed = Boolean(shouldDimByContext && !connectedNodeIds.has(agent.id));
           const calmClass = agent.isAnomaly ? 'calm-anomaly' : 'calm-normal';
           const ledClass =
             agent.state === 'urgent' ? 'led-urgent' :
@@ -1919,14 +2084,17 @@
           el.style.top = `${agent.y}%`;
           el.style.setProperty('--ctx-color', thermal.color);
           el.style.setProperty('--ctx-glow', thermal.glow);
+          el.style.setProperty('--ctx-fill-pct', `${thermal.pct}%`);
+          el.style.setProperty('--ctx-fill-grad', getNodeThermalFillGrad(agent.ctxPct));
 
           const ledEl = el.querySelector('.status-led');
           if (ledEl) {
             ledEl.className = `status-led ${ledClass}`;
             const nextLedHtml = renderStateIndicatorHtml(agent);
-            if (ledEl.getAttribute('data-state-key') !== `${agent.state}:${agent.activityLabel}`) {
+            const ledKey = `${agent.state}:${agent.activityLabel}:${agent.shellExited ? 1 : 0}`;
+            if (ledEl.getAttribute('data-state-key') !== ledKey) {
               ledEl.innerHTML = nextLedHtml;
-              ledEl.setAttribute('data-state-key', `${agent.state}:${agent.activityLabel}`);
+              ledEl.setAttribute('data-state-key', ledKey);
             }
           }
 
@@ -2013,7 +2181,7 @@
           return `
             <div class="agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}"
                  data-agent-id="${escapeHtml(agent.id)}"
-                 style="left:${agent.x}%; top:${agent.y}%; ${isHidden ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow};"
+                 style="left:${agent.x}%; top:${agent.y}%; ${isHidden ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow}; --ctx-fill-pct:${thermal.pct}%; --ctx-fill-grad:${getNodeThermalFillGrad(agent.ctxPct)};"
                  onmouseenter="setHoverAgent(this.getAttribute('data-agent-id'))"
                  onmouseleave="setHoverAgent(null)"
                  onmousedown="selectAgent(this.getAttribute('data-agent-id'), event)"
@@ -2026,7 +2194,7 @@
                     <div class="node-role">${escapeHtml(agent.role)}</div>
                   </div>
                 </div>
-                <span class="status-led ${ledClass}" data-state-key="${agent.state}:${agent.activityLabel}">${renderStateIndicatorHtml(agent)}</span>
+                <span class="status-led ${ledClass}" data-state-key="${agent.state}:${agent.activityLabel}:${agent.shellExited ? 1 : 0}">${renderStateIndicatorHtml(agent)}</span>
               </div>
 
               <div class="badge-row">
@@ -2122,7 +2290,7 @@
           : (isQueuedStatic ? 2.6 : 2);
         const streamWidth = Math.max(2, Math.round(trunkWidth * 0.45));
 
-        const isVisibleSlice = isEdgeInSlice(edge);
+        const isVisibleSlice = !hasSliceMatch || isEdgeInSlice(edge);
         const isHoveredMatch = !hoveredAgentId || edge.from === hoveredAgentId || edge.to === hoveredAgentId;
         const dimmedClass = (!isVisibleSlice || !isHoveredMatch) ? 'dimmed' : '';
 
@@ -2429,6 +2597,9 @@
       `;
     }
 
+    const COPY_CLIPBOARD_SVG = '<svg class="cmd-copy-ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.6"/><path d="M3 11H2.4A1.4 1.4 0 0 1 1 9.6V2.4A1.4 1.4 0 0 1 2.4 1h7.2A1.4 1.4 0 0 1 11 2.4V3"/></svg>';
+    const CMD_COPY_LABEL_HTML = `<span class="cmd-copy-label">Cmd ${COPY_CLIPBOARD_SVG}</span>`;
+
     function renderOntologyActionBtn(desc, opts = {}) {
       if (!desc) return '';
       const baseClass = opts.className || (
@@ -2443,7 +2614,12 @@
       const statusElId = opts.statusElId || 'cmdSendStatus';
       const closeModal = opts.closeModal || '';
       const stop = opts.stopPropagation ? 'event.stopPropagation(); ' : '';
-      return `<button type="button" class="${baseClass}"${toneStyle ? ` style="${toneStyle}"` : ''} title="${escapeHtml(desc.title || desc.label || '')}" data-action-id="${escapeHtml(desc.id || '')}" data-transport="${escapeHtml(desc.transport || '')}" data-seat="${escapeHtml(desc.seatId || '')}" data-payload="${escapeHtml(desc.payload || '')}" data-status="${escapeHtml(statusElId)}" data-close-modal="${escapeHtml(closeModal)}" onclick="${stop}dispatchOntologyAction(this)">${escapeHtml(desc.label || '⚡ Применить')}</button>`;
+      const isCopyCmd = desc.transport === 'clipboard';
+      const btnLabelHtml = isCopyCmd ? CMD_COPY_LABEL_HTML : escapeHtml(desc.label || '⚡ Применить');
+      const btnTitle = isCopyCmd && desc.payload
+        ? `${desc.title || desc.label || 'Copy command'} (${desc.payload})`
+        : (desc.title || desc.label || '');
+      return `<button type="button" class="${baseClass}"${toneStyle ? ` style="${toneStyle}"` : ''} title="${escapeHtml(btnTitle)}" data-action-id="${escapeHtml(desc.id || '')}" data-transport="${escapeHtml(desc.transport || '')}" data-seat="${escapeHtml(desc.seatId || '')}" data-payload="${escapeHtml(desc.payload || '')}" data-status="${escapeHtml(statusElId)}" data-close-modal="${escapeHtml(closeModal)}" onclick="${stop}dispatchOntologyAction(this)">${btnLabelHtml}</button>`;
     }
 
     function dispatchOntologyAction(btn) {
@@ -2687,12 +2863,12 @@
                   <div style="font-family:var(--font-mono); font-size:13px; font-weight:800; color:#fff; word-break:break-word; line-height:1.25;" title="${agent.id}">
                     ${getNodeDisplayTitle(agent)}
                   </div>
-                  <div style="font-size:11px; color:#94a3b8; margin-top:1px;">${agent.role}</div>
+                  <div style="font-size:11px; color:#94a3b8; margin-top:1px;">${escapeHtml(formatRoleForRig(agent.role))}</div>
                 </div>
               </div>
               <div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
                 <button class="action-pill" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.screenBtn')}</button>
-                <button class="action-pill" data-cmd="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 tmux</button>
+                <button class="action-pill" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>
               </div>
             </div>
 
@@ -2784,29 +2960,79 @@
         }
       }
 
-      document.getElementById('queueCountBadge').textContent = `${LIVE_QITEMS.length} ШТ`;
-      document.getElementById('queuePacketsList').innerHTML = LIVE_QITEMS.map(q => {
+      const visibleQItems = currentRigFilter === 'all'
+        ? LIVE_QITEMS
+        : LIVE_QITEMS.filter(q => {
+            const sfx = '@' + currentRigFilter;
+            return String(q.fromId || q.from || '').endsWith(sfx) || String(q.toId || q.to || '').endsWith(sfx);
+          });
+      document.getElementById('queueCountBadge').textContent = `${visibleQItems.length} ${td('insp.itemsUnit')}`;
+      const ganttRows = Array.isArray(window.LIVE_GANTT) ? window.LIVE_GANTT : [];
+      document.getElementById('queuePacketsList').innerHTML = visibleQItems.map(q => {
+        const fromDisp = shortSeat(q.fromId || q.from);
+        const toDisp = shortSeat(q.toId || q.to);
+        const seatShort = getNodeDisplayTitle(agent);
         const isNodeInvolved =
-          q.from.includes(agent.shortName.split(' ')[0]) ||
-          q.to.includes(agent.shortName.split(' ')[0]);
+          fromDisp === seatShort || toDisp === seatShort ||
+          (q.fromId && q.fromId === agent.id) || (q.toId && q.toId === agent.id);
         const borderStyle = isNodeInvolved
           ? `border: 1px solid ${q.color}; border-left: 4px solid ${q.color}; background: rgba(0, 240, 255, 0.08);`
           : `border-left: 3px solid ${q.color};`;
+        const cleanSlice = String(q.slice || '').replace(/^slice:/, '');
+        const envKey = q.id || `${fromDisp}-${toDisp}-${cleanSlice}`;
+        const related = cleanSlice
+          ? ganttRows
+              .filter(g => g && (g.slice === cleanSlice || g.chain === 'slice:' + cleanSlice))
+              .sort((a, b) => (Date.parse(b.endAt || b.claimedAt || b.createdAt || 0) || 0) - (Date.parse(a.endAt || a.claimedAt || a.createdAt || 0) || 0))
+              .slice(0, 8)
+          : [];
+        const hasHistory = related.length > 1;
+        const isExpanded = hasHistory && expandedQueueEnvelopes.has(envKey);
+        const tsStr = formatEnvelopeClock(q.ts);
+        const historyHtml = isExpanded ? `
+          <div class="env-history-timeline">
+            ${related.map(ev => {
+              const evColor = ev.state === 'in-progress' ? '#00ff9d' : ev.state === 'canceled' ? '#fda4af' : ev.state === 'blocked' ? '#fb923c' : '#7dd3fc';
+              const evTs = formatEnvelopeClock(ev.endAt || ev.claimedAt || ev.createdAt);
+              const evAge = ageLabel(ev.endAt || ev.claimedAt || ev.createdAt);
+              const evIdShort = String(ev.id || '').slice(-8);
+              return `
+                <div class="env-history-row">
+                  <div class="env-history-row-head">
+                    <span style="color:#e2e8f0; font-weight:700;">${escapeHtml(shortSeat(ev.from))} ▶ ${escapeHtml(shortSeat(ev.to))}</span>
+                    <span style="display:flex; align-items:center; gap:5px;">
+                      <span style="color:${evColor}; font-weight:700;">${escapeHtml(ev.state)}</span>
+                      ${evTs ? `<span style="color:#94a3b8;">${escapeHtml(evTs)}${evAge ? ` · ${escapeHtml(evAge)}` : ''}</span>` : ''}
+                      ${ev.id ? `<button type="button" class="env-copy-btn" title="rig queue show ${escapeHtml(ev.id)} --full" onclick="event.stopPropagation(); copyCmd('rig queue show ${escapeHtml(ev.id)} --full')">${CMD_COPY_LABEL_HTML}</button>` : ''}
+                    </span>
+                  </div>
+                  <div style="font-size:11px; color:#cbd5e1; line-height:1.35;">${escapeHtml(ev.summary || td('xray.emptySummary', { id: evIdShort || '—' })).slice(0, 220)}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : '';
         return `
-          <div class="insp-stat" style="padding:8px 10px; ${borderStyle} cursor:pointer;" onclick="copyCmd('rig queue show ${q.id} --full')">
-            <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:11.5px; font-weight:700;">
-              <span style="color:var(--cyan);">📨 ${q.id.slice(0, 23)}</span>
-              <span style="color:${q.color};">${q.state}</span>
+          <div class="insp-stat" style="padding:8px 10px; ${borderStyle} cursor:pointer;" onclick="${hasHistory ? `toggleQueueEnvelope('${escapeHtml(envKey)}')` : `copyCmd('rig queue show ${escapeHtml(q.id)} --full')`}">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; font-weight:700; flex-wrap:wrap;">
+              <span style="color:var(--cyan);">📨 ${escapeHtml(String(q.id || '').slice(0, 23))}</span>
+              <span style="display:flex; align-items:center; gap:5px;">
+                <span style="color:${q.color};">${escapeHtml(q.state)}</span>
+                ${tsStr ? `<span style="color:#94a3b8; font-weight:500;">${escapeHtml(tsStr)}</span>` : ''}
+                ${hasHistory ? `<span class="env-history-toggle ${isExpanded ? 'open' : ''}">📜 ${td('xray.eventsCount', { n: related.length })} ${isExpanded ? '▴' : '▾'}</span>` : ''}
+                <button type="button" class="env-copy-btn" title="rig queue show ${escapeHtml(q.id)} --full" onclick="event.stopPropagation(); copyCmd('rig queue show ${escapeHtml(q.id)} --full')">${CMD_COPY_LABEL_HTML}</button>
+              </span>
             </div>
             <div style="font-family:var(--font-mono); font-size:11px; color:#e2e8f0; margin: 3px 0;">
-              ${q.from} ──▶ ${q.to} <span style="color:#94a3b8;">(${q.slice})</span>
+              ${escapeHtml(fromDisp)} ──▶ ${escapeHtml(toDisp)} <span style="color:#94a3b8;">(${escapeHtml(q.slice)})</span>
             </div>
-            <div style="font-size:12px; color:#cbd5e1; line-height:1.38;">${q.summary}</div>
+            <div style="font-size:12px; color:#cbd5e1; line-height:1.38;">${escapeHtml(q.summary || td('xray.emptySummary', { id: String(q.id || '').slice(-8) }))}</div>
+            ${historyHtml}
           </div>
         `;
       }).join('');
 
-      const coders = AGENTS.filter(a => a.reworkHistory);
+      const coders = AGENTS.filter(a => a.reworkHistory && (currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter)));
       document.getElementById('coderScorecards').innerHTML = coders.map(c => {
         const isCurrent = c.id === selectedAgentId;
         const dots = c.reworkHistory.map(r =>
@@ -2816,7 +3042,7 @@
         return `
           <div class="insp-stat" style="padding:8px 10px; cursor:pointer; ${isCurrent ? 'border-color:var(--cyan); background:rgba(0,240,255,0.09);' : ''}" onclick="selectAgent('${c.id}')">
             <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:12.5px; font-weight:700;">
-              <span>${c.icon} ${c.shortName} (${c.model})</span>
+              <span>${c.icon} ${escapeHtml(getNodeDisplayTitle(c))} (${escapeHtml(c.model)})</span>
               <span style="color:${c.reworkAvg > 2.0 ? '#fcd34d' : '#6ee7b7'}">🪃 Avg: ${c.reworkAvg} кр</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
@@ -2858,7 +3084,7 @@
       const box = document.getElementById('tmuxScreenBox');
       if (box && !silent) box.textContent = `Захват экрана tmux для ${seatId}...`;
       try {
-        const res = await fetch(`/api/capture?seat=${encodeURIComponent(seatId)}&lines=32`);
+        const res = await fetch(`/api/capture?seat=${encodeURIComponent(seatId)}&lines=72`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (selectedAgentId !== seatId) return;
@@ -3025,6 +3251,7 @@
             target.needsInputReason = seat.needsInputReason;
             target.parkedData = seat.parkedData;
             target.parkedReason = seat.parkedReason;
+            target.shellExited = Boolean(seat.shellExited);
             target.isAnomaly = seat.isCalmVisible;
             target.assignedWorkCount = seat.assignedWorkCount;
             target.inProgressWorkCount = seat.inProgressWorkCount;
@@ -3056,10 +3283,13 @@
               id: q.qitemId,
               state: `${q.state} (${(q.pickup && q.pickup.state) || '—'})`,
               color: isWorking ? '#00ff9d' : '#f59e0b',
-              from: (q.sourceSession || '').replace('@core-platform', ''),
-              to: (q.destinationSession || '').replace('@core-platform', ''),
+              fromId: q.sourceSession || '',
+              toId: q.destinationSession || '',
+              from: shortSeat(q.sourceSession || ''),
+              to: shortSeat(q.destinationSession || ''),
               slice: sliceTag,
-              summary: q.summary || ''
+              ts: q.tsUpdated || q.tsCreated || q.updatedAt || q.createdAt || '',
+              summary: q.summary || q.title || q.subject || ''
             };
           });
 
@@ -3285,6 +3515,17 @@
           }
         }
 
+        // Auto-heal stale slice filter if the selected slice rotated out of active swimlanes & edges
+        if (currentSliceFilter !== 'all') {
+          const stillInLanes = SLICES_LANES.some(l => l.id === currentSliceFilter);
+          const matchesAnyEdge = EDGES.some(e => isEdgeInSlice(e));
+          if (!stillInLanes && !matchesAnyEdge) {
+            currentSliceFilter = 'all';
+            updateActiveFilterLabel();
+          }
+        }
+        renderFilterButtons();
+
         // Render Level 0: Top-3 Actionable Triage Strip (ADR-0006)
         renderTriageStrip();
 
@@ -3328,7 +3569,7 @@
             prio: 0,
             type: 'p0-urgent',
             tag: 'P0 • INPUT',
-            title: `🚨 ${a.shortName}: ${td('triage.waitingHuman')}`,
+            title: `🚨 ${getNodeDisplayTitle(a)}: ${td('triage.waitingHuman')}`,
             desc: a.needsInputReason || td('triage.waitingDefault'),
             action: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: td('triage.screenBtn'), tone: 'urgent' },
             targetAgentId: a.id
@@ -3353,7 +3594,7 @@
           prio: 1,
           type: 'p1-hot',
           tag: isOver ? td('triage.critTag') : td('triage.ctxTag'),
-          title: `🔥 ${a.shortName}: CTX ${a.ctxPct}%`,
+          title: `🔥 ${getNodeDisplayTitle(a)}: CTX ${a.ctxPct}%`,
           desc: `${etaStr} • ${burn.label}`,
           action,
           targetAgentId: a.id
@@ -3382,7 +3623,7 @@
             prio: 3,
             type: 'p3-parked',
             tag: td('triage.parkedTag'),
-            title: `🟠 ${a.shortName}: ${td('triage.parkedTitle')}`,
+            title: `🟠 ${getNodeDisplayTitle(a)}: ${td('triage.parkedTitle')}`,
             desc: a.parkedReason || td('triage.parkedDesc'),
             action: { id: 'focus_seat', transport: 'select_seat', seatId: a.id, payload: '', label: td('triage.inspectBtn'), tone: 'default' },
             targetAgentId: a.id
@@ -3568,8 +3809,16 @@
             <span style="font-family:var(--font-mono); font-size:10.5px; color:${pool.hasValidCtx ? '#cbd5e1' : '#64748b'};">${pool.hasValidCtx ? pool.avgCtx + '%' : '—'}</span>
           </div>`;
 
+        const tankTint = pool.isOver
+          ? 'rgba(255, 0, 85, 0.14)'
+          : pool.color === '#a855f7'
+            ? 'rgba(168, 85, 247, 0.11)'
+            : pool.color === '#00ff9d' || pool.color === '#10b981'
+              ? 'rgba(16, 185, 129, 0.11)'
+              : 'rgba(56, 189, 248, 0.10)';
+
         return `
-        <div class="tank-card" onclick="openFleetAdvisorModal('budget')" title="Seats (${pool.seatCount}): ${seatListTip} • Click for SUB vs API Budget" style="cursor:pointer; --tank-color: ${pool.color}; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
+        <div class="tank-card" onclick="openFleetAdvisorModal('budget')" title="Seats (${pool.seatCount}): ${seatListTip} • Click for SUB vs API Budget" style="cursor:pointer; --tank-color: ${pool.color}; --tank-tint: ${tankTint}; --pool-fill: ${ctxFillWidth}%; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
           <div class="tank-top">
             <span>${pool.name}</span>
             <span style="color:${pool.activeCount > 0 ? '#6ee7b7' : '#e9d5ff'}; font-family:var(--font-mono); font-size:11px;">${pool.statusLabel}</span>
@@ -3583,7 +3832,7 @@
           </div>
           ${secondRowHtml}
         </div>`;
-      }).join('');
+      }).join('') + `<button type="button" class="widget-hint" data-hint-key="hint.pools" aria-label="Info" style="align-self:flex-start; margin-top:2px;">?</button>`;
     }
 
     function setHoverAgent(id) {
@@ -3606,8 +3855,7 @@
 
     function setSliceFilter(slice) {
       currentSliceFilter = slice;
-      document.getElementById('activeFilterLabel').textContent =
-        slice === 'all' ? td('center.allHighways') : td('center.flowFocus', { slice: slice.toUpperCase() });
+      updateActiveFilterLabel();
 
       renderFilterButtons();
       renderWaitRadarAndDecisions();
@@ -5010,6 +5258,21 @@
       renderEdgeXray();
     }
 
+    const expandedXrayEnvelopes = new Set();
+    const expandedQueueEnvelopes = new Set();
+
+    function toggleXrayEnvelope(envKey) {
+      if (expandedXrayEnvelopes.has(envKey)) expandedXrayEnvelopes.delete(envKey);
+      else expandedXrayEnvelopes.add(envKey);
+      renderEdgeXray();
+    }
+
+    function toggleQueueEnvelope(envKey) {
+      if (expandedQueueEnvelopes.has(envKey)) expandedQueueEnvelopes.delete(envKey);
+      else expandedQueueEnvelopes.add(envKey);
+      renderInspectorAndScorecards(false);
+    }
+
     function closeEdgeXray() {
       selectedEdgeIdx = null;
       renderEdgeXray();
@@ -5021,36 +5284,143 @@
       const edge = selectedEdgeIdx !== null ? EDGES[selectedEdgeIdx] : null;
       if (!edge) { drawer.style.display = 'none'; return; }
       const key = [edge.from, edge.to].sort().join(' <-> ');
-      const envs = PAIR_ENVELOPES[key] || [];
+      const histEnvs = Array.isArray(PAIR_ENVELOPES[key]) ? PAIR_ENVELOPES[key] : [];
       const openRows = LIVE_OPEN_QUEUE.filter(q =>
         (q.sourceSession === edge.from && q.destinationSession === edge.to) ||
         (q.sourceSession === edge.to && q.destinationSession === edge.from)
       );
-      const rowHtml = (e, live) => `
-        <div class="insp-stat" style="padding:7px 9px; margin-top:6px; border-left:3px solid ${live ? '#00ff9d' : '#38bdf8'}; cursor:pointer;" onclick="copyCmd('rig queue show ${escapeHtml(e.id)} --full')">
-          <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10.5px; font-weight:700;">
-            <span style="color:var(--cyan);">${shortSeat(e.from)} ▶ ${shortSeat(e.to)}</span>
-            <span style="color:${live ? '#00ff9d' : '#94a3b8'};">${escapeHtml(e.state)}${e.updatedAt ? ` • ${ageLabel(e.updatedAt)}` : ''}</span>
+
+      // 1. Merge & deduplicate live + history envelopes by qitemId (live never duplicates into history!)
+      const byId = new Map();
+      for (const h of histEnvs) {
+        const id = h.id || `${h.from}|${h.to}|${h.slice}|${h.state}|${h.updatedAt}`;
+        byId.set(id, {
+          id: h.id || '',
+          from: h.from || '',
+          to: h.to || '',
+          slice: h.slice || '',
+          state: h.state || 'done',
+          summary: h.summary || '',
+          createdAt: h.createdAt || '',
+          updatedAt: h.updatedAt || h.createdAt || '',
+          isLive: false
+        });
+      }
+      for (const q of openRows) {
+        const id = q.qitemId || q.id || '';
+        const prev = id ? byId.get(id) : null;
+        const slice = ((q.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', '') || (prev && prev.slice) || '';
+        const ts = q.tsUpdated || q.tsCreated || q.updatedAt || q.createdAt || (prev && prev.updatedAt) || '';
+        byId.set(id || `live-${Math.random()}`, {
+          id,
+          from: q.sourceSession || (prev && prev.from) || '',
+          to: q.destinationSession || (prev && prev.to) || '',
+          slice,
+          state: q.state || 'in-progress',
+          summary: q.summary || q.title || q.subject || (prev && prev.summary) || '',
+          createdAt: q.tsCreated || q.createdAt || (prev && prev.createdAt) || ts,
+          updatedAt: ts,
+          isLive: true
+        });
+      }
+
+      // 2. Pack history inside each logical envelope (grouped by slice when present, else by id)
+      const groupsMap = new Map();
+      for (const ev of byId.values()) {
+        const gKey = ev.slice ? `slice:${ev.slice}` : `id:${ev.id}`;
+        if (!groupsMap.has(gKey)) groupsMap.set(gKey, { key: gKey, slice: ev.slice, events: [] });
+        groupsMap.get(gKey).events.push(ev);
+      }
+
+      const envelopes = Array.from(groupsMap.values()).map(g => {
+        g.events.sort((a, b) => {
+          if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+          return (Date.parse(b.updatedAt || b.createdAt || 0) || 0) - (Date.parse(a.updatedAt || a.createdAt || 0) || 0);
+        });
+        g.lead = g.events[0];
+        g.hasLive = g.events.some(e => e.isLive);
+        g.latestTs = Math.max(...g.events.map(e => Date.parse(e.updatedAt || e.createdAt || 0) || 0));
+        return g;
+      }).sort((a, b) => {
+        if (a.hasLive !== b.hasLive) return a.hasLive ? -1 : 1;
+        return b.latestTs - a.latestTs;
+      });
+
+      const stateColor = (st, live) =>
+        live || st === 'in-progress' ? '#00ff9d' :
+        st === 'canceled' ? '#fda4af' :
+        st === 'blocked' ? '#fb923c' :
+        st === 'pending' ? '#fbbf24' : '#7dd3fc';
+
+      const cardsHtml = envelopes.map(env => {
+        const lead = env.lead;
+        const hasHistory = env.events.length > 1;
+        const isExpanded = hasHistory && expandedXrayEnvelopes.has(env.key);
+        const leadTs = formatEnvelopeClock(lead.updatedAt || lead.createdAt);
+        const leadAge = ageLabel(lead.updatedAt || lead.createdAt);
+        const leadShortId = String(lead.id || '').slice(-8);
+        const leadSummary = lead.summary || td('xray.emptySummary', { id: leadShortId || '—' });
+
+        const timelineHtml = isExpanded ? `
+          <div class="env-history-timeline">
+            ${env.events.map(ev => {
+              const c = stateColor(ev.state, ev.isLive);
+              const ts = formatEnvelopeClock(ev.updatedAt || ev.createdAt);
+              const age = ageLabel(ev.updatedAt || ev.createdAt);
+              const sid = String(ev.id || '').slice(-8);
+              return `
+                <div class="env-history-row">
+                  <div class="env-history-row-head">
+                    <span style="color:#e2e8f0; font-weight:700;">${escapeHtml(shortSeat(ev.from))} ▶ ${escapeHtml(shortSeat(ev.to))}</span>
+                    <span style="display:flex; align-items:center; gap:5px;">
+                      <span style="color:${c}; font-weight:700;">${ev.isLive ? '● ' : ''}${escapeHtml(ev.state)}</span>
+                      ${ts ? `<span style="color:#94a3b8;">${escapeHtml(ts)}${age ? ` · ${escapeHtml(age)}` : ''}</span>` : ''}
+                      ${ev.id ? `<button type="button" class="env-copy-btn" title="rig queue show ${escapeHtml(ev.id)} --full" onclick="event.stopPropagation(); copyCmd('rig queue show ${escapeHtml(ev.id)} --full')">${CMD_COPY_LABEL_HTML}</button>` : ''}
+                    </span>
+                  </div>
+                  <div style="font-size:11px; color:#cbd5e1; line-height:1.35;">${escapeHtml(ev.summary || td('xray.emptySummary', { id: sid || '—' })).slice(0, 260)}</div>
+                </div>
+              `;
+            }).join('')}
           </div>
-          ${e.slice ? `<div style="font-family:var(--font-mono); font-size:10.5px; color:#fcd34d; margin-top:2px;">🏷️ ${escapeHtml(e.slice)}</div>` : ''}
-          <div style="font-size:11.5px; color:#cbd5e1; line-height:1.38; margin-top:3px;">${escapeHtml(e.summary).slice(0, 420)}</div>
-        </div>`;
-      const liveHtml = openRows.map(q => rowHtml({
-        id: q.qitemId || '', from: q.sourceSession, to: q.destinationSession, state: q.state,
-        slice: ((q.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', ''),
-        summary: q.summary || '', updatedAt: q.updatedAt || q.createdAt
-      }, true)).join('');
+        ` : '';
+
+        return `
+          <div class="insp-stat" style="padding:8px 10px; margin-top:7px; border-left:3px solid ${stateColor(lead.state, env.hasLive)};${hasHistory ? ' cursor:pointer;' : ''}"${hasHistory ? ` onclick="toggleXrayEnvelope('${escapeHtml(env.key)}')" title="${escapeHtml(td('xray.historyHint'))}"` : ''}>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; flex-wrap:wrap;">
+              <span style="color:var(--cyan);">${escapeHtml(shortSeat(lead.from))} ▶ ${escapeHtml(shortSeat(lead.to))}</span>
+              <span style="display:flex; align-items:center; gap:5px;">
+                <span style="color:${stateColor(lead.state, env.hasLive)};">${env.hasLive ? '🟢 ' : ''}${escapeHtml(lead.state)}</span>
+                ${leadTs ? `<span style="color:#94a3b8; font-weight:500;">${escapeHtml(leadTs)}${leadAge ? ` · ${escapeHtml(leadAge)}` : ''}</span>` : ''}
+              </span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap;">
+              <span style="font-family:var(--font-mono); font-size:10.5px; color:#fcd34d;">
+                ${env.slice ? `🏷️ ${escapeHtml(env.slice)}` : `📨 #${escapeHtml(leadShortId || 'qitem')}`}
+              </span>
+              <span style="display:flex; align-items:center; gap:5px;">
+                ${hasHistory ? `<span class="env-history-toggle ${isExpanded ? 'open' : ''}">📜 ${td('xray.eventsCount', { n: env.events.length })} ${isExpanded ? '▴' : '▾'}</span>` : ''}
+                ${lead.id ? `<button type="button" class="env-copy-btn" title="rig queue show ${escapeHtml(lead.id)} --full" onclick="event.stopPropagation(); copyCmd('rig queue show ${escapeHtml(lead.id)} --full')">${CMD_COPY_LABEL_HTML}</button>` : ''}
+              </span>
+            </div>
+            <div style="font-size:11.5px; color:#cbd5e1; line-height:1.38; margin-top:4px;">${escapeHtml(leadSummary).slice(0, 320)}</div>
+            ${timelineHtml}
+          </div>
+        `;
+      }).join('');
+
       drawer.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:12px; font-weight:800; color:#fff;">
-          <span>💌 РЕНТГЕН МАГИСТРАЛИ</span>
-          <button class="action-pill" onclick="closeEdgeXray()">✕</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:12px; font-weight:800; color:#fff; gap:8px;">
+          <span>${td('xray.title')}</span>
+          <span style="display:flex; align-items:center; gap:6px;">
+            <button type="button" class="widget-hint" data-hint-key="hint.xray" aria-label="Info">?</button>
+            <button class="action-pill" onclick="closeEdgeXray()">✕</button>
+          </span>
         </div>
         <div style="font-family:var(--font-mono); font-size:11px; color:#94a3b8; margin-top:3px;">
-          ${shortSeat(edge.from)} ⇄ ${shortSeat(edge.to)} • всего передач: <b style="color:#00ff9d">${edge.calls || 0}</b>
+          ${escapeHtml(shortSeat(edge.from))} ⇄ ${escapeHtml(shortSeat(edge.to))} • ${td('xray.totalCalls')} <b style="color:#00ff9d">${edge.calls || 0}</b>
         </div>
-        ${liveHtml ? `<div style="font-family:var(--font-mono); font-size:10.5px; color:#00ff9d; margin-top:8px;">🟢 СЕЙЧАС В ПОЛЁТЕ</div>${liveHtml}` : ''}
-        <div style="font-family:var(--font-mono); font-size:10.5px; color:#7dd3fc; margin-top:8px;">📜 ПОСЛЕДНИЕ ПЕРЕДАЧИ</div>
-        ${envs.length ? envs.map(e => rowHtml(e, false)).join('') : '<div style="font-size:11.5px; color:#94a3b8; margin-top:5px;">Истории передач между этой парой в последних 300 строках очереди нет.</div>'}
+        ${envelopes.length ? cardsHtml : `<div style="font-size:11.5px; color:#94a3b8; margin-top:6px;">${td('xray.noHistory')}</div>`}
       `;
       drawer.style.display = 'block';
     }
@@ -5540,7 +5910,7 @@
                <button type="button" class="quest-mini-btn active" onclick="openGuardrailsModal()">${escapeHtml(td('quest.ctaGuardrails'))}</button>
                <button type="button" class="quest-mini-btn" style="border-color:rgba(168,85,247,0.55); color:#e9d5ff;" onclick="openShareCardModal()">📸 ${escapeHtml(td('share.btn'))}</button>
                <button type="button" class="quest-mini-btn" onclick="dismissDemoQuest(); toggleSaTour()">${escapeHtml(td('quest.ctaTour'))}</button>
-               <button type="button" class="quest-mini-btn" onclick="copyCmd('npx rig-commander@latest')">${escapeHtml(td('quest.ctaNpx'))}</button>
+               <button type="button" class="quest-mini-btn" title="npx rig-commander@latest" onclick="copyCmd('npx rig-commander@latest')">${CMD_COPY_LABEL_HTML}</button>
              </div>
            </div>`
         : `<div class="quest-steps-grid">
@@ -5758,8 +6128,7 @@
       if (btnIdle) btnIdle.textContent = hideIdleNodes ? td('hud.idleHidden') : td('hud.idleShown');
       const cTitle = document.getElementById('centerPanelTitle');
       if (cTitle) cTitle.textContent = centerViewMode === 'gantt' ? td('center.ganttTitle') : td('center.graphTitle');
-      const fLbl = document.getElementById('activeFilterLabel');
-      if (fLbl) fLbl.textContent = currentSliceFilter === 'all' ? td('center.allHighways') : td('center.flowFocus', { slice: currentSliceFilter.toUpperCase() });
+      updateActiveFilterLabel();
 
       localizeDemoData(deckLang);
       if (skipRerender) return;
@@ -6217,6 +6586,7 @@
       }
       syncMobileRadarBadge();
       setInterval(syncMobileRadarBadge, 4000);
+      initWidgetHints();
     }
   </script>
 

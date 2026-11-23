@@ -8,6 +8,7 @@ import {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
   detectTerminalIdleAtPrompt,
+  classifyTerminalScreen,
   classifyEdgeQueueStatus,
   getContextThermal,
   formatTokensShort,
@@ -333,4 +334,68 @@ test('LiveBlockerDetector surfaces real HITL P0 and parked-with-work P1 findings
   assert.ok(parked);
   assert.equal(parked.actionPlan.kind, 'wake_seat');
   assert.equal(parked.actionPlan.seatTarget, 'dev-coder3@demo');
+});
+
+test('classifyTerminalScreen catches narrow-pane wrapped Antigravity HITL prompts when options 1-2 scrolled off top', () => {
+  const narrowWrappedAgy = [
+    'commands that start with',
+    '\'rm -f /private/tmp/qa-a1-',
+    'results/_host-*...\'',
+    '  3. Yes, and always allow',
+    'for commands that start',
+    'with \'rm -f /private/tmp/',
+    'qa-a1-results/_host-*...\'',
+    '(Persist to settings.json)',
+    '  4. No, cancel',
+    '',
+    '  ↑/↓ Navigate · tab Amend',
+    'esc to cancel'
+  ].join('\n');
+
+  const res = classifyTerminalScreen(narrowWrappedAgy, 'terminal');
+  assert.equal(res.state, 'needs-input');
+  assert.equal(res.blocked, true);
+  assert.equal(res.harness, 'antigravity');
+  assert.equal(res.reason, 'permission_prompt');
+  // Synthesizes [1] shortcut + parses [3] and [4]
+  assert.deepEqual(res.options.map(o => o.badge), ['1', '3', '4']);
+  assert.equal(res.options[2].isCancel, true);
+});
+
+test('classifyTerminalScreen treats Antigravity active braille spinner + bare esc to cancel as working, never HITL', () => {
+  const agyWorking = [
+    '○ Thought for 36.7s',
+    '● Ran (rm -f...) (ctrl+o to expand)',
+    '⣟  The backup confirms the candidate state...',
+    '└ Tip: Press ? to see keyboard shortcuts',
+    '───────────────────────────',
+    '>',
+    '───────────────────────────',
+    'esc to cancel'
+  ].join('\n');
+
+  const res = classifyTerminalScreen(agyWorking, 'terminal');
+  assert.equal(res.blocked, false);
+  assert.equal(res.state, 'working');
+  assert.equal(res.working, true);
+  assert.equal(res.idleAtPrompt, false);
+});
+
+test('classifyTerminalScreen detects bare OS shell prompt (shellExited) without false-triggering on AI prompts', () => {
+  const bareZsh = [
+    'Agent pid 22228',
+    'user@workstation project.pwa %',
+    'user@workstation project.pwa %'
+  ].join('\n');
+  const resZsh = classifyTerminalScreen(bareZsh, 'terminal');
+  assert.equal(resZsh.shellExited, true);
+  assert.equal(resZsh.state, 'shell-exited');
+  assert.equal(resZsh.blocked, false);
+
+  const bareSh = 'sh-3.2$';
+  assert.equal(classifyTerminalScreen(bareSh, 'terminal').shellExited, true);
+
+  // Active Codex idle prompt must NOT trigger shellExited
+  const codexIdle = '› Ask Codex to do anything\nGPT-6.2-Sol high';
+  assert.equal(classifyTerminalScreen(codexIdle, 'codex').shellExited, false);
 });

@@ -12,7 +12,7 @@ import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
 import { discoverUniversalFleet, buildUniversalGanttItems, isValidTmuxTarget } from './lib/universal-discovery.mjs';
 import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
 import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
-import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt } from './assets/domain/prompt-parser.js';
+import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
@@ -20,8 +20,8 @@ const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalT
 const actionAudit = new ActionAuditLog({ maxRecords: 100 });
 const latestSeatBaselines = new Map();
 const universalTmuxTargets = new Map();
-const terminalPromptProbeCache = new Map(); // seatId -> { ts, blocked, reason }
-const TERMINAL_PROMPT_PROBE_TTL_MS = 3500;
+const terminalPromptProbeCache = new Map(); // seatId -> { ts, blocked, working, idleAtPrompt, reason, harness }
+const TERMINAL_PROMPT_PROBE_TTL_MS = 2500;
 let latestFleetSnapshot = null;
 
 async function captureSeatScreen(seat, lines = 38) {
@@ -71,14 +71,32 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
         ...node,
         activityState: {
           ...(node.activityState || {}),
+          activity: 'waiting-human',
           display: 'needs-input',
           needsInput: {
             count: 1,
             reason: probe.reason || 'permission_prompt',
-            source: 'tmux-prompt-probe'
+            source: 'tmux-prompt-probe',
+            harness: probe.harness || node.runtime || 'generic'
           }
         }
       };
+    }
+
+    if (probe.working && curNeeds === 0 && curDisp === 'idle') {
+      const hasWork = (Number(node.inProgressWorkCount) || 0) > 0 || (Number(node.assignedWorkCount) || 0) > 0;
+      if (hasWork || node.runtime === 'terminal') {
+        return {
+          ...node,
+          activityState: {
+            ...(node.activityState || {}),
+            activity: 'working',
+            display: 'working',
+            source: 'tmux-work-probe'
+          },
+          agentActivity: node.agentActivity ? { ...node.agentActivity, state: 'running' } : node.agentActivity
+        };
+      }
     }
 
     if (probe.idleAtPrompt && node.runtime === 'terminal') {
@@ -97,6 +115,13 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
       }
     }
 
+    if (probe.shellExited) {
+      return {
+        ...node,
+        shellExited: true
+      };
+    }
+
     return node;
   });
 }
@@ -113,18 +138,21 @@ async function enrichOpenRigTerminalPrompts(nodes) {
       if (curNeeds > 0 || curDisp === 'needs-input') return false;
       const isTerminalRuntime = n.runtime === 'terminal';
       const isActive = curDisp === 'working' || curDisp === 'running' || (n.agentActivity && n.agentActivity.state === 'running');
-      return isTerminalRuntime || isActive;
+      const hasOpenWork = (Number(n.assignedWorkCount) || 0) > 0 || (Number(n.inProgressWorkCount) || 0) > 0;
+      const isRunningSession = n.sessionStatus === 'running' || n.lifecycleState === 'running';
+      return isTerminalRuntime || isActive || hasOpenWork || isRunningSession;
     })
     .sort((a, b) => {
       const score = n => {
         const d = (n.activityState && n.activityState.display) || '';
-        const act = (d === 'working' || d === 'running' || (n.agentActivity && n.agentActivity.state === 'running')) ? 2 : 0;
-        const term = n.runtime === 'terminal' ? 1 : 0;
-        return act + term;
+        const act = (d === 'working' || d === 'running' || (n.agentActivity && n.agentActivity.state === 'running')) ? 4 : 0;
+        const work = ((Number(n.inProgressWorkCount) || 0) > 0 || (Number(n.assignedWorkCount) || 0) > 0) ? 3 : 0;
+        const term = n.runtime === 'terminal' ? 2 : 0;
+        return act + work + term;
       };
       return score(b) - score(a);
     })
-    .slice(0, 16);
+    .slice(0, 20);
 
   if (candidates.length === 0) return nodes;
 
@@ -134,16 +162,24 @@ async function enrichOpenRigTerminalPrompts(nodes) {
       const seatId = n.canonicalSessionName;
       const cached = terminalPromptProbeCache.get(seatId);
       if (cached && now - cached.ts < TERMINAL_PROMPT_PROBE_TTL_MS) {
-        if (cached.blocked || cached.idleAtPrompt) probeMap.set(seatId, cached);
+        if (cached.blocked || cached.working || cached.idleAtPrompt || cached.shellExited) probeMap.set(seatId, cached);
         return;
       }
       try {
-        const screen = await captureSeatScreen(seatId, 34);
-        const res = detectLiveHitlPrompt(screen || '');
-        const idleRes = res.blocked ? { idle: false } : detectTerminalIdleAtPrompt(screen || '');
-        const entry = { ts: now, blocked: res.blocked, reason: res.reason, idleAtPrompt: Boolean(idleRes.idle) };
+        // Capture 72 lines so narrow tmux split panes with wrapped long command options stay fully in view
+        const screen = await captureSeatScreen(seatId, 72);
+        const verdict = classifyTerminalScreen(screen || '', n.runtime || n.harness || '');
+        const entry = {
+          ts: now,
+          blocked: verdict.blocked,
+          working: verdict.working,
+          idleAtPrompt: verdict.idleAtPrompt,
+          shellExited: Boolean(verdict.shellExited),
+          reason: verdict.reason,
+          harness: verdict.harness
+        };
         boundedMapSet(terminalPromptProbeCache, seatId, entry, MAX_GUIDANCE_CACHE);
-        if (entry.blocked || entry.idleAtPrompt) probeMap.set(seatId, entry);
+        if (entry.blocked || entry.working || entry.idleAtPrompt || entry.shellExited) probeMap.set(seatId, entry);
       } catch {
         // non-blocking probe failure
       }
@@ -1022,6 +1058,12 @@ async function readRecentDecisions(limit = 12, nodes = []) {
   }
 }
 
+function extractTsFromQitemId(id) {
+  const m = String(id || '').match(/^qitem-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})-/);
+  if (!m) return '';
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`;
+}
+
 function computeHistoryStats(allQueue) {
   if (!Array.isArray(allQueue)) return { pairCounts: {}, pairEnvelopes: {}, coderStats: {}, sliceStats: {}, nodeTraffic: {} };
   const pairCounts = {};
@@ -1048,15 +1090,20 @@ function computeHistoryStats(allQueue) {
       const key = [src, dst].sort().join(' <-> ');
       pairCounts[key] = (pairCounts[key] || 0) + 1;
       if (!pairEnvelopes[key]) pairEnvelopes[key] = [];
-      if (pairEnvelopes[key].length < 4) {
+      if (pairEnvelopes[key].length < 20) {
+        const qId = q.qitemId || q.id || '';
+        const createdIso = q.tsCreated || q.createdAt || extractTsFromQitemId(qId);
+        const updatedIso = q.tsUpdated || q.updatedAt || q.tsClosed || q.tsClaimed || createdIso;
         pairEnvelopes[key].push({
-          id: q.qitemId || q.id || '',
+          id: qId,
           from: src,
           to: dst,
           slice: sName,
           state: q.state || 'done',
-          summary: q.summary || '',
-          updatedAt: q.updatedAt || q.createdAt || ''
+          pickupState: (q.pickup && q.pickup.state) || '',
+          summary: q.summary || q.title || q.subject || '',
+          createdAt: createdIso,
+          updatedAt: updatedIso
         });
       }
     }
@@ -1696,6 +1743,8 @@ function resolveSafeStaticPath(baseDir, pathname) {
 export {
   buildGanttItems,
   isGanttSystemNoise,
+  computeHistoryStats,
+  extractTsFromQitemId,
   readTranscriptTokenUsage,
   buildSeatUsageReport,
   getModelPricing,

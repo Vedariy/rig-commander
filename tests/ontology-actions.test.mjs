@@ -166,3 +166,25 @@ test('resolveActionFromFinding maps open_modal, wake_seat and select_seat to liv
   assert.equal(ganttAct.transport, 'gantt_slice');
   assert.equal(ganttAct.payload, 'auth-flow');
 });
+
+test('parked seat whose agent exited to bare shell offers rig restart instead of wake Enter', () => {
+  const shellSeat = {
+    id: 'dev-operator@rig',
+    harness: 'terminal',
+    state: 'waiting',
+    parkedData: { parked: true },
+    shellExited: true
+  };
+  const actions = getSeatContextualActions(shellSeat);
+  assert.deepEqual(actions.map(a => a.id), ['copy_restart_shell']);
+  assert.equal(actions[0].transport, 'clipboard');
+  assert.equal(actions[0].payload, 'rig restart dev-operator@rig');
+
+  const resolved = resolveActionFromFinding(
+    { kind: 'wake_seat', seatTarget: 'dev-operator@rig', label: '⚡ Разбудить' },
+    shellSeat
+  );
+  assert.equal(resolved.id, 'copy_restart_shell');
+  assert.equal(resolved.transport, 'clipboard');
+  assert.equal(resolved.payload, 'rig restart dev-operator@rig');
+});

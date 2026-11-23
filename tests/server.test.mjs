@@ -6,6 +6,8 @@ import path from 'node:path';
 import {
   buildGanttItems,
   isGanttSystemNoise,
+  computeHistoryStats,
+  extractTsFromQitemId,
   readTranscriptTokenUsage,
   boundedMapSet,
   parseAllowedTmuxKeys,
@@ -289,4 +291,22 @@ test('PWA manifest.webmanifest, sw.js and icons are valid and allowed by static 
   }
   const swText = await fs.readFile(swGuard.resolved, 'utf8');
   assert.ok(swText.includes("startsWith('/api/')"), 'Service Worker must never cache /api/* routes');
+});
+
+test('computeHistoryStats extracts tsUpdated/tsCreated/qitemId timestamps and preserves up to 20 pair envelopes', () => {
+  assert.equal(extractTsFromQitemId('qitem-20261122230703-6646a255e35a6e0d'), '2026-11-22T23:07:03Z');
+  const rows = Array.from({ length: 12 }, (_, i) => ({
+    qitemId: `qitem-2026112223${String(i).padStart(2, '0')}00-deadbeef`,
+    sourceSession: 'dev-owner@demo',
+    destinationSession: 'dev-check-argon@demo',
+    state: i === 0 ? 'in-progress' : (i === 1 ? 'canceled' : 'done'),
+    tags: ['slice:0147-a1'],
+    tsCreated: i < 2 ? '' : `2026-11-22T23:${String(i).padStart(2, '0')}:00Z`,
+    summary: i === 0 ? '' : `Round ${i}`
+  }));
+  const stats = computeHistoryStats(rows);
+  const key = 'dev-check-argon@demo <-> dev-owner@demo';
+  assert.equal(stats.pairEnvelopes[key].length, 12);
+  assert.equal(stats.pairEnvelopes[key][0].createdAt, '2026-11-22T23:00:00Z');
+  assert.equal(stats.pairEnvelopes[key][1].updatedAt, '2026-11-22T23:01:00Z');
 });

@@ -26,6 +26,7 @@ function buildSeatContext(seat, screenText = '') {
   const isParked = Boolean(
     seat && ((seat.parkedData && seat.parkedData.parked) || String(seat.activityLabel || '').includes('PARKED'))
   );
+  const isShellExited = Boolean(seat && seat.shellExited);
   return {
     seat,
     id,
@@ -40,7 +41,8 @@ function buildSeatContext(seat, screenText = '') {
     ctxPct,
     isHotCtx,
     isCritCtx,
-    isParked
+    isParked,
+    isShellExited
   };
 }
 
@@ -144,7 +146,7 @@ export const ACTION_DEFINITIONS = [
     id: 'wake_parked_seat',
     transport: 'tmux_key',
     reversibility: 'fully_reversible',
-    precondition: (ctx) => ctx.isParked,
+    precondition: (ctx) => ctx.isParked && !ctx.isShellExited,
     buildDescriptor: (ctx) => ({
       id: 'wake_parked_seat',
       transport: 'tmux_key',
@@ -152,6 +154,21 @@ export const ACTION_DEFINITIONS = [
       payload: 'Enter',
       label: '⚡ Разбудить (Enter)',
       title: 'Отправить Enter в запаркованное сиденье',
+      tone: 'warn'
+    })
+  },
+  {
+    id: 'copy_restart_shell',
+    transport: 'clipboard',
+    reversibility: 'checkpointed',
+    precondition: (ctx) => ctx.isShellExited,
+    buildDescriptor: (ctx) => ({
+      id: 'copy_restart_shell',
+      transport: 'clipboard',
+      seatId: ctx.id,
+      payload: `rig restart ${ctx.id}`,
+      label: '🔄 Restart (shell)',
+      title: `Агент вышел в shell — перезапустить: rig restart ${ctx.id}`,
       tone: 'warn'
     })
   }
@@ -252,6 +269,17 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
   }
 
   if (actionPlan.kind === 'wake_seat' && seatId) {
+    if (targetSeat && targetSeat.shellExited) {
+      return {
+        id: 'copy_restart_shell',
+        transport: 'clipboard',
+        seatId,
+        payload: `rig restart ${seatId}`,
+        label: '🔄 Restart (shell)',
+        title: `Агент вышел в shell — скопировать rig restart ${seatId}`,
+        tone: 'warn'
+      };
+    }
     return {
       id: 'wake_parked_seat',
       transport: 'tmux_key',
