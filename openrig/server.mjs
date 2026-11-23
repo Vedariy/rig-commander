@@ -12,6 +12,7 @@ import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
 import { discoverUniversalFleet, buildUniversalGanttItems, isValidTmuxTarget } from './lib/universal-discovery.mjs';
 import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
 import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
+import { RemoteAccessGuard, buildLiveManifest, detectTailscaleServeUrl } from './lib/remote-access.mjs';
 import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
@@ -256,6 +257,11 @@ const execFileAsync = promisify(execFile);
 const gzipAsync = promisify(zlib.gzip);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 7440);
+const BIND_HOST = process.env.RIGCOMMANDER_HOST || '127.0.0.1';
+const remoteAccess = new RemoteAccessGuard({
+  port: PORT,
+  publicUrl: process.env.RIGCOMMANDER_PUBLIC_URL || ''
+});
 const RIG_BIN = process.env.RIG_BIN || (process.env.HOME ? path.join(process.env.HOME, '.local/bin/rig') : 'rig');
 const TMUX_BIN = process.env.TMUX_BIN || 'tmux';
 const DAEMON_URL = process.env.OPENRIG_DAEMON_URL || 'http://127.0.0.1:7437';
@@ -1263,6 +1269,181 @@ async function getHistoryStats() {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const isRemote = remoteAccess.isRemoteRequest(req);
+
+  // 0.1 Dynamic Live PWA Manifest (always points to Live Deck "/" instead of static "/demo")
+  if (url.pathname === '/manifest.webmanifest' && req.method === 'GET') {
+    const manifestJson = JSON.stringify(buildLiveManifest(), null, 2);
+    res.writeHead(200, {
+      'Content-Type': 'application/manifest+json; charset=utf-8',
+      'Cache-Control': 'no-store'
+    });
+    res.end(manifestJson);
+    return;
+  }
+
+  // 0.2 Public pairing endpoint: exchanges one-time QR token or 8-char PIN for HttpOnly session cookie
+  if (url.pathname === '/pair') {
+    if (req.method === 'GET') {
+      const code = url.searchParams.get('code') || '';
+      const result = remoteAccess.consumePairingCode(code, {
+        secure: remoteAccess.isHttpsRequest(req),
+        userAgent: req.headers['user-agent'] || ''
+      });
+      if (result.ok) {
+        res.writeHead(302, {
+          Location: '/?source=qr',
+          'Set-Cookie': result.cookieHeader,
+          'Cache-Control': 'no-store'
+        });
+        res.end();
+        return;
+      }
+      res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(remoteAccess.renderPairRequiredHtml({ error: result.error }));
+      return;
+    }
+    if (req.method === 'POST') {
+      let bodyStr = '';
+      let tooLarge = false;
+      req.on('data', chunk => {
+        if (tooLarge) return;
+        bodyStr += chunk;
+        if (bodyStr.length > 8 * 1024) {
+          tooLarge = true;
+          sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
+          req.resume();
+        }
+      });
+      req.on('end', async () => {
+        if (tooLarge) return;
+        const ctype = String(req.headers['content-type'] || '').toLowerCase();
+        let code = '';
+        const isJson = ctype.includes('application/json');
+        if (isJson) {
+          try {
+            code = String((JSON.parse(bodyStr || '{}')).code || '');
+          } catch {
+            code = '';
+          }
+        } else {
+          code = String(new URLSearchParams(bodyStr).get('code') || '');
+        }
+        const result = remoteAccess.consumePairingCode(code, {
+          secure: remoteAccess.isHttpsRequest(req),
+          userAgent: req.headers['user-agent'] || ''
+        });
+        if (result.ok) {
+          if (isJson) {
+            res.writeHead(200, {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Set-Cookie': result.cookieHeader,
+              'Cache-Control': 'no-store'
+            });
+            res.end(JSON.stringify({ ok: true, redirect: '/?source=qr' }));
+          } else {
+            res.writeHead(302, {
+              Location: '/?source=qr',
+              'Set-Cookie': result.cookieHeader,
+              'Cache-Control': 'no-store'
+            });
+            res.end();
+          }
+          return;
+        }
+        if (isJson) {
+          await sendJson(req, res, 401, { ok: false, error: result.error });
+        } else {
+          res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+          res.end(remoteAccess.renderPairRequiredHtml({ error: result.error }));
+        }
+      });
+      return;
+    }
+    res.writeHead(405, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Method not allowed');
+    return;
+  }
+
+  // 0.3 Remote access gate: unpaired remote clients can only fetch PWA metadata/icons (/sw.js, /assets/icons/*)
+  const isPublicPwaAsset =
+    req.method === 'GET' &&
+    (url.pathname === '/sw.js' || url.pathname.startsWith('/assets/icons/'));
+  if (isRemote && !isPublicPwaAsset && !remoteAccess.isAuthenticatedRequest(req)) {
+    if (url.pathname.startsWith('/api/')) {
+      await sendJson(req, res, 401, { ok: false, error: 'Device pairing required' });
+      return;
+    }
+    res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(remoteAccess.renderPairRequiredHtml());
+    return;
+  }
+
+  // 0.4 Local-only Remote Live PWA configuration & pairing endpoints
+  if (url.pathname.startsWith('/api/remote/')) {
+    if (isRemote) {
+      await sendJson(req, res, 403, { ok: false, error: 'Remote pairing settings can only be managed locally on the host machine.' });
+      return;
+    }
+    if (url.pathname === '/api/remote/status' && req.method === 'GET') {
+      await sendJson(req, res, 200, { ok: true, localPort: PORT, ...remoteAccess.getStatus() });
+      return;
+    }
+    if (
+      url.pathname === '/api/remote/config' ||
+      url.pathname === '/api/remote/pair' ||
+      url.pathname === '/api/remote/revoke'
+    ) {
+      const origin = req.headers.origin || '';
+      const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
+      if (req.method !== 'POST') return deny(405, 'Method not allowed');
+      if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
+      if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
+      if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
+
+      let bodyStr = '';
+      let tooLarge = false;
+      req.on('data', chunk => {
+        if (tooLarge) return;
+        bodyStr += chunk;
+        if (bodyStr.length > 16 * 1024) {
+          tooLarge = true;
+          sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
+          req.resume();
+        }
+      });
+      req.on('end', async () => {
+        if (tooLarge) return;
+        try {
+          const body = JSON.parse(bodyStr || '{}');
+          if (url.pathname === '/api/remote/config') {
+            const out = remoteAccess.setPublicUrl(body.publicUrl || '');
+            if (!out.ok) {
+              await sendJson(req, res, 400, { ok: false, error: out.error });
+              return;
+            }
+            await sendJson(req, res, 200, { ok: true, localPort: PORT, ...out.status });
+            return;
+          }
+          if (url.pathname === '/api/remote/pair') {
+            remoteAccess.mintPairingCode();
+            await sendJson(req, res, 200, { ok: true, localPort: PORT, ...remoteAccess.getStatus() });
+            return;
+          }
+          if (url.pathname === '/api/remote/revoke') {
+            const st = remoteAccess.revokeAllSessions();
+            await sendJson(req, res, 200, { ok: true, localPort: PORT, ...st });
+            return;
+          }
+        } catch (err) {
+          await sendJson(req, res, 400, { ok: false, error: err.message });
+        }
+      });
+      return;
+    }
+    await sendJson(req, res, 404, { ok: false, error: 'Not found' });
+    return;
+  }
 
   // 1. Live telemetry endpoint — directly queries OpenRig Daemon /api/rigs/:id/nodes (exact same source as TUI!)
   if (url.pathname === '/api/telemetry') {
@@ -1486,11 +1667,10 @@ const server = http.createServer(async (req, res) => {
     url.pathname === '/api/guardrails/reset' ||
     url.pathname === '/api/guardrails/telegram'
   ) {
-    const allowedOrigins = new Set([`http://127.0.0.1:${PORT}`, `http://localhost:${PORT}`]);
     const origin = req.headers.origin || '';
     const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
     if (req.method !== 'POST') return deny(405, 'Method not allowed');
-    if (!allowedOrigins.has(origin)) return deny(403, 'Forbidden origin');
+    if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
     if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
     if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
 
@@ -1563,13 +1743,12 @@ const server = http.createServer(async (req, res) => {
   // 3. Interactive send command/keystroke to seat endpoint
   // Guarded: same-origin only (no CORS grant) + per-process token from the served page.
   if (url.pathname === '/api/send') {
-    const allowedOrigins = new Set([`http://127.0.0.1:${PORT}`, `http://localhost:${PORT}`]);
     const origin = req.headers.origin || '';
     const deny = async (code, error) => {
       await sendJson(req, res, code, { ok: false, error });
     };
     if (req.method !== 'POST') return deny(405, 'Method not allowed');
-    if (!allowedOrigins.has(origin)) return deny(403, 'Forbidden origin');
+    if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
     if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
     if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
 
@@ -1726,6 +1905,7 @@ function resolveSafeStaticPath(baseDir, pathname) {
   const rel =
     decoded === '/' ? 'index.html' :
     (decoded === '/passport' || decoded === '/passport/') ? 'passport.html' :
+    (decoded === '/guide' || decoded === '/guide/') ? 'guide.html' :
     decoded.replace(/^\/+/, '');
   const segments = rel.split(/[\\/]+/);
   if (segments.some(s => s === '' || s === '.' || s === '..' || s.startsWith('.'))) {
@@ -1752,6 +1932,7 @@ export {
   parseAllowedTmuxKeys,
   resolveSafeStaticPath,
   applyTerminalPromptProbes,
+  buildLiveManifest,
   transcriptUsageCache,
   seatGuidanceCache
 };
@@ -1761,8 +1942,20 @@ if (isMainModule) {
   if (telegramBridge.isConfigured()) {
     telegramBridge.startPolling();
   }
-  server.listen(PORT, '127.0.0.1', () => {
-    console.log(`💠 RigCommander // Neural Command Deck v3.1 at http://127.0.0.1:${PORT}`);
+  server.listen(PORT, BIND_HOST, () => {
+    console.log(`💠 RigCommander // Neural Command Deck v3.1 at http://${BIND_HOST}:${PORT}`);
+    if (remoteAccess.getStatus().enabled) {
+      console.log(`📱 Live Mobile PWA pairing active: ${remoteAccess.getStatus().publicOrigin}`);
+    } else {
+      detectTailscaleServeUrl(PORT).then(tsUrl => {
+        if (tsUrl && !remoteAccess.getStatus().enabled) {
+          const out = remoteAccess.setPublicUrl(tsUrl);
+          if (out.ok) {
+            console.log(`📱 Auto-detected Tailscale Serve HTTPS for Live Mobile PWA: ${tsUrl}`);
+          }
+        }
+      }).catch(() => {});
+    }
     if (telegramBridge.isConfigured()) {
       console.log('📱 Telegram HITL bridge active (authorized chat polling)');
     }

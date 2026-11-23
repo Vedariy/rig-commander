@@ -12,7 +12,9 @@ const COPIES = [
   ['openrig/sw.js', 'public/sw.js'],
   ['landing/index.html', 'public/index.html'],
   ['landing/passport.html', 'public/passport/index.html'],
-  ['landing/passport.html', 'openrig/passport.html']
+  ['landing/passport.html', 'openrig/passport.html'],
+  ['landing/guide.html', 'public/guide/index.html'],
+  ['landing/guide.html', 'openrig/guide.html']
 ];
 
 for (const [srcRel, dstRel] of COPIES) {

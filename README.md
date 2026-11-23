@@ -1,6 +1,6 @@
 # 💠 RigCommander — Mission Control for Autonomous AI Coding Fleets
 
-**Live Demo:** https://rig-commander.vercel.app/demo · **Landing:** https://rig-commander.vercel.app · **Project Passport:** https://rig-commander.vercel.app/passport
+**Live Demo:** https://rig-commander.vercel.app/demo · **User Guide:** https://rig-commander.vercel.app/guide ([Markdown](./docs/USER_GUIDE.md)) · **Landing:** https://rig-commander.vercel.app · **Project Passport:** https://rig-commander.vercel.app/passport
 
 RigCommander is a **zero-dependency, local-first DSS SA (L1–L3)** command deck for engineers running parallel AI coding agents across `tmux`, **Claude Code**, **Codex CLI**, and **OpenRig** fleets.
 
@@ -34,7 +34,11 @@ npx rig-commander@latest
 npm start
 ```
 
-Open `http://127.0.0.1:7440` (or `http://127.0.0.1:7440/passport` for C4 architecture diagrams & test matrix).
+Open `http://127.0.0.1:7440` (or `http://127.0.0.1:7440/guide` for the bilingual Operator User Guide, `http://127.0.0.1:7440/passport` for C4 architecture diagrams & test matrix).
+
+### Live Desktop & Mobile PWA
+- **Mac Desktop PWA:** Open `http://127.0.0.1:7440` → Chrome/Edge **Install App** or Safari **File → Add to Dock…** (installs live Command Deck `/?source=pwa`).
+- **Phone Live PWA:** Expose port `7440` via `tailscale serve https / http://127.0.0.1:7440` or `cloudflared tunnel --url http://127.0.0.1:7440`, then pass `--public-url https://...` or activate inside the **Phone QR** modal (single-use QR + 8-char iPhone PIN, `HttpOnly; Secure` cookie, 1-click revoke). See [docs/USER_GUIDE.md](./docs/USER_GUIDE.md) for step-by-step instructions.
 
 ### Keyboard Shortcuts
 | Key | Action |

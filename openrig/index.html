@@ -66,6 +66,9 @@
       <button class="triage-refresh-btn" onclick="copyCmd('rig status')" title="rig status">
         <span class="cmd-copy-label">Cmd <svg class="cmd-copy-ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.6"/><path d="M3 11H2.4A1.4 1.4 0 0 1 1 9.6V2.4A1.4 1.4 0 0 1 2.4 1h7.2A1.4 1.4 0 0 1 11 2.4V3"/></svg></span>
       </button>
+      <a class="triage-refresh-btn triage-icon-btn" href="/guide" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(0,240,255,0.42); color:#7dd3fc;" title="Руководство пользователя / User Guide">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </a>
       <a class="triage-refresh-btn triage-icon-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.42); color:#e9d5ff;" title="Инженерный паспорт">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       </a>
@@ -3132,6 +3135,10 @@
       try {
         const rigParam = currentRigFilter === 'all' ? '' : `?rig=${encodeURIComponent(currentRigFilter)}`;
         const res = await fetch(`/api/telemetry${rigParam}`);
+        if (res.status === 401) {
+          window.location.reload();
+          return;
+        }
         if (!res.ok) throw new Error('Offline');
         const data = await res.json();
         const snapshot = buildOntologySnapshot(data, window.ONTOLOGY_SNAPSHOT);
@@ -3149,12 +3156,13 @@
         window.LIVE_DISCOVERY_MODE = data.discoveryMode || 'none';
         const hasLiveDaemonData = snapshot.hasLiveDaemonData;
         const badge = document.getElementById('liveConnectionBadge');
+        const connSuffix = location.port ? `:${location.port}` : (location.protocol === 'https:' ? 'HTTPS' : ':7440');
         if (hasLiveDaemonData) {
           const modeTag = data.discoveryMode === 'universal' ? 'LIVE UNIVERSAL' : 'LIVE API';
-          badge.textContent = `● ${modeTag} :${location.port || '7440'}`;
+          badge.textContent = `● ${modeTag} ${connSuffix}`;
           badge.classList.remove('offline');
         } else {
-          badge.textContent = deckLang === 'en' ? `✨ DEMO SANDBOX :${location.port || '7440'}` : `✨ ДЕМО-ПЕСОЧНИЦА :${location.port || '7440'}`;
+          badge.textContent = deckLang === 'en' ? `✨ DEMO SANDBOX ${connSuffix}` : `✨ ДЕМО-ПЕСОЧНИЦА ${connSuffix}`;
           badge.classList.add('offline');
         }
 
@@ -6408,13 +6416,24 @@
       window.addEventListener('resize', () => renderTopology());
     };
 
-    // ===== Mobile PWA Bottom Navigation, QR Handoff & Install Support =====
+    // ===== Mobile PWA Bottom Navigation, QR Handoff & Live Remote Pairing Support =====
     let currentMobileTab = 'map';
     let deferredPwaPrompt = null;
+    let mobileQrSection = 'auto'; // 'auto' | 'live' | 'demo'
     let mobileQrTargetMode = 'demo'; // 'demo' | 'landing' | 'share'
     let mobileQrCustomUrl = '';
+    let liveRemoteStatus = null; // null | { ok, localPort, enabled, publicOrigin, isHttps, pairingUrl, pairingPin, pairingExpiresAt, pairedDeviceCount, remoteClient }
+    let liveRemoteError = '';
+
+    function isLiveQrActive() {
+      if (!IS_LIVE) return false;
+      return mobileQrSection === 'demo' ? false : true;
+    }
 
     function resolveMobileQrUrl() {
+      if (isLiveQrActive() && liveRemoteStatus && liveRemoteStatus.pairingUrl) {
+        return liveRemoteStatus.pairingUrl;
+      }
       const custom = String(mobileQrCustomUrl || '').trim();
       if (custom && /^https?:\/\//i.test(custom)) return custom;
       const isLoopback = /^(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\])$/i.test(window.location.hostname || '');
@@ -6425,9 +6444,37 @@
       return `${baseOrigin}/demo?source=qr&lang=${langParam}`;
     }
 
-    function openMobileQrModal() {
+    async function fetchLiveRemoteStatus() {
+      if (!IS_LIVE) {
+        liveRemoteStatus = null;
+        return;
+      }
+      try {
+        const res = await fetch('/api/remote/status', { cache: 'no-store' });
+        if (res.status === 403) {
+          // Accessed from an already-paired remote phone (local-only management boundary)
+          liveRemoteStatus = { ok: true, remoteClient: true, publicOrigin: window.location.origin };
+          liveRemoteError = '';
+          return;
+        }
+        if (res.ok) {
+          liveRemoteStatus = await res.json();
+          liveRemoteError = '';
+        }
+      } catch {
+        // Ignore when offline
+      }
+    }
+
+    async function openMobileQrModal() {
       const modal = document.getElementById('mobileQrModal');
       if (modal) modal.classList.add('open');
+      if (IS_LIVE) {
+        if (mobileQrSection === 'auto') mobileQrSection = 'live';
+        await fetchLiveRemoteStatus();
+      } else {
+        mobileQrSection = 'demo';
+      }
       renderMobileQrModal();
     }
 
@@ -6436,10 +6483,60 @@
       if (modal) modal.classList.remove('open');
     }
 
+    function setMobileQrSection(sec) {
+      mobileQrSection = sec === 'live' ? 'live' : 'demo';
+      liveRemoteError = '';
+      renderMobileQrModal();
+    }
+
     function setMobileQrTarget(mode) {
       mobileQrTargetMode = mode === 'landing' ? 'landing' : (mode === 'share' ? 'share' : 'demo');
       mobileQrCustomUrl = '';
       renderMobileQrModal();
+    }
+
+    async function saveLiveRemotePublicUrl(rawVal) {
+      const inputEl = document.getElementById('liveRemoteUrlInput');
+      const val = rawVal !== undefined ? String(rawVal) : String((inputEl && inputEl.value) || '').trim();
+      liveRemoteError = '';
+      try {
+        const { res, data } = await deckPostJson('/api/remote/config', { publicUrl: val });
+        if (!res.ok || !data.ok) {
+          liveRemoteError = (data && data.error) || 'Failed to save URL';
+          renderMobileQrModal();
+          return;
+        }
+        liveRemoteStatus = data;
+        renderMobileQrModal();
+        if (val && typeof showToast === 'function') showToast(td('qr.liveActivated'), false);
+      } catch (err) {
+        liveRemoteError = err.message || 'Network error';
+        renderMobileQrModal();
+      }
+    }
+
+    async function rotateLivePairingCode() {
+      liveRemoteError = '';
+      try {
+        const { res, data } = await deckPostJson('/api/remote/pair', {});
+        if (res.ok && data.ok) {
+          liveRemoteStatus = data;
+          renderMobileQrModal();
+          if (typeof showToast === 'function') showToast(td('qr.liveRotated'), false);
+        }
+      } catch {}
+    }
+
+    async function revokeLiveRemoteDevices() {
+      liveRemoteError = '';
+      try {
+        const { res, data } = await deckPostJson('/api/remote/revoke', {});
+        if (res.ok && data.ok) {
+          liveRemoteStatus = data;
+          renderMobileQrModal();
+          if (typeof showToast === 'function') showToast(td('qr.liveRevoked'), false);
+        }
+      } catch {}
     }
 
     function onMobileQrCustomInput(val) {
@@ -6470,6 +6567,129 @@
     function renderMobileQrModal() {
       const body = document.getElementById('mobileQrModalBody');
       if (!body || typeof renderQrSvg !== 'function') return;
+
+      const sectionTabsHtml = IS_LIVE ? `
+        <div style="display:flex; justify-content:center; gap:6px; width:100%; margin-bottom:2px;">
+          <button type="button" class="hud-segment-btn ${isLiveQrActive() ? 'active' : ''}" onclick="setMobileQrSection('live')">${escapeHtml(td('qr.tabLive'))}</button>
+          <button type="button" class="hud-segment-btn ${!isLiveQrActive() ? 'active' : ''}" onclick="setMobileQrSection('demo')">${escapeHtml(td('qr.tabDemo'))}</button>
+        </div>
+      ` : '';
+
+      // ===== LIVE RIGCOMMANDER PWA PAIRING MODE =====
+      if (isLiveQrActive()) {
+        const st = liveRemoteStatus || { localPort: location.port || 7440, enabled: false };
+        const localPort = st.localPort || location.port || '7440';
+
+        // Case 1: Opened on an already-paired remote phone itself
+        if (st.remoteClient) {
+          body.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:12px; font-family:var(--font-mono);">
+              ${sectionTabsHtml}
+              <div style="width:100%; font-size:12px; color:#6ee7b7; background:rgba(0,255,157,0.09); border:1px solid rgba(0,255,157,0.35); border-radius:10px; padding:12px; line-height:1.5; text-align:center;">
+                ${escapeHtml(td('qr.liveRemoteConnected'))}
+              </div>
+              <div style="width:100%; display:flex; flex-direction:column; gap:6px; font-size:11.5px; color:#cbd5e1; background:rgba(15,23,42,0.75); border:1px solid rgba(56,189,248,0.28); border-radius:10px; padding:10px 12px; line-height:1.5;">
+                <div>🍏 ${escapeHtml(td('qr.iosStep'))}</div>
+                <div>🤖 ${escapeHtml(td('qr.androidStep'))}</div>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        // Case 2: Mac localhost with configured Public URL -> Show Live Pairing QR + 8-char iOS PIN
+        if (st.enabled && st.publicOrigin) {
+          const pairUrl = st.pairingUrl || st.publicOrigin;
+          let qrSvg = '';
+          try {
+            qrSvg = renderQrSvg(pairUrl, { size: 224, margin: 4 });
+          } catch (err) {
+            qrSvg = `<div style="color:#fda4af; padding:16px;">${escapeHtml(err.message)}</div>`;
+          }
+          body.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:11px; font-family:var(--font-mono);">
+              ${sectionTabsHtml}
+              <div style="font-size:12px; color:#cbd5e1; text-align:center; line-height:1.45;">
+                ${escapeHtml(td('qr.liveScanHint'))}
+              </div>
+              <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; font-size:11px;">
+                <span style="color:${st.isHttps ? '#6ee7b7' : '#fde68a'}; background:rgba(15,23,42,0.85); border:1px solid ${st.isHttps ? 'rgba(0,255,157,0.4)' : 'rgba(251,191,36,0.45)'}; border-radius:999px; padding:3px 10px;">
+                  ${st.isHttps ? '🔒 LIVE HTTPS' : '⚠️ HTTP'} · ${escapeHtml(st.publicOrigin)}
+                </span>
+                <span style="color:#7dd3fc; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.35); border-radius:999px; padding:3px 10px;">
+                  ${escapeHtml(td('qr.livePairedCount', { n: st.pairedDeviceCount || 0 }))}
+                </span>
+              </div>
+              ${!st.isHttps ? `<div style="width:100%; font-size:11px; color:#fde68a; background:rgba(251,191,36,0.09); border:1px solid rgba(251,191,36,0.35); border-radius:8px; padding:8px 10px; line-height:1.45;">${escapeHtml(td('qr.liveHttpsWarn'))}</div>` : ''}
+              <div id="mobileQrSvgBox" style="background:#ffffff; padding:10px; border-radius:16px; box-shadow:0 0 34px rgba(0,255,157,0.28), 0 12px 30px rgba(0,0,0,0.65); border:2px solid rgba(0,255,157,0.6); line-height:0;">
+                ${qrSvg}
+              </div>
+              ${st.pairingPin ? `
+                <div style="width:100%; background:rgba(15,23,42,0.85); border:1px solid rgba(0,255,157,0.32); border-radius:10px; padding:8px 12px; text-align:center;">
+                  <div style="font-size:10.5px; color:#94a3b8;">${escapeHtml(td('qr.livePinLabel'))}</div>
+                  <div style="font-size:20px; font-weight:800; letter-spacing:3px; color:#6ee7b7; margin:2px 0;">${escapeHtml(st.pairingPin)}</div>
+                  <div style="font-size:10.5px; color:#64748b; line-height:1.35;">${escapeHtml(td('qr.livePinHint'))}</div>
+                </div>
+              ` : ''}
+              <div style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.28); border-radius:8px; padding:7px 10px;">
+                <code id="mobileQrUrlText" style="font-size:11px; color:#67e8f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(pairUrl)}</code>
+                <button type="button" class="action-pill" style="flex-shrink:0; border-color:var(--cyan); color:var(--cyan);" onclick="copyMobileQrUrl()">${escapeHtml(td('qr.copyUrl'))}</button>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; width:100%;">
+                <button type="button" class="action-pill" style="border-color:rgba(0,255,157,0.45); color:#6ee7b7;" onclick="rotateLivePairingCode()">${escapeHtml(td('qr.liveRotateBtn'))}</button>
+                <button type="button" class="action-pill" style="border-color:rgba(244,63,94,0.45); color:#fda4af;" onclick="revokeLiveRemoteDevices()">${escapeHtml(td('qr.liveRevokeBtn'))}</button>
+                <button type="button" class="action-pill" style="border-color:rgba(148,163,184,0.35); color:#94a3b8;" onclick="saveLiveRemotePublicUrl('')">${escapeHtml(td('qr.liveClearBtn'))}</button>
+              </div>
+              <div style="width:100%; display:flex; flex-direction:column; gap:4px; font-size:11px; color:#94a3b8; background:rgba(15,23,42,0.6); border:1px solid rgba(148,163,184,0.18); border-radius:8px; padding:8px 10px;">
+                <div>🍏 ${escapeHtml(td('qr.iosStep'))}</div>
+                <div>🤖 ${escapeHtml(td('qr.androidStep'))}</div>
+                <div style="color:#7dd3fc; margin-top:2px;">${escapeHtml(td('qr.liveDesktopInstall'))}</div>
+              </div>
+              <div id="mobileQrStatus" style="font-size:11px; color:#6ee7b7; min-height:14px;"></div>
+            </div>
+          `;
+          return;
+        }
+
+        // Case 3: Mac localhost without configured Public URL yet -> 2-step HTTPS Tunnel Setup Wizard
+        const tailscaleCmd = `tailscale serve https / http://127.0.0.1:${localPort}`;
+        const cfCmd = `cloudflared tunnel --url http://127.0.0.1:${localPort}`;
+        body.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:stretch; gap:11px; font-family:var(--font-mono);">
+            ${sectionTabsHtml}
+            <div style="font-size:12px; font-weight:700; color:#e2e8f0; text-align:center;">
+              ${escapeHtml(td('qr.liveSetupTitle'))}
+            </div>
+            <div style="font-size:11.5px; color:#94a3b8; line-height:1.45;">
+              ${escapeHtml(td('qr.liveSetupDesc'))}
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; background:rgba(15,23,42,0.78); border:1px solid rgba(56,189,248,0.28); border-radius:10px; padding:10px 12px;">
+              <div style="font-size:11px; color:#6ee7b7; font-weight:700;">${escapeHtml(td('qr.liveOptTailscale'))}</div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.9); border:1px solid rgba(148,163,184,0.22); border-radius:7px; padding:7px 9px;">
+                <code style="font-size:11px; color:#67e8f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(tailscaleCmd)}</code>
+                <button type="button" class="env-copy-btn" data-cmd="${escapeHtml(tailscaleCmd)}" title="${escapeHtml(tailscaleCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>
+              </div>
+              <div style="font-size:11px; color:#7dd3fc; font-weight:700; margin-top:2px;">${escapeHtml(td('qr.liveOptCloudflare'))}</div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.9); border:1px solid rgba(148,163,184,0.22); border-radius:7px; padding:7px 9px;">
+                <code style="font-size:11px; color:#67e8f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(cfCmd)}</code>
+                <button type="button" class="env-copy-btn" data-cmd="${escapeHtml(cfCmd)}" title="${escapeHtml(cfCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="url" id="liveRemoteUrlInput" class="ctrl-input" style="flex:1; font-size:11.5px;" placeholder="${escapeHtml(td('qr.liveUrlPlaceholder'))}" onkeydown="if (event.key === 'Enter') saveLiveRemotePublicUrl()" />
+              <button type="button" class="action-pill" style="flex-shrink:0; border-color:var(--emerald); color:#6ee7b7; font-weight:700;" onclick="saveLiveRemotePublicUrl()">${escapeHtml(td('qr.liveActivateBtn'))}</button>
+            </div>
+            ${liveRemoteError ? `<div style="font-size:11px; color:#fda4af; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.35); border-radius:8px; padding:7px 10px;">⚠️ ${escapeHtml(liveRemoteError)}</div>` : ''}
+            <div style="font-size:11px; color:#7dd3fc; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.28); border-radius:8px; padding:8px 10px; line-height:1.45;">
+              ${escapeHtml(td('qr.liveDesktopInstall'))}
+            </div>
+            <div id="mobileQrStatus" style="font-size:11px; color:#6ee7b7; min-height:14px; text-align:center;"></div>
+          </div>
+        `;
+        return;
+      }
+
+      // ===== CLOUD DEMO QR MODE (Vercel /demo or Demo tab) =====
       const isLoopback = /^(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\])$/i.test(window.location.hostname || '');
       const targetUrl = resolveMobileQrUrl();
       let qrSvg = '';
@@ -6481,6 +6701,7 @@
 
       body.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; gap:12px; font-family:var(--font-mono);">
+          ${sectionTabsHtml}
           <div style="font-size:12px; color:#cbd5e1; text-align:center; line-height:1.45;">
             ${escapeHtml(td('qr.scanHint'))}
           </div>

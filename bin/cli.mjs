@@ -17,11 +17,13 @@ Usage:
   rig-commander [options]
 
 Options:
-  -p, --port <number>   Specify telemetry bridge port (default: 7440)
-  --universal           Force Universal Mode (Claude Code / Codex / tmux without OpenRig)
-  --no-open             Do not automatically open browser on startup
-  -v, --version         Show version
-  -h, --help            Show this help manual
+  -p, --port <number>     Specify telemetry bridge port (default: 7440)
+  --host <address>        Bind host interface (default: 127.0.0.1)
+  --public-url <https://> Enable paired Live Mobile PWA via Tailscale Serve / Cloudflare Tunnel
+  --universal             Force Universal Mode (Claude Code / Codex / tmux without OpenRig)
+  --no-open               Do not automatically open browser on startup
+  -v, --version           Show version
+  -h, --help              Show this help manual
 
 Keyboard Shortcuts in Deck:
   G                     Toggle Graph ⇄ Task Gantt Timeline
@@ -47,6 +49,18 @@ if (portIdx !== -1 && args[portIdx + 1]) {
   port = Number(process.env.PORT) || 7440;
 }
 
+let host = process.env.RIGCOMMANDER_HOST || '127.0.0.1';
+const hostIdx = args.findIndex(a => a === '--host');
+if (hostIdx !== -1 && args[hostIdx + 1]) {
+  host = String(args[hostIdx + 1]).trim() || '127.0.0.1';
+}
+
+let publicUrl = process.env.RIGCOMMANDER_PUBLIC_URL || '';
+const pubIdx = args.findIndex(a => a === '--public-url');
+if (pubIdx !== -1 && args[pubIdx + 1]) {
+  publicUrl = String(args[pubIdx + 1]).trim();
+}
+
 const noOpen = args.includes('--no-open');
 const forceUniversal = args.includes('--universal');
 const serverPath = path.resolve(__dirname, '../openrig/server.mjs');
@@ -56,7 +70,7 @@ console.log(`
 \x1b[36m  💠 RIGCOMMANDER // NEURAL COMMAND DECK v3.1\x1b[0m
   \x1b[90m==============================================================\x1b[0m
   \x1b[32m●\x1b[0m Status:            \x1b[1m\x1b[32mLIVE TELEMETRY BRIDGE\x1b[0m
-  \x1b[36m●\x1b[0m Command Deck:      \x1b[4m\x1b[36m${url}\x1b[0m
+  \x1b[36m●\x1b[0m Command Deck:      \x1b[4m\x1b[36m${url}\x1b[0m${publicUrl ? `\n  \x1b[35m●\x1b[0m Live Mobile PWA:   \x1b[4m\x1b[35m${publicUrl}\x1b[0m \x1b[90m(QR paired)\x1b[0m` : ''}
   \x1b[33m●\x1b[0m Keyboard Control:  \x1b[90m[ [ ] Radar | [ ] ] Inspector | [ \\ ] Zen\x1b[0m
   \x1b[90m--------------------------------------------------------------\x1b[0m
   \x1b[90mPress \x1b[37mCtrl+C\x1b[90m to safely detach flight deck.\x1b[0m
@@ -67,6 +81,8 @@ const serverProc = spawn(process.execPath, [serverPath], {
   env: {
     ...process.env,
     PORT: String(port),
+    RIGCOMMANDER_HOST: host,
+    ...(publicUrl ? { RIGCOMMANDER_PUBLIC_URL: publicUrl } : {}),
     ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {})
   },
   stdio: 'inherit'
