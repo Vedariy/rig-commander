@@ -37,7 +37,7 @@ Keyboard Shortcuts in Deck:
 }
 
 if (args.includes('-v') || args.includes('--version')) {
-  console.log('rig-commander v3.1.1');
+  console.log('rig-commander v3.2.0');
   process.exit(0);
 }
 
