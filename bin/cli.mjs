@@ -1,15 +1,23 @@
 #!/usr/bin/env node
 import { spawn, execFile } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { RESTART_FOR_UPDATE_EXIT_CODE, detectInstallMode } from '../openrig/lib/self-update.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pkgRoot = path.resolve(__dirname, '..');
+let APP_VERSION = '3.2.0';
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, 'package.json'), 'utf8'));
+  if (pkg && pkg.version) APP_VERSION = String(pkg.version);
+} catch {}
 const args = process.argv.slice(2);
 
 // Check flags
 if (args.includes('-h') || args.includes('--help')) {
   console.log(`
-💠 RIGCOMMANDER // NEURAL COMMAND DECK v3.1
+💠 RIGCOMMANDER // NEURAL COMMAND DECK v${APP_VERSION}
 Mission Control for Autonomous AI Coding Fleets (OpenRig + Universal Claude/Codex/tmux)
 
 Usage:
@@ -37,7 +45,7 @@ Keyboard Shortcuts in Deck:
 }
 
 if (args.includes('-v') || args.includes('--version')) {
-  console.log('rig-commander v3.2.0');
+  console.log(`rig-commander v${APP_VERSION}`);
   process.exit(0);
 }
 
@@ -67,7 +75,7 @@ const serverPath = path.resolve(__dirname, '../openrig/server.mjs');
 const url = `http://127.0.0.1:${port}`;
 
 console.log(`
-\x1b[36m  💠 RIGCOMMANDER // NEURAL COMMAND DECK v3.1\x1b[0m
+\x1b[36m  💠 RIGCOMMANDER // NEURAL COMMAND DECK v${APP_VERSION}\x1b[0m
   \x1b[90m==============================================================\x1b[0m
   \x1b[32m●\x1b[0m Status:            \x1b[1m\x1b[32mLIVE TELEMETRY BRIDGE\x1b[0m
   \x1b[36m●\x1b[0m Command Deck:      \x1b[4m\x1b[36m${url}\x1b[0m${publicUrl ? `\n  \x1b[35m●\x1b[0m Live Mobile PWA:   \x1b[4m\x1b[35m${publicUrl}\x1b[0m \x1b[90m(QR paired)\x1b[0m` : ''}
@@ -76,22 +84,46 @@ console.log(`
   \x1b[90mPress \x1b[37mCtrl+C\x1b[90m to safely detach flight deck.\x1b[0m
 `);
 
-// Launch Server Process
-const serverProc = spawn(process.execPath, [serverPath], {
-  env: {
-    ...process.env,
-    PORT: String(port),
-    RIGCOMMANDER_HOST: host,
-    ...(publicUrl ? { RIGCOMMANDER_PUBLIC_URL: publicUrl } : {}),
-    ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {})
-  },
-  stdio: 'inherit'
-});
+const childEnv = {
+  ...process.env,
+  PORT: String(port),
+  RIGCOMMANDER_HOST: host,
+  RIGCOMMANDER_SUPERVISED: '1',
+  ...(publicUrl ? { RIGCOMMANDER_PUBLIC_URL: publicUrl } : {}),
+  ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {})
+};
 
-serverProc.on('error', err => {
-  console.error('\x1b[31m✕ Failed to launch RigCommander server:\x1b[0m', err.message);
-  process.exit(1);
-});
+let serverProc = null;
+let shuttingDown = false;
+const installMode = detectInstallMode(pkgRoot);
+
+function startServerChild(useNpxLatest = false) {
+  if (useNpxLatest) {
+    const npxArgs = ['--yes', 'rig-commander@latest', '--no-open', '-p', String(port), '--host', host];
+    if (publicUrl) npxArgs.push('--public-url', publicUrl);
+    if (forceUniversal) npxArgs.push('--universal');
+    serverProc = spawn('npx', npxArgs, { env: childEnv, stdio: 'inherit' });
+  } else {
+    serverProc = spawn(process.execPath, [serverPath], { env: childEnv, stdio: 'inherit' });
+  }
+
+  serverProc.on('error', err => {
+    console.error('\x1b[31m✕ Failed to launch RigCommander server:\x1b[0m', err.message);
+    process.exit(1);
+  });
+
+  serverProc.on('exit', code => {
+    if (shuttingDown) return;
+    if (code === RESTART_FOR_UPDATE_EXIT_CODE) {
+      console.log('\n\x1b[32m🔄 Applying RigCommander update — restarting telemetry bridge...\x1b[0m');
+      setTimeout(() => startServerChild(installMode === 'npx-cache'), 450);
+    } else if (typeof code === 'number' && code !== 0) {
+      process.exit(code);
+    }
+  });
+}
+
+startServerChild(false);
 
 // Auto-open browser
 if (!noOpen) {
@@ -108,8 +140,9 @@ if (!noOpen) {
 }
 
 function shutdown() {
+  shuttingDown = true;
   console.log('\n\x1b[36m💠 Detaching RigCommander flight deck. Agents remain in background.\x1b[0m');
-  serverProc.kill('SIGINT');
+  if (serverProc) serverProc.kill('SIGINT');
   process.exit(0);
 }
 

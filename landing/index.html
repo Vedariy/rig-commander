@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="app-version" content="3.2.0">
   <meta name="theme-color" content="#030712">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -1257,7 +1258,7 @@
     <nav class="navbar">
       <a href="#" class="nav-brand">
         <span>💠 RIGCOMMANDER</span>
-        <span class="nav-brand-badge">v3.1 LIVE</span>
+        <span class="nav-brand-badge" id="navVersionBadge">v3.2 LIVE</span>
       </a>
       <ul class="nav-links">
         <li><a href="#features" data-i18n="nav.features">Features</a></li>
@@ -1269,6 +1270,13 @@
         <li><a href="#waitlist" data-i18n="nav.waitlist">Early Access</a></li>
       </ul>
       <div class="nav-actions-right">
+        <div id="landingReleaseNotice" style="display:none; align-items:center; gap:4px; background:rgba(0,255,157,0.12); border:1px solid rgba(0,255,157,0.55); color:#6ee7b7; font-family:var(--font-mono); font-size:11px; font-weight:700; padding:3px 6px 3px 10px; border-radius:999px; box-shadow:0 0 16px rgba(0,255,157,0.22); white-space:nowrap;">
+          <button type="button" id="landingUpdateBtn" onclick="openLandingUpdateModal()" style="background:none; border:none; color:inherit; font:inherit; cursor:pointer; display:inline-flex; align-items:center; gap:5px; padding:2px 2px;">
+            <span>✨</span>
+            <span id="landingUpdateBtnText">New release</span>
+          </button>
+          <button type="button" id="landingUpdateDismiss" onclick="dismissLandingReleaseNotice()" aria-label="Dismiss release notice" title="Dismiss" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:12px; line-height:1; padding:2px 4px; border-radius:999px;">×</button>
+        </div>
         <div class="lang-switch" role="group" aria-label="Language switch">
           <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
           <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
@@ -1857,7 +1865,7 @@ Run negative control fault check?
             </p>
             <div class="passport-pills">
               <span class="passport-pill">0 npm deps • MIT</span>
-              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">70 / 70 node --test PASS</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">78 / 78 node --test PASS</span>
               <span class="passport-pill">10s 3-Step Demo Mission</span>
               <span class="passport-pill">SUB vs PAYG FinOps + PNG Card</span>
               <span class="passport-pill">Telegram HITL + Breaker</span>
@@ -2011,6 +2019,17 @@ Run negative control fault check?
         <div>🍏 <span data-i18n="qr.ios">iOS: Safari → Share ⬆ → "Add to Home Screen"</span></div>
         <div>🤖 <span data-i18n="qr.android">Android: Chrome → "Install app"</span></div>
       </div>
+    </div>
+  </div>
+
+  <!-- LANDING AUTO-UPDATE MODAL (NPMJS RELEASE CHECKER) -->
+  <div id="landingUpdateModal" onclick="if (event.target === this) closeLandingUpdateModal()" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(2,6,23,0.82); backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px;">
+    <div style="width:100%; max-width:480px; background:rgba(8,15,32,0.98); border:1px solid rgba(0,255,157,0.5); border-radius:18px; padding:22px; box-shadow:0 24px 64px rgba(0,0,0,0.85), 0 0 40px rgba(0,255,157,0.16); font-family:var(--font-mono); text-align:left;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;">
+        <span id="landingUpdateTitle" style="font-size:13px; font-weight:800; color:#6ee7b7;">⬆️ RigCommander Update Available</span>
+        <button type="button" onclick="closeLandingUpdateModal()" style="background:transparent; border:1px solid rgba(148,163,184,0.35); color:#cbd5e1; border-radius:8px; padding:4px 10px; cursor:pointer; font-family:var(--font-mono); font-size:11px;">✕</button>
+      </div>
+      <div id="landingUpdateBody"></div>
     </div>
   </div>
 
@@ -2590,8 +2609,155 @@ Run negative control fault check?
     function copyLandingQrUrl() {
       copyCli(getLandingQrUrl());
     }
+
+    // Auto-Update Watcher on Website (checks npmjs.org/rig-commander/latest via CORS)
+    let landingUpdateState = {
+      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.2.0').trim(),
+      latestVersion: '',
+      updateAvailable: false,
+      releaseUrl: 'https://www.npmjs.com/package/rig-commander'
+    };
+
+    function syncLandingUpdateBtn() {
+      const wrap = document.getElementById('landingReleaseNotice');
+      const txt = document.getElementById('landingUpdateBtnText');
+      if (!wrap || !txt) return;
+      let dismissedVer = '';
+      try { dismissedVer = localStorage.getItem('rigcommander_dismissed_release') || ''; } catch {}
+      const isDismissed = !landingUpdateState.simulated && dismissedVer === landingUpdateState.latestVersion;
+      if (landingUpdateState.updateAvailable && landingUpdateState.latestVersion && !isDismissed) {
+        txt.textContent = currentLang === 'ru'
+          ? `Новая v${landingUpdateState.latestVersion}`
+          : `New v${landingUpdateState.latestVersion}`;
+        wrap.style.display = 'inline-flex';
+      } else {
+        wrap.style.display = 'none';
+      }
+      const modal = document.getElementById('landingUpdateModal');
+      if (modal && modal.style.display === 'flex') renderLandingUpdateModal();
+    }
+
+    function dismissLandingReleaseNotice() {
+      try {
+        if (landingUpdateState.latestVersion) {
+          localStorage.setItem('rigcommander_dismissed_release', landingUpdateState.latestVersion);
+        }
+      } catch {}
+      landingUpdateState.simulated = false;
+      const wrap = document.getElementById('landingReleaseNotice');
+      if (wrap) wrap.style.display = 'none';
+    }
+
+    function openLandingUpdateModal() {
+      const modal = document.getElementById('landingUpdateModal');
+      if (!modal) return;
+      renderLandingUpdateModal();
+      modal.style.display = 'flex';
+    }
+
+    function closeLandingUpdateModal() {
+      const modal = document.getElementById('landingUpdateModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function renderLandingUpdateModal() {
+      const titleEl = document.getElementById('landingUpdateTitle');
+      const bodyEl = document.getElementById('landingUpdateBody');
+      if (!bodyEl) return;
+      const ru = currentLang === 'ru';
+      const st = landingUpdateState;
+      if (titleEl) {
+        titleEl.textContent = ru
+          ? `✨ Вышла новая версия RigCommander v${st.latestVersion || st.currentVersion}`
+          : `✨ New RigCommander v${st.latestVersion || st.currentVersion} Released`;
+      }
+      const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      bodyEl.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:12px; color:#cbd5e1; line-height:1.5;">
+            ${ru ? 'На npmjs.org доступен свежий релиз CLI и локального пульта RigCommander:' : 'A fresh release of the RigCommander CLI and local deck is now live on npmjs.org:'}
+          </div>
+          <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:10px; padding:12px; text-align:center;">
+            <div>
+              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">${ru ? 'На сайте' : 'Site build'}</div>
+              <div style="font-size:17px; font-weight:800; color:#e2e8f0;">v${esc(st.currentVersion)}</div>
+            </div>
+            <div style="font-size:18px; color:#6ee7b7; font-weight:800;">→</div>
+            <div>
+              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">npmjs.org</div>
+              <div style="font-size:17px; font-weight:800; color:#00ff9d;">v${esc(st.latestVersion || st.currentVersion)}</div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; background:rgba(15,23,42,0.72); border:1px solid rgba(148,163,184,0.2); border-radius:10px; padding:10px;">
+            <div style="font-size:10.5px; color:#94a3b8;">${ru ? 'Запустить или обновить локальный RigCommander:' : 'Run or upgrade your local RigCommander:'}</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.92); border:1px solid rgba(56,189,248,0.25); border-radius:7px; padding:7px 9px;">
+              <code style="font-size:11px; color:#67e8f9;">npx rig-commander@latest</code>
+              <button type="button" onclick="copyCli('npx rig-commander@latest')" style="background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.4); color:#67e8f9; border-radius:6px; padding:4px 8px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; cursor:pointer;">Cmd ⧉</button>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.92); border:1px solid rgba(56,189,248,0.25); border-radius:7px; padding:7px 9px;">
+              <code style="font-size:11px; color:#67e8f9;">npm install -g rig-commander@latest</code>
+              <button type="button" onclick="copyCli('npm install -g rig-commander@latest')" style="background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.4); color:#67e8f9; border-radius:6px; padding:4px 8px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; cursor:pointer;">Cmd ⧉</button>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:11px;">
+            <a href="http://127.0.0.1:7440/?track=update" target="_blank" rel="noopener" style="color:#6ee7b7; text-decoration:none; font-weight:700;">
+              ${ru ? '⚡ Обновить в локальном пульте →' : '⚡ Open local deck updater →'}
+            </a>
+            <a href="${esc(st.releaseUrl)}" target="_blank" rel="noopener" style="color:#7dd3fc; text-decoration:none;">
+              ${ru ? 'Релиз на npmjs.org ↗' : 'Release on npmjs.org ↗'}
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    (async function checkLandingNpmUpdate() {
+      try {
+        const { parseSemver, isNewerVersion, normalizeNpmReleaseInfo } = await import('/assets/domain/semver.js');
+        const sim = new URLSearchParams(window.location.search).get('simulateUpdate');
+        if (sim && parseSemver(sim)) {
+          const normVer = parseSemver(sim).normalized;
+          landingUpdateState = {
+            ...landingUpdateState,
+            latestVersion: normVer,
+            updateAvailable: isNewerVersion(normVer, landingUpdateState.currentVersion),
+            releaseUrl: `https://www.npmjs.com/package/rig-commander/v/${normVer}`,
+            simulated: true
+          };
+          syncLandingUpdateBtn();
+          return;
+        }
+        const res = await fetch('https://registry.npmjs.org/rig-commander/latest', {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        if (!res.ok) return;
+        const norm = normalizeNpmReleaseInfo(await res.json(), 'rig-commander');
+        if (norm.ok && isNewerVersion(norm.version, landingUpdateState.currentVersion)) {
+          landingUpdateState = {
+            ...landingUpdateState,
+            latestVersion: norm.version,
+            updateAvailable: true,
+            releaseUrl: norm.releaseUrl
+          };
+          syncLandingUpdateBtn();
+        }
+      } catch {
+        // Non-blocking: ignore offline/registry errors on marketing site
+      }
+    })();
+
+    const _origSetLang = setLang;
+    setLang = function patchedSetLang(lang) {
+      _origSetLang(lang);
+      syncLandingUpdateBtn();
+    };
+
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeLandingQrModal();
+      if (e.key === 'Escape') {
+        closeLandingQrModal();
+        closeLandingUpdateModal();
+      }
     });
   </script>
 </body>

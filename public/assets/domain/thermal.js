@@ -1,15 +1,42 @@
 export function getContextThermal(ctxPct, ctxWindowSize) {
-  if (ctxPct === null || ctxPct === undefined) {
-    return { color: '#475569', glow: 'rgba(71, 85, 105, 0.18)', pct: 6, label: '— (no reader)', tempTag: '❄️ CTX: —' };
+  if (ctxPct === null || ctxPct === undefined || !Number.isFinite(Number(ctxPct))) {
+    return {
+      color: '#64748b',
+      glow: 'rgba(71, 85, 105, 0.12)',
+      pct: 0,
+      tier: 'none',
+      band: 'none',
+      tokensShort: '',
+      label: '— (no reader)',
+      tempTag: 'CTX: —'
+    };
   }
-  const pct = Math.min(100, Math.max(4, Math.round(ctxPct)));
+  const rawPct = Math.min(100, Math.max(0, Math.round(Number(ctxPct))));
+  const pct = Math.max(4, rawPct);
   const winK = ctxWindowSize ? `${Math.round(ctxWindowSize / 1000)}K` : '';
-  const usedK = ctxWindowSize ? `${Math.round((ctxPct / 100) * (ctxWindowSize / 1000))}K / ${winK}` : `${pct}%`;
+  const usedNumK = ctxWindowSize ? Math.round((rawPct / 100) * (ctxWindowSize / 1000)) : null;
+  const usedK = ctxWindowSize ? `${usedNumK}K / ${winK}` : `${rawPct}%`;
+  const tokensShort = ctxWindowSize ? `${usedNumK}K/${winK}` : '';
+  const label = `${rawPct}% (${usedK})`;
 
-  if (pct <= 20) return { color: '#00f0ff', glow: 'rgba(0, 240, 255, 0.25)', pct, label: `${pct}% (${usedK})`, tempTag: `❄️ CTX ${pct}%` };
-  if (pct <= 45) return { color: '#3b82f6', glow: 'rgba(59, 130, 246, 0.32)', pct, label: `${pct}% (${usedK})`, tempTag: `💧 CTX ${pct}%` };
-  if (pct <= 70) return { color: '#f59e0b', glow: 'rgba(245, 158, 11, 0.45)', pct, label: `${pct}% (${usedK})`, tempTag: `🌡️ CTX ${pct}%` };
-  return { color: '#ff0055', glow: 'rgba(255, 0, 85, 0.65)', pct, label: `${pct}% (${usedK})`, tempTag: `🔥 CTX ${pct}%` };
+  // 6-Band Thermal Spectrum (Inferno/Plasma — zero green conflict with WORKING emerald #00ff9d):
+  // violet (0-19%) -> blue (20-39%) -> sky (40-54%) -> yellow (55-64%) -> orange (65-74% warn) -> red (>=75% crit)
+  if (rawPct < 20) {
+    return { color: '#a78bfa', glow: 'rgba(167, 139, 250, 0.18)', pct, tier: 'cool', band: 'violet', tokensShort, label, tempTag: `❄️ CTX ${rawPct}%` };
+  }
+  if (rawPct < 40) {
+    return { color: '#60a5fa', glow: 'rgba(96, 165, 250, 0.20)', pct, tier: 'cool', band: 'blue', tokensShort, label, tempTag: `💧 CTX ${rawPct}%` };
+  }
+  if (rawPct < 55) {
+    return { color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.22)', pct, tier: 'cool', band: 'sky', tokensShort, label, tempTag: `💧 CTX ${rawPct}%` };
+  }
+  if (rawPct < 65) {
+    return { color: '#facc15', glow: 'rgba(250, 204, 21, 0.28)', pct, tier: 'warm', band: 'yellow', tokensShort, label, tempTag: `🌡️ CTX ${rawPct}%` };
+  }
+  if (rawPct < 75) {
+    return { color: '#fb923c', glow: 'rgba(251, 146, 60, 0.38)', pct, tier: 'warn', band: 'orange', tokensShort, label, tempTag: `🌡️ CTX ${rawPct}%` };
+  }
+  return { color: '#ff0055', glow: 'rgba(255, 0, 85, 0.60)', pct, tier: 'crit', band: 'red', tokensShort, label, tempTag: `🔥 CTX ${rawPct}%` };
 }
 
 export function formatTokensShort(n) {

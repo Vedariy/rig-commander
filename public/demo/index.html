@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="app-version" content="3.2.0" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -32,8 +33,8 @@
   <!-- LEVEL 0: TOP-3 ACTIONABLE TRIAGE STRIP (ADR-0006) -->
   <div class="triage-strip" id="triageStrip">
     <div class="triage-meta">
-      <span class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal()" style="cursor:pointer;" title="Fleet Intelligence">🟢 LIVE TELEMETRY</span>
-      <button class="triage-refresh-btn" onclick="openFleetAdvisorModal()" style="border-color:rgba(0,240,255,0.45); color:var(--cyan);" title="Fleet Intelligence & Advisory Radar">
+      <span class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal('health')" style="cursor:pointer;" title="Индекс здоровья и План действий (Triage)">🟢 LIVE TELEMETRY</span>
+      <button class="triage-refresh-btn" id="btnFleetAdvisor" onclick="openFleetAdvisorModal('findings')" style="border-color:rgba(0,240,255,0.45); color:var(--cyan);" title="Аналитика Советника флота (Находки, QA, Бюджет, Топология)">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
         <span data-i18n="triage.advisor">Советник флота</span>
       </button>
@@ -52,6 +53,9 @@
       </button>
       <button class="triage-refresh-btn" id="btnPwaInstall" onclick="triggerPwaInstall()" style="display:none; border-color:rgba(0,255,157,0.65); color:#6ee7b7;">
         📲 <span data-i18n="pwa.installBtn">Установить</span>
+      </button>
+      <button class="triage-refresh-btn" id="btnAppUpdate" onclick="openUpdateModal()" style="display:none; border-color:rgba(0,255,157,0.75); background:rgba(0,255,157,0.14); color:#6ee7b7; font-weight:800; box-shadow:0 0 14px rgba(0,255,157,0.22);">
+        ⬆ <span id="btnAppUpdateLabel">Update</span>
       </button>
     </div>
     <div class="triage-cards-container" id="triageCardsContainer">
@@ -333,12 +337,16 @@
   <div class="modal-overlay" id="fleetAdvisorModal" onclick="if (event.target === this) closeFleetAdvisorModal()">
     <div class="modal-fleet-card">
       <div class="modal-fleet-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:16px;">💡</span>
-          <span style="font-family:var(--font-mono); font-size:13.5px; font-weight:800; letter-spacing:0.8px; color:var(--cyan);">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="modalFleetHeaderIcon" style="font-size:16px;">💡</span>
+          <span id="modalFleetHeaderTitle" style="font-family:var(--font-mono); font-size:13.5px; font-weight:800; letter-spacing:0.8px; color:var(--cyan);">
             FLEET INTELLIGENCE &amp; ADVISORY RADAR
           </span>
-          <span class="triage-badge" id="modalFleetHealthBadge" style="margin:0; font-size:11px;"></span>
+          <span class="triage-badge" id="modalFleetHealthBadge" onclick="openFleetAdvisorModal('health')" style="margin:0; font-size:11px; cursor:pointer;" title="Здоровье и План действий"></span>
+          <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:7px; padding:2px; gap:2px;" role="tablist">
+            <button type="button" id="btnFleetViewHealth" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setFleetAdvisorView('health')">🩺 Здоровье и план</button>
+            <button type="button" id="btnFleetViewAdvisor" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setFleetAdvisorView('advisor')">💡 Аналитика</button>
+          </div>
         </div>
         <span style="display:flex; gap:8px;">
           <button class="action-pill" onclick="refreshFleetAdvisorModal()" data-i18n="modal.refresh">🔄 Обновить</button>
@@ -400,6 +408,23 @@
         </div>
       </div>
       <div class="modal-fleet-body" id="mobileQrModalBody"></div>
+    </div>
+  </div>
+
+  <!-- SELF-UPDATE MODAL (NPMJS RELEASE CHECK & 1-CLICK LOCAL UPDATE) -->
+  <div class="modal-overlay" id="updateModal" onclick="if (event.target === this) closeUpdateModal()">
+    <div class="modal-fleet-card" style="max-width:520px;">
+      <div class="modal-fleet-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#6ee7b7;" data-i18n="update.title">
+            ⬆️ ДОСТУПНО ОБНОВЛЕНИЕ RIGCOMMANDER
+          </span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="action-pill" onclick="closeUpdateModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        </div>
+      </div>
+      <div class="modal-fleet-body" id="updateModalBody"></div>
     </div>
   </div>
 
@@ -1692,26 +1717,42 @@
     }
 
     function getNodeThermalFillGrad(ctxPct) {
-      if (typeof ctxPct !== 'number' || ctxPct <= 0) return 'transparent';
-      if (ctxPct >= 75) return 'linear-gradient(90deg, rgba(255, 0, 85, 0.24), rgba(255, 0, 85, 0.08))';
-      if (ctxPct >= 65) return 'linear-gradient(90deg, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0.06))';
-      return 'linear-gradient(90deg, rgba(56, 189, 248, 0.16), rgba(0, 240, 255, 0.04))';
+      if (typeof ctxPct !== 'number' || !Number.isFinite(ctxPct) || ctxPct <= 0) return 'transparent';
+      if (ctxPct >= 75) return 'linear-gradient(90deg, rgba(255, 0, 85, 0.22), rgba(255, 0, 85, 0.05))';
+      if (ctxPct >= 65) return 'linear-gradient(90deg, rgba(251, 146, 60, 0.17), rgba(251, 146, 60, 0.04))';
+      if (ctxPct >= 55) return 'linear-gradient(90deg, rgba(250, 204, 21, 0.12), rgba(250, 204, 21, 0.02))';
+      if (ctxPct >= 40) return 'linear-gradient(90deg, rgba(56, 189, 248, 0.11), rgba(56, 189, 248, 0.02))';
+      if (ctxPct >= 20) return 'linear-gradient(90deg, rgba(96, 165, 250, 0.10), rgba(96, 165, 250, 0.02))';
+      return 'linear-gradient(90deg, rgba(167, 139, 250, 0.10), rgba(167, 139, 250, 0.02))';
     }
 
-    function getBottomBadgeText(agent, thermal) {
-      const hasCalls = Boolean((agent.callsIn || 0) > 0 || (agent.callsOut || 0) > 0);
-      const qSuffix = hasCalls ? ` · ↓${agent.callsIn} ↑${agent.callsOut}` : '';
-      if (typeof agent.ctxPct === 'number') {
-        if (agent.ctxPct >= 75) {
-          return `🔥 ${agent.ctxPct}% · ${deckLang === 'en' ? '75% LIMIT' : 'ПОРОГ 75%'}`;
-        }
-        if (agent.ctxPct >= 65) {
-          return `🌡️ ${agent.ctxPct}%${qSuffix}`;
-        }
-        const compactLabel = String(thermal.label || '').replace(/\s*\/\s*/g, '/');
-        return `${compactLabel}${qSuffix}`;
-      }
-      return hasCalls ? `live${qSuffix}` : '● live';
+    function getNodeCtxValText(agent, thermal) {
+      if (typeof agent.ctxPct !== 'number' || !Number.isFinite(agent.ctxPct)) return '';
+      const pct = Math.min(100, Math.max(0, Math.round(agent.ctxPct)));
+      return thermal.tier === 'crit' ? `${pct}%!` : `${pct}%`;
+    }
+
+    function getNodeCtxValClass(thermal) {
+      if (thermal.tier === 'crit') return 'node-ctx-val pill-crit';
+      if (thermal.tier === 'warn') return 'node-ctx-val pill-warn';
+      return 'node-ctx-val';
+    }
+
+    function renderNodeMetaRowHtml(agent, thermal) {
+      const tok = thermal && thermal.tokensShort ? thermal.tokensShort : '';
+      const callsIn = Number(agent.callsIn) || 0;
+      const callsOut = Number(agent.callsOut) || 0;
+      const hasCalls = callsIn > 0 || callsOut > 0;
+      if (!tok && !hasCalls) return '';
+      const tokTip = deckLang === 'en'
+        ? `Context window used: ${tok}`
+        : `Заполнение контекстного окна: ${tok}`;
+      const callTip = deckLang === 'en'
+        ? `Queue envelopes: ↓${callsIn} received / ↑${callsOut} sent`
+        : `Передачи очереди: ↓${callsIn} получено / ↑${callsOut} отправлено`;
+      const tokSpan = tok ? `<span class="node-meta-tokens" title="${escapeHtml(tokTip)}">${escapeHtml(tok)}</span>` : '';
+      const callSpan = hasCalls ? `<span class="node-meta-traffic" title="${escapeHtml(callTip)}">↓${callsIn} ↑${callsOut}</span>` : '';
+      return tokSpan + callSpan;
     }
 
     // ===== GANTT VIEW: one chain = one color =====
@@ -2083,6 +2124,7 @@
             agent.state === 'waiting' ? 'led-waiting' : 'led-idle';
 
           el.className = `agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}`;
+          el.setAttribute('data-thermal-tier', thermal.tier || 'none');
           el.style.left = `${agent.x}%`;
           el.style.top = `${agent.y}%`;
           el.style.setProperty('--ctx-color', thermal.color);
@@ -2145,17 +2187,18 @@
             fillEl.style.background = thermal.color;
           }
 
-          // Update context border meter and bottom floating badge (User request 2)
-          const bottomMeterFill = el.querySelector('.node-bottom-meter-fill');
-          if (bottomMeterFill) {
-            bottomMeterFill.style.width = `${thermal.pct}%`;
-            bottomMeterFill.style.background = thermal.color;
+          // Update integrated compact telemetry (Row 1 % + Row 2 tokens/traffic) in-place
+          const ctxValEl = el.querySelector('.node-ctx-val');
+          if (ctxValEl) {
+            ctxValEl.className = getNodeCtxValClass(thermal);
+            const nextCtxTxt = getNodeCtxValText(agent, thermal);
+            if (ctxValEl.textContent !== nextCtxTxt) ctxValEl.textContent = nextCtxTxt;
+            ctxValEl.title = thermal.label || '';
           }
-          const bottomBadge = el.querySelector('.node-bottom-badge');
-          if (bottomBadge) {
-            bottomBadge.innerHTML = getBottomBadgeText(agent, thermal);
-            bottomBadge.style.setProperty('--ctx-color', thermal.color);
-            bottomBadge.style.setProperty('--ctx-glow', thermal.glow);
+          const metaRowEl = el.querySelector('.node-meta-row');
+          if (metaRowEl) {
+            const nextMetaHtml = renderNodeMetaRowHtml(agent, thermal);
+            if (metaRowEl.innerHTML !== nextMetaHtml) metaRowEl.innerHTML = nextMetaHtml;
           }
         });
       } else {
@@ -2184,6 +2227,7 @@
           return `
             <div class="agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}"
                  data-agent-id="${escapeHtml(agent.id)}"
+                 data-thermal-tier="${thermal.tier || 'none'}"
                  style="left:${agent.x}%; top:${agent.y}%; ${isHidden ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow}; --ctx-fill-pct:${thermal.pct}%; --ctx-fill-grad:${getNodeThermalFillGrad(agent.ctxPct)};"
                  onmouseenter="setHoverAgent(this.getAttribute('data-agent-id'))"
                  onmouseleave="setHoverAgent(null)"
@@ -2197,8 +2241,11 @@
                     <div class="node-role">${escapeHtml(agent.role)}</div>
                   </div>
                 </div>
+                <span class="${getNodeCtxValClass(thermal)}" title="${escapeHtml(thermal.label || '')}">${escapeHtml(getNodeCtxValText(agent, thermal))}</span>
                 <span class="status-led ${ledClass}" data-state-key="${agent.state}:${agent.activityLabel}:${agent.shellExited ? 1 : 0}">${renderStateIndicatorHtml(agent)}</span>
               </div>
+
+              <div class="node-meta-row">${renderNodeMetaRowHtml(agent, thermal)}</div>
 
               <div class="badge-row">
                 <span class="chip chip-harness">⚙️ ${agent.harness}</span>
@@ -2217,14 +2264,9 @@
                 </div>
               </div>
 
-              <!-- Context border progress bar (User request 2) -->
+              <!-- Integrated 3px progressive 6-band thermal spectrum rail -->
               <div class="node-bottom-meter">
-                <div class="node-bottom-meter-fill" style="width:${thermal.pct}%; background:${thermal.color};"></div>
-              </div>
-
-              <!-- Floating bottom badge shifted half-body down (User request 2) -->
-              <div class="node-bottom-badge" style="--ctx-color:${thermal.color}; --ctx-glow:${thermal.glow};">
-                ${getBottomBadgeText(agent, thermal)}
+                <div class="node-bottom-meter-fill"></div>
               </div>
             </div>
           `;
@@ -2571,26 +2613,30 @@
     const lastScreenBySeat = {};
 
     function triggerPromptOption(btn) {
-      if (!btn) return;
+      if (!btn || btn.disabled) return;
       const seat = btn.getAttribute('data-seat');
       const key = btn.getAttribute('data-key');
       const statusElId = btn.getAttribute('data-status') || 'cmdSendStatus';
       if (!seat || !key) return;
-      sendTerminalKey(seat, key, statusElId, 'answer_prompt_option');
-      if (statusElId === 'modalCmdStatus') {
-        setTimeout(fetchModalCapture, 450);
-      } else {
-        setTimeout(() => fetchTerminalCapture(seat, true), 450);
-      }
+      sendTerminalKey(seat, key, statusElId, 'answer_prompt_option', btn);
+    }
+
+    function getControlLockAttrs(scopeKey, fingerprint = '') {
+      const guard = typeof getDeckActionGuard === 'function' ? getDeckActionGuard() : null;
+      const locked = Boolean(guard && guard.isLocked(scopeKey, fingerprint));
+      return ` data-mutating="1" data-lock-scope="${escapeHtml(scopeKey)}"${fingerprint ? ` data-lock-fp="${escapeHtml(fingerprint)}"` : ''}${locked ? ' disabled aria-busy="true" data-ctrl-busy="1"' : ''}`;
     }
 
     function renderInteractivePromptOptionsHtml(seatId, screenText, statusElId = 'cmdSendStatus') {
       const options = parseInteractivePromptOptions(screenText);
       if (!options.length) return '';
+      const scopeKey = typeof buildSeatScopeKey === 'function' ? buildSeatScopeKey(seatId) : `seat:${seatId}`;
       const btns = options.map(opt => {
         const cls = opt.isCancel ? 'action-pill key-pill key-cancel' : (opt.isPrimary ? 'action-pill key-pill key-proceed' : 'action-pill key-pill');
         const icon = opt.isCancel ? '❌' : (opt.isPrimary ? '✅' : '🔹');
-        return `<button type="button" class="${cls}" title="${escapeHtml(opt.fullText)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}" onclick="triggerPromptOption(this)">${icon} <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}</button>`;
+        const fp = typeof buildSeatSendKey === 'function' ? buildSeatSendKey(seatId, 'key', opt.keyStroke) : '';
+        const lockAttrs = getControlLockAttrs(scopeKey, fp);
+        return `<button type="button" class="${cls}" title="${escapeHtml(opt.fullText)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}"${lockAttrs} onclick="triggerPromptOption(this)">${icon} <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}</button>`;
       }).join('');
       return `
         <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
@@ -2622,11 +2668,19 @@
       const btnTitle = isCopyCmd && desc.payload
         ? `${desc.title || desc.label || 'Copy command'} (${desc.payload})`
         : (desc.title || desc.label || '');
-      return `<button type="button" class="${baseClass}"${toneStyle ? ` style="${toneStyle}"` : ''} title="${escapeHtml(btnTitle)}" data-action-id="${escapeHtml(desc.id || '')}" data-transport="${escapeHtml(desc.transport || '')}" data-seat="${escapeHtml(desc.seatId || '')}" data-payload="${escapeHtml(desc.payload || '')}" data-status="${escapeHtml(statusElId)}" data-close-modal="${escapeHtml(closeModal)}" onclick="${stop}dispatchOntologyAction(this)">${btnLabelHtml}</button>`;
+      const isMutating = (desc.transport === 'tmux_key' || desc.transport === 'tmux_raw') && desc.seatId;
+      let lockAttrs = '';
+      if (isMutating) {
+        const scopeKey = typeof buildSeatScopeKey === 'function' ? buildSeatScopeKey(desc.seatId) : `seat:${desc.seatId}`;
+        const sendType = desc.transport === 'tmux_raw' ? 'raw' : 'key';
+        const fp = typeof buildSeatSendKey === 'function' ? buildSeatSendKey(desc.seatId, sendType, desc.payload) : '';
+        lockAttrs = getControlLockAttrs(scopeKey, fp);
+      }
+      return `<button type="button" class="${baseClass}"${toneStyle ? ` style="${toneStyle}"` : ''} title="${escapeHtml(btnTitle)}" data-action-id="${escapeHtml(desc.id || '')}" data-transport="${escapeHtml(desc.transport || '')}" data-seat="${escapeHtml(desc.seatId || '')}" data-payload="${escapeHtml(desc.payload || '')}" data-status="${escapeHtml(statusElId)}" data-close-modal="${escapeHtml(closeModal)}"${lockAttrs} onclick="${stop}dispatchOntologyAction(this)">${btnLabelHtml}</button>`;
     }
 
     function dispatchOntologyAction(btn) {
-      if (!btn) return;
+      if (!btn || btn.disabled) return;
       const actionId = btn.getAttribute('data-action-id') || '';
       const transport = btn.getAttribute('data-transport') || '';
       const seatId = btn.getAttribute('data-seat') || '';
@@ -2636,9 +2690,9 @@
       const closeModal = btn.getAttribute('data-close-modal') || '';
 
       if (transport === 'tmux_key' && seatId && payload) {
-        sendTerminalKey(seatId, payload, statusElId, actionId);
+        sendTerminalKey(seatId, payload, statusElId, actionId, btn);
       } else if (transport === 'tmux_raw' && seatId && payload) {
-        sendTerminalRaw(seatId, payload, statusElId, actionId);
+        sendTerminalRaw(seatId, payload, statusElId, actionId, btn);
       } else if (transport === 'modal_terminal' && seatId) {
         selectAgent(seatId);
         openTerminalModal(seatId);
@@ -2915,7 +2969,7 @@
               <form class="ctrl-input-form" onsubmit="submitAgentPrompt('${agent.id}', event, 'terminalCmdInput', 'cmdSendStatus')">
                 <div class="ctrl-prompt-tag">&gt;</div>
                 <input type="text" id="terminalCmdInput" class="ctrl-input" placeholder="${escapeHtml(td('insp.cmdPlaceholder'))}" autocomplete="off" onkeydown="handleHistoryKey(event, 'terminalCmdInput')" />
-                <button type="submit" class="cyber-btn active ctrl-send-btn">${td('insp.sendBtn')}</button>
+                <button type="submit" class="cyber-btn active ctrl-send-btn"${getControlLockAttrs(typeof buildSeatScopeKey === 'function' ? buildSeatScopeKey(agent.id) : `seat:${agent.id}`)}>${td('insp.sendBtn')}</button>
               </form>
               <div id="cmdSendStatus" class="ctrl-status"></div>
             </div>
@@ -3151,6 +3205,9 @@
           updateGuardrailsBadge();
           const gm = document.getElementById('guardrailsModal');
           if (gm && gm.classList.contains('open')) renderGuardrailsModal();
+        }
+        if (data.update && typeof syncAppUpdateState === 'function') {
+          syncAppUpdateState(data.update);
         }
 
         window.LIVE_DISCOVERY_MODE = data.discoveryMode || 'none';
@@ -4026,89 +4083,195 @@
       }
     }
 
-    async function deckPostJson(endpoint, payload) {
-      const doPost = async (tok) => {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Deck-Token': tok
-          },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        return { res, data };
-      };
-      let result = await doPost(getDeckToken());
-      if (result.res.status === 403 && /deck token/i.test(String(result.data && result.data.error || ''))) {
-        const freshTok = await refreshDeckTokenFromShell();
-        if (freshTok) {
-          result = await doPost(freshTok);
-        }
+    // ===== Shared Control-Primitive Guard (Double-Click & Idempotency Protection) =====
+    let _deckActionGuard = null;
+    function getDeckActionGuard() {
+      if (!_deckActionGuard && typeof ActionFlightGuard === 'function') {
+        _deckActionGuard = new ActionFlightGuard({ defaultCooldownMs: DEFAULT_ACTION_COOLDOWN_MS || 1800 });
+        _deckActionGuard.onChange(() => syncMutatingControlsDom());
       }
-      return result;
+      return _deckActionGuard;
     }
 
-    async function executeApiSend(seat, text, type, statusElId, actionId = '') {
-      const statusEl = statusElId ? document.getElementById(statusElId) : null;
-      if (statusEl) {
-        statusEl.className = 'ctrl-status';
-        statusEl.textContent = `Отправка в ${shortSeat(seat)} (${type})...`;
+    function syncMutatingControlsDom() {
+      const guard = getDeckActionGuard();
+      if (!guard) return;
+      document.querySelectorAll('[data-mutating="1"]').forEach(el => {
+        const scopeKey = el.getAttribute('data-lock-scope') || '';
+        const fp = el.getAttribute('data-lock-fp') || '';
+        const locked = guard.isLocked(scopeKey, fp);
+        el.disabled = locked;
+        if (locked) {
+          el.setAttribute('aria-busy', 'true');
+          el.setAttribute('data-ctrl-busy', '1');
+        } else {
+          el.removeAttribute('aria-busy');
+          el.removeAttribute('data-ctrl-busy');
+        }
+      });
+    }
+
+    function scheduleControlUnlockSync(delayMs) {
+      if (delayMs > 0) {
+        setTimeout(() => syncMutatingControlsDom(), delayMs + 45);
       }
-      try {
-        const { data } = await deckPostJson('/api/send', { seat, text, type, actionId });
-        if (!data.ok) throw new Error(data.error || 'Ошибка отправки');
+    }
+
+    async function deckPostJson(endpoint, payload, opts = {}) {
+      const guard = getDeckActionGuard();
+      const useEndpointGuard = opts.skipEndpointGuard !== true && endpoint !== '/api/send';
+      const epScope = typeof buildEndpointScopeKey === 'function' ? buildEndpointScopeKey(endpoint) : `endpoint:${endpoint}`;
+
+      const execPost = async (idemKey) => {
+        const doPost = async (tok) => {
+          const headers = {
+            'Content-Type': 'application/json',
+            'X-Deck-Token': tok
+          };
+          if (idemKey) headers['X-Idempotency-Key'] = idemKey;
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          return { res, data };
+        };
+        let result = await doPost(getDeckToken());
+        if (result.res.status === 403 && /deck token/i.test(String(result.data && result.data.error || ''))) {
+          const freshTok = await refreshDeckTokenFromShell();
+          if (freshTok) {
+            result = await doPost(freshTok);
+          }
+        }
+        return result;
+      };
+
+      if (useEndpointGuard && guard) {
+        const out = await guard.runGuarded(
+          { scopeKey: epScope, fingerprint: `${epScope}:${JSON.stringify(payload || {})}`, cooldownMs: 700 },
+          ({ idempotencyKey }) => execPost(opts.idempotencyKey || idempotencyKey)
+        );
+        scheduleControlUnlockSync(700);
+        if (out.skipped) {
+          return { res: { ok: false, status: 409 }, data: { ok: false, deduplicated: true, error: 'Request already in progress' } };
+        }
+        return out.value;
+      }
+
+      return execPost(opts.idempotencyKey || '');
+    }
+
+    async function executeApiSend(seat, text, type, statusElId, actionId = '', controlEl = null) {
+      const guard = getDeckActionGuard();
+      const scopeKey = typeof buildSeatScopeKey === 'function' ? buildSeatScopeKey(seat) : `seat:${seat}`;
+      const fingerprint = typeof buildSeatSendKey === 'function' ? buildSeatSendKey(seat, type, text) : `send:${seat}:${type}:${text}`;
+      const cooldownMs = (type === 'key' || type === 'raw') ? (DEFAULT_DESTRUCTIVE_COOLDOWN_MS || 2200) : (DEFAULT_ACTION_COOLDOWN_MS || 1800);
+      const statusEl = statusElId ? document.getElementById(statusElId) : null;
+
+      const onBlocked = (acq) => {
+        const sec = Math.max(0.5, Math.ceil((acq.remainingMs || 1000) / 100) / 10).toFixed(1);
+        const msg = acq.reason === 'in_flight'
+          ? td('ctrl.inFlight', { seat: shortSeat(seat) })
+          : td('ctrl.cooldown', { seat: shortSeat(seat), sec });
         if (statusEl) {
-          statusEl.className = 'ctrl-status ok';
-          statusEl.textContent = `✓ Отправлено [${type}]: ${text.slice(0, 45)}`;
-          setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3500);
+          statusEl.className = 'ctrl-status';
+          statusEl.textContent = msg;
         }
-        const toast = document.getElementById('copyToast');
-        if (toast) {
-          toast.textContent = `Отправлено в ${shortSeat(seat)}: ${text.slice(0, 35)}`;
-          toast.style.display = 'block';
-          setTimeout(() => { toast.style.display = 'none'; }, 2200);
+        if (typeof showToast === 'function') showToast(msg, false);
+      };
+
+      const runSend = async (idempotencyKey) => {
+        if (controlEl) {
+          controlEl.disabled = true;
+          controlEl.setAttribute('aria-busy', 'true');
+          controlEl.setAttribute('data-ctrl-busy', '1');
         }
-        // Immediate updates (terminal + telemetry reconciliation)
-        setTimeout(() => {
-          fetchTerminalCapture(selectedAgentId, true);
-          if (modalSeatId) fetchModalCapture();
-          refreshTelemetryNow();
-        }, 450);
-        setTimeout(() => {
-          fetchTerminalCapture(selectedAgentId, true);
-          if (modalSeatId) fetchModalCapture();
-          refreshTelemetryNow();
-        }, 1400);
-      } catch (err) {
-        if (!IS_LIVE) {
-          const detail = applyDemoAction(seat, text, type, actionId);
+        if (statusEl) {
+          statusEl.className = 'ctrl-status';
+          statusEl.textContent = `Отправка в ${shortSeat(seat)} (${type})...`;
+        }
+        try {
+          const { res, data } = await deckPostJson('/api/send', { seat, text, type, actionId }, {
+            skipEndpointGuard: true,
+            idempotencyKey
+          });
+          if (res.status === 409 && data && data.deduplicated) {
+            onBlocked({ reason: 'cooldown', remainingMs: 1500 });
+            return { ok: false, deduplicated: true };
+          }
+          if (!data.ok) throw new Error(data.error || 'Ошибка отправки');
           if (statusEl) {
             statusEl.className = 'ctrl-status ok';
-            statusEl.textContent = `✓ [DEMO] Применено (${detail}) • postcondition verified`;
-            setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3800);
+            statusEl.textContent = `✓ Отправлено [${type}]: ${text.slice(0, 45)}`;
+            setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3500);
           }
           const toast = document.getElementById('copyToast');
           if (toast) {
-            toast.textContent = `✅ [DEMO] ${shortSeat(seat)}: ${detail}`;
+            toast.textContent = `Отправлено в ${shortSeat(seat)}: ${text.slice(0, 35)}`;
             toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2400);
+            setTimeout(() => { toast.style.display = 'none'; }, 2200);
           }
-          return;
+          // Immediate updates (terminal + telemetry reconciliation)
+          setTimeout(() => {
+            fetchTerminalCapture(selectedAgentId, true);
+            if (modalSeatId) fetchModalCapture();
+            refreshTelemetryNow();
+          }, 450);
+          setTimeout(() => {
+            fetchTerminalCapture(selectedAgentId, true);
+            if (modalSeatId) fetchModalCapture();
+            refreshTelemetryNow();
+          }, 1400);
+          return { ok: true };
+        } catch (err) {
+          if (!IS_LIVE) {
+            const detail = applyDemoAction(seat, text, type, actionId);
+            if (statusEl) {
+              statusEl.className = 'ctrl-status ok';
+              statusEl.textContent = `✓ [DEMO] Применено (${detail}) • postcondition verified`;
+              setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3800);
+            }
+            const toast = document.getElementById('copyToast');
+            if (toast) {
+              toast.textContent = `✅ [DEMO] ${shortSeat(seat)}: ${detail}`;
+              toast.style.display = 'block';
+              setTimeout(() => { toast.style.display = 'none'; }, 2400);
+            }
+            return { ok: true, demo: true };
+          }
+          if (statusEl) {
+            statusEl.className = 'ctrl-status err';
+            statusEl.textContent = `✕ Ошибка: ${err.message}`;
+          }
+          return { ok: false, __skipCooldown: true };
+        } finally {
+          if (controlEl && (!guard || !guard.isLocked(scopeKey, fingerprint))) {
+            controlEl.disabled = false;
+            controlEl.removeAttribute('aria-busy');
+            controlEl.removeAttribute('data-ctrl-busy');
+          }
         }
-        if (statusEl) {
-          statusEl.className = 'ctrl-status err';
-          statusEl.textContent = `✕ Ошибка: ${err.message}`;
-        }
+      };
+
+      if (!guard) {
+        return runSend('');
       }
+      const res = await guard.runGuarded(
+        { scopeKey, fingerprint, cooldownMs, scopeCooldownMs: 450, onBlocked },
+        ({ idempotencyKey }) => runSend(idempotencyKey)
+      );
+      scheduleControlUnlockSync(450);
+      scheduleControlUnlockSync(cooldownMs);
+      return res;
     }
 
-    function sendTerminalKey(seat, keyStr, statusElId = 'cmdSendStatus', actionId = '') {
-      executeApiSend(seat, keyStr, 'key', statusElId, actionId);
+    function sendTerminalKey(seat, keyStr, statusElId = 'cmdSendStatus', actionId = '', controlEl = null) {
+      return executeApiSend(seat, keyStr, 'key', statusElId, actionId, controlEl);
     }
 
-    function sendTerminalRaw(seat, rawText, statusElId = 'cmdSendStatus', actionId = '') {
-      executeApiSend(seat, rawText, 'raw', statusElId, actionId);
+    function sendTerminalRaw(seat, rawText, statusElId = 'cmdSendStatus', actionId = '', controlEl = null) {
+      return executeApiSend(seat, rawText, 'raw', statusElId, actionId, controlEl);
     }
 
     function submitAgentPrompt(seat, ev, inputId = 'terminalCmdInput', statusElId = 'cmdSendStatus') {
@@ -4117,23 +4280,35 @@
       if (!input) return;
       const val = input.value.trim();
       if (!val) return;
-      terminalHistory.push(val);
-      historyIdx = -1;
-      input.value = '';
 
+      const submitBtn = (ev && ev.submitter) || (input.form && input.form.querySelector('button[type="submit"]')) || null;
       const targetAgent = AGENTS.find(a => a.id === seat);
       const hasInteractiveMenu = (targetAgent && targetAgent.state === 'urgent') ||
         parseInteractivePromptOptions(lastScreenBySeat[seat] || '').length >= 2;
 
+      let resolvedType = 'msg';
+      let resolvedPayload = val;
       if (val.startsWith('/')) {
-        // Harness hygiene: deduplicate repeated slash commands (e.g. /compact/compact -> /compact)
-        const cleanVal = val.replace(/(\/[a-zA-Z0-9_-]+)\1+/g, '$1');
-        sendTerminalRaw(seat, cleanVal, statusElId);
+        resolvedType = 'raw';
+        resolvedPayload = val.replace(/(\/[a-zA-Z0-9_-]+)\1+/g, '$1');
       } else if (hasInteractiveMenu && /^[1-9yn]$/i.test(val)) {
-        sendTerminalKey(seat, `${val} Enter`, statusElId);
-      } else {
-        executeApiSend(seat, val, 'msg', statusElId);
+        resolvedType = 'key';
+        resolvedPayload = `${val} Enter`;
       }
+
+      // Check lock BEFORE clearing the input box so a blocked double-submit never erases operator text
+      const guard = getDeckActionGuard();
+      const scopeKey = typeof buildSeatScopeKey === 'function' ? buildSeatScopeKey(seat) : `seat:${seat}`;
+      const fp = typeof buildSeatSendKey === 'function' ? buildSeatSendKey(seat, resolvedType, resolvedPayload) : '';
+      if (guard && guard.isLocked(scopeKey, fp)) {
+        executeApiSend(seat, resolvedPayload, resolvedType, statusElId, '', submitBtn);
+        return;
+      }
+
+      terminalHistory.push(val);
+      historyIdx = -1;
+      input.value = '';
+      executeApiSend(seat, resolvedPayload, resolvedType, statusElId, '', submitBtn);
     }
 
     function renderModalCtrl(seatId) {
@@ -4149,7 +4324,7 @@
           <form class="ctrl-input-form" onsubmit="submitAgentPrompt('${seatId}', event, 'modalCmdInput', 'modalCmdStatus')">
             <div class="ctrl-prompt-tag">&gt;</div>
             <input type="text" id="modalCmdInput" class="ctrl-input" placeholder="${deckLang === 'en' ? `Command, prompt, or /slash in ${seatId}...` : `Команда, промпт или /команда в ${seatId}...`}" autocomplete="off" onkeydown="handleHistoryKey(event, 'modalCmdInput')" />
-            <button type="submit" class="cyber-btn active ctrl-send-btn">${deckLang === 'en' ? '🚀 SEND' : '🚀 ОТПРАВИТЬ'}</button>
+            <button type="submit" class="cyber-btn active ctrl-send-btn"${getControlLockAttrs(typeof buildSeatScopeKey === 'function' ? buildSeatScopeKey(seatId) : `seat:${seatId}`)}>${deckLang === 'en' ? '🚀 SEND' : '🚀 ОТПРАВИТЬ'}</button>
           </form>
           <div id="modalCmdStatus" class="ctrl-status"></div>
         </div>
@@ -4221,15 +4396,26 @@
     }
 
     // ===== Stage 5: Fleet Intelligence & Advisory Radar (ADR-0009) =====
+    let activeFleetView = 'advisor'; // 'health' (Score + Action Plan triage) | 'advisor' (4 analytical tabs)
     let activeFleetTab = 'findings';
     let fleetCategoryFilter = 'all';
 
-    function openFleetAdvisorModal(tab = 'findings') {
-      activeFleetTab = tab;
+    function openFleetAdvisorModal(tabOrView = 'findings') {
+      if (tabOrView === 'health') {
+        activeFleetView = 'health';
+      } else {
+        activeFleetView = 'advisor';
+        activeFleetTab = tabOrView || 'findings';
+      }
       const modal = document.getElementById('fleetAdvisorModal');
       if (modal) modal.classList.add('open');
       renderFleetAdvisorModal();
-      if (activeFleetTab === 'budget' && typeof markDemoQuestStep === 'function') markDemoQuestStep('budget');
+      if (activeFleetView === 'advisor' && activeFleetTab === 'budget' && typeof markDemoQuestStep === 'function') markDemoQuestStep('budget');
+    }
+
+    function setFleetAdvisorView(view) {
+      activeFleetView = view === 'health' ? 'health' : 'advisor';
+      renderFleetAdvisorModal();
     }
 
     function closeFleetAdvisorModal() {
@@ -4238,6 +4424,7 @@
     }
 
     function setFleetAdvisorTab(tab) {
+      activeFleetView = 'advisor';
       activeFleetTab = tab;
       renderFleetAdvisorModal();
       if (activeFleetTab === 'budget' && typeof markDemoQuestStep === 'function') markDemoQuestStep('budget');
@@ -4274,6 +4461,21 @@
         badge.textContent = `${td('triage.health')}: ${score}% • ${scoreLabel}`;
         badge.style.borderColor = scoreColor;
         badge.style.color = scoreColor;
+      }
+      const hdrIcon = document.getElementById('modalFleetHeaderIcon');
+      const hdrTitle = document.getElementById('modalFleetHeaderTitle');
+      const btnVH = document.getElementById('btnFleetViewHealth');
+      const btnVA = document.getElementById('btnFleetViewAdvisor');
+      const isHealthView = activeFleetView === 'health';
+      if (hdrIcon) hdrIcon.textContent = isHealthView ? '🩺' : '💡';
+      if (hdrTitle) hdrTitle.textContent = isHealthView ? td('advisor.modeHealthTitle') : td('advisor.modeAdvisorTitle');
+      if (btnVH) {
+        btnVH.textContent = td('advisor.switchHealth');
+        btnVH.classList.toggle('active', isHealthView);
+      }
+      if (btnVA) {
+        btnVA.textContent = td('advisor.switchAdvisor');
+        btnVA.classList.toggle('active', !isHealthView);
       }
 
       const findings = intel.allFindings || [];
@@ -4787,11 +4989,26 @@
         `;
       }
 
-      body.innerHTML = summaryHtml + tabsHtml + tabContentHtml;
+      if (activeFleetView === 'health') {
+        const jumpBarHtml = `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid rgba(56,189,248,0.18);">
+            <button type="button" class="action-pill" style="border-color:rgba(0,240,255,0.45); color:var(--cyan); font-weight:700;" onclick="setFleetAdvisorView('advisor')">
+              ${escapeHtml(td('advisor.openAnalyticsCta'))}
+            </button>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button type="button" class="action-pill" onclick="setFleetAdvisorTab('quality')">${td('advisor.tabQuality')}</button>
+              <button type="button" class="action-pill" onclick="setFleetAdvisorTab('budget')">${td('advisor.tabBudget')}</button>
+            </div>
+          </div>
+        `;
+        body.innerHTML = summaryHtml + jumpBarHtml;
+      } else {
+        body.innerHTML = tabsHtml + tabContentHtml;
+      }
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeSaTour(); }
+      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeUpdateModal(); closeSaTour(); }
     });
 
     // ===== Stage 7: Viral Daily Fleet Receipt / Share Card PNG Export (Item 6) =====
@@ -6157,6 +6374,9 @@
       if (shr && shr.classList.contains('open')) renderShareCardModal();
       const qrm = document.getElementById('mobileQrModal');
       if (qrm && qrm.classList.contains('open')) renderMobileQrModal();
+      const upd = document.getElementById('updateModal');
+      if (upd && upd.classList.contains('open')) renderUpdateModal();
+      if (typeof syncUpdateButtonUi === 'function') syncUpdateButtonUi();
       if (saTourOpen) renderSaTour();
       if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
@@ -6291,8 +6511,8 @@
         if (auditEl) auditEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         showTrackToast('🧬 UX-трек: Онтология v2.0 • Actions по причине + Журнал postcondition');
       } else if (track === 'advisor' || track === 'intelligence') {
-        openFleetAdvisorModal('findings');
-        showTrackToast('💡 UX-трек: Советник флота • автоматическая диагностика узких мест');
+        openFleetAdvisorModal('health');
+        showTrackToast('🩺 UX-трек: Здоровье флота и План действий (переключатель Аналитики в шапке)');
       } else if (track === 'calm') {
         if (!calmMode) toggleCalmMode(true);
         showTrackToast('🧘 UX-трек: Calm HUD (ISO 11064) • в фокусе только аномалии и работа');
@@ -6311,6 +6531,8 @@
         showTrackToast(deckLang === 'en'
           ? '📱 Scan QR with your phone camera to open Mobile PWA'
           : '📱 Наведи камеру телефона на QR, чтобы открыть Mobile PWA');
+      } else if (track === 'update') {
+        openUpdateModal();
       } else if (track === 'tour') {
         if (!saTourOpen) toggleSaTour();
       } else if (track === 'quest' || track === 'mission' || track === 'start') {
@@ -6808,6 +7030,312 @@
       syncMobileRadarBadge();
       setInterval(syncMobileRadarBadge, 4000);
       initWidgetHints();
+      initAppUpdateWatcher();
+    }
+
+    // ===== Auto-Update Watcher (npmjs.org Release Check + 1-Click Self-Update) =====
+    function getEmbeddedAppVersion() {
+      const m = document.querySelector('meta[name="app-version"]');
+      return (m && m.content) ? m.content.trim() : '3.2.0';
+    }
+
+    let appUpdateState = {
+      packageName: 'rig-commander',
+      currentVersion: getEmbeddedAppVersion(),
+      latestVersion: getEmbeddedAppVersion(),
+      updateAvailable: false,
+      installMode: 'web-demo',
+      updateCommand: 'npx rig-commander@latest',
+      state: 'idle',
+      lastCheckedAt: null,
+      lastError: '',
+      releaseUrl: 'https://www.npmjs.com/package/rig-commander',
+      progressLog: '',
+      isRemote: false,
+      simulated: false
+    };
+    let updateReconnectTimer = null;
+
+    function applySimulatedUpdateFromUrl() {
+      try {
+        const sim = new URLSearchParams(window.location.search).get('simulateUpdate');
+        if (sim && typeof parseSemver === 'function' && parseSemver(sim)) {
+          const cur = getEmbeddedAppVersion();
+          const norm = parseSemver(sim).normalized;
+          appUpdateState = {
+            ...appUpdateState,
+            currentVersion: cur,
+            latestVersion: norm,
+            updateAvailable: typeof isNewerVersion === 'function' ? isNewerVersion(norm, cur) : norm !== cur,
+            releaseUrl: `https://www.npmjs.com/package/rig-commander/v/${norm}`,
+            simulated: true
+          };
+          syncUpdateButtonUi();
+          return true;
+        }
+      } catch {}
+      return false;
+    }
+
+    function syncUpdateButtonUi() {
+      const btn = document.getElementById('btnAppUpdate');
+      const lbl = document.getElementById('btnAppUpdateLabel');
+      if (!btn || !lbl) return;
+      if (appUpdateState.updateAvailable && appUpdateState.latestVersion) {
+        lbl.textContent = td('update.btn', { ver: appUpdateState.latestVersion });
+        btn.style.display = 'inline-flex';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    function syncAppUpdateState(next) {
+      if (!next || typeof next !== 'object') return;
+      if (appUpdateState.simulated) {
+        // Keep simulated update visible during QA verification while preserving real mode/remote flags
+        appUpdateState = {
+          ...appUpdateState,
+          installMode: next.installMode || appUpdateState.installMode,
+          updateCommand: next.updateCommand || appUpdateState.updateCommand,
+          isRemote: Boolean(next.isRemote)
+        };
+        syncUpdateButtonUi();
+        return;
+      }
+      appUpdateState = { ...appUpdateState, ...next };
+      syncUpdateButtonUi();
+      const modal = document.getElementById('updateModal');
+      if (modal && modal.classList.contains('open')) renderUpdateModal();
+    }
+
+    function isLiveUpdateBridge() {
+      return Boolean(IS_LIVE || getDeckToken());
+    }
+
+    async function checkBrowserNpmUpdate(force = false) {
+      if (isLiveUpdateBridge()) {
+        try {
+          if (force) {
+            const { res, data } = await deckPostJson('/api/update/check', {});
+            if (res.ok && data) syncAppUpdateState(data);
+          } else {
+            const res = await fetch('/api/update/status', { cache: 'no-store' });
+            if (res.ok) syncAppUpdateState(await res.json());
+          }
+        } catch {}
+        return;
+      }
+      if (appUpdateState.simulated && !force) return;
+      appUpdateState.state = 'checking';
+      const modal = document.getElementById('updateModal');
+      if (modal && modal.classList.contains('open')) renderUpdateModal();
+      try {
+        const res = await fetch('https://registry.npmjs.org/rig-commander/latest', {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const payload = await res.json();
+        const norm = typeof normalizeNpmReleaseInfo === 'function'
+          ? normalizeNpmReleaseInfo(payload, 'rig-commander')
+          : { ok: Boolean(payload && payload.version), version: String((payload && payload.version) || ''), releaseUrl: 'https://www.npmjs.com/package/rig-commander' };
+        if (norm.ok) {
+          const cur = getEmbeddedAppVersion();
+          const avail = typeof isNewerVersion === 'function' ? isNewerVersion(norm.version, cur) : false;
+          appUpdateState = {
+            ...appUpdateState,
+            currentVersion: cur,
+            latestVersion: norm.version,
+            updateAvailable: avail,
+            releaseUrl: norm.releaseUrl,
+            state: 'idle',
+            lastCheckedAt: new Date().toISOString(),
+            lastError: '',
+            simulated: false
+          };
+        }
+      } catch (err) {
+        appUpdateState.state = 'idle';
+        appUpdateState.lastError = String((err && err.message) || err);
+      }
+      syncUpdateButtonUi();
+      if (modal && modal.classList.contains('open')) renderUpdateModal();
+    }
+
+    function initAppUpdateWatcher() {
+      const hasSim = applySimulatedUpdateFromUrl();
+      if (isLiveUpdateBridge()) {
+        checkBrowserNpmUpdate(false);
+      } else if (!hasSim) {
+        setTimeout(() => checkBrowserNpmUpdate(false), 1800);
+        setInterval(() => { if (!isLiveUpdateBridge()) checkBrowserNpmUpdate(false); }, 30 * 60 * 1000);
+      }
+    }
+
+    async function openUpdateModal() {
+      const modal = document.getElementById('updateModal');
+      if (modal) modal.classList.add('open');
+      renderUpdateModal();
+      if (isLiveUpdateBridge()) {
+        await checkBrowserNpmUpdate(false);
+        renderUpdateModal();
+      }
+    }
+
+    function closeUpdateModal() {
+      const modal = document.getElementById('updateModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    async function applyRigCommanderUpdate() {
+      if (!isLiveUpdateBridge()) {
+        await refreshWebAppCache();
+        return;
+      }
+      appUpdateState.state = 'updating';
+      appUpdateState.lastError = '';
+      appUpdateState.progressLog = td('update.applying');
+      renderUpdateModal();
+      try {
+        const { res, data } = await deckPostJson('/api/update/apply', {});
+        if (!res.ok || !data || !data.ok) {
+          appUpdateState.state = 'error';
+          appUpdateState.lastError = (data && data.error) || `HTTP ${res.status}`;
+          renderUpdateModal();
+          return;
+        }
+        appUpdateState = { ...appUpdateState, ...(data.status || {}), state: 'restarting' };
+        renderUpdateModal();
+        startUpdateReconnectPoll();
+      } catch (err) {
+        appUpdateState.state = 'error';
+        appUpdateState.lastError = String((err && err.message) || err);
+        renderUpdateModal();
+      }
+    }
+
+    function startUpdateReconnectPoll() {
+      if (updateReconnectTimer) clearInterval(updateReconnectTimer);
+      let sawDown = false;
+      let attempts = 0;
+      updateReconnectTimer = setInterval(async () => {
+        attempts += 1;
+        try {
+          const res = await fetch('/api/update/status', { cache: 'no-store' });
+          if (res.ok) {
+            const st = await res.json();
+            if (sawDown || attempts >= 4 || (st.currentVersion && st.currentVersion !== appUpdateState.currentVersion)) {
+              clearInterval(updateReconnectTimer);
+              updateReconnectTimer = null;
+              appUpdateState.progressLog = td('update.reconnected');
+              renderUpdateModal();
+              setTimeout(() => window.location.reload(), 600);
+            }
+          } else {
+            sawDown = true;
+          }
+        } catch {
+          sawDown = true;
+        }
+        if (attempts > 45) {
+          clearInterval(updateReconnectTimer);
+          updateReconnectTimer = null;
+        }
+      }, 1200);
+    }
+
+    async function refreshWebAppCache() {
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.update().catch(() => {})));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.filter(k => k.startsWith('rigcommander-pwa-')).map(k => caches.delete(k)));
+        }
+      } catch {}
+      const url = new URL(window.location.href);
+      url.searchParams.delete('simulateUpdate');
+      url.searchParams.set('v', appUpdateState.latestVersion || String(Date.now()));
+      window.location.replace(url.toString());
+    }
+
+    function renderUpdateModal() {
+      const body = document.getElementById('updateModalBody');
+      if (!body) return;
+      const st = appUpdateState;
+      const liveBridge = isLiveUpdateBridge();
+      const isBusy = st.state === 'updating' || st.state === 'restarting';
+      const npxCmd = 'npx rig-commander@latest';
+      const globalCmd = 'npm install -g rig-commander@latest';
+      const manualCmd = liveBridge ? (st.updateCommand || npxCmd) : npxCmd;
+      const canApplyLocal = liveBridge && !st.isRemote;
+
+      body.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:12px; font-family:var(--font-mono);">
+          <div style="font-size:12px; color:#cbd5e1; line-height:1.45;">
+            ${escapeHtml(st.updateAvailable ? td('update.available') : td('update.upToDate'))}
+          </div>
+          <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.28); border-radius:10px; padding:12px;">
+            <div style="text-align:center;">
+              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">${escapeHtml(td('update.currentVer'))}</div>
+              <div style="font-size:18px; font-weight:800; color:#e2e8f0; margin-top:2px;">v${escapeHtml(st.currentVersion)}</div>
+            </div>
+            <div style="font-size:18px; color:#6ee7b7; font-weight:800;">→</div>
+            <div style="text-align:center;">
+              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">${escapeHtml(td('update.latestVer'))}</div>
+              <div style="font-size:18px; font-weight:800; color:${st.updateAvailable ? '#00ff9d' : '#7dd3fc'}; margin-top:2px;">v${escapeHtml(st.latestVersion || st.currentVersion)}</div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; color:#94a3b8;">
+            <span>${escapeHtml(td('update.modeLabel'))} <strong style="color:#7dd3fc;">${escapeHtml(liveBridge ? st.installMode : 'Web PWA / Demo')}</strong></span>
+            <a href="${escapeHtml(st.releaseUrl || 'https://www.npmjs.com/package/rig-commander')}" target="_blank" rel="noopener" style="color:#67e8f9; text-decoration:none;">${escapeHtml(td('update.viewNpm'))}</a>
+          </div>
+
+          ${st.state === 'updating' ? `<div style="font-size:11.5px; color:#fde68a; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.38); border-radius:8px; padding:10px;">${escapeHtml(td('update.applying'))}</div>` : ''}
+          ${st.state === 'restarting' ? `<div style="font-size:11.5px; color:#6ee7b7; background:rgba(0,255,157,0.1); border:1px solid rgba(0,255,157,0.38); border-radius:8px; padding:10px;">${escapeHtml(td('update.restarting'))}</div>` : ''}
+          ${st.lastError ? `<div style="font-size:11px; color:#fda4af; background:rgba(244,63,94,0.12); border:1px solid rgba(244,63,94,0.38); border-radius:8px; padding:9px 10px; white-space:pre-wrap; word-break:break-word;">⚠️ ${escapeHtml(st.lastError)}</div>` : ''}
+          ${st.progressLog && st.state !== 'idle' ? `<pre style="margin:0; font-size:10.5px; color:#94a3b8; background:rgba(2,6,23,0.88); border:1px solid rgba(148,163,184,0.2); border-radius:8px; padding:8px 10px; max-height:110px; overflow:auto; white-space:pre-wrap;">${escapeHtml(st.progressLog)}</pre>` : ''}
+
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            ${canApplyLocal ? `
+              <button type="button" id="btnApplyLiveUpdate" class="action-pill" ${isBusy ? 'disabled' : ''} style="flex:1; justify-content:center; padding:9px 14px; font-weight:800; border-color:var(--emerald); background:rgba(0,255,157,0.16); color:#6ee7b7;" onclick="applyRigCommanderUpdate()">
+                ${escapeHtml(td('update.applyBtn'))}
+              </button>
+            ` : (!liveBridge ? `
+              <button type="button" id="btnReloadWebUpdate" class="action-pill" style="flex:1; justify-content:center; padding:9px 14px; font-weight:800; border-color:var(--emerald); background:rgba(0,255,157,0.16); color:#6ee7b7;" onclick="refreshWebAppCache()">
+                ${escapeHtml(td('update.reloadWebBtn'))}
+              </button>
+              <a class="action-pill" href="http://127.0.0.1:7440/?track=update" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(0,240,255,0.45); color:#67e8f9; padding:9px 12px;">
+                ${escapeHtml(td('update.openLocalBtn'))}
+              </a>
+            ` : `
+              <div style="width:100%; font-size:11px; color:#fde68a; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.3); border-radius:8px; padding:8px 10px; line-height:1.45;">
+                ${escapeHtml(td('update.remoteOnlyHint'))}
+              </div>
+            `)}
+            <button type="button" class="action-pill" ${isBusy ? 'disabled' : ''} style="border-color:rgba(148,163,184,0.35); color:#cbd5e1;" onclick="checkBrowserNpmUpdate(true)">
+              ${escapeHtml(td('update.checkBtn'))}
+            </button>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:6px; background:rgba(15,23,42,0.7); border:1px solid rgba(148,163,184,0.18); border-radius:9px; padding:9px 11px;">
+            <div style="font-size:10.5px; color:#94a3b8;">${escapeHtml(td('update.manualHint'))}</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.9); border:1px solid rgba(56,189,248,0.22); border-radius:7px; padding:6px 9px;">
+              <code style="font-size:11px; color:#67e8f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(manualCmd)}</code>
+              <button type="button" class="env-copy-btn" data-cmd="${escapeHtml(manualCmd)}" title="${escapeHtml(manualCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>
+            </div>
+            ${manualCmd !== globalCmd ? `
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.9); border:1px solid rgba(56,189,248,0.22); border-radius:7px; padding:6px 9px;">
+                <code style="font-size:11px; color:#67e8f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(globalCmd)}</code>
+                <button type="button" class="env-copy-btn" data-cmd="${escapeHtml(globalCmd)}" title="${escapeHtml(globalCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
     }
   </script>
 

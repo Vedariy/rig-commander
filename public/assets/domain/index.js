@@ -38,3 +38,19 @@ export {
   resetQuestState,
   shouldAutoOpenQuest
 } from './quest.js';
+export {
+  parseSemver,
+  compareSemver,
+  isNewerVersion,
+  normalizeNpmReleaseInfo
+} from './semver.js';
+export {
+  DEFAULT_ACTION_COOLDOWN_MS,
+  DEFAULT_DESTRUCTIVE_COOLDOWN_MS,
+  buildSeatScopeKey,
+  buildSeatSendKey,
+  buildEndpointScopeKey,
+  createIdempotencyKey,
+  ActionFlightGuard,
+  ServerIdempotencyCache
+} from './action-guard.js';

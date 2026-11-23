@@ -453,7 +453,7 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">70 / 70 PASS</div>
+        <div class="kpi-val" style="color:var(--emerald);">78 / 78 PASS</div>
         <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 8 наборов (~0.2s)</div>
       </div>
       <div class="kpi-card">
@@ -692,7 +692,7 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 70/70</span>
+        <span class="sec-tag">NODE --TEST • 78/78</span>
       </div>
       <table>
         <thead>
@@ -712,6 +712,8 @@
           <tr><td><code>tests/finops.test.mjs</code></td><td><code>openrig/assets/domain/finops.js</code> + оконный JSONL-парсер: амортизация подписок <code>24ч/7д/сессия</code>, сравнение <code>SUB vs PAYG</code>, ROI и рекомендации</td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/share-card.test.mjs</code></td><td><code>openrig/assets/domain/share-card.js</code>: генерация <code>1200×630</code> PNG Share Card (мини-Гант, <code>SUB vs API</code> ROI), режим анонимизации и XML-экранирование</td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/remote-access.test.mjs</code></td><td><code>openrig/lib/remote-access.mjs</code>: динамический Live <code>manifest.webmanifest</code> (<code>/</code>), QR + 8-симв. PIN pairing, <code>HttpOnly; Secure</code> cookie, защита от перебора, origin pinning и отзыв устройств</td><td><span class="badge-ok">5 PASS</span></td></tr>
+          <tr><td><code>tests/self-update.test.mjs</code></td><td><code>openrig/assets/domain/semver.js</code> + <code>openrig/lib/self-update.mjs</code>: SemVer-сравнение, опрос <code>npmjs.org</code> с TTL, детектор режима (<code>npm/npx/git</code>) и безопасный <code>applyUpdate</code> + рестарт</td><td><span class="badge-ok">5 PASS</span></td></tr>
+          <tr><td><code>tests/action-guard.test.mjs</code></td><td><code>openrig/assets/domain/action-guard.js</code>: примитив <code>ActionFlightGuard</code> (защита контролов от двойных кликов и конкурентных команд на узел) + серверный <code>ServerIdempotencyCache</code> (<code>X-Idempotency-Key</code> и 409 dedupe)</td><td><span class="badge-ok">3 PASS</span></td></tr>
         </tbody>
       </table>
 

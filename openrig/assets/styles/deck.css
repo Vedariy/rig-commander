@@ -1174,13 +1174,13 @@
       position: absolute;
       width: 238px;
       transform: translate(-50%, -50%);
-      background: linear-gradient(180deg, rgba(15, 25, 46, 0.96), rgba(9, 16, 32, 0.97));
-      border: 1.5px solid var(--ctx-color, #38bdf8);
+      background: linear-gradient(180deg, rgba(14, 23, 42, 0.96), rgba(8, 15, 30, 0.98));
+      border: 1px solid rgba(148, 163, 184, 0.28);
       border-radius: 9px;
       padding: 9px 11px;
       cursor: pointer;
-      transition: transform 0.2s ease, opacity 0.25s ease, box-shadow 0.25s ease;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65), 0 0 12px var(--ctx-glow), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      transition: transform 0.2s ease, opacity 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
       user-select: none;
     }
 
@@ -1193,17 +1193,29 @@
       left: 0;
       width: var(--ctx-fill-pct, 0%);
       max-width: 100%;
-      background: var(--ctx-fill-grad, linear-gradient(90deg, rgba(56, 189, 248, 0.14), rgba(56, 189, 248, 0.04)));
-      border-radius: 7px 0 0 7px;
+      background: var(--ctx-fill-grad, transparent);
+      border-radius: 8px 0 0 8px;
       pointer-events: none;
       z-index: 0;
       transition: width 0.35s ease;
     }
     .agent-node > .node-top > .node-identity,
+    .agent-node > .node-top > .node-ctx-val,
+    .agent-node > .node-meta-row,
     .agent-node > .badge-row,
     .agent-node > .ctx-box {
       position: relative;
       z-index: 2;
+    }
+
+    /* Heat-alert borders ONLY at >=65% (warn) or >=75% (crit) when not overridden by active working/urgent state */
+    .agent-node.state-idle[data-thermal-tier="warn"] {
+      border-color: rgba(251, 146, 60, 0.72);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65), 0 0 12px rgba(251, 146, 60, 0.22);
+    }
+    .agent-node.state-idle[data-thermal-tier="crit"] {
+      border-color: rgba(255, 0, 85, 0.85);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65), 0 0 16px rgba(255, 0, 85, 0.36);
     }
 
     .agent-node.dimmed {
@@ -1323,16 +1335,19 @@
     }
 
     /* STRICT NON-BLINKING BY DEFAULT, BLINK ONLY WHEN ATTN=YES */
-    .agent-node.state-idle { opacity: 0.88; }
+    .agent-node.state-idle { opacity: 0.92; }
     .agent-node.state-working {
+      border-width: 1.5px;
       border-color: var(--emerald);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 18px rgba(0, 255, 157, 0.35), inset 0 0 8px rgba(0, 255, 157, 0.08);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.72), 0 0 18px rgba(0, 255, 157, 0.32), inset 0 0 8px rgba(0, 255, 157, 0.08);
     }
     .agent-node.state-waiting {
+      border-width: 1.5px;
       border-style: dashed;
-      border-color: rgba(245, 158, 11, 0.75);
+      border-color: rgba(245, 158, 11, 0.72);
     }
     .agent-node.state-urgent {
+      border-width: 1.5px;
       animation: blink-urgent-frame 1.05s infinite ease-in-out;
     }
 
@@ -1341,57 +1356,92 @@
       50% { border-color: var(--amber); box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
     }
 
-    /* CONTEXT BORDER PROGRESS BAR & FLOATING BOTTOM BADGE */
+    /* INTEGRATED SINGLE-CARD THERMAL RAIL (6-BAND PROGRESSIVE SPECTRUM) & INLINE TELEMETRY */
     .node-bottom-meter {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.14);
-      border-radius: 0 0 7px 7px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 0 0 8px 8px;
       overflow: hidden;
       z-index: 5;
+      pointer-events: none;
+    }
+
+    .agent-node[data-thermal-tier="none"] .node-bottom-meter {
+      display: none;
     }
 
     .node-bottom-meter-fill {
-      height: 100%;
-      border-radius: 0 0 7px 7px;
-      transition: width 0.35s ease;
-      box-shadow: 0 0 8px var(--ctx-color);
-    }
-
-    .node-bottom-badge {
       position: absolute;
-      top: calc(100% + 6px);
-      bottom: auto;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 8;
-      background: rgba(6, 12, 24, 0.96);
-      border: 1px solid var(--ctx-color);
-      border-radius: 999px;
-      padding: 1px 8px;
-      font-family: var(--font-mono);
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--ctx-color);
-      white-space: nowrap;
-      text-align: center;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.85), 0 0 8px var(--ctx-glow);
-      backdrop-filter: blur(8px);
-      display: inline-block;
-      pointer-events: none;
-      line-height: 1.3;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #a78bfa 0%, #60a5fa 28%, #38bdf8 48%, #facc15 60%, #fb923c 70%, #ff0055 82%);
+      clip-path: inset(0 calc(100% - var(--ctx-fill-pct, 0%)) 0 0);
+      transition: clip-path 0.35s ease;
     }
 
-    /* FIT DENSITY MODE (КОМПАКТ) - ПОЛНОЕ ИМЯ SEAT БЕЗ ОБРЕЗКИ И БЕЗ ЛИШНЕЙ ИКОНКИ */
+    .node-ctx-val {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--ctx-color, #7dd3fc);
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-left: 10px;
+      line-height: 1.25;
+    }
+    .node-ctx-val:empty {
+      display: none;
+    }
+    .node-ctx-val.pill-warn {
+      background: rgba(251, 146, 60, 0.16);
+      border: 1px solid rgba(251, 146, 60, 0.52);
+      border-radius: 5px;
+      padding: 0 5px;
+      color: #fdba74;
+    }
+    .node-ctx-val.pill-crit {
+      background: rgba(255, 0, 85, 0.18);
+      border: 1px solid rgba(255, 0, 85, 0.65);
+      border-radius: 5px;
+      padding: 0 5px;
+      color: #fda4af;
+    }
+
+    .node-meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 4px;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: #64748b;
+      white-space: nowrap;
+      line-height: 1.25;
+    }
+    .node-meta-row:empty {
+      display: none;
+    }
+    .node-meta-traffic {
+      color: #71839c;
+      margin-left: auto;
+    }
+
+    /* FIT DENSITY MODE (КОМПАКТ) - ЕДИНАЯ ЧИСТАЯ КАРТОЧКА БЕЗ ВНЕШНИХ ТАБЛЕТОК СНИЗУ */
     body:not(.density-detailed) .agent-node {
       width: max-content;
-      min-width: 118px;
+      min-width: 158px;
       max-width: none;
-      padding: 6px 12px 10px 12px;
-      border-radius: 8px;
+      padding: 7px 11px 9px 11px;
+      border-radius: 9px;
       min-height: 36px;
     }
     body:not(.density-detailed) .agent-node .node-icon {
@@ -1427,8 +1477,9 @@
       display: none !important;
     }
 
-    /* DETAILED MODE: ПОКАЗЫВАЕТ ПОЛНЫЙ CTX-BOX И ПРЯЧЕТ ДУБЛИРУЮЩИЙСЯ НИЖНИЙ БЕЙДЖ */
-    body.density-detailed .agent-node .node-bottom-badge {
+    /* DETAILED MODE: ПОКАЗЫВАЕТ ПОЛНЫЙ CTX-BOX И ПРЯЧЕТ КОМПАКТНУЮ ТЕЛЕМЕТРИЮ */
+    body.density-detailed .agent-node .node-ctx-val,
+    body.density-detailed .agent-node .node-meta-row {
       display: none;
     }
 
@@ -3363,4 +3414,17 @@
       .mobile-nav-badge.show {
         display: inline-flex;
       }
+    }
+
+    /* Shared control-primitive double-click & in-flight lock visual state */
+    button[data-ctrl-busy="1"],
+    .ctrl-btn-busy,
+    button:disabled.action-pill,
+    button:disabled.ctrl-send-btn {
+      opacity: 0.58 !important;
+      cursor: wait !important;
+      pointer-events: none;
+      filter: saturate(0.75);
+      box-shadow: inset 0 0 0 1px rgba(0, 240, 255, 0.35);
+      transition: opacity 0.14s ease, filter 0.14s ease;
     }

@@ -8,6 +8,7 @@
     "bin/",
     "openrig/",
     "docs/USER_GUIDE.md",
+    "CHANGELOG.md",
     "README.md",
     "LICENSE"
   ],

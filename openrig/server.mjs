@@ -2,7 +2,7 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
@@ -13,12 +13,15 @@ import { discoverUniversalFleet, buildUniversalGanttItems, isValidTmuxTarget } f
 import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
 import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
 import { RemoteAccessGuard, buildLiveManifest, detectTailscaleServeUrl } from './lib/remote-access.mjs';
+import { SelfUpdater, RESTART_FOR_UPDATE_EXIT_CODE, readInstalledVersion } from './lib/self-update.mjs';
+import { ServerIdempotencyCache, buildSeatSendKey } from './assets/domain/action-guard.js';
 import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalThrottleMs: 3000 });
 const actionAudit = new ActionAuditLog({ maxRecords: 100 });
+const sendIdempotency = new ServerIdempotencyCache();
 const latestSeatBaselines = new Map();
 const universalTmuxTargets = new Map();
 const terminalPromptProbeCache = new Map(); // seatId -> { ts, blocked, working, idleAtPrompt, reason, harness }
@@ -256,11 +259,48 @@ function tokenMatches(got) {
 const execFileAsync = promisify(execFile);
 const gzipAsync = promisify(zlib.gzip);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const INSTALL_ROOT = path.resolve(__dirname, '..');
+const APP_VERSION = readInstalledVersion(INSTALL_ROOT, '3.2.0');
 const PORT = Number(process.env.PORT || 7440);
 const BIND_HOST = process.env.RIGCOMMANDER_HOST || '127.0.0.1';
 const remoteAccess = new RemoteAccessGuard({
   port: PORT,
   publicUrl: process.env.RIGCOMMANDER_PUBLIC_URL || ''
+});
+const selfUpdater = new SelfUpdater({
+  currentVersion: APP_VERSION,
+  installRoot: INSTALL_ROOT,
+  onRestart: ({ installMode }) => {
+    const finishExit = () => {
+      if (process.env.RIGCOMMANDER_SUPERVISED === '1') {
+        process.exit(RESTART_FOR_UPDATE_EXIT_CODE);
+        return;
+      }
+      try {
+        if (installMode === 'npx-cache') {
+          const npxArgs = ['--yes', 'rig-commander@latest', '--no-open', '-p', String(PORT), '--host', BIND_HOST];
+          const child = spawn('npx', npxArgs, { detached: true, stdio: 'ignore', env: process.env });
+          child.unref();
+        } else {
+          const child = spawn(process.execPath, [fileURLToPath(import.meta.url)], {
+            detached: true,
+            stdio: 'ignore',
+            env: process.env
+          });
+          child.unref();
+        }
+      } catch {
+        // ignore detached respawn error
+      }
+      process.exit(0);
+    };
+    try {
+      server.close(finishExit);
+      setTimeout(finishExit, 1500).unref();
+    } catch {
+      finishExit();
+    }
+  }
 });
 const RIG_BIN = process.env.RIG_BIN || (process.env.HOME ? path.join(process.env.HOME, '.local/bin/rig') : 'rig');
 const TMUX_BIN = process.env.TMUX_BIN || 'tmux';
@@ -1445,6 +1485,34 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 0.5 Self-Update status, npmjs check & 1-click local apply endpoints
+  if (url.pathname.startsWith('/api/update/')) {
+    if (url.pathname === '/api/update/status' && req.method === 'GET') {
+      await sendJson(req, res, 200, { ok: true, isRemote, ...selfUpdater.getStatus() });
+      return;
+    }
+    if (url.pathname === '/api/update/check' || url.pathname === '/api/update/apply') {
+      const origin = req.headers.origin || '';
+      const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
+      if (isRemote) return deny(403, 'Updates can only be triggered locally on the host machine.');
+      if (req.method !== 'POST') return deny(405, 'Method not allowed');
+      if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
+      if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
+      if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
+
+      if (url.pathname === '/api/update/check') {
+        const st = await selfUpdater.check({ force: true });
+        await sendJson(req, res, 200, { ok: true, ...st });
+        return;
+      }
+      const out = await selfUpdater.applyUpdate();
+      await sendJson(req, res, out.ok ? 200 : 500, out);
+      return;
+    }
+    await sendJson(req, res, 404, { ok: false, error: 'Not found' });
+    return;
+  }
+
   // 1. Live telemetry endpoint — directly queries OpenRig Daemon /api/rigs/:id/nodes (exact same source as TUI!)
   if (url.pathname === '/api/telemetry') {
     const requestedRig = url.searchParams.get('rig') || 'all';
@@ -1593,6 +1661,7 @@ const server = http.createServer(async (req, res) => {
         breaker: circuitBreaker.getState(),
         telegram: telegramBridge.getStatus()
       },
+      update: selfUpdater.getStatus(),
       intelligence: null
     };
 
@@ -1780,67 +1849,91 @@ const server = http.createServer(async (req, res) => {
             return;
           }
 
+          // Server-side duplicate-dispatch / double-click idempotency guard
+          const idempotencyKey = String(req.headers['x-idempotency-key'] || payload.idempotencyKey || '').trim();
+          const semanticKey = buildSeatSendKey(seat, type, text);
+          const idem = sendIdempotency.begin({ idempotencyKey, seatId: seat, semanticKey });
+          if (idem.action === 'replay') {
+            await sendJson(req, res, idem.status, idem.body);
+            return;
+          }
+          if (idem.action === 'reject') {
+            await sendJson(req, res, idem.status, { ok: false, deduplicated: true, error: idem.reason });
+            return;
+          }
+
           const universalTarget = universalTmuxTargets.get(seat);
           const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seat;
 
           let output = '';
-          if (type === 'key') {
-            // Specific tmux keystrokes validated against strict allowlist (prevents flag injection)
-            const keyArgs = parseAllowedTmuxKeys(text);
-            if (!keyArgs) {
-              actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 400, ok: false, baseline });
-              await sendJson(req, res, 400, { ok: false, error: 'Disallowed tmux keystroke' });
-              return;
-            }
-            output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
-            terminalPromptProbeCache.delete(seat);
-          } else if (type === 'raw') {
-            // Harness-aware hygiene and deduplication:
-            // 1. Normalize and deduplicate repeated slash commands (e.g. /compact/compact -> /compact)
-            let cleanText = text.trim();
-            cleanText = cleanText.replace(/(\/[a-zA-Z0-9_-]+)\1+/g, '$1');
+          try {
+            if (type === 'key') {
+              // Specific tmux keystrokes validated against strict allowlist (prevents flag injection)
+              const keyArgs = parseAllowedTmuxKeys(text);
+              if (!keyArgs) {
+                actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 400, ok: false, baseline });
+                const errBody = { ok: false, error: 'Disallowed tmux keystroke' };
+                idem.complete(400, errBody);
+                await sendJson(req, res, 400, errBody);
+                return;
+              }
+              output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
+              terminalPromptProbeCache.delete(seat);
+            } else if (type === 'raw') {
+              // Harness-aware hygiene and deduplication:
+              // 1. Normalize and deduplicate repeated slash commands (e.g. /compact/compact -> /compact)
+              let cleanText = text.trim();
+              cleanText = cleanText.replace(/(\/[a-zA-Z0-9_-]+)\1+/g, '$1');
 
-            // 2. Pi harness guard: Pi (DeepSeek) does not support slash commands
-            if ((seat.includes('coder3') || seat.includes('pi')) && cleanText.startsWith('/compact')) {
-              actionAudit.record({ actionId, seatId: seat, type, payload: cleanText, httpStatus: 400, ok: false, baseline });
-              await sendJson(req, res, 400, { ok: false, error: 'Харнес Pi (DeepSeek) не поддерживает команду /compact. Используйте ротацию сиденья.' });
-              return;
-            }
+              // 2. Pi harness guard: Pi (DeepSeek) does not support slash commands
+              if ((seat.includes('coder3') || seat.includes('pi')) && cleanText.startsWith('/compact')) {
+                actionAudit.record({ actionId, seatId: seat, type, payload: cleanText, httpStatus: 400, ok: false, baseline });
+                const errBody = { ok: false, error: 'Харнес Pi (DeepSeek) не поддерживает команду /compact. Используйте ротацию сиденья.' };
+                idem.complete(400, errBody);
+                await sendJson(req, res, 400, errBody);
+                return;
+              }
 
-            // 3. Prompt line hygiene: Send C-u first to clear any dirty/pending input in the terminal buffer!
-            // This prevents duplicate concatenation like /compact/compact when prompt already had a slash.
-            await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'C-u']);
-            await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', cleanText]);
-            output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
-          } else if (type === 'interact') {
-            if (universalTarget) {
-              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+              // 3. Prompt line hygiene: Send C-u first to clear any dirty/pending input in the terminal buffer!
+              // This prevents duplicate concatenation like /compact/compact when prompt already had a slash.
+              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'C-u']);
+              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', cleanText]);
               output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
-            } else {
-              output = await safeTextExec(RIG_BIN, [
-                'send',
-                '--dangerously-interact',
-                '--reason', 'Dashboard interactive prompt answer',
-                seat,
-                text
-              ]);
-              if (!output || output.includes('Error') || output.includes('refused')) {
+            } else if (type === 'interact') {
+              if (universalTarget) {
                 await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-                output += '\n' + await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+                output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+              } else {
+                output = await safeTextExec(RIG_BIN, [
+                  'send',
+                  '--dangerously-interact',
+                  '--reason', 'Dashboard interactive prompt answer',
+                  seat,
+                  text
+                ]);
+                if (!output || output.includes('Error') || output.includes('refused')) {
+                  await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+                  output += '\n' + await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+                }
+              }
+            } else {
+              // Standard rig send (or direct tmux send-keys for universal standalone tmux panes)
+              if (universalTarget) {
+                await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+                output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+              } else {
+                output = await safeTextExec(RIG_BIN, ['send', seat, text]);
               }
             }
-          } else {
-            // Standard rig send (or direct tmux send-keys for universal standalone tmux panes)
-            if (universalTarget) {
-              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-              output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
-            } else {
-              output = await safeTextExec(RIG_BIN, ['send', seat, text]);
-            }
-          }
 
-          const auditRec = actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
-          await sendJson(req, res, 200, { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() });
+            const auditRec = actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
+            const okBody = { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() };
+            idem.complete(200, okBody);
+            await sendJson(req, res, 200, okBody);
+          } catch (innerErr) {
+            idem.abort();
+            throw innerErr;
+          }
         } catch (err) {
           await sendJson(req, res, 500, { ok: false, error: err.message });
         }
@@ -1860,9 +1953,10 @@ const server = http.createServer(async (req, res) => {
   try {
     let data = await fs.readFile(filePath);
     if (safeRel === 'index.html') {
-      data = Buffer.from(
-        data.toString('utf-8').replace('<head>', `<head>\n  <meta name="deck-token" content="${DECK_TOKEN}">`)
-      );
+      let html = data.toString('utf-8');
+      html = html.replace(/<meta\s+name="app-version"\s+content="[^"]*"\s*\/?>/i, `<meta name="app-version" content="${APP_VERSION}" />`);
+      html = html.replace('<head>', `<head>\n  <meta name="deck-token" content="${DECK_TOKEN}">`);
+      data = Buffer.from(html);
     }
     const mime =
       ext === '.html' ? 'text/html; charset=utf-8' :
@@ -1943,7 +2037,17 @@ if (isMainModule) {
     telegramBridge.startPolling();
   }
   server.listen(PORT, BIND_HOST, () => {
-    console.log(`💠 RigCommander // Neural Command Deck v3.1 at http://${BIND_HOST}:${PORT}`);
+    console.log(`💠 RigCommander // Neural Command Deck v${APP_VERSION} at http://${BIND_HOST}:${PORT}`);
+    setTimeout(() => {
+      selfUpdater.check().then(st => {
+        if (st && st.updateAvailable) {
+          console.log(`⬆️  Update available on npmjs: v${st.currentVersion} -> v${st.latestVersion} (click Update in the deck)`);
+        }
+      }).catch(() => {});
+    }, 2500).unref();
+    setInterval(() => {
+      selfUpdater.check().catch(() => {});
+    }, 30 * 60 * 1000).unref();
     if (remoteAccess.getStatus().enabled) {
       console.log(`📱 Live Mobile PWA pairing active: ${remoteAccess.getStatus().publicOrigin}`);
     } else {

@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+const appVersion = String(pkg.version || '3.2.0');
 
 const COPIES = [
   ['openrig/index.html', 'public/demo/index.html'],
@@ -17,11 +19,25 @@ const COPIES = [
   ['landing/guide.html', 'openrig/guide.html']
 ];
 
+const STAMP_VERSION_TARGETS = new Set([
+  'public/demo/index.html',
+  'public/deck/index.html',
+  'public/index.html'
+]);
+
 for (const [srcRel, dstRel] of COPIES) {
   const src = path.join(root, srcRel);
   const dst = path.join(root, dstRel);
   await fs.mkdir(path.dirname(dst), { recursive: true });
-  await fs.copyFile(src, dst);
+  if (STAMP_VERSION_TARGETS.has(dstRel)) {
+    const html = (await fs.readFile(src, 'utf8')).replace(
+      /(<meta\s+name="app-version"\s+content=")[^"]*(")/i,
+      `$1${appVersion}$2`
+    );
+    await fs.writeFile(dst, html, 'utf8');
+  } else {
+    await fs.copyFile(src, dst);
+  }
   console.log(`synced ${srcRel} -> ${dstRel}`);
 }
 

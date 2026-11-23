@@ -1,6 +1,6 @@
 # 💠 RigCommander — Mission Control for Autonomous AI Coding Fleets
 
-**Live Demo:** https://rig-commander.vercel.app/demo · **User Guide:** https://rig-commander.vercel.app/guide ([Markdown](./docs/USER_GUIDE.md)) · **Landing:** https://rig-commander.vercel.app · **Project Passport:** https://rig-commander.vercel.app/passport
+**Live Demo:** https://rig-commander.vercel.app/demo · **User Guide:** https://rig-commander.vercel.app/guide ([Markdown](./docs/USER_GUIDE.md)) · **Changelog:** [CHANGELOG.md](./CHANGELOG.md) · **Landing:** https://rig-commander.vercel.app · **Project Passport:** https://rig-commander.vercel.app/passport
 
 RigCommander is a **zero-dependency, local-first DSS SA (L1–L3)** command deck for engineers running parallel AI coding agents across `tmux`, **Claude Code**, **Codex CLI**, and **OpenRig** fleets.
 

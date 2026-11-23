@@ -178,8 +178,26 @@ test('classifyEdgeQueueStatus differentiates live, blocked, parked, held, pendin
 });
 
 test('domain thermal, audio and gantt helpers work deterministically', () => {
-  assert.equal(getContextThermal(null, 475000).label, '— (no reader)');
-  assert.equal(getContextThermal(80, 475000).color, '#ff0055');
+  const noneT = getContextThermal(null, 475000);
+  assert.equal(noneT.label, '— (no reader)');
+  assert.equal(noneT.tier, 'none');
+  assert.equal(noneT.pct, 0);
+  assert.equal(noneT.tokensShort, '');
+
+  assert.equal(getContextThermal(5, 1000000).band, 'violet');
+  assert.equal(getContextThermal(22, 1000000).band, 'blue');
+  const skyT = getContextThermal(46, 475000);
+  assert.equal(skyT.band, 'sky');
+  assert.equal(skyT.tier, 'cool');
+  assert.equal(skyT.tokensShort, '219K/475K');
+  assert.equal(getContextThermal(58, 475000).band, 'yellow');
+  assert.equal(getContextThermal(68, 475000).band, 'orange');
+  assert.equal(getContextThermal(68, 475000).tier, 'warn');
+  const critT = getContextThermal(80, 475000);
+  assert.equal(critT.color, '#ff0055');
+  assert.equal(critT.band, 'red');
+  assert.equal(critT.tier, 'crit');
+
   assert.equal(formatTokensShort(1_250_000), '1.25M');
   assert.equal(formatTokensShort(42_300), '42K');
 
