@@ -14,15 +14,15 @@
   <meta name="description" content="Архитектурный и операционный паспорт RigCommander: DSS SA методология, C4-контекст и компоненты, операционная онтология (Objects, Links, Actions, Audit), безопасность и покрытие тестами.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
-  <meta property="og:title" content="RigCommander — Architecture & Operational Passport (C4 + Ontology v2.0)">
-  <meta property="og:description" content="C4 Level 1 & Level 3 diagrams, 7-object Operational Ontology v2.0, localhost security posture, and 0-dependency test matrix.">
+  <meta property="og:title" content="RigCommander — Architecture & Operational Passport (C4 + Ontology v2.1)">
+  <meta property="og:description" content="C4 Level 1 & Level 3 diagrams, 7-object Operational Ontology v2.1, paired Mobile PWA & idempotency controls, and 88-test 0-dependency matrix.">
   <meta property="og:url" content="https://rig-commander.vercel.app/passport">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Architecture & Operational Passport">
-  <meta name="twitter:description" content="C4 diagrams, Operational Ontology v2.0, localhost security controls, and 0-dep test suite.">
+  <meta name="twitter:description" content="C4 diagrams, Operational Ontology v2.1, Remote PWA & 409 idempotency security controls, and 88-test 0-dep suite.">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -399,7 +399,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/">
         <span>💠 RIGCOMMANDER</span>
-        <span class="pill-tag" data-i18n="badge">PASSPORT v3.1</span>
+        <span class="pill-tag" data-i18n="badge">PASSPORT v3.2</span>
       </a>
       <nav class="nav-links">
         <a href="#context" data-i18n="nav.context">C4 Контекст</a>
@@ -425,7 +425,7 @@
       <div class="eyebrow" data-i18n="hero.eyebrow">Архитектурный и операционный паспорт системы</div>
       <h1 data-i18n="hero.title">RigCommander // Neural Command Deck</h1>
       <p class="hero-sub" data-i18n="hero.sub">
-        Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / tmux). Объединяет телеметрию реального времени, операционную онтологию (Objects • Links • Actions • Audit), диаграмму Ганта, FinOps-мониторинг токенов и защищённый Human-in-the-Loop write-back.
+        Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux &amp; JSONL). Объединяет адаптивный граф (Динам/Фикс), операционную онтологию v2.1 (Objects • Links • Actions • Audit), поддорожечный Гант + Handoff Flow, FinOps-мониторинг, Remote Mobile PWA и идемпотентный Human-in-the-Loop write-back.
       </p>
     </div>
 
@@ -448,18 +448,18 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.ont.l">Онтология</div>
-        <div class="kpi-val" style="color:var(--lavender);">v2.0 Live</div>
-        <div class="kpi-note" data-i18n="kpi.ont.n">7 Objects • 7 Actions • Postcondition Audit</div>
+        <div class="kpi-val" style="color:var(--lavender);">v2.1 Live</div>
+        <div class="kpi-note" data-i18n="kpi.ont.n">7 Objects • 10 Actions • Postcondition Audit</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">78 / 78 PASS</div>
-        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 8 наборов (~0.2s)</div>
+        <div class="kpi-val" style="color:var(--emerald);">88 / 88 PASS</div>
+        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 18 наборов (~1s)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
-        <div class="kpi-val" style="color:var(--amber);">127.0.0.1</div>
-        <div class="kpi-note" data-i18n="kpi.sec.n">DECK_TOKEN + Origin + Key Allowlist</div>
+        <div class="kpi-val" style="color:var(--amber);">127.0.0.1 + QR</div>
+        <div class="kpi-note" data-i18n="kpi.sec.n">DECK_TOKEN • SHA-256 Cookie • 409 Idempotency</div>
       </div>
     </div>
 
@@ -485,45 +485,45 @@
 
           <!-- Operator -->
           <rect x="16" y="88" width="155" height="96" rx="10" fill="#0f172a" stroke="#00f0ff" stroke-width="1.6"/>
-          <text x="93" y="122" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="13" font-weight="800">👤 ОПЕРАТОР</text>
-          <text x="93" y="143" text-anchor="middle" fill="#94a3b8" font-family="Plus Jakarta Sans" font-size="11.5">Браузер / HITL</text>
-          <text x="93" y="162" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="10">Polling 4s + Actions</text>
+          <text x="93" y="120" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="13" font-weight="800">👤 ОПЕРАТОР</text>
+          <text x="93" y="140" text-anchor="middle" fill="#94a3b8" font-family="Plus Jakarta Sans" font-size="11">Desktop / Phone PWA</text>
+          <text x="93" y="159" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.5">Polling 4s • QR+PIN • TG</text>
 
           <!-- Local Trust Boundary -->
           <rect x="225" y="14" width="718" height="196" rx="12" fill="rgba(15,23,42,0.55)" stroke="rgba(0,255,157,0.4)" stroke-dasharray="6 4" stroke-width="1.4"/>
-          <text x="242" y="34" fill="#00ff9d" font-family="JetBrains Mono" font-size="10.5" font-weight="700">ЛОКАЛЬНЫЙ КОНТУР ДОВЕРИЯ (127.0.0.1 ONLY)</text>
+          <text x="242" y="34" fill="#00ff9d" font-family="JetBrains Mono" font-size="10.5" font-weight="700">ЛОКАЛЬНЫЙ КОНТУР ДОВЕРИЯ (127.0.0.1 + PAIRED HTTPS TUNNEL)</text>
 
           <!-- BFF Server -->
           <rect x="246" y="54" width="210" height="70" rx="9" fill="#0b1325" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="351" y="80" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="12" font-weight="800">💠 server.mjs (:7440)</text>
-          <text x="351" y="99" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="10">BFF • FleetIntel • Audit</text>
-          <text x="351" y="114" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.5">/api/telemetry /capture /audit</text>
+          <text x="351" y="78" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="12" font-weight="800">💠 server.mjs (:7440)</text>
+          <text x="351" y="96" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">BFF • FleetIntel(6) • SelfUpdate</text>
+          <text x="351" y="112" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.2">/api/telemetry /capture /remote</text>
 
           <!-- Security Gate -->
           <rect x="246" y="138" width="210" height="58" rx="9" fill="rgba(251,191,36,0.08)" stroke="#fbbf24" stroke-width="1.5"/>
-          <text x="351" y="160" text-anchor="middle" fill="#fde68a" font-family="JetBrains Mono" font-size="11.5" font-weight="800">🛡️ Security Gate (/api/send)</text>
-          <text x="351" y="178" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.5">DECK_TOKEN • Origin • Allowlist</text>
+          <text x="351" y="159" text-anchor="middle" fill="#fde68a" font-family="JetBrains Mono" font-size="11" font-weight="800">🛡️ Security &amp; Idempotency</text>
+          <text x="351" y="177" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.2">TOKEN • Cookie • X-Idempotency 409</text>
 
           <!-- Downstream read-only -->
           <rect x="530" y="46" width="190" height="44" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="625" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">🧠 OpenRig Daemon :7437</text>
-          <text x="625" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">GET /api/rigs &amp; /nodes</text>
+          <text x="625" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">🧠 OpenRig :7437 / tmux</text>
+          <text x="625" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Native + Universal Discovery</text>
 
           <rect x="740" y="46" width="186" height="44" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
           <text x="833" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">📂 JSONL + TSV + RECAP</text>
-          <text x="833" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Incremental offset read</text>
+          <text x="833" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Windowed 24h/7d offset read</text>
 
           <rect x="530" y="100" width="396" height="36" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="728" y="122" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">🔧 rig CLI (read-only: ps, queue list -a, parked, capture)</text>
+          <text x="728" y="122" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="10.8" font-weight="700">🔧 rig CLI + Screen Classifier (ps, queue -a, parked, 72L capture)</text>
 
           <!-- Downstream write-back -->
           <rect x="530" y="148" width="396" height="44" rx="8" fill="rgba(255,42,109,0.08)" stroke="#ff2a6d" stroke-width="1.3"/>
-          <text x="728" y="168" text-anchor="middle" fill="#fda4af" font-family="JetBrains Mono" font-size="11.5" font-weight="700">🖥️ tmux send-keys / rig send (Write-Back)</text>
-          <text x="728" y="183" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.5">Каждая запись логируется в ActionAuditLog + сверка postcondition</text>
+          <text x="728" y="168" text-anchor="middle" fill="#fda4af" font-family="JetBrains Mono" font-size="11.5" font-weight="700">🖥️ tmux send-keys / rig send / Breaker C-c (Write-Back)</text>
+          <text x="728" y="183" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.5">ActionFlightGuard + ServerIdempotencyCache + ActionAuditLog</text>
 
           <!-- Vercel Cloud -->
           <rect x="225" y="224" width="718" height="48" rx="10" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.45)"/>
-          <text x="584" y="253" text-anchor="middle" fill="#e9d5ff" font-family="JetBrains Mono" font-size="11.5" font-weight="700">🌐 Vercel Static Hosting (public/) — Landing (/), Passport (/passport), Offline Demo (/demo, /deck)</text>
+          <text x="584" y="253" text-anchor="middle" fill="#e9d5ff" font-family="JetBrains Mono" font-size="11.2" font-weight="700">🌐 Vercel Static Hosting (public/) — Landing (/), Guide (/guide), Passport (/passport), Demo (/demo)</text>
 
           <!-- Arrows -->
           <line x1="171" y1="110" x2="244" y2="88" stroke="#38bdf8" stroke-width="1.6" marker-end="url(#arrC)"/>
@@ -540,37 +540,37 @@
     <section id="components">
       <div class="sec-head">
         <h2 data-i18n="s2.title">2. Модульная структура и карта зависимостей (C4 Level 3)</h2>
-        <span class="sec-tag">ZERO-BUILD ESM</span>
+        <span class="sec-tag">ZERO-BUILD ESM • 14 PURE DOMAIN MODULES</span>
       </div>
       <div class="grid-3">
         <div class="subcard">
           <h3>🎨 Frontend (openrig/)</h3>
           <ul>
-            <li><code>index.html</code> — 6 проекций UI + in-place DOM patching (без потери фокуса)</li>
-            <li><code>assets/styles/deck.css</code> — дизайн-токены и стили панелей</li>
-            <li><code>assets/domain/*</code> — чистые функции без DOM: <code>prompt-parser</code>, <code>thermal</code>, <code>audio</code>, <code>gantt-model</code></li>
-            <li><code>assets/ontology/actions.js</code> — единый реестр Actions и предусловий</li>
-            <li><code>assets/ontology/snapshot.js</code> — <code>buildOntologySnapshot</code> + чистые селекторы</li>
+            <li><code>index.html</code> — 7 проекций UI (Адаптивный граф, Гант + Handoff Flow, Радар, Инспектор + <code>SeatDiagnosis</code>) + in-place DOM patching</li>
+            <li><code>assets/styles/deck.css</code> — дизайн-токены Dark Cockpit, 6-band терморейка, мобильный 5-tab док</li>
+            <li><code>assets/domain/*</code> (14 модулей + <code>index.js</code>) — чистые функции без DOM: <code>topology-layout</code>, <code>gantt-model</code>, <code>action-guard</code>, <code>thermal</code>, <code>finops</code>, <code>prompt-parser</code>, <code>edge-state</code>, <code>i18n</code>, <code>preferences</code>, <code>qr</code>, <code>quest</code>, <code>semver</code>, <code>share-card</code>, <code>audio</code></li>
+            <li><code>assets/ontology/actions.js</code> — единый реестр <code>ACTION_DEFINITIONS</code>, <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></li>
+            <li><code>assets/ontology/snapshot.js</code> — <code>buildOntologySnapshot</code> + чистые селекторы и эксклюзивные пулы моделей</li>
           </ul>
         </div>
         <div class="subcard">
           <h3>⚡ Backend BFF (openrig/)</h3>
           <ul>
-            <li><code>server.mjs</code> — HTTP-роутер, Security Gate, кэши <code>boundedMapSet</code></li>
-            <li><code>buildGanttItems</code> — очистка <code>opgate</code>-шума, закрытие <code>blocked/held</code>, union-find цепочек</li>
-            <li><code>readTranscriptTokenUsage</code> — инкрементальный ридер JSONL Codex/Claude по байтовому <code>offset</code></li>
-            <li><code>lib/fleet-intelligence/*</code> — Facade + RingBuffer + 5 детекторов + per-rig кэш</li>
-            <li><code>lib/action-audit.mjs</code> — кольцевой <code>ActionAuditLog</code> + сверка <code>postcondition</code></li>
+            <li><code>server.mjs</code> — HTTP-роутер, Security Gate, <code>ServerIdempotencyCache</code>, динамический Live PWA <code>manifest.webmanifest</code>, <code>classifyTerminalScreen()</code></li>
+            <li><code>lib/fleet-intelligence/*</code> — Facade + RingBuffer + <strong>6 детекторов</strong> (<code>LiveBlocker</code>, <code>Bottleneck</code>, <code>ContextEntropy</code>, <code>Ceremony</code>, <code>ModelMismatch</code>, <code>ZombieSeat</code>) + per-rig кэш</li>
+            <li><code>lib/action-audit.mjs</code> — кольцевой <code>ActionAuditLog</code> + сверка <code>postcondition</code> (вкл. <code>nudge_queue</code>)</li>
+            <li><code>lib/remote-access.mjs</code> — QR + 8-симв. PIN pairing, SHA-256 cookie (<code>0600</code>), origin pinning и отзыв устройств</li>
+            <li><code>lib/self-update.mjs</code>, <code>circuit-breaker.mjs</code>, <code>telegram-bridge.mjs</code>, <code>universal-discovery.mjs</code></li>
           </ul>
         </div>
         <div class="subcard">
           <h3>🚀 CLI, Доставка и Тесты</h3>
           <ul>
-            <li><code>bin/cli.mjs</code> — точка запуска <code>npx rig-commander</code></li>
+            <li><code>bin/cli.mjs</code> — точка запуска <code>npx rig-commander</code> + супервизор автообновления (<code>exit 75</code>) + <code>--public-url</code> / <code>--universal</code></li>
             <li><code>scripts/sync-public.mjs</code> — <code>npm run sync:public</code> (единый источник правды для Vercel <code>public/</code>)</li>
-            <li><code>landing/index.html</code> &amp; <code>landing/passport.html</code> — публичные страницы EN/RU</li>
-            <li><code>tests/*.test.mjs</code> — 5 тестовых наборов на встроенном <code>node --test</code></li>
-            <li><code>openrig/docs/*</code> — ADR, C4, операционная онтология v2.0</li>
+            <li><code>landing/index.html</code>, <code>landing/guide.html</code>, <code>landing/passport.html</code> — публичные страницы EN/RU</li>
+            <li><code>tests/*.test.mjs</code> — <strong>18 тестовых наборов</strong> (88 проверок) на встроенном <code>node --test</code></li>
+            <li><code>openrig/docs/*</code> — <strong>ADR-0001..0011</strong>, C4, операционная онтология <strong>v2.1</strong>, <code>docs/USER_GUIDE.md</code></li>
           </ul>
         </div>
       </div>
@@ -578,7 +578,7 @@
       <div class="rules-bar">
         <div class="rule-item">
           <b data-i18n="r1.t">1. Чистый слой domain &amp; ontology</b>
-          <span data-i18n="r1.d">Модули в assets/domain/ и assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.</span>
+          <span data-i18n="r1.d">Все 14 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.</span>
         </div>
         <div class="rule-item">
           <b data-i18n="r2.t">2. Единый источник правды</b>
@@ -586,11 +586,11 @@
         </div>
         <div class="rule-item">
           <b data-i18n="r3.t">3. Неблокирующая аналитика</b>
-          <span data-i18n="r3.d">FleetIntelligenceEngine принимает снапшоты через setImmediate с изоляцией сбоев детекторов.</span>
+          <span data-i18n="r3.d">FleetIntelligenceEngine принимает снапшоты через setImmediate с изоляцией сбоев 6 детекторов и шумоочисткой.</span>
         </div>
         <div class="rule-item">
-          <b data-i18n="r4.t">4. Действия только по причине</b>
-          <span data-i18n="r4.d">Все 4 UI-поверхности берут кнопки из ACTION_DEFINITIONS; у здорового idle-узла 0 write-back кнопок.</span>
+          <b data-i18n="r4.t">4. Действия по причине и с защитой</b>
+          <span data-i18n="r4.d">Все UI-поверхности берут кнопки из actions.js; у здорового idle-узла 0 write-back кнопок; двойные клики гасятся ActionFlightGuard + 409.</span>
         </div>
       </div>
     </section>
@@ -598,7 +598,7 @@
     <!-- SECTION 3: OPERATIONAL ONTOLOGY -->
     <section id="ontology">
       <div class="sec-head">
-        <h2 data-i18n="s3.title">3. Операционная онтология v2.0 (Objects • Links • Actions)</h2>
+        <h2 data-i18n="s3.title">3. Операционная онтология v2.1 (Objects • Links • Actions)</h2>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span class="sec-tag">PALANTIR-STYLE DIGITAL TWIN</span>
           <a class="cta-btn" href="/demo?track=ontology" data-i18n="s3.tryDemo">▶ Открыть в демо</a>
@@ -612,19 +612,19 @@
               <tr><th>Object</th><th>PK</th><th data-i18n="s3.src">Источник / Роль</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>Rig</code></td><td><code>rigId</code></td><td>OpenRig <code>ps</code> / <code>/api/rigs</code></td></tr>
-              <tr><td><code>Seat</code></td><td><code>seatId</code></td><td>5-state FSM (<code>urgent/working/parked/waiting/idle</code>)</td></tr>
-              <tr><td><code>OccupantSession</code></td><td><code>sessionKey</code></td><td><code>ctxPct</code>, <code>ctxHistory</code>, токены, <code>estUsd</code></td></tr>
-              <tr><td><code>WorkChain</code></td><td><code>chainId</code></td><td><code>slice:</code> или union-find <code>q:</code>, цвет, <code>qaRounds</code></td></tr>
-              <tr><td><code>QueueObligation</code></td><td><code>qitemId</code></td><td>Отрезок Ганта: ожидание vs работа</td></tr>
-              <tr><td><code>Situation</code></td><td><code>situationId</code></td><td>Единое исключение <code>P0–P3</code> (Триаж/Радар/Звук)</td></tr>
-              <tr><td><code>ActionRecord</code></td><td><code>execId</code></td><td>Write-back след + статус <code>postcondition</code></td></tr>
+              <tr><td><code>Rig</code></td><td><code>rigId</code></td><td>OpenRig <code>ps</code> / <code>/api/rigs</code> / Universal Discovery</td></tr>
+              <tr><td><code>Seat</code></td><td><code>seatId</code></td><td>5-state FSM + <code>shellExited</code> + <code>activityTier</code> (12s гистерезис)</td></tr>
+              <tr><td><code>OccupantSession</code></td><td><code>sessionKey</code></td><td><code>ctxPct</code>, 6-band Inferno/Plasma, 24h/7d токены, <code>estUsd</code></td></tr>
+              <tr><td><code>WorkChain</code></td><td><code>chainId</code></td><td><code>slice:</code> или union-find <code>q:</code>, <code>qaRounds</code>, <code>isBounceBack</code>, <code>HandoffFlow</code></td></tr>
+              <tr><td><code>QueueObligation</code></td><td><code>qitemId</code></td><td>Отрезок Ганта (<code>subRow</code> bin-pack, Wait vs Work, <code>isNoise</code>)</td></tr>
+              <tr><td><code>Situation</code></td><td><code>situationId</code></td><td>Единое исключение <code>P0–P3</code> + <code>remediation</code> + <code>SeatDiagnosis</code></td></tr>
+              <tr><td><code>ActionRecord</code></td><td><code>execId</code></td><td>Write-back след + <code>X-Idempotency-Key</code> + статус <code>postcondition</code></td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="subcard">
-          <h3 data-i18n="s3.act.t">Реестр действий (Actions + Postconditions)</h3>
+          <h3 data-i18n="s3.act.t">Реестр действий (10 Actions + Postconditions)</h3>
           <table>
             <thead>
               <tr><th>Action</th><th data-i18n="s3.pre">Предусловие</th><th data-i18n="s3.post">Postcondition</th></tr>
@@ -636,7 +636,10 @@
               <tr><td><code>interrupt_execution</code></td><td><code>working || urgent</code></td><td>Остановка (<code>C-c</code>)</td></tr>
               <tr><td><code>compact_context</code></td><td><code>ctxPct &ge; 65 &amp;&amp; !Pi</code></td><td>Падение <code>ctxPct &ge; 10%</code></td></tr>
               <tr><td><code>copy_restart_seat</code></td><td><code>ctxPct &ge; 65 &amp;&amp; Pi</code></td><td>Копирование <code>rig restart</code></td></tr>
-              <tr><td><code>wake_parked_seat</code></td><td><code>isParked === true</code></td><td>Снятие <code>PARKED</code> / активность</td></tr>
+              <tr><td><code>wake_parked_seat</code></td><td><code>isParked &amp;&amp; !shellExited</code></td><td>Снятие <code>PARKED</code> / активность</td></tr>
+              <tr><td><code>nudge_queue</code></td><td>Затор/очередь на idle-промпте (<code>!shellExited</code>)</td><td>Переход в <code>working</code> / активность</td></tr>
+              <tr><td><code>copy_restart_shell</code></td><td><code>shellExited === true</code></td><td>Копирование <code>rig restart</code> (вместо <code>Enter</code>)</td></tr>
+              <tr><td><code>open_gantt_slice</code></td><td>Контекстный слайс / задержка</td><td>Фокус слайса в Ганте / <code>Handoff Flow</code></td></tr>
             </tbody>
           </table>
         </div>
@@ -647,7 +650,7 @@
     <section id="security">
       <div class="sec-head">
         <h2 data-i18n="s4.title">4. Безопасность и эксплуатационная устойчивость</h2>
-        <span class="sec-tag">HARDENED LOCALHOST</span>
+        <span class="sec-tag">HARDENED LOCALHOST + PAIRED REMOTE PWA</span>
       </div>
       <table>
         <thead>
@@ -656,13 +659,23 @@
         <tbody>
           <tr>
             <td><b>Loopback-изоляция</b></td>
-            <td><code>server.listen(PORT, '127.0.0.1')</code> — сервер недоступен из локальной сети</td>
+            <td><code>server.listen(PORT, '127.0.0.1')</code> — сервер недоступен из локальной сети по умолчанию</td>
             <td><span class="badge-ok">ACTIVE</span></td>
           </tr>
           <tr>
             <td><b>Аутентификация Write-Back</b></td>
             <td>Per-process <code>DECK_TOKEN</code> (24 байта), <code>crypto.timingSafeEqual</code>, проверка <code>Origin</code> и <code>application/json</code></td>
             <td><span class="badge-ok">ACTIVE</span></td>
+          </tr>
+          <tr>
+            <td><b>Защита Remote Mobile PWA</b></td>
+            <td>192-bit QR + 8-симв. PIN (wipe после 5 ошибок), <code>HttpOnly; Secure</code> 30d cookie, SHA-256 хэши (<code>0600</code>), <code>401</code> без пары, origin pinning</td>
+            <td><span class="badge-ok">TESTED</span></td>
+          </tr>
+          <tr>
+            <td><b>Идемпотентность управления</b></td>
+            <td>Клиентский <code>ActionFlightGuard</code> (per-seat lock + cooldown) + серверный <code>ServerIdempotencyCache</code> (<code>X-Idempotency-Key</code> 30s replay и <code>409</code> dedupe)</td>
+            <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
             <td><b>Защита от flag injection (tmux)</b></td>
@@ -681,7 +694,7 @@
           </tr>
           <tr>
             <td><b>Защита памяти и диска</b></td>
-            <td>Лимит тела <code>64KB</code> (<code>413</code>), <code>boundedMapSet</code> на кэшах, инкрементальное чтение JSONL по <code>offset</code></td>
+            <td>Лимит тела <code>64KB</code> (<code>413</code>), <code>boundedMapSet</code> на кэшах, оконное инкрементальное чтение JSONL по <code>offset</code></td>
             <td><span class="badge-sec">VERIFIED</span></td>
           </tr>
         </tbody>
@@ -692,25 +705,28 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 78/78</span>
+        <span class="sec-tag">NODE --TEST • 88/88</span>
       </div>
       <table>
         <thead>
-          <tr><th>Test Suite</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
+          <tr><th>Test Suite (18)</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, инкрементальный JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>applyTerminalPromptProbes</code></td><td><span class="badge-ok">8 PASS</span></td></tr>
-          <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, инвариант 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi, маппинг UX-транспортов <code>resolveActionFromFinding</code></td><td><span class="badge-ok">9 PASS</span></td></tr>
-          <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">4 PASS</span></td></tr>
+          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, инкрементальный JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>applyTerminalPromptProbes</code>, PWA-статика, <code>computeHistoryStats</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
+          <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi и <code>shellExited</code>, канонический <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
+          <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, <code>inferActionId</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>nudge_queue</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">5 PASS</span></td></tr>
           <tr><td><code>tests/ontology-snapshot.test.mjs</code></td><td><code>shouldIncludeLiveNode</code>, сброс <code>ctxHistory</code> при свапе, <code>buildOntologySnapshot</code>, чистые селекторы и эксклюзивные пулы <code>computeModelPools</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш), <code>parseInteractivePromptOptions</code>, <code>detectLiveHitlPrompt</code>, <code>classifyEdgeQueueStatus</code>, <code>thermal/audio/gantt</code>, паритет <code>DECK_I18N</code> EN/RU</td><td><span class="badge-ok">6 PASS</span></td></tr>
+          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш, 6 детекторов), шумоочистка <code>BottleneckDetector</code> &amp; <code>remediation</code>, <code>classifyTerminalScreen</code>, <code>LiveBlocker</code>, <code>Ceremony</code>, <code>DECK_I18N</code> EN/RU паритет</td><td><span class="badge-ok">14 PASS</span></td></tr>
+          <tr><td><code>tests/topology-layout.test.mjs</code></td><td><code>openrig/assets/domain/topology-layout.js</code>: классификация <code>activityTier</code> с 12с гистерезисом, режим <code>Dynamic</code> (Stage + Dormant Bench, clearance &ge;130px), режим <code>Fixed</code> (инвариантные ярусы без коллизий) и крайние размеры 0..17 узлов</td><td><span class="badge-ok">4 PASS</span></td></tr>
+          <tr><td><code>tests/gantt-model.test.mjs</code></td><td><code>openrig/assets/domain/gantt-model.js</code>: фильтр шума <code>isGanttItemNoise</code>, поддорожечная упаковка <code>packLaneIntervals</code> без перекрытий, <code>Wait vs Work</code> KPI, <code>By Agent</code> / <code>By Slice</code> и <code>Handoff Flow</code></td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/universal-discovery.test.mjs</code></td><td>Универсальное автообнаружение Claude Code / Codex JSONL + <code>tmux</code> панелей (без OpenRig), HITL-детектор и валидация target</td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/circuit-breaker.test.mjs</code></td><td><code>BudgetCircuitBreaker</code>: лимиты сессии и сиденья, burn-rate <code>$/ч</code>, QA bounce-back петли, режим <code>auto_stop (C-c)</code>, fleet cooldown и сброс</td><td><span class="badge-ok">4 PASS</span></td></tr>
           <tr><td><code>tests/telegram-bridge.test.mjs</code></td><td><code>TelegramHitlBridge</code>: inline-клавиатура, одноразовые nonces, блокировка чужих чатов, команды <code>/status /budget /stop /arm_breaker</code></td><td><span class="badge-ok">2 PASS</span></td></tr>
           <tr><td><code>tests/quest.test.mjs</code></td><td><code>openrig/assets/domain/quest.js</code>: конечный автомат 10-сек мини-квеста (идемпотентность, прогресс 3 шагов, gating live vs demo/tracks, сброс)</td><td><span class="badge-ok">3 PASS</span></td></tr>
-          <tr><td><code>tests/preferences.test.mjs</code></td><td><code>openrig/assets/domain/preferences.js</code>: сохранение и санитизация всех настроек UI в <code>localStorage</code>, миграция legacy-ключей, fallback рига</td><td><span class="badge-ok">3 PASS</span></td></tr>
+          <tr><td><code>tests/preferences.test.mjs</code></td><td><code>openrig/assets/domain/preferences.js</code>: сохранение и санитизация всех настроек UI (вкл. <code>graphLayout</code>) в <code>localStorage</code>, миграция legacy-ключей, fallback рига</td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/finops.test.mjs</code></td><td><code>openrig/assets/domain/finops.js</code> + оконный JSONL-парсер: амортизация подписок <code>24ч/7д/сессия</code>, сравнение <code>SUB vs PAYG</code>, ROI и рекомендации</td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/share-card.test.mjs</code></td><td><code>openrig/assets/domain/share-card.js</code>: генерация <code>1200×630</code> PNG Share Card (мини-Гант, <code>SUB vs API</code> ROI), режим анонимизации и XML-экранирование</td><td><span class="badge-ok">3 PASS</span></td></tr>
+          <tr><td><code>tests/qr.test.mjs</code></td><td><code>openrig/assets/domain/qr.js</code>: локальный генератор ISO 18004 QR-матриц и crisp SVG без внешних зависимостей и с защитой от переполнения</td><td><span class="badge-ok">2 PASS</span></td></tr>
           <tr><td><code>tests/remote-access.test.mjs</code></td><td><code>openrig/lib/remote-access.mjs</code>: динамический Live <code>manifest.webmanifest</code> (<code>/</code>), QR + 8-симв. PIN pairing, <code>HttpOnly; Secure</code> cookie, защита от перебора, origin pinning и отзыв устройств</td><td><span class="badge-ok">5 PASS</span></td></tr>
           <tr><td><code>tests/self-update.test.mjs</code></td><td><code>openrig/assets/domain/semver.js</code> + <code>openrig/lib/self-update.mjs</code>: SemVer-сравнение, опрос <code>npmjs.org</code> с TTL, детектор режима (<code>npm/npx/git</code>) и безопасный <code>applyUpdate</code> + рестарт</td><td><span class="badge-ok">5 PASS</span></td></tr>
           <tr><td><code>tests/action-guard.test.mjs</code></td><td><code>openrig/assets/domain/action-guard.js</code>: примитив <code>ActionFlightGuard</code> (защита контролов от двойных кликов и конкурентных команд на узел) + серверный <code>ServerIdempotencyCache</code> (<code>X-Idempotency-Key</code> и 409 dedupe)</td><td><span class="badge-ok">3 PASS</span></td></tr>
@@ -719,23 +735,23 @@
 
       <div class="cmd-strip">
         <div class="cmd-box"><span>Запуск локальной деки (:7440)</span>npm start</div>
-        <div class="cmd-box"><span>Прогон всех юнит-тестов</span>npm test</div>
+        <div class="cmd-box"><span>Прогон всех 88 юнит-тестов</span>npm test</div>
         <div class="cmd-box"><span>Синхронизация артефактов для Vercel</span>npm run sync:public</div>
       </div>
     </section>
   </main>
 
   <footer>
-    <span>💠 RigCommander // Operational Passport v3.1 (MIT Open Source)</span>
+    <span>💠 RigCommander // Operational Passport v3.2 (MIT Open Source)</span>
     <span>
-      <a href="/">Landing</a> · <a href="/demo">Live Demo</a> · <a href="/demo?track=tour">SA-DSS Tour</a> · <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
+      <a href="/">Landing</a> · <a href="/guide">User Guide</a> · <a href="/demo">Live Demo</a> · <a href="/demo?track=tour">SA-DSS Tour</a> · <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
     </span>
   </footer>
 
   <script>
     const I18N = {
       ru: {
-        badge: 'PASSPORT v3.1',
+        badge: 'PASSPORT v3.2',
         'nav.context': 'C4 Контекст',
         'nav.components': 'Модули',
         'nav.ontology': 'Онтология',
@@ -745,33 +761,33 @@
         'nav.demo': '▶ Live Demo',
         'hero.eyebrow': 'Архитектурный и операционный паспорт системы',
         'hero.title': 'RigCommander // Neural Command Deck',
-        'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / tmux). Объединяет телеметрию реального времени, операционную онтологию (Objects • Links • Actions • Audit), диаграмму Ганта, FinOps-мониторинг токенов и защищённый Human-in-the-Loop write-back.',
+        'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux & JSONL). Объединяет адаптивный граф (Динам/Фикс), операционную онтологию v2.1 (Objects • Links • Actions • Audit), поддорожечный Гант + Handoff Flow, FinOps-мониторинг, Remote Mobile PWA и идемпотентный Human-in-the-Loop write-back.',
         'kpi.class.l': 'Класс системы',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Архитектура',
         'kpi.arch.n': 'Local-First + Zero-Build ES Modules',
         'kpi.deps.l': 'Зависимости',
         'kpi.ont.l': 'Онтология',
-        'kpi.ont.n': '7 Objects • 7 Actions • Postcondition Audit',
+        'kpi.ont.n': '7 Objects • 10 Actions • Postcondition Audit',
         'kpi.tests.l': 'Автотесты',
-        'kpi.tests.n': 'node --test • 8 наборов (~0.2s)',
+        'kpi.tests.n': 'node --test • 18 наборов (~1s)',
         'kpi.sec.l': 'Граница доверия',
-        'kpi.sec.n': 'DECK_TOKEN + Origin + Key Allowlist',
+        'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
         's1.title': '1. Контекст системы и границы доверия (C4 Level 1)',
         's2.title': '2. Модульная структура и карта зависимостей (C4 Level 3)',
         'r1.t': '1. Чистый слой domain & ontology',
-        'r1.d': 'Модули в assets/domain/ и assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.',
+        'r1.d': 'Все 14 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.',
         'r2.t': '2. Единый источник правды',
         'r2.d': 'Правки вносятся только в openrig/ и landing/; папка public/ генерируется командой npm run sync:public.',
         'r3.t': '3. Неблокирующая аналитика',
-        'r3.d': 'FleetIntelligenceEngine принимает снапшоты через setImmediate с изоляцией сбоев детекторов.',
-        'r4.t': '4. Действия только по причине',
-        'r4.d': 'Все 4 UI-поверхности берут кнопки из ACTION_DEFINITIONS; у здорового idle-узла 0 write-back кнопок.',
-        's3.title': '3. Операционная онтология v2.0 (Objects • Links • Actions)',
+        'r3.d': 'FleetIntelligenceEngine принимает снапшоты через setImmediate с изоляцией сбоев 6 детекторов и шумоочисткой.',
+        'r4.t': '4. Действия по причине и с защитой',
+        'r4.d': 'Все UI-поверхности берут кнопки из actions.js; у здорового idle-узла 0 write-back кнопок; двойные клики гасятся ActionFlightGuard + 409.',
+        's3.title': '3. Операционная онтология v2.1 (Objects • Links • Actions)',
         's3.tryDemo': '▶ Открыть в демо',
         's3.obj.t': '7 Типов объектов (Objects)',
         's3.src': 'Источник / Роль',
-        's3.act.t': 'Реестр действий (Actions + Postconditions)',
+        's3.act.t': 'Реестр действий (10 Actions + Postconditions)',
         's3.pre': 'Предусловие',
         's3.post': 'Postcondition',
         's4.title': '4. Безопасность и эксплуатационная устойчивость',
@@ -782,7 +798,7 @@
         's5.cov': 'Покрытие'
       },
       en: {
-        badge: 'PASSPORT v3.1',
+        badge: 'PASSPORT v3.2',
         'nav.context': 'C4 Context',
         'nav.components': 'Modules',
         'nav.ontology': 'Ontology',
@@ -792,33 +808,33 @@
         'nav.demo': '▶ Live Demo',
         'hero.eyebrow': 'Architectural & Operational System Passport',
         'hero.title': 'RigCommander // Neural Command Deck',
-        'hero.sub': 'Local-first DSS SA Mission Control for autonomous AI coding fleets (OpenRig / tmux). Unifies real-time telemetry, Palantir-style Operational Ontology (Objects • Links • Actions • Audit), task Gantt chains, FinOps token tracking, and hardened Human-in-the-Loop write-back.',
+        'hero.sub': 'Local-first DSS SA Mission Control for autonomous AI coding fleets (OpenRig / Universal tmux & JSONL). Unifies adaptive Dynamic/Fixed topology, Operational Ontology v2.1 (Objects • Links • Actions • Audit), sub-lane Task Gantt + Handoff Flow, FinOps tracking, paired Live Mobile PWA, and idempotent HITL write-back.',
         'kpi.class.l': 'System Class',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Architecture',
         'kpi.arch.n': 'Local-First + Zero-Build ES Modules',
         'kpi.deps.l': 'Dependencies',
         'kpi.ont.l': 'Ontology',
-        'kpi.ont.n': '7 Objects • 7 Actions • Postcondition Audit',
+        'kpi.ont.n': '7 Objects • 10 Actions • Postcondition Audit',
         'kpi.tests.l': 'Automated Tests',
-        'kpi.tests.n': 'node --test • 8 suites (~0.2s)',
+        'kpi.tests.n': 'node --test • 18 suites (~1s)',
         'kpi.sec.l': 'Trust Boundary',
-        'kpi.sec.n': 'DECK_TOKEN + Origin + Key Allowlist',
+        'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
         's1.title': '1. System Context & Trust Boundaries (C4 Level 1)',
         's2.title': '2. Modular Structure & Dependency Rules (C4 Level 3)',
         'r1.t': '1. Pure domain & ontology layer',
-        'r1.d': 'Modules in assets/domain/ and assets/ontology/ have zero DOM coupling and are imported directly by node --test.',
+        'r1.d': 'All 14 modules in assets/domain/ and assets/ontology/ have zero DOM coupling and are imported directly by node --test.',
         'r2.t': '2. Single source of truth',
         'r2.d': 'Edits happen only in openrig/ and landing/; public/ is generated deterministically via npm run sync:public.',
         'r3.t': '3. Non-blocking analytics',
-        'r3.d': 'FleetIntelligenceEngine ingests snapshots via setImmediate with per-detector fault isolation.',
-        'r4.t': '4. Reason-driven actions only',
-        'r4.d': 'All 4 UI surfaces source buttons from ACTION_DEFINITIONS; healthy idle seats render 0 write-back buttons.',
-        's3.title': '3. Operational Ontology v2.0 (Objects • Links • Actions)',
+        'r3.d': 'FleetIntelligenceEngine ingests snapshots via setImmediate with fault isolation across 6 noise-filtered detectors.',
+        'r4.t': '4. Reason-driven, idempotent actions',
+        'r4.d': 'All UI surfaces source buttons from actions.js; healthy idle seats render 0 write-back buttons; double-sends are blocked by ActionFlightGuard + 409.',
+        's3.title': '3. Operational Ontology v2.1 (Objects • Links • Actions)',
         's3.tryDemo': '▶ Open in Demo',
         's3.obj.t': '7 Object Types',
         's3.src': 'Source / Role',
-        's3.act.t': 'Action Registry (Actions + Postconditions)',
+        's3.act.t': 'Action Registry (10 Actions + Postconditions)',
         's3.pre': 'Precondition',
         's3.post': 'Postcondition',
         's4.title': '4. Security & Operational Resilience',

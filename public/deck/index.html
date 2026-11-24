@@ -3526,18 +3526,13 @@
         primary.detectorId === 'parked_seat';
 
       if (isQueueOrParkedIssue && !agent.shellExited && agent.state !== 'urgent') {
-        const nudgePayload = deckLang === 'en'
-          ? 'Check your open queue (`rig queue list --owned`): pick up active tasks or close stale/duplicate stuck-sweep and HELD items.'
-          : 'Проверь открытую очередь (`rig queue list --owned`): возьми актуальные задачи в работу, а устаревшие или служебные stuck-sweep/HELD закрой.';
-        pushAction({
-          id: 'nudge_queue',
-          transport: 'tmux_raw',
-          seatId: agent.id,
-          payload: nudgePayload,
-          label: td('diag.nudgeQueueBtn'),
-          title: td('diag.nudgeQueueTip'),
-          tone: 'proceed'
-        }, 'border-color:rgba(0,255,157,0.55); color:#6ee7b7; background:rgba(0,255,157,0.12);');
+        pushAction(
+          buildNudgeQueueAction(agent.id, deckLang, {
+            label: td('diag.nudgeQueueBtn'),
+            title: td('diag.nudgeQueueTip')
+          }),
+          'border-color:rgba(0,255,157,0.55); color:#6ee7b7; background:rgba(0,255,157,0.12);'
+        );
 
         pushAction({
           id: 'open_diag_gantt',

@@ -6,6 +6,7 @@ export function inferActionId(type, payload) {
   const t = String(type || 'msg').trim();
   const p = String(payload || '').trim();
   if (t === 'raw' && p.startsWith('/compact')) return 'compact_context';
+  if (t === 'raw' && /rig queue list\s+--owned/i.test(p)) return 'nudge_queue';
   if (t === 'key') {
     if (p === 'C-c') return 'interrupt_execution';
     if (p === 'Escape') return 'cancel_prompt';
@@ -54,6 +55,18 @@ function evaluatePostcondition(rec, cur) {
   if (id === 'wake_parked_seat') {
     if (!cur.parked || (cur.lastActivityAt && cur.lastActivityAt !== base.lastActivityAt)) {
       return { verified: true, detail: !cur.parked ? 'Снят с PARKED' : 'Активность возобновлена' };
+    }
+    return { verified: false };
+  }
+
+  if (id === 'nudge_queue') {
+    if (
+      cur.displayState === 'working' ||
+      cur.displayState === 'running' ||
+      (base.parked && !cur.parked) ||
+      (cur.lastActivityAt && cur.lastActivityAt !== base.lastActivityAt)
+    ) {
+      return { verified: true, detail: `Сиденье взяло очередь (${cur.displayState})` };
     }
     return { verified: false };
   }

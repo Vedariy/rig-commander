@@ -4,6 +4,7 @@ import {
   CONTEXT_WARN_PCT,
   CONTEXT_CRIT_PCT,
   isPiHarness,
+  buildNudgeQueueAction,
   getSeatContextualActions,
   getManualHarnessActions,
   resolveActionFromFinding
@@ -187,4 +188,27 @@ test('parked seat whose agent exited to bare shell offers rig restart instead of
   assert.equal(resolved.id, 'copy_restart_shell');
   assert.equal(resolved.transport, 'clipboard');
   assert.equal(resolved.payload, 'rig restart dev-operator@rig');
+});
+
+test('buildNudgeQueueAction and resolveActionFromFinding(nudge_queue) enforce canonical prompt and shellExited guard', () => {
+  const ruAct = buildNudgeQueueAction('dev-owner@rig', 'ru');
+  assert.equal(ruAct.id, 'nudge_queue');
+  assert.equal(ruAct.transport, 'tmux_raw');
+  assert.match(ruAct.payload, /rig queue list --owned/);
+
+  const enAct = resolveActionFromFinding(
+    { kind: 'nudge_queue', seatTarget: 'dev-owner@rig', lang: 'en', label: '📨 Process queue' },
+    { id: 'dev-owner@rig', harness: 'codex', shellExited: false }
+  );
+  assert.equal(enAct.id, 'nudge_queue');
+  assert.equal(enAct.transport, 'tmux_raw');
+  assert.match(enAct.payload, /Check your open queue/);
+
+  const guarded = resolveActionFromFinding(
+    { kind: 'nudge_queue', seatTarget: 'dev-operator@rig', lang: 'ru' },
+    { id: 'dev-operator@rig', harness: 'terminal', shellExited: true }
+  );
+  assert.equal(guarded.id, 'copy_restart_shell');
+  assert.equal(guarded.transport, 'clipboard');
+  assert.equal(guarded.payload, 'rig restart dev-operator@rig');
 });

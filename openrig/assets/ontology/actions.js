@@ -47,10 +47,30 @@ function buildSeatContext(seat, screenText = '') {
 }
 
 /**
- * Canonical declarative Action Registry (Operational Ontology v2.0).
+ * Canonical declarative Action Registry (Operational Ontology v2.1).
  * Every write-back or navigation action declares its own precondition, transport,
- * reversibility, and UI descriptor so all 4 UI surfaces stay 100% consistent.
+ * reversibility, and UI descriptor so all UI surfaces stay 100% consistent.
  */
+export const NUDGE_QUEUE_PROMPTS = {
+  ru: 'Проверь открытую очередь (`rig queue list --owned`): возьми актуальные задачи в работу, а устаревшие или служебные stuck-sweep/HELD закрой.',
+  en: 'Check your open queue (`rig queue list --owned`): pick up active tasks or close stale/duplicate stuck-sweep and HELD items.'
+};
+
+export function buildNudgeQueueAction(seatId, lang = 'ru', overrides = {}) {
+  const id = String(seatId || '').trim();
+  const isEn = String(lang || '').toLowerCase() === 'en';
+  return {
+    id: 'nudge_queue',
+    transport: 'tmux_raw',
+    seatId: id,
+    payload: overrides.payload || (isEn ? NUDGE_QUEUE_PROMPTS.en : NUDGE_QUEUE_PROMPTS.ru),
+    label: overrides.label || (isEn ? '📨 Process queue' : '📨 Разобрать очередь'),
+    title: overrides.title || (isEn
+      ? `Send explicit queue-review prompt (rig queue list --owned) to ${id}`
+      : `Отправить явный промпт разбора очереди (rig queue list --owned) в ${id}`),
+    tone: overrides.tone || 'proceed'
+  };
+}
 export const ACTION_DEFINITIONS = [
   {
     id: 'proceed_prompt',
@@ -289,6 +309,24 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
       title: actionPlan.commandPreview || `Отправить Enter в запаркованное сиденье ${seatId}`,
       tone: 'warn'
     };
+  }
+
+  if (actionPlan.kind === 'nudge_queue' && seatId) {
+    if (targetSeat && targetSeat.shellExited) {
+      return {
+        id: 'copy_restart_shell',
+        transport: 'clipboard',
+        seatId,
+        payload: `rig restart ${seatId}`,
+        label: '🔄 Restart (shell)',
+        title: `Агент вышел в shell — скопировать rig restart ${seatId}`,
+        tone: 'warn'
+      };
+    }
+    return buildNudgeQueueAction(seatId, actionPlan.lang || 'ru', {
+      label: actionPlan.label,
+      title: actionPlan.commandPreview
+    });
   }
 
   if (actionPlan.kind === 'open_gantt_slice') {

@@ -120,3 +120,30 @@ test('ActionAuditLog enforces ring buffer capacity and records failed actions im
   const f = failedLog.record({ seatId: 's1', type: 'key', payload: '-X', httpStatus: 400, ok: false });
   assert.equal(f.postconditionStatus, 'failed');
 });
+
+test('inferActionId and ActionAuditLog verify nudge_queue when seat starts working or resumes activity', () => {
+  const payload = 'Check your open queue (`rig queue list --owned`): pick up active tasks.';
+  assert.equal(inferActionId('raw', payload), 'nudge_queue');
+
+  const log = new ActionAuditLog({ maxRecords: 5, timeoutMs: 30_000 });
+  const t0 = 1_700_000_000_000;
+  log.record({
+    seatId: 'dev-owner@rig',
+    type: 'raw',
+    payload,
+    httpStatus: 200,
+    ok: true,
+    baseline: { displayState: 'idle', parked: true, lastActivityAt: '2026-11-24T00:00:00Z' },
+    nowMs: t0
+  });
+  assert.equal(log.list(1)[0].actionId, 'nudge_queue');
+  assert.equal(log.list(1)[0].postconditionStatus, 'pending');
+
+  log.reconcileWithTelemetry([
+    { canonicalSessionName: 'dev-owner@rig', activityState: { display: 'working' }, lastActivityAt: '2026-11-24T00:00:05Z' }
+  ], { 'dev-owner@rig': { parked: true } }, t0 + 5_000);
+
+  const verified = log.list(1)[0];
+  assert.equal(verified.postconditionStatus, 'verified');
+  assert.match(verified.postconditionDetail, /working/);
+});

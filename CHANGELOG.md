@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Operational Ontology v2.1, Architectural Passport v3.2 & ADRs 0010–0011:**
+  - Canonicalized `nudge_queue` (`buildNudgeQueueAction` + `resolveActionFromFinding` + `shellExited` protection) inside `openrig/assets/ontology/actions.js` and added explicit `nudge_queue` inference & postcondition verification in `openrig/lib/action-audit.mjs`.
+  - Upgraded `openrig/docs/operational-ontology.md` to **v2.1** (covering `shellExited`, `activityTier` with 12s hysteresis, 6-band Inferno/Plasma thermal spectrum, `subRow` bin-packing, `isNoise`, `HandoffSequence`, `SeatDiagnosis`, `ActionFlightGuard` / `ServerIdempotencyCache`, and 10 canonical actions).
+  - Added `openrig/docs/adr/0010-control-plane-idempotency-remote-pwa-and-self-update.md` and `openrig/docs/adr/0011-adaptive-graph-seat-diagnosis-and-sublane-gantt.md` and registered them in `openrig/docs/adr/README.md`.
+  - Upgraded `/passport` (`landing/passport.html`) to **Passport v3.2** (exact **88 / 88 PASS** across **18** test suites, all **14** pure `assets/domain/*` modules, **6** Fleet Intelligence detectors, Remote PWA + `409` idempotency controls) and refreshed `/guide` (`landing/guide.html`) + `docs/USER_GUIDE.md` to **v3.2**.
 - **Operational Task Gantt & Chronological Handoff Flow (`openrig/assets/domain/gantt-model.js`, `openrig/index.html`, `deck.css`):**
   - **Sub-lane interval bin packing (`packLaneIntervals`):** concurrent tasks on the same agent or slice expand cleanly into non-overlapping sub-rows (eliminating smashed overlapping labels).
   - **Dual Timeline Grouping (`[By Agent | By Slice]`):** switch between agent utilization/concurrency and per-slice Trace Waterfall with QA bounce-back counters.

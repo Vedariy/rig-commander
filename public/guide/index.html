@@ -509,7 +509,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/" id="guideBrandLink">
         <span>💠 RIGCOMMANDER</span>
-        <span class="pill-tag">USER GUIDE v3.1</span>
+        <span class="pill-tag">USER GUIDE v3.2</span>
       </a>
       <nav class="nav-links">
         <a href="#quickstart"><span data-lang-block="ru">Старт</span><span data-lang-block="en">Quick Start</span></a>
@@ -649,29 +649,29 @@
           <div class="subcard">
             <div class="subcard-title">L0 · <span data-lang-block="ru">Верхняя полоса триажа (Triage Strip)</span><span data-lang-block="en">Top Triage Strip</span></div>
             <p>
-              <span data-lang-block="ru"><strong>Что смотреть первым:</strong> общий статус здоровья (<code class="inline">ЗДОРОВЬЕ: 85%</code>) и до 3 самых срочных ситуаций (HITL-промпты, контекст &ge; 75%, готовые к push слайсы). Справа — кнопки <strong>Советник флота</strong>, <strong>Авто-тормоз / TG</strong>, <strong>Карточка дня</strong>, <strong>QR на телефон</strong>, <strong>Гайд</strong>, <strong>Паспорт</strong> и переключатель <strong>EN/RU</strong>.</span>
-              <span data-lang-block="en"><strong>Check first:</strong> fleet <code class="inline">HEALTH %</code> and Top-3 actionable alerts (HITL prompts, context &ge; 75%, ready-to-push slices). Quick buttons open <strong>Fleet Advisor</strong>, <strong>Guardrails / TG</strong>, <strong>Share Card</strong>, <strong>Phone QR</strong>, <strong>Guide</strong>, <strong>Passport</strong>, and <strong>EN/RU</strong>.</span>
+              <span data-lang-block="ru"><strong>Что смотреть первым:</strong> общий бейдж здоровья (<code class="inline">ЗДОРОВЬЕ: 85%</code> — открывает отдельный <strong>План действий</strong>) и до 3 диверсифицированных ситуаций (HITL, контекст &ge; 75%, реальные заторы очереди). Справа — <strong>Советник флота</strong> (4 вкладки аналитики), <strong>Авто-тормоз / TG</strong>, <strong>Карточка дня</strong>, <strong>QR на телефон</strong>, автообновление <code class="inline">⬆ Update</code>, <strong>Гайд</strong>, <strong>Паспорт</strong> и <strong>EN/RU</strong>.</span>
+              <span data-lang-block="en"><strong>Check first:</strong> fleet <code class="inline">HEALTH %</code> (opens the focused <strong>Health &amp; Action Plan</strong>) and Top-3 seat-diverse alerts (HITL prompts, context &ge; 75%, real queue bottlenecks). Quick buttons open <strong>Fleet Advisor</strong> (4 analytical tabs), <strong>Guardrails / TG</strong>, <strong>Share Card</strong>, <strong>Phone QR</strong>, <code class="inline">⬆ Update</code>, <strong>Guide</strong>, <strong>Passport</strong>, and <strong>EN/RU</strong>.</span>
             </p>
           </div>
           <div class="subcard">
-            <div class="subcard-title">L1 · <span data-lang-block="ru">HUD, пулы моделей и центр (Граф ⇄ Гант)</span><span data-lang-block="en">HUD, Model Pools & Center (Graph ⇄ Gantt)</span></div>
+            <div class="subcard-title">L1 · <span data-lang-block="ru">Пулы моделей, Граф (Динам/Фикс) и Гант + Передачи</span><span data-lang-block="en">Model Pools, Adaptive Graph &amp; Task Gantt + Handoff Flow</span></div>
             <p>
-              <span data-lang-block="ru"><strong>Пулы моделей</strong> в шапке показывают пиковый нагрев контекста (<code class="inline">CTX%</code>) и расход 24ч по классам моделей. В центре — <strong>Магистрали вызовов</strong> (толщина линии = объём передач) и переключение на <strong>Гант задач (<kbd>G</kbd>)</strong>. Под графом — <strong>Дорожки слайсов</strong> (прогресс фичи от Spec до Push).</span>
-              <span data-lang-block="en"><strong>Model Pools</strong> show peak context load (<code class="inline">CTX%</code>) and 24h spend per model family. Center shows <strong>Call Highways</strong> (edge thickness = handoff volume) and toggles to <strong>Task Gantt (<kbd>G</kbd>)</strong>. Below sits <strong>Slice Swimlanes</strong> (Spec → Push delivery progress).</span>
+              <span data-lang-block="ru"><strong>Граф магистралей</strong> поддерживает 2 режима прямо в шапке: <strong>Динам</strong> (активные на верхней сцене, спящие — компактной скамьёй внизу) и <strong>Фикс</strong> (стабильные ролевые ярусы). По клавише <kbd>G</kbd> открывается <strong>Операционный Гант</strong>: поддорожки без наложений, <em>По агентам / По слайсам</em>, хронологический <strong>Handoff Flow</strong>, KPI ожидания и фильтр шума.</span>
+              <span data-lang-block="en"><strong>Call Highways Graph</strong> has a header toggle for <strong>Dynamic</strong> (active seats on the upper stage, sleepers docked as compact pills below) vs <strong>Fixed</strong> (stable role tiers). Press <kbd>G</kbd> for the <strong>Operational Task Gantt</strong>: non-overlapping sub-lanes, <em>By Agent / By Slice</em>, chronological <strong>Handoff Flow</strong>, Wait-vs-Work KPIs, and noise filtering.</span>
             </p>
           </div>
           <div class="subcard">
-            <div class="subcard-title">L2 · <span data-lang-block="ru">Радар ожиданий и Рентген магистрали</span><span data-lang-block="en">Wait Radar & Route X-Ray</span></div>
+            <div class="subcard-title">L2 · <span data-lang-block="ru">Радар ожиданий и Рентген магистрали</span><span data-lang-block="en">Wait Radar &amp; Route X-Ray</span></div>
             <p>
               <span data-lang-block="ru">Слева — <strong>Радар ожиданий</strong> (<code class="inline">Кто → Кого → Зачем ждёт</code>) с вкладками <em>Все / Блокеры / Задачи</em> и <strong>Журналом решений</strong>. Клик по любой линии на графе открывает <strong>Рентген магистрали</strong> — конверты сгруппированы по задачам; клик по конверту с несколькими событиями разворачивает хронологию с временными метками.</span>
               <span data-lang-block="en">Left panel is <strong>Wait Radar</strong> (<code class="inline">Who → Whom → Why</code>) with <em>All / Blockers / Tasks</em> tabs and <strong>Decisions Log</strong>. Clicking any graph highway opens <strong>Route X-Ray</strong>: envelopes grouped by task, clickable to expand timestamped round history.</span>
             </p>
           </div>
           <div class="subcard">
-            <div class="subcard-title">L3 · <span data-lang-block="ru">Паспорт узла, Live TMUX и Аудит действий</span><span data-lang-block="en">Node Passport, Live TMUX & Action Audit</span></div>
+            <div class="subcard-title">L3 · <span data-lang-block="ru">Паспорт узла, Диагноз, Live TMUX и Аудит</span><span data-lang-block="en">Node Passport, Diagnosis, Live TMUX &amp; Audit</span></div>
             <p>
-              <span data-lang-block="ru">Справа — выбранный агент: модель, % контекста, живой 80-строчный экран <code class="inline">tmux</code> (с <code class="inline">AUTO-FOLLOW</code>), автоматически распарсенные кнопки ответа, поле ручной команды, журнал <strong>Action Audit</strong> (подтверждает результат действия) и <strong>Рейтинг возвратов QA</strong>.</span>
-              <span data-lang-block="en">Right panel shows the selected seat: model, context fill, live 80-line <code class="inline">tmux</code> capture (<code class="inline">AUTO-FOLLOW</code>), parsed 1-click prompt buttons, manual command input, postcondition-verified <strong>Action Audit</strong>, and <strong>QA Rework Scorecard</strong>.</span>
+              <span data-lang-block="ru">Справа — выбранный агент: в самом верху блок <strong>Диагноз и что исправить</strong> (точные ожидающие задачи и кнопка <strong>📨 Разобрать очередь</strong>), живой 80-строчный экран <code class="inline">tmux</code> (<code class="inline">AUTO-FOLLOW</code>), распарсенные кнопки ответа с защитой от двойного клика (<code class="inline">409</code>), журнал <strong>Action Audit</strong> и <strong>Рейтинг возвратов QA</strong>.</span>
+              <span data-lang-block="en">Right panel shows the selected seat: top <strong>Diagnosis &amp; What to Fix</strong> card (exact pending queue items + 1-click <strong>📨 Process queue</strong>), live 80-line <code class="inline">tmux</code> capture (<code class="inline">AUTO-FOLLOW</code>), idempotency-guarded prompt pills, postcondition-verified <strong>Action Audit</strong>, and <strong>QA Rework Scorecard</strong>.</span>
             </p>
           </div>
         </div>
@@ -699,8 +699,8 @@
             <ul class="clean" style="margin-top:6px;">
               <li><strong><span data-lang-block="ru">Зелёная анимированная стрелка:</span><span data-lang-block="en">Animated green highway:</span></strong> <span data-lang-block="ru">конверт сейчас в работе (<code class="inline">in-progress</code>) прямо между этими узлами.</span><span data-lang-block="en">active <code class="inline">in-progress</code> handoff moving between those two seats.</span></li>
               <li><strong><span data-lang-block="ru">Оранжевый / красный пунктир:</span><span data-lang-block="en">Amber / coral dashed line:</span></strong> <span data-lang-block="ru">задача ждёт взятия (<code class="inline">pending</code>) или заблокирована на стороне получателя.</span><span data-lang-block="en">handoff waiting for pickup (<code class="inline">pending</code>) or blocked downstream.</span></li>
-              <li><strong><span data-lang-block="ru">Фоновая заливка внутри узла:</span><span data-lang-block="en">Inner node thermal fill:</span></strong> <span data-lang-block="ru">прогресс заполнения контекстного окна (<span style="color:#6ee7b7">до 55%</span> → <span style="color:#fde68a">55–74%</span> → <span style="color:#fda4af">&ge; 75%</span>).</span><span data-lang-block="en">context window saturation (<span style="color:#6ee7b7">&lt;55%</span> → <span style="color:#fde68a">55–74%</span> → <span style="color:#fda4af">&ge;75%</span>).</span></li>
-              <li><strong><span data-lang-block="ru">Штриховка в Ганте:</span><span data-lang-block="en">Hatched Gantt segment:</span></strong> <span data-lang-block="ru">время, которое конверт пролежал в очереди до начала реальной работы (сплошной цвет).</span><span data-lang-block="en">queue wait duration before actual work started (solid bar).</span></li>
+              <li><strong><span data-lang-block="ru">Терморейка контекста внутри карточки (6 диапазонов):</span><span data-lang-block="en">Inner node 6-band thermal rail:</span></strong> <span data-lang-block="ru">шкала Inferno/Plasma (<span style="color:#a78bfa">фиолетовый</span> → <span style="color:#38bdf8">голубой</span> → <span style="color:#fde68a">жёлтый</span> → <span style="color:#fb923c">оранжевый &ge;65%</span> → <span style="color:#fda4af">красный &ge;75%</span>) без конфликта с зелёным <code class="inline">WORKING</code>.</span><span data-lang-block="en">Inferno/Plasma spectrum (<span style="color:#a78bfa">violet</span> → <span style="color:#38bdf8">sky</span> → <span style="color:#fde68a">yellow</span> → <span style="color:#fb923c">orange &ge;65%</span> → <span style="color:#fda4af">red &ge;75%</span>) with zero green conflict against <code class="inline">WORKING</code>.</span></li>
+              <li><strong><span data-lang-block="ru">Штриховка и поддорожки в Ганте:</span><span data-lang-block="en">Hatched Gantt &amp; sub-lanes:</span></strong> <span data-lang-block="ru">штриховка — простой в очереди до начала работы (сплошной цвет); параллельные задачи автоматически расходятся по подстрокам без наложения.</span><span data-lang-block="en">hatched bar = queue wait before active execution (solid bar); concurrent tasks automatically expand into non-overlapping sub-rows.</span></li>
             </ul>
           </div>
         </div>
@@ -738,35 +738,35 @@
 
         <div class="playbook p-amber">
           <div class="playbook-head">
-            <strong>3. <span data-lang-block="ru">Запаркованный узел vs выход в голый shell</span><span data-lang-block="en">Parked Seat vs Bare Shell Exit</span></strong>
-            <span class="badge-chip chip-amber">P1–P3 • HOLD</span>
+            <strong>3. <span data-lang-block="ru">Затор очереди, запаркованный узел vs выход в shell</span><span data-lang-block="en">Queue Bottleneck, Parked Seat vs Bare Shell Exit</span></strong>
+            <span class="badge-chip chip-amber">P1–P3 • DIAGNOSIS</span>
           </div>
           <div class="playbook-body">
-            <span data-lang-block="ru">Если узел просто <strong>ЗАПАРКОВАН</strong> с открытыми обязательствами — нажмите <strong>⚡ Разбудить (Enter)</strong>. Если же процесс агента завершился и в <code class="inline">tmux</code> видна обычная строка <code class="inline">zsh/bash %</code>, классификатор экранов пометит узел как <strong>⚠️ СЕССИЯ В SHELL</strong> и вместо бесполезного <code class="inline">Enter</code> покажет кнопку копирования команды перезапуска <code class="inline">rig restart &lt;seat&gt;</code>.</span>
-            <span data-lang-block="en">For a normal <strong>PARKED</strong> seat with open work, click <strong>⚡ Wake (Enter)</strong>. If the AI process crashed back to a bare <code class="inline">zsh/bash</code> prompt, the terminal classifier marks it <strong>⚠️ SHELL EXITED</strong> and replaces the useless <code class="inline">Enter</code> button with a 1-click <code class="inline">Cmd</code> copy for <code class="inline">rig restart &lt;seat&gt;</code>.</span>
+            <span data-lang-block="ru">Кликните по карточке тревоги — вверху Паспорта узла откроется блок <strong>Диагноз и что исправить</strong> с точным списком ожидающих задач. Если агент сидит на чистом промпте, нажмите <strong>📨 Разобрать очередь</strong> (отправляет явную инструкцию <code class="inline">rig queue list --owned</code>, так как пустой <code class="inline">Enter</code> не запускает работу). Для обычного <strong>PARKED</strong> доступна кнопка <strong>⚡ Разбудить (Enter)</strong>; если процесс упал в голый <code class="inline">zsh/bash</code>, пульт покажет <strong>⚠️ СЕССИЯ В SHELL</strong> и кнопку копирования <code class="inline">rig restart &lt;seat&gt;</code>.</span>
+            <span data-lang-block="en">Click any topology alert to open <strong>Diagnosis &amp; What to Fix</strong> at the top of the Inspector showing the exact pending queue tasks. When the seat sits at an idle prompt, click <strong>📨 Process queue</strong> (sends an explicit <code class="inline">rig queue list --owned</code> prompt where bare <code class="inline">Enter</code> does nothing). Normal <strong>PARKED</strong> seats offer <strong>⚡ Wake (Enter)</strong>; crashed bare-shell seats flag <strong>⚠️ SHELL EXITED</strong> and swap to a 1-click <code class="inline">rig restart &lt;seat&gt;</code> copy.</span>
           </div>
         </div>
 
         <div class="playbook p-purple">
           <div class="playbook-head">
-            <strong>4. <span data-lang-block="ru">Анализ узких мест и кругов доработки QA</span><span data-lang-block="en">Bottlenecks, QA Rework Loops & Fleet Advisor</span></strong>
-            <span class="badge-chip chip-cyan">GANTT + ADVISOR</span>
+            <strong>4. <span data-lang-block="ru">Анализ узких мест: Гант, Handoff Flow и Советник</span><span data-lang-block="en">Bottlenecks, Handoff Flow &amp; Fleet Advisor</span></strong>
+            <span class="badge-chip chip-cyan">GANTT + SEQUENCE</span>
           </div>
           <div class="playbook-body">
-            <span data-lang-block="ru">Нажмите <kbd>G</kbd>, чтобы переключить граф на <strong>Гант задач</strong> (окна 1ч / 6ч / 24ч). Задачи с иконкой <code class="inline">🪃</code> прошли &gt;2 круга QA. Откройте <strong>💡 Советник флота</strong> в шапке — он раскладывает индекс здоровья (P0–P3) и даёт готовый <strong>Action Plan</strong>: каждый пункт ведёт сразу на проблемный узел или нужный фильтр.</span>
-            <span data-lang-block="en">Press <kbd>G</kbd> for the <strong>Task Gantt</strong> (1h / 6h / 24h windows). Rows marked <code class="inline">🪃</code> bounced through &gt;2 QA rounds. Open <strong>💡 Fleet Advisor</strong> in the top bar for the health score breakdown and a 1-click <strong>Action Plan</strong> that jumps straight to each offending seat or Gantt chain.</span>
+            <span data-lang-block="ru">Нажмите <kbd>G</kbd> для <strong>Ганта задач</strong> (<code class="inline">30м / 1ч / 6ч / 24ч</code> + зум <code class="inline">1× / 2× / 4×</code>). Служебный шум (<code class="inline">Wake escalation</code>) скрыт по умолчанию. Переключайтесь между <strong>По агентам</strong> и <strong>По слайсам</strong>, кликайте по чипу <strong>🔥 Главная задержка</strong>, открывайте <strong>🔀 Передачи (Handoff Flow)</strong> для хронологического разбора передач и возвратов QA (<code class="inline">🪃</code>), или кликайте по любому отрезку для нижнего <strong>Инспектора отрезка</strong>.</span>
+            <span data-lang-block="en">Press <kbd>G</kbd> for the <strong>Task Gantt</strong> (<code class="inline">30m / 1h / 6h / 24h</code> + <code class="inline">1× / 2× / 4×</code> zoom). System noise (<code class="inline">Wake escalation</code>) is filtered by default. Toggle <strong>By Agent</strong> vs <strong>By Slice</strong>, click the <strong>🔥 Top delay</strong> chip to spotlight the worst wait, switch to <strong>🔀 Handoff Flow</strong> to trace chronological handoffs and <code class="inline">🪃</code> QA bounce-backs, or click any bar to open the bottom <strong>Span Inspector</strong>.</span>
           </div>
-          <a class="playbook-link" href="/demo?track=advisor"><span data-lang-block="ru">▶ Открыть Советник флота в демо</span><span data-lang-block="en">▶ Open Fleet Advisor in Demo</span> →</a>
+          <a class="playbook-link" href="/demo?track=gantt"><span data-lang-block="ru">▶ Открыть Гант и Handoff Flow в демо</span><span data-lang-block="en">▶ Open Gantt &amp; Handoff Flow in Demo</span> →</a>
         </div>
 
         <div class="playbook p-green">
           <div class="playbook-head">
-            <strong>5. <span data-lang-block="ru">Фокус на одном риге / срезе и копирование CLI</span><span data-lang-block="en">Focusing a Rig / Slice & Unified Cmd Copy</span></strong>
+            <strong>5. <span data-lang-block="ru">Режимы графа (Динам/Фикс), фокус и копирование CLI</span><span data-lang-block="en">Graph Modes (Dynamic/Fixed), Focus &amp; CLI Copy</span></strong>
             <span class="badge-chip chip-green">ERGONOMICS</span>
           </div>
           <div class="playbook-body">
-            <span data-lang-block="ru">Выберите конкретный риг в выпадающем списке шапки — пульт автоматически уберёт повторяющийся суффикс <code class="inline">@имя-рига</code> со всех карточек. Клик по чипу <strong>СРЕЗ</strong> подсветит только нужный поток задач (сброс — по чипу <strong>ВСЕ ПОТОКИ</strong>). Любая кнопка <strong>Cmd ⧉</strong> на конверте, узле или в шапке копирует готовую CLI-команду (<code class="inline">rig queue show ... --full</code>, <code class="inline">tmux attach</code>, <code class="inline">rig status</code>) в буфер.</span>
-            <span data-lang-block="en">Pick a single rig from the top dropdown to strip repetitive <code class="inline">@rig-name</code> suffixes everywhere. Click a <strong>SLICE</strong> chip to spotlight one feature flow (or <strong>ALL FLOWS</strong> to reset). Every <strong>Cmd ⧉</strong> button across envelopes, nodes, and the HUD copies the exact CLI command (<code class="inline">rig queue show</code>, <code class="inline">tmux attach</code>, <code class="inline">rig status</code>).</span>
+            <span data-lang-block="ru">Переключатель <strong>[Динам | Фикс]</strong> в шапке графа выбирает адаптивную сцену с нижней скамьёй спящих либо стабильные ролевые ярусы. Выбор одного рига автоматически убирает суффикс <code class="inline">@имя-рига</code>, чип <strong>СРЕЗ</strong> подсвечивает поток задачи, а любая кнопка <strong>Cmd ⧉</strong> копирует точную CLI-команду (<code class="inline">rig queue show</code>, <code class="inline">tmux attach</code>, <code class="inline">rig status</code>).</span>
+            <span data-lang-block="en">The header <strong>[Dynamic | Fixed]</strong> toggle picks between an active-stage + compact dormant bench layout or invariant role tiers. Picking a single rig strips repetitive <code class="inline">@rig-name</code> suffixes, <strong>SLICE</strong> chips spotlight one flow, and every <strong>Cmd ⧉</strong> button copies the exact CLI command (<code class="inline">rig queue show</code>, <code class="inline">tmux attach</code>, <code class="inline">rig status</code>).</span>
           </div>
         </div>
       </section>
@@ -955,7 +955,7 @@
   </div>
 
   <footer>
-    <span>💠 RigCommander // Operator User Guide v3.1</span>
+    <span>💠 RigCommander // Operator User Guide v3.2</span>
     <span style="display:flex; gap:16px; flex-wrap:wrap;">
       <a href="/" id="footerHomeLink"><span data-lang-block="ru">Главная / Пульт</span><span data-lang-block="en">Home / Deck</span></a>
       <a href="/passport"><span data-lang-block="ru">Паспорт проекта</span><span data-lang-block="en">Project Passport</span></a>
