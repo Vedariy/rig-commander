@@ -341,7 +341,12 @@ export const DECK_I18N = {
     'advisor.switchHealth': '🩺 Health & Plan',
     'advisor.switchAdvisor': '💡 Analytics',
     'advisor.openAnalyticsCta': '💡 Open Full Advisor Analytics (Findings, QA, Budget, WWR) →',
-    'advisor.backToHealthCta': '🩺 Health & Action Plan'
+    'advisor.backToHealthCta': '🩺 Health & Action Plan',
+    'graph.layoutDynamic': 'Dynamic',
+    'graph.layoutFixed': 'Fixed',
+    'graph.layoutDynamicTip': 'Dynamic layout: active & communicating nodes take center stage, sleeping nodes dock compactly at the bottom',
+    'graph.layoutFixedTip': 'Fixed layout: every agent keeps its stable role-tiered position (sleeping nodes stay compact in place)',
+    'graph.dormantBench': 'DORMANT'
   },
   ru: {
     'doc.title': 'RIGCOMMANDER // NEURAL COMMAND DECK v3.1',
@@ -685,7 +690,12 @@ export const DECK_I18N = {
     'advisor.switchHealth': '🩺 Здоровье и план',
     'advisor.switchAdvisor': '💡 Аналитика',
     'advisor.openAnalyticsCta': '💡 Открыть полную аналитику Советника (Находки, QA, Бюджет, WWR) →',
-    'advisor.backToHealthCta': '🩺 Здоровье и План действий'
+    'advisor.backToHealthCta': '🩺 Здоровье и План действий',
+    'graph.layoutDynamic': 'Динам',
+    'graph.layoutFixed': 'Фикс',
+    'graph.layoutDynamicTip': 'Динамическая раскладка: активные и обменивающиеся узлы в фокусе сверху, спящие компактно выстроены снизу',
+    'graph.layoutFixedTip': 'Фиксированная раскладка: каждый агент остаётся на своём ролевом месте (спящие сжимаются на месте)',
+    'graph.dormantBench': 'СПЯЩИЕ'
   }
 };
 

@@ -14,6 +14,7 @@ export const DEFAULT_DECK_PREFS = Object.freeze({
   hideIdleNodes: false,
   radarFilter: 'all', // 'all' | 'blockers' | 'tasks'
   centerView: 'graph', // 'graph' | 'gantt'
+  graphLayout: 'dynamic', // 'dynamic' | 'fixed'
   ganttWindowH: 6, // 1 | 6 | 24
   density: 'fit', // 'fit' | 'detailed'
   sidebarLeftCollapsed: false,
@@ -29,6 +30,7 @@ export const DEFAULT_DECK_PREFS = Object.freeze({
 
 const VALID_RADAR = new Set(['all', 'blockers', 'tasks']);
 const VALID_CENTER = new Set(['graph', 'gantt']);
+const VALID_GRAPH_LAYOUT = new Set(['dynamic', 'fixed']);
 const VALID_GANTT_H = new Set([1, 6, 24]);
 const VALID_DENSITY = new Set(['fit', 'detailed']);
 const VALID_INSP_TAB = new Set(['rules', 'fallback', 'memory']);
@@ -51,6 +53,7 @@ export function sanitizeDeckPrefs(raw = {}) {
     hideIdleNodes: typeof src.hideIdleNodes === 'boolean' ? src.hideIdleNodes : DEFAULT_DECK_PREFS.hideIdleNodes,
     radarFilter: VALID_RADAR.has(src.radarFilter) ? src.radarFilter : DEFAULT_DECK_PREFS.radarFilter,
     centerView: VALID_CENTER.has(src.centerView) ? src.centerView : DEFAULT_DECK_PREFS.centerView,
+    graphLayout: VALID_GRAPH_LAYOUT.has(src.graphLayout) ? src.graphLayout : DEFAULT_DECK_PREFS.graphLayout,
     ganttWindowH: VALID_GANTT_H.has(ganttNum) ? ganttNum : DEFAULT_DECK_PREFS.ganttWindowH,
     density: VALID_DENSITY.has(src.density) ? src.density : DEFAULT_DECK_PREFS.density,
     sidebarLeftCollapsed: typeof src.sidebarLeftCollapsed === 'boolean' ? src.sidebarLeftCollapsed : DEFAULT_DECK_PREFS.sidebarLeftCollapsed,

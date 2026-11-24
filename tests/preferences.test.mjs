@@ -25,6 +25,7 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
     hideIdleNodes: true,
     radarFilter: 'blockers',
     centerView: 'gantt',
+    graphLayout: 'fixed',
     ganttWindowH: 24,
     density: 'detailed',
     sidebarLeftCollapsed: true,
@@ -40,6 +41,7 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
   assert.equal(clean.hideIdleNodes, true);
   assert.equal(clean.radarFilter, 'blockers');
   assert.equal(clean.centerView, 'gantt');
+  assert.equal(clean.graphLayout, 'fixed');
   assert.equal(clean.ganttWindowH, 24);
   assert.equal(clean.density, 'detailed');
   assert.equal(clean.sidebarLeftCollapsed, true);
@@ -53,6 +55,7 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
     rigFilter: '<script>alert(1)</script>',
     radarFilter: 'unknown',
     centerView: 'table',
+    graphLayout: 'chaotic',
     ganttWindowH: 999,
     density: 'huge',
     selectedAgentId: 'bad;rm -rf /',

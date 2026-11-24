@@ -211,6 +211,10 @@
         <span id="centerPanelTitle" data-i18n="center.graphTitle">🕸️ МАГИСТРАЛИ ВЫЗОВОВ (ШИРИНА ЛИНИИ = ЧИСЛО ПЕРЕДАЧ В ОЧЕРЕДИ, НАВЕДИ ДЛЯ ФОКУСА)</span>
         <span style="display:flex; align-items:center; gap:8px;">
           <span id="activeFilterLabel" style="color:#00ff9d" data-i18n="center.allHighways">ВСЕ МАГИСТРАЛИ</span>
+          <div class="hud-segmented-group graph-layout-switch" id="graphLayoutSwitch" role="group" aria-label="Graph layout mode">
+            <button type="button" class="hud-segment-btn active" id="btnLayoutDynamic" onclick="setGraphLayoutMode('dynamic')" data-i18n="graph.layoutDynamic">Динам</button>
+            <button type="button" class="hud-segment-btn" id="btnLayoutFixed" onclick="setGraphLayoutMode('fixed')" data-i18n="graph.layoutFixed">Фикс</button>
+          </div>
           <button class="hud-segment-btn active" id="btnViewGraph" onclick="setCenterView('graph')" data-i18n="center.btnGraph">🕸️ ГРАФ</button>
           <button class="hud-segment-btn" id="btnViewGantt" onclick="setCenterView('gantt')" data-i18n="center.btnGantt">📊 ГАНТ</button>
           <button type="button" class="widget-hint" data-hint-key="hint.graph" aria-label="Info">?</button>
@@ -242,6 +246,7 @@
           <g id="svgEdgesGroup"></g>
         </svg>
 
+        <div class="dormant-bench-divider" id="dormantBenchDivider"><span class="dormant-bench-label" id="dormantBenchLabel"></span></div>
         <div class="nodes-layer" id="nodesLayer"></div>
         <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()"></div>
         <div class="edge-xray-drawer" id="edgeXrayDrawer"></div>
@@ -994,6 +999,12 @@
     let budgetWindow = 'h24'; // 'h24' | 'd7' | 'session'
     let billingPlans = null;
     let centerViewMode = localStorage.getItem('openrig_center_view') === 'gantt' ? 'gantt' : 'graph';
+    let graphLayoutMode = 'dynamic'; // 'dynamic' | 'fixed'
+    const nodeLastActiveAt = new Map();
+    const TOPOLOGY_STAGE_COOLDOWN_MS = 12000;
+    let topologyTweenRaf = null;
+    let topologyHasInitialLayout = false;
+    let topologyResizeObserver = null;
     let ganttWindowH = [1, 6, 24].includes(Number(localStorage.getItem('openrig_gantt_window')))
       ? Number(localStorage.getItem('openrig_gantt_window'))
       : 6;
@@ -1320,7 +1331,7 @@
         activityLabel: '🔵 IDLE',
         callsIn: 0,
         callsOut: 0,
-        reworkBadge: '📐 Spec & Arch',
+        reworkBadge: null,
         reworkClass: 'chip-rework-good',
         cwd: liveNode.cwd ? liveNode.cwd.split('/').pop() : 'core-platform',
         port: '—',
@@ -1690,6 +1701,7 @@
         const isVisibleSlice = !hasSliceMatch || isEdgeInSlice({ from, to, slice });
         const isHoveredMatch = !hoveredAgentId || from === hoveredAgentId || to === hoveredAgentId;
         el.classList.toggle('dimmed', !isVisibleSlice || !isHoveredMatch);
+        el.classList.toggle('hover-focus', Boolean(hoveredAgentId && isHoveredMatch));
       });
     }
 
@@ -1755,6 +1767,73 @@
       return tokSpan + callSpan;
     }
 
+    function renderNodeSpecMetaHtml(agent, burn) {
+      const parts = [];
+      const harness = String(agent.harness || '').trim();
+      const model = String(agent.model || '').trim();
+      if (harness) {
+        parts.push(`<span class="spec-harness">${escapeHtml(harness)}</span>`);
+      }
+      if (model && model.toLowerCase() !== harness.toLowerCase()) {
+        parts.push(`<span class="spec-model">${escapeHtml(model)}</span>`);
+      }
+      // Show real QA rework metric only (strip leading emoji/noise; never duplicate static role or ctx%)
+      const rawRework = String(agent.reworkBadge || '').trim();
+      if (rawRework && !/Spec\s*&\s*Arch|Watchdog/i.test(rawRework)) {
+        const cleanRework = rawRework.replace(/^[\p{Extended_Pictographic}\uFE0F\s]+/u, '').trim();
+        if (cleanRework) {
+          const isWarn = (agent.reworkClass || '').includes('warn');
+          parts.push(`<span class="spec-qa ${isWarn ? 'is-warn' : ''}">${escapeHtml(cleanRework)}</span>`);
+        }
+      }
+      // Show ETA to 75% ONLY when backed by a real measured positive burn rate (no fabricated 20%/h fallback!)
+      if (typeof agent.ctxPct === 'number' && agent.ctxPct >= 65 && agent.ctxPct < 75 && burn && typeof burn.perHour === 'number' && burn.perHour > 0.5) {
+        const etaMin = Math.max(1, Math.round(((75 - agent.ctxPct) / burn.perHour) * 60));
+        const etaLabel = deckLang === 'en' ? `~${etaMin}m to 75%` : `~${etaMin}м до 75%`;
+        parts.push(`<span class="spec-eta" title="${escapeHtml(burn.label || '')}">${escapeHtml(etaLabel)}</span>`);
+      }
+      return parts.join('<span class="spec-sep">·</span>');
+    }
+
+    function renderDormantFlagHtml(agent) {
+      if (!agent || agent.state !== 'waiting') return '';
+      const count = agent.assignedWorkCount || 1;
+      return agent.shellExited ? `⚠️ ${count}` : `🟠 ${count}`;
+    }
+
+    function updateGraphLayoutSwitchUi() {
+      const sw = document.getElementById('graphLayoutSwitch');
+      const bDyn = document.getElementById('btnLayoutDynamic');
+      const bFix = document.getElementById('btnLayoutFixed');
+      if (sw) sw.style.display = centerViewMode === 'gantt' ? 'none' : '';
+      if (bDyn) {
+        bDyn.classList.toggle('active', graphLayoutMode === 'dynamic');
+        bDyn.textContent = td('graph.layoutDynamic');
+        bDyn.title = td('graph.layoutDynamicTip');
+      }
+      if (bFix) {
+        bFix.classList.toggle('active', graphLayoutMode === 'fixed');
+        bFix.textContent = td('graph.layoutFixed');
+        bFix.title = td('graph.layoutFixedTip');
+      }
+    }
+
+    function setGraphLayoutMode(mode, skipPersist = false) {
+      const nextMode = mode === 'fixed' ? 'fixed' : 'dynamic';
+      if (graphLayoutMode === nextMode && !skipPersist) {
+        updateGraphLayoutSwitchUi();
+        return;
+      }
+      graphLayoutMode = nextMode;
+      if (!skipPersist) {
+        persistDeckPref({ graphLayout: graphLayoutMode });
+      }
+      updateGraphLayoutSwitchUi();
+      if (centerViewMode !== 'gantt') {
+        renderTopology();
+      }
+    }
+
     // ===== GANTT VIEW: one chain = one color =====
     // GANTT_LONG_WAIT_MS, ganttChainColor, ganttRoleRank imported from /assets/domain/gantt-model.js
 
@@ -1772,6 +1851,7 @@
       const bT = document.getElementById('btnViewGantt');
       if (bG) bG.classList.toggle('active', !isGantt);
       if (bT) bT.classList.toggle('active', isGantt);
+      updateGraphLayoutSwitchUi();
       const title = document.getElementById('centerPanelTitle');
       if (title) {
         title.textContent = isGantt ? td('center.ganttTitle') : td('center.graphTitle');
@@ -2069,7 +2149,8 @@
 
       const activeEndpointIds = new Set();
       EDGES.forEach(e => {
-        if (e.liveActive) {
+        const st = String(e.queueStatus || (e.liveActive ? 'live' : 'ghost')).toLowerCase();
+        if (st !== 'ghost') {
           activeEndpointIds.add(e.from);
           activeEndpointIds.add(e.to);
         }
@@ -2100,6 +2181,110 @@
         }
       }
 
+      // Compute Adaptive (Dynamic Stage + Dormant Bench) or Fixed Role-Tiered layout in real canvas pixels
+      const cw = nodesLayer.clientWidth || 1000;
+      const ch = nodesLayer.clientHeight || 510;
+      const isDetailed = document.body.classList.contains('density-detailed');
+      const visibleAgents = AGENTS.filter(a => {
+        const isRigMatch = currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter);
+        return isRigMatch && !collapsedIdleIds.has(a.id);
+      });
+
+      const nowMs = Date.now();
+      const recentActiveIds = new Set();
+      if (topologyHasInitialLayout) {
+        for (const a of visibleAgents) {
+          if (a.state === 'working' || a.state === 'urgent' || activeEndpointIds.has(a.id)) {
+            nodeLastActiveAt.set(a.id, nowMs);
+          }
+          const lastAt = nodeLastActiveAt.get(a.id);
+          if (typeof lastAt === 'number' && (nowMs - lastAt) <= TOPOLOGY_STAGE_COOLDOWN_MS) {
+            recentActiveIds.add(a.id);
+          }
+        }
+      }
+
+      const measuredBoxes = {};
+      const visibleById = new Map(visibleAgents.map(a => [a.id, a]));
+      nodesLayer.querySelectorAll('.agent-node').forEach(domEl => {
+        const aid = domEl.getAttribute('data-agent-id');
+        if (!aid || aid === hoveredAgentId || domEl.style.display === 'none') return;
+        const ag = visibleById.get(aid);
+        if (!ag) return;
+        const nameEl = domEl.querySelector('.node-name');
+        const expectedTitle = getNodeDisplayTitle(ag);
+        // Ignore stale DOM measurements when rig filter or title just changed!
+        if (nameEl && nameEl.textContent !== expectedTitle) return;
+        if (domEl.offsetWidth > 30 && domEl.offsetHeight > 16) {
+          measuredBoxes[aid] = {
+            width: domEl.offsetWidth,
+            height: domEl.offsetHeight,
+            tier: domEl.getAttribute('data-activity-tier') || 'active',
+            detailed: isDetailed
+          };
+        }
+      });
+
+      const layoutResult = (typeof computeTopologyLayout === 'function')
+        ? computeTopologyLayout({
+            agents: visibleAgents.map(a => ({ ...a, displayTitle: getNodeDisplayTitle(a) })),
+            edges: EDGES,
+            mode: graphLayoutMode,
+            canvasWidth: cw,
+            canvasHeight: ch,
+            detailed: isDetailed,
+            measuredBoxes,
+            recentActiveIds
+          })
+        : { positions: {}, tiers: {}, benchEdgeById: {}, benchSeparatorY: null, activeCount: visibleAgents.length, dormantCount: 0 };
+
+      const benchDiv = document.getElementById('dormantBenchDivider');
+      const benchLbl = document.getElementById('dormantBenchLabel');
+      if (benchDiv) {
+        if (layoutResult.benchSeparatorY != null && layoutResult.dormantCount > 0) {
+          benchDiv.style.top = `${layoutResult.benchSeparatorY}%`;
+          if (benchLbl) benchLbl.textContent = `${td('graph.dormantBench')} · ${layoutResult.dormantCount}`;
+          benchDiv.classList.add('visible');
+        } else {
+          benchDiv.classList.remove('visible');
+        }
+      }
+
+      const targetPositions = {};
+      const startPositions = {};
+      let maxPosDelta = 0;
+      for (const a of visibleAgents) {
+        const pos = layoutResult.positions[a.id];
+        if (pos) {
+          startPositions[a.id] = { x: a.x, y: a.y };
+          targetPositions[a.id] = { x: pos.x, y: pos.y };
+          const d = Math.hypot(pos.x - a.x, pos.y - a.y);
+          if (d > maxPosDelta) maxPosDelta = d;
+        }
+      }
+
+      const prefersReducedMotion = Boolean(
+        window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      );
+      const shouldAnimateLayout = Boolean(
+        topologyHasInitialLayout &&
+        !prefersReducedMotion &&
+        maxPosDelta >= 0.8 &&
+        nodesLayer.querySelectorAll('.agent-node').length === AGENTS.length
+      );
+
+      if (!shouldAnimateLayout) {
+        for (const a of visibleAgents) {
+          if (targetPositions[a.id]) {
+            a.x = targetPositions[a.id].x;
+            a.y = targetPositions[a.id].y;
+          }
+        }
+      }
+      if (visibleAgents.length > 0) {
+        topologyHasInitialLayout = true;
+      }
+
       const hasSliceMatch = currentSliceFilter !== 'all' && activeEdges.length > 0;
       const shouldDimByContext = Boolean(hoveredAgentId || hasSliceMatch);
       const existingNodes = nodesLayer.querySelectorAll('.agent-node');
@@ -2118,6 +2303,8 @@
           const isSelected = agent.id === selectedAgentId;
           const isDimmed = Boolean(shouldDimByContext && !connectedNodeIds.has(agent.id));
           const calmClass = agent.isAnomaly ? 'calm-anomaly' : 'calm-normal';
+          const tier = layoutResult.tiers[agent.id] || 'active';
+          const benchEdge = layoutResult.benchEdgeById[agent.id] || '';
           const ledClass =
             agent.state === 'urgent' ? 'led-urgent' :
             agent.state === 'working' ? 'led-working' :
@@ -2125,6 +2312,9 @@
 
           el.className = `agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}`;
           el.setAttribute('data-thermal-tier', thermal.tier || 'none');
+          el.setAttribute('data-activity-tier', tier);
+          if (benchEdge) el.setAttribute('data-bench-edge', benchEdge);
+          else el.removeAttribute('data-bench-edge');
           el.style.left = `${agent.x}%`;
           el.style.top = `${agent.y}%`;
           el.style.setProperty('--ctx-color', thermal.color);
@@ -2143,8 +2333,14 @@
             }
           }
 
-          const modelEl = el.querySelector('.chip-model');
-          if (modelEl) modelEl.textContent = `🧠 ${agent.model}`;
+          const dormantFlagEl = el.querySelector('.node-dormant-flag');
+          if (dormantFlagEl) {
+            const nextFlag = renderDormantFlagHtml(agent);
+            if (dormantFlagEl.textContent !== nextFlag) {
+              dormantFlagEl.textContent = nextFlag;
+              dormantFlagEl.title = agent.activityLabel || '';
+            }
+          }
 
           const nameEl = el.querySelector('.node-name');
           if (nameEl) {
@@ -2156,23 +2352,12 @@
           }
 
           const burn = computeBurn(agent, deckLang);
-          let urgentThermalHtml = '';
-          if (typeof agent.ctxPct === 'number' && agent.ctxPct >= 65) {
-            const isCrit = agent.ctxPct >= 75;
-            const burnRate = burn.perHour > 0 ? burn.perHour : 20;
-            const etaMin = Math.max(1, Math.round(((75 - agent.ctxPct) / burnRate) * 60));
-            const etaLabel = isCrit ? 'ПОРОГ 75%' : `~${etaMin}м`;
-            urgentThermalHtml = `<span class="chip chip-urgent-thermal ${isCrit ? 'is-critical' : ''}" title="Контекст: ${agent.ctxPct}%. ${burn.label}">🔥 ${agent.ctxPct}% (${etaLabel})</span>`;
-          }
-
           const badgeRowEl = el.querySelector('.badge-row');
           if (badgeRowEl) {
-            badgeRowEl.innerHTML = `
-              <span class="chip chip-harness">⚙️ ${agent.harness}</span>
-              <span class="chip chip-model">🧠 ${agent.model}</span>
-              ${urgentThermalHtml}
-              ${agent.reworkBadge ? `<span class="chip ${agent.reworkClass || 'chip-rework-good'}">${agent.reworkBadge}</span>` : ''}
-            `;
+            const nextSpecHtml = renderNodeSpecMetaHtml(agent, burn);
+            if (badgeRowEl.innerHTML !== nextSpecHtml) {
+              badgeRowEl.innerHTML = nextSpecHtml;
+            }
           }
 
           const ctxLabelEl = el.querySelector('.ctx-thermal-label');
@@ -2209,25 +2394,21 @@
           const isHidden = collapsedIdleIds.has(agent.id) || !isRigMatch;
           const isDimmed = Boolean(hoveredAgentId && !connectedNodeIds.has(agent.id));
           const calmClass = agent.isAnomaly ? 'calm-anomaly' : 'calm-normal';
+          const tier = layoutResult.tiers[agent.id] || 'active';
+          const benchEdge = layoutResult.benchEdgeById[agent.id] || '';
           const ledClass =
             agent.state === 'urgent' ? 'led-urgent' :
             agent.state === 'working' ? 'led-working' :
             agent.state === 'waiting' ? 'led-waiting' : 'led-idle';
 
           const burn = computeBurn(agent, deckLang);
-          let urgentThermalHtml = '';
-          if (typeof agent.ctxPct === 'number' && agent.ctxPct >= 65) {
-            const isCrit = agent.ctxPct >= 75;
-            const burnRate = burn.perHour > 0 ? burn.perHour : 20;
-            const etaMin = Math.max(1, Math.round(((75 - agent.ctxPct) / burnRate) * 60));
-            const etaLabel = isCrit ? 'ПОРОГ 75%' : `~${etaMin}м`;
-            urgentThermalHtml = `<span class="chip chip-urgent-thermal ${isCrit ? 'is-critical' : ''}" title="Контекст: ${agent.ctxPct}%. ${burn.label}">🔥 ${agent.ctxPct}% (${etaLabel})</span>`;
-          }
 
           return `
             <div class="agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}"
                  data-agent-id="${escapeHtml(agent.id)}"
                  data-thermal-tier="${thermal.tier || 'none'}"
+                 data-activity-tier="${tier}"
+                 ${benchEdge ? `data-bench-edge="${escapeHtml(benchEdge)}"` : ''}
                  style="left:${agent.x}%; top:${agent.y}%; ${isHidden ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow}; --ctx-fill-pct:${thermal.pct}%; --ctx-fill-grad:${getNodeThermalFillGrad(agent.ctxPct)};"
                  onmouseenter="setHoverAgent(this.getAttribute('data-agent-id'))"
                  onmouseleave="setHoverAgent(null)"
@@ -2241,18 +2422,14 @@
                     <div class="node-role">${escapeHtml(agent.role)}</div>
                   </div>
                 </div>
+                <span class="node-dormant-flag" title="${escapeHtml(agent.activityLabel || '')}">${escapeHtml(renderDormantFlagHtml(agent))}</span>
                 <span class="${getNodeCtxValClass(thermal)}" title="${escapeHtml(thermal.label || '')}">${escapeHtml(getNodeCtxValText(agent, thermal))}</span>
                 <span class="status-led ${ledClass}" data-state-key="${agent.state}:${agent.activityLabel}:${agent.shellExited ? 1 : 0}">${renderStateIndicatorHtml(agent)}</span>
               </div>
 
               <div class="node-meta-row">${renderNodeMetaRowHtml(agent, thermal)}</div>
 
-              <div class="badge-row">
-                <span class="chip chip-harness">⚙️ ${agent.harness}</span>
-                <span class="chip chip-model">🧠 ${agent.model}</span>
-                ${urgentThermalHtml}
-                ${agent.reworkBadge ? `<span class="chip ${agent.reworkClass || 'chip-rework-good'}">${agent.reworkBadge}</span>` : ''}
-              </div>
+              <div class="badge-row">${renderNodeSpecMetaHtml(agent, burn)}</div>
 
               <div class="ctx-box">
                 <div class="ctx-header">
@@ -2276,18 +2453,7 @@
       // Sync SVG viewBox with actual pixel canvas dimensions so 1 SVG unit = 1px
       // and clip every route segment to the exact outer border of each block along the center-to-center ray.
       const svgEl = document.getElementById('topologySvg');
-      const cw = nodesLayer.clientWidth || 1000;
-      const ch = nodesLayer.clientHeight || 510;
       if (svgEl) svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
-
-      const boxSizes = {};
-      AGENTS.forEach(a => {
-        const domEl = nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`);
-        boxSizes[a.id] = {
-          hw: domEl && domEl.offsetWidth ? domEl.offsetWidth / 2 : 86,
-          hh: domEl && domEl.offsetHeight ? domEl.offsetHeight / 2 : 22
-        };
-      });
 
       function intersectNodeBorder(cx, cy, hw, hh, vx, vy, pad) {
         const w = hw + pad;
@@ -2298,86 +2464,128 @@
         return { x: cx + vx * t, y: cy + vy * t };
       }
 
-      svgGroup.innerHTML = EDGES.map((edge, edgeIdx) => {
-        const n1 = nodeMap[edge.from];
-        const n2 = nodeMap[edge.to];
-        if (!n1 || !n2) return '';
-        if (collapsedIdleIds.has(edge.from) || collapsedIdleIds.has(edge.to)) return '';
-        if (currentRigFilter !== 'all' && (!edge.from.endsWith('@' + currentRigFilter) || !edge.to.endsWith('@' + currentRigFilter))) return '';
+      const drawTopologyEdgesNow = () => {
+        const boxSizes = {};
+        AGENTS.forEach(a => {
+          const domEl = nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`);
+          boxSizes[a.id] = {
+            hw: domEl && domEl.offsetWidth ? domEl.offsetWidth / 2 : 80,
+            hh: domEl && domEl.offsetHeight ? domEl.offsetHeight / 2 : 18
+          };
+        });
 
-        const cx1 = (n1.x / 100) * cw;
-        const cy1 = (n1.y / 100) * ch;
-        const cx2 = (n2.x / 100) * cw;
-        const cy2 = (n2.y / 100) * ch;
+        svgGroup.innerHTML = EDGES.map((edge, edgeIdx) => {
+          const n1 = nodeMap[edge.from];
+          const n2 = nodeMap[edge.to];
+          if (!n1 || !n2) return '';
+          if (collapsedIdleIds.has(edge.from) || collapsedIdleIds.has(edge.to)) return '';
+          if (currentRigFilter !== 'all' && (!edge.from.endsWith('@' + currentRigFilter) || !edge.to.endsWith('@' + currentRigFilter))) return '';
 
-        // Center-to-center vector (preserves exact center-to-center orientation!)
-        const dx = cx2 - cx1;
-        const dy = cy2 - cy1;
+          const cx1 = (n1.x / 100) * cw;
+          const cy1 = (n1.y / 100) * ch;
+          const cx2 = (n2.x / 100) * cw;
+          const cy2 = (n2.y / 100) * ch;
 
-        const sz1 = boxSizes[n1.id] || { hw: 124, hh: 55 };
-        const sz2 = boxSizes[n2.id] || { hw: 124, hh: 55 };
+          // Center-to-center vector (preserves exact center-to-center orientation!)
+          const dx = cx2 - cx1;
+          const dy = cy2 - cy1;
 
-        // Start point right at the border of source block (pad = 2px)
-        const p1 = intersectNodeBorder(cx1, cy1, sz1.hw, sz1.hh, dx, dy, 2);
-        // End point right at the border of target block (pad = 4px so arrowhead tip touches border)
-        const p2 = intersectNodeBorder(cx2, cy2, sz2.hw, sz2.hh, -dx, -dy, 4);
+          const sz1 = boxSizes[n1.id] || { hw: 100, hh: 32 };
+          const sz2 = boxSizes[n2.id] || { hw: 100, hh: 32 };
 
-        const mx = (p1.x + p2.x) / 2;
-        const my = (p1.y + p2.y) / 2;
-        const pathD = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+          // Start point right at the border of source block (pad = 2px)
+          const p1 = intersectNodeBorder(cx1, cy1, sz1.hw, sz1.hh, dx, dy, 2);
+          // End point right at the border of target block (pad = 4px so arrowhead tip touches border)
+          const p2 = intersectNodeBorder(cx2, cy2, sz2.hw, sz2.hh, -dx, -dy, 4);
 
-        const statusKey = edge.queueStatus || (edge.liveActive ? 'live' : 'ghost');
-        const isLive = statusKey === 'live';
-        const isQueuedStatic = statusKey === 'blocked' || statusKey === 'parked' || statusKey === 'held' || statusKey === 'pending';
-        const segClass = isLive ? 'is-live' : (isQueuedStatic ? `is-${statusKey}` : 'is-ghost');
-        const trunkWidth = isLive
-          ? Math.max(4, Math.round(Math.log2(1 + (edge.calls || 1)) * 2.4))
-          : (isQueuedStatic ? 2.6 : 2);
-        const streamWidth = Math.max(2, Math.round(trunkWidth * 0.45));
+          const mx = (p1.x + p2.x) / 2;
+          const my = (p1.y + p2.y) / 2;
+          const pathD = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
 
-        const isVisibleSlice = !hasSliceMatch || isEdgeInSlice(edge);
-        const isHoveredMatch = !hoveredAgentId || edge.from === hoveredAgentId || edge.to === hoveredAgentId;
-        const dimmedClass = (!isVisibleSlice || !isHoveredMatch) ? 'dimmed' : '';
+          const statusKey = edge.queueStatus || (edge.liveActive ? 'live' : 'ghost');
+          const isLive = statusKey === 'live';
+          const isQueuedStatic = statusKey === 'blocked' || statusKey === 'parked' || statusKey === 'held' || statusKey === 'pending';
+          const segClass = isLive ? 'is-live' : (isQueuedStatic ? `is-${statusKey}` : 'is-ghost');
+          const isDormantGhost = !isLive && !isQueuedStatic &&
+            (layoutResult.tiers[edge.from] === 'dormant' || layoutResult.tiers[edge.to] === 'dormant');
+          const trunkWidth = isLive
+            ? Math.max(4, Math.round(Math.log2(1 + (edge.calls || 1)) * 2.4))
+            : (isQueuedStatic ? 2.6 : 2);
+          const streamWidth = Math.max(2, Math.round(trunkWidth * 0.45));
 
-        // Semantic badges:
-        //  - live (in-progress):        📨 <slice> (animated emerald flow)
-        //  - blocked:                   🚧 <slice> (static orange dashed)
-        //  - parked (no active wake):   🅿️ <slice> (static amber dashed)
-        //  - held (with wake):          ⏸️ <slice> (static purple dotted)
-        //  - pending (waiting claim):   ⏳ <slice> (static sky dashed)
-        //  - ghost (historical >0):     ⚡ N calls (subtle slate)
-        const showBadge = isLive || isQueuedStatic || (edge.calls && edge.calls > 0);
-        const sliceLabel = edge.slice && edge.slice !== 'all' ? edge.slice : '';
-        let badgeText = '';
-        if (isLive) {
-          badgeText = `📨 ${sliceLabel || (deckLang === 'en' ? 'Active' : 'В работе')}`;
-        } else if (isQueuedStatic) {
-          const icon = edge.statusIcon || (statusKey === 'blocked' ? '🚧' : statusKey === 'parked' ? '🅿️' : statusKey === 'held' ? '⏸️' : '⏳');
-          const fallbackWord = edge.statusLabel || statusKey;
-          badgeText = sliceLabel ? `${icon} ${sliceLabel}` : `${icon} ${fallbackWord}`;
-        } else {
-          badgeText = `⚡ ${edge.calls} ${deckLang === 'en' ? 'calls' : 'выз.'}`;
-        }
-        const badgeWidth = Math.max(76, badgeText.length * 7.2 + 16);
-        const badgeX = mx - badgeWidth / 2;
-        const tooltipText = edge.statusTooltip || `${badgeText} (${shortSeat(edge.from)} → ${shortSeat(edge.to)})`;
+          const isVisibleSlice = !hasSliceMatch || isEdgeInSlice(edge);
+          const isHoveredMatch = !hoveredAgentId || edge.from === hoveredAgentId || edge.to === hoveredAgentId;
+          const dimmedClass = (!isVisibleSlice || !isHoveredMatch) ? 'dimmed' : '';
+          const hoverFocusClass = (hoveredAgentId && isHoveredMatch) ? 'hover-focus' : '';
 
-        return `
-          <g class="edge-group ${segClass} ${dimmedClass}" style="--edge-stroke:${edge.color};" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-slice="${escapeHtml(edge.slice)}" data-edge-status="${escapeHtml(statusKey)}" onclick="selectEdge(${edgeIdx}, event)">
-            <title>${escapeHtml(tooltipText)}</title>
-            <path d="${pathD}" stroke="transparent" stroke-width="18" fill="none" style="pointer-events:stroke;" />
-            <path d="${pathD}" class="edge-trunk" stroke="${isLive || isQueuedStatic ? edge.color : '#334155'}" stroke-width="${trunkWidth}"${isQueuedStatic ? ` marker-end="url(#${edge.marker || 'arr-amber'})"` : ''} />
-            ${isLive ? `
-              <path d="${pathD}" class="edge-stream live-active" stroke="${edge.color}" stroke-width="${streamWidth}"
-                    style="--stream-speed:${edge.speed}; --edge-glow:${edge.color};" marker-end="url(#${edge.marker})" />
-            ` : ''}
-            ${showBadge ? `
-              <rect x="${badgeX}" y="${my - 9}" width="${badgeWidth}" height="18" rx="4" class="edge-badge-bg" />
-              <text x="${mx}" y="${my + 3.5}" text-anchor="middle" class="edge-badge-text">${escapeHtml(badgeText)}</text>
-            ` : ''}
-          </g>
-        `;
-      }).join('');
+          const showBadge = isLive || isQueuedStatic || (edge.calls && edge.calls > 0);
+          const sliceLabel = edge.slice && edge.slice !== 'all' ? edge.slice : '';
+          let badgeText = '';
+          if (isLive) {
+            badgeText = `📨 ${sliceLabel || (deckLang === 'en' ? 'Active' : 'В работе')}`;
+          } else if (isQueuedStatic) {
+            const icon = edge.statusIcon || (statusKey === 'blocked' ? '🚧' : statusKey === 'parked' ? '🅿️' : statusKey === 'held' ? '⏸️' : '⏳');
+            const fallbackWord = edge.statusLabel || statusKey;
+            badgeText = sliceLabel ? `${icon} ${sliceLabel}` : `${icon} ${fallbackWord}`;
+          } else {
+            badgeText = `⚡ ${edge.calls} ${deckLang === 'en' ? 'calls' : 'выз.'}`;
+          }
+          const badgeWidth = Math.max(76, badgeText.length * 7.2 + 16);
+          const badgeX = mx - badgeWidth / 2;
+          const tooltipText = edge.statusTooltip || `${badgeText} (${shortSeat(edge.from)} → ${shortSeat(edge.to)})`;
+
+          return `
+            <g class="edge-group ${segClass} ${isDormantGhost ? 'is-dormant-edge' : ''} ${dimmedClass} ${hoverFocusClass}" style="--edge-stroke:${edge.color};" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-slice="${escapeHtml(edge.slice)}" data-edge-status="${escapeHtml(statusKey)}" onclick="selectEdge(${edgeIdx}, event)">
+              <title>${escapeHtml(tooltipText)}</title>
+              <path d="${pathD}" stroke="transparent" stroke-width="18" fill="none" style="pointer-events:stroke;" />
+              <path d="${pathD}" class="edge-trunk" stroke="${isLive || isQueuedStatic ? edge.color : '#334155'}" stroke-width="${trunkWidth}"${isQueuedStatic ? ` marker-end="url(#${edge.marker || 'arr-amber'})"` : ''} />
+              ${isLive ? `
+                <path d="${pathD}" class="edge-stream live-active" stroke="${edge.color}" stroke-width="${streamWidth}"
+                      style="--stream-speed:${edge.speed}; --edge-glow:${edge.color};" marker-end="url(#${edge.marker})" />
+              ` : ''}
+              ${showBadge ? `
+                <rect x="${badgeX}" y="${my - 9}" width="${badgeWidth}" height="18" rx="4" class="edge-badge-bg" />
+                <text x="${mx}" y="${my + 3.5}" text-anchor="middle" class="edge-badge-text">${escapeHtml(badgeText)}</text>
+              ` : ''}
+            </g>
+          `;
+        }).join('');
+      };
+
+      if (topologyTweenRaf) {
+        cancelAnimationFrame(topologyTweenRaf);
+        topologyTweenRaf = null;
+      }
+
+      if (shouldAnimateLayout) {
+        const animDuration = 280;
+        const t0 = performance.now();
+        const stepTween = (now) => {
+          const p = Math.min(1, (now - t0) / animDuration);
+          const ease = 1 - Math.pow(1 - p, 3);
+          for (const a of visibleAgents) {
+            const st = startPositions[a.id];
+            const tg = targetPositions[a.id];
+            if (!st || !tg) continue;
+            a.x = st.x + (tg.x - st.x) * ease;
+            a.y = st.y + (tg.y - st.y) * ease;
+            const domEl = nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`);
+            if (domEl) {
+              domEl.style.left = `${a.x}%`;
+              domEl.style.top = `${a.y}%`;
+            }
+          }
+          drawTopologyEdgesNow();
+          if (p < 1) {
+            topologyTweenRaf = requestAnimationFrame(stepTween);
+          } else {
+            topologyTweenRaf = null;
+          }
+        };
+        topologyTweenRaf = requestAnimationFrame(stepTween);
+      } else {
+        drawTopologyEdgesNow();
+      }
     }
 
     function renderSwimlanes() {
@@ -3388,24 +3596,10 @@
         // Ensure structural topology highways exist for multi-seat rigs even when system noise crowds queue history
         syncStructuralRigEdges();
 
-        // In Universal Mode (no OpenRig queue): clear demo-only slice swimlanes and arrange discovered sessions in a clean non-overlapping grid
-        if (data.discoveryMode === 'universal') {
-          if (openQueue.length === 0) {
-            SLICES_LANES = [];
-            currentSliceFilter = 'all';
-          }
-          const visibleUniv = AGENTS.filter(a => currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter));
-          const cols = visibleUniv.length <= 2 ? Math.max(1, visibleUniv.length) : (visibleUniv.length <= 4 ? 2 : 3);
-          const rows = Math.max(1, Math.ceil(visibleUniv.length / cols));
-          const xSlots = cols === 1 ? [50] : (cols === 2 ? [28, 72] : [18, 50, 82]);
-          const yMin = rows <= 2 ? 28 : 16;
-          const yMax = rows <= 2 ? 68 : 84;
-          visibleUniv.forEach((a, idx) => {
-            const c = idx % cols;
-            const r = Math.floor(idx / cols);
-            a.x = xSlots[c] ?? 50;
-            a.y = rows === 1 ? 48 : Math.round(yMin + (r * (yMax - yMin)) / Math.max(1, rows - 1));
-          });
+        // In Universal Mode (no OpenRig queue): clear demo-only slice swimlanes (positions are handled by computeTopologyLayout)
+        if (data.discoveryMode === 'universal' && openQueue.length === 0) {
+          SLICES_LANES = [];
+          currentSliceFilter = 'all';
         }
 
         // Sync EDGES semantics strictly with live node states & activeQueue:
@@ -6353,6 +6547,7 @@
       if (btnIdle) btnIdle.textContent = hideIdleNodes ? td('hud.idleHidden') : td('hud.idleShown');
       const cTitle = document.getElementById('centerPanelTitle');
       if (cTitle) cTitle.textContent = centerViewMode === 'gantt' ? td('center.ganttTitle') : td('center.graphTitle');
+      updateGraphLayoutSwitchUi();
       updateActiveFilterLabel();
 
       localizeDemoData(deckLang);
@@ -6551,6 +6746,7 @@
       hideIdleNodes = prefs.hideIdleNodes;
       currentRadarFilter = prefs.radarFilter;
       centerViewMode = prefs.centerView;
+      graphLayoutMode = prefs.graphLayout || 'dynamic';
       ganttWindowH = prefs.ganttWindowH;
       autoFollow = prefs.autoFollow;
       audioRadarOn = prefs.audioRadarOn;
@@ -6600,6 +6796,7 @@
         layout.classList.toggle('right-collapsed', prefs.sidebarRightCollapsed);
       }
       document.body.classList.toggle('density-detailed', prefs.density === 'detailed');
+      updateGraphLayoutSwitchUi();
     }
 
     // Initial render + start live polling loop (invoked after /assets/domain/index.js loads)
@@ -6636,6 +6833,21 @@
         }
       });
       window.addEventListener('resize', () => renderTopology());
+      if (typeof ResizeObserver === 'function') {
+        const canvasWrapEl = document.querySelector('#panelCenter .canvas-wrap');
+        if (canvasWrapEl) {
+          let roRaf = null;
+          topologyResizeObserver = new ResizeObserver(() => {
+            if (centerViewMode === 'gantt') return;
+            if (roRaf) cancelAnimationFrame(roRaf);
+            roRaf = requestAnimationFrame(() => {
+              roRaf = null;
+              renderTopology();
+            });
+          });
+          topologyResizeObserver.observe(canvasWrapEl);
+        }
+      }
     };
 
     // ===== Mobile PWA Bottom Navigation, QR Handoff & Live Remote Pairing Support =====

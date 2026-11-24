@@ -54,3 +54,11 @@ export {
   ActionFlightGuard,
   ServerIdempotencyCache
 } from './action-guard.js';
+export {
+  GRAPH_LAYOUT_MODES,
+  isEdgeActiveForLayout,
+  classifyNodeActivityTier,
+  getRolePlacementInfo,
+  estimateNodeBox,
+  computeTopologyLayout
+} from './topology-layout.js';

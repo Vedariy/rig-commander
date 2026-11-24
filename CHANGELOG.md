@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Dual Graph Layout Modes (`Dynamic` vs `Fixed`) & Ultra-Compact Dormant Nodes (`openrig/assets/domain/topology-layout.js`, `deck.css`, `openrig/index.html`):**
+  - Added pure pixel-aware topology layout engine (`computeTopologyLayout`) with a header switcher (`[Dynamic | Fixed]` / `[Динам | Фикс]`) persisted in `rigcommander_prefs_v1.graphLayout`.
+  - **Dynamic mode (default):** gives working, urgent, and actively communicating nodes the upper Active Stage with guaranteed collision & edge-badge clearance (`≥130px` clear span) plus 12s stage hysteresis and 60fps lockstep node+edge glide transitions, while docking sleeping/non-communicating nodes into a compact bottom bench (`DORMANT · N`).
+  - **Fixed mode:** preserves deterministic role-tiered coordinates invariant to `idle ↔ working` transitions while enforcing pixel-aware collision-free spacing (preventing `dev-owner` / `dev-senior-architect` crowding).
+  - **Ultra-compact dormant capsules (both modes):** shrinks idle/non-communicating nodes to single-row untruncated pills (`min-width: 0`, inline `🟠`/`⚠️` flag, 2px thermal rail, quiet `opacity: 0.14` ghost web) with edge-aware hover expansion so bottom/side cards never clip.
 - **Auto-Update & npmjs Release Watcher:**
   - Shared zero-dependency SemVer & npmjs release module (`openrig/assets/domain/semver.js`) and server-side `SelfUpdater` (`openrig/lib/self-update.mjs`) polling `https://registry.npmjs.org/rig-commander/latest` (30-min cache + manual check).
   - Live RigCommander `⬆ Update vX.Y.Z` button + modal (`#updateModal`) with safe 1-click self-update per install mode (`global-npm`, `npx-cache`, `git-checkout`), graceful supervisor restart (`exit 75` in `bin/cli.mjs`), and automatic browser reconnect.
@@ -19,8 +24,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Changelog:** Added `CHANGELOG.md` linked from `README.md`, npm package, and `/guide`.
 
 ### Changed
-- **Single-Card Graph Node Telemetry & 6-Band Thermal Spectrum (`thermal.js`, `deck.css`, `openrig/index.html`):**
+- **Single-Card Graph Node Telemetry, Clean Hover Meta & 6-Band Thermal Spectrum (`thermal.js`, `deck.css`, `openrig/index.html`):**
   - Removed the dangling external neon `.node-bottom-badge` pill below graph nodes and integrated all telemetry cleanly inside one unified Dark-Cockpit card (Row 1: seat name + tabular context %; Row 2: quiet `K/K` token quota + `↓in ↑out` queue envelope traffic with tooltips; 3px progressive 6-band thermal rail via `clip-path`).
+  - Replaced legacy 4-chip rainbow hover bar with a calm single-line typographic spec footer (`codex · gpt-6.2-sol`), fixed hardcoded bogus `Spec & Arch` badge on dynamic seats, removed duplicate `ctx%` thermal pill & fabricated `20%/h` idle ETA, and capped compact hover width (`max-width: 256px`).
   - Calibrated `getContextThermal()` to a 6-band Inferno/Plasma spectrum (`violet → blue → sky → yellow → orange ≥65% → red ≥75%`) with zero green conflict against `WORKING` (`#00ff9d`), calm slate borders below 65%, and removal of noisy `live` / `• live` placeholders on seats without token readers.
 - **Focused Health & Action Plan vs Fleet Advisor Split:** Clicking the top-left Health / Attention badge now opens a dedicated **Health & Action Plan** triage view (score gauge, penalty breakdown, and 1-click resolution steps), while clicking **Fleet Advisor** opens the 4 analytical tabs (Findings, QA Quality Radar, Budget & Pools, Topology WWR) at full modal height, with a 1-click switcher in the modal header.
 
