@@ -95,12 +95,13 @@ export class ActionAuditLog {
     this.records = [];
   }
 
-  record({ actionId, seatId, type, payload, httpStatus, ok, baseline = null, nowMs = Date.now() }) {
+  record({ actionId, evalId = null, seatId, type, payload, httpStatus, ok, baseline = null, nowMs = Date.now() }) {
     const resolvedActionId = actionId || inferActionId(type, payload);
     const execId = `act-${nowMs.toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
     const entry = {
       execId,
       actionId: resolvedActionId,
+      evalId: evalId ? String(evalId).slice(0, 64) : null,
       targetSeatId: String(seatId || ''),
       transport: String(type || 'msg'),
       payloadPreview: String(payload || '').slice(0, 120),
@@ -155,6 +156,7 @@ export class ActionAuditLog {
     return filtered.slice(0, Math.max(1, limit)).map(r => ({
       execId: r.execId,
       actionId: r.actionId,
+      evalId: r.evalId || null,
       targetSeatId: r.targetSeatId,
       transport: r.transport,
       payloadPreview: r.payloadPreview,

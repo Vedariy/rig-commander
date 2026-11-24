@@ -384,11 +384,15 @@
   <div class="modal-overlay" id="guardrailsModal" onclick="if (event.target === this) closeGuardrailsModal()">
     <div class="modal-fleet-card" style="max-width:980px;">
       <div class="modal-fleet-header">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#6ee7b7;" data-i18n="guard.title">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="guardrailsModalTitle" style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#6ee7b7;" data-i18n="guard.title">
             🛡️ GUARDRAILS // ПРЕДОХРАНИТЕЛЬ БЮДЖЕТА И TELEGRAM HITL
           </span>
           <span class="triage-badge" id="modalGuardStatusBadge" style="margin:0; font-size:10.5px;"></span>
+          <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:7px; padding:2px; gap:2px;" role="tablist">
+            <button type="button" id="btnGuardTabMain" class="hud-segment-btn active" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('guardrails')">🛡️ Авто-тормоз / TG</button>
+            <button type="button" id="btnGuardTabEval" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('evaluator')">🧠 AI Оценщик</button>
+          </div>
         </div>
         <span style="display:flex; gap:8px;">
           <button class="action-pill" onclick="closeGuardrailsModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
@@ -2069,11 +2073,13 @@
             <button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-chain="${escapeHtml(sp.chain)}" onclick="setGanttFocus(ganttFocusChain === this.getAttribute('data-chain') ? null : this.getAttribute('data-chain'))">${escapeHtml(isFocused ? td('gantt.spanClearChain') : td('gantt.spanFocusChain'))}</button>
             ${hasSeat ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-seat="${escapeHtml(sp.to)}" onclick="focusSeatDiagnosis(this.getAttribute('data-seat'))">${escapeHtml(td('gantt.spanFocusSeat'))}</button>` : ''}
             ${hasSeat ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-seat="${escapeHtml(sp.to)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${escapeHtml(td('gantt.spanScreen'))}</button>` : ''}
+            <button type="button" class="action-pill" style="padding:2px 7px; font-size:10px; border-color:rgba(168,85,247,0.48); color:#e9d5ff;" data-slice="${escapeHtml(sp.slice || sp.chain)}" onclick="runAiEvaluation('slice', this.getAttribute('data-slice'), 'system2')">${escapeHtml(td('eval.ganttAnalyzeS2'))}</button>
             ${showCmd ? `<button type="button" class="env-copy-btn" data-cmd="${escapeHtml(showCmd)}" title="${escapeHtml(showCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>` : ''}
             <button type="button" class="action-pill" style="padding:2px 6px; font-size:10px; border-color:rgba(148,163,184,0.3); color:#94a3b8;" onclick="selectGanttSpan(null)">✕</button>
           </div>
         </div>
         ${sp.summary ? `<div class="gantt-span-detail-summary">${escapeHtml(sp.summary)}</div>` : ''}
+        ${renderEvaluatorVerdictCardHtml('slice', sp.slice || sp.chain)}
       `;
     }
 
@@ -3440,7 +3446,25 @@
     function renderSeatDiagnosisHtml(agent) {
       if (!agent || !agent.id) return '';
       const findings = getActiveFindingsForSeat(agent.id);
-      if (findings.length === 0) return '';
+      const evalVerdictHtml = renderEvaluatorVerdictCardHtml('seat', agent.id);
+      const s1Busy = isEvalRunning('seat', agent.id, 'system1');
+      const s2Busy = isEvalRunning('seat', agent.id, 'system2');
+      const evalTriggersHtml = `
+        <span class="eval-inline-triggers">
+          <button type="button" class="eval-mini-btn" data-eval-seat="${escapeHtml(agent.id)}" ${s1Busy ? 'disabled' : ''} title="${escapeHtml(td('eval.btnS1Tip'))}" onclick="runAiEvaluation('seat', this.getAttribute('data-eval-seat'), 'system1')">${s1Busy ? '⏳ S1' : escapeHtml(td('eval.btnS1'))}</button>
+          <button type="button" class="eval-mini-btn is-s2" data-eval-seat="${escapeHtml(agent.id)}" ${s2Busy ? 'disabled' : ''} title="${escapeHtml(td('eval.btnS2Tip'))}" onclick="runAiEvaluation('seat', this.getAttribute('data-eval-seat'), 'system2')">${s2Busy ? '⏳ S2' : escapeHtml(td('eval.btnS2'))}</button>
+          <button type="button" class="eval-mini-btn" style="border-color:rgba(148,163,184,0.3); color:#94a3b8; background:transparent;" title="${escapeHtml(td('eval.configureBtn'))}" onclick="openGuardrailsModal('evaluator')">⚙️</button>
+        </span>
+      `;
+      if (findings.length === 0) {
+        return `
+          <div class="eval-bar-row" id="inspEvalMiniBar">
+            <span>${escapeHtml(td('eval.barLabel'))} <span style="color:#6ee7b7;">⚙️ Expert</span></span>
+            ${evalTriggersHtml}
+          </div>
+          ${evalVerdictHtml}
+        `;
+      }
 
       const primary = findings[0];
       const extras = findings.slice(1, 3);
@@ -3568,13 +3592,14 @@
         <div class="seat-diagnosis-card ${sevClass} ${isSpotlight ? 'is-spotlight' : ''}" id="seatDiagnosisCard">
           <div class="diag-kicker">
             <span>${sevBadge} • ${escapeHtml(td('diag.header'))}</span>
-            ${primary.metrics && primary.metrics.roiEstimate ? `<span style="color:#94a3b8; font-weight:600;">${escapeHtml(primary.metrics.roiEstimate)}</span>` : ''}
+            ${evalTriggersHtml}
           </div>
           <div class="diag-title">${escapeHtml(primary.title || '')}</div>
           ${primary.summary ? `<div class="diag-summary">${escapeHtml(primary.summary)}</div>` : ''}
           ${queueBoxHtml}
           ${remediationText ? `<div class="diag-remediation"><b style="color:var(--cyan);">${escapeHtml(td('diag.whatToDo'))}</b> ${escapeHtml(remediationText)}</div>` : ''}
           ${actionBtns.length > 0 ? `<div class="diag-actions">${actionBtns.join('')}</div>` : ''}
+          ${evalVerdictHtml}
           ${extrasHtml}
         </div>
       `;
@@ -4015,7 +4040,10 @@
           window.GUARDRAILS_STATE = data.guardrails;
           updateGuardrailsBadge();
           const gm = document.getElementById('guardrailsModal');
-          if (gm && gm.classList.contains('open')) renderGuardrailsModal();
+          if (gm && gm.classList.contains('open') && activeGuardrailsTab !== 'evaluator') renderGuardrailsModal();
+        }
+        if (data.evaluator && typeof syncEvaluatorTelemetry === 'function') {
+          syncEvaluatorTelemetry(data.evaluator);
         }
         if (data.update && typeof syncAppUpdateState === 'function') {
           syncAppUpdateState(data.update);
@@ -5142,6 +5170,7 @@
       const modalAgent = AGENTS.find(a => a.id === seatId) || { id: seatId, harness: '', shortName: shortSeat(seatId) };
       mount.innerHTML = `
         <div class="terminal-ctrl-bar" style="margin-top:0; background:transparent; border:none; padding:0;">
+          <div id="modalEvalRiskBar">${renderModalEvalRiskBarHtml(seatId, lastScreenBySeat[seatId] || '')}</div>
           <div id="modalPromptOptionsBar">${renderInteractivePromptOptionsHtml(seatId, lastScreenBySeat[seatId] || '', 'modalCmdStatus')}</div>
           <div class="ctrl-quick-keys" id="modalQuickKeysBar">
             ${renderHarnessQuickKeys(modalAgent, 'modalCmdStatus')}
@@ -5191,6 +5220,10 @@
         const screenText = data.screen || '(Пустой экран терминала)';
         lastScreenBySeat[seat] = screenText;
         body.textContent = screenText;
+        const modalRiskBar = document.getElementById('modalEvalRiskBar');
+        if (modalRiskBar) {
+          modalRiskBar.innerHTML = renderModalEvalRiskBarHtml(seat, screenText);
+        }
         const modalOpts = document.getElementById('modalPromptOptionsBar');
         if (modalOpts) {
           modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seat, screenText, 'modalCmdStatus');
@@ -5207,6 +5240,10 @@
           : `Не удалось получить экран: ${e.message}\n$ rig capture ${seat} --lines 80`;
         lastScreenBySeat[seat] = screenText;
         body.textContent = screenText;
+        const modalRiskBar = document.getElementById('modalEvalRiskBar');
+        if (modalRiskBar) {
+          modalRiskBar.innerHTML = renderModalEvalRiskBarHtml(seat, screenText);
+        }
         const modalOpts = document.getElementById('modalPromptOptionsBar');
         if (modalOpts) {
           modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seat, screenText, 'modalCmdStatus');
@@ -6034,10 +6071,676 @@
       }
     }
 
-    function openGuardrailsModal() {
+    let activeGuardrailsTab = 'guardrails'; // 'guardrails' | 'evaluator'
+    window.EVALUATOR_STATE = {
+      config: null,
+      stats: { callsLastHour: 0, estDailyUsd: 0, tierCounts: { heuristic: 0, system1: 0, system2: 0 } },
+      verdictsByTarget: {},
+      discoveredModels: { system1: [], system2: [] },
+      statusMessage: ''
+    };
+    const evalRunningKeys = new Set();
+
+    function getEvalConfigSafe() {
+      if (window.EVALUATOR_STATE.config) return window.EVALUATOR_STATE.config;
+      if (typeof DEFAULT_EVALUATOR_CONFIG === 'object') {
+        window.EVALUATOR_STATE.config = JSON.parse(JSON.stringify(DEFAULT_EVALUATOR_CONFIG));
+        return window.EVALUATOR_STATE.config;
+      }
+      return {
+        privacyMode: 'local_only',
+        autoSystem1Hitl: false,
+        autoEscalateS2: false,
+        maxCallsPerHour: 60,
+        maxDailyUsd: 2.0,
+        system1: { enabled: true, presetId: 'local_laya_von', dialect: 'systemone_http', baseUrl: 'http://127.0.0.1:8000', model: 'laya-base' },
+        system2: { enabled: true, presetId: 'local_qwen38_27b', dialect: 'ollama_native', baseUrl: 'http://127.0.0.1:11434', model: 'qwen3.8:27b', thinkingLevel: 'medium' }
+      };
+    }
+
+    function syncEvaluatorTelemetry(ev) {
+      if (!ev || typeof ev !== 'object') return;
+      if (ev.stats) window.EVALUATOR_STATE.stats = ev.stats;
+      if (ev.verdictsByTarget && typeof ev.verdictsByTarget === 'object') {
+        window.EVALUATOR_STATE.verdictsByTarget = {
+          ...window.EVALUATOR_STATE.verdictsByTarget,
+          ...ev.verdictsByTarget
+        };
+      }
+    }
+
+    function isEvalRunning(scope, targetId, tier) {
+      return evalRunningKeys.has(`${scope}:${targetId}:${tier}`);
+    }
+
+    function getLatestEvalVerdict(scope, targetId) {
+      if (!targetId) return null;
+      const map = window.EVALUATOR_STATE.verdictsByTarget || {};
+      return map[`${scope}:${targetId}`] || map[`${scope}:${String(targetId).replace(/^slice:/, '')}`] || null;
+    }
+
+    function buildDemoEvalVerdict(scope, targetId, tier) {
+      const en = deckLang === 'en';
+      const nowIso = new Date().toISOString();
+      const targetKey = String(targetId || '');
+
+      // Demo Case 1: Destructive HITL prompt -> Tier 0 Expert Veto overrides adversarial S1
+      if (scope === 'seat' && (targetKey.includes('dev-check') || /git push.*--force|rm -rf/i.test(lastScreenBySeat[targetKey] || ''))) {
+        return {
+          evalId: `demo-eval-${Date.now()}`,
+          scope: 'seat',
+          targetId: targetKey,
+          targetSeatId: targetKey,
+          highestTier: tier === 'system2' ? 'system2' : 'system1',
+          providerStatus: 'ok',
+          trace: [
+            { tier: 'heuristic', status: 'evaluated', durationMs: 2, firedRules: ['E-VETO-DESTRUCTIVE-CMD'] },
+            { tier: 'system1', status: 'resolved', model: 'laya-base', durationMs: 14, confidence: 0.91, entropy: 0.19 }
+          ],
+          riskLevel: 'destructive_block',
+          vetoedByExpert: true,
+          hardVetoes: [{ ruleId: 'E-VETO-DESTRUCTIVE-CMD', reason: en ? 'Destructive git checkout / fault-injection prompt' : 'Опасный промпт git checkout / fault-injection' }],
+          firedRules: ['E-VETO-DESTRUCTIVE-CMD'],
+          confidence: 0.99,
+          headline: en ? 'Expert Veto: verify destructive command before answering' : 'Вето эксперта: проверьте опасную команду перед ответом',
+          rootCause: en
+            ? 'Tier 0 Expert Rule blocked blind auto-approval on git checkout / fault-injection. Single-pass S1 (Laya, 14ms) confirmed elevated risk (P_block=89%, H=0.19).'
+            : 'Правило Tier 0 Эксперта заблокировало слепое подтверждение команды git checkout / fault-injection. Однопроходный S1 (Laya, 14мс) подтвердил высокий риск (P_block=89%, H=0.19).',
+          suggestedActions: [
+            { actionId: 'open_live_terminal', seatId: targetKey, rationale: en ? 'Inspect full 80-line screen' : 'Открыть 80 строк tmux' },
+            { actionId: 'cancel_prompt', seatId: targetKey, rationale: en ? 'Cancel with Escape' : 'Отменить через Escape' }
+          ],
+          draftPrompt: null,
+          hypothesesChecked: [],
+          evidenceRefs: [
+            { source: 'rule', ref: 'E-VETO-DESTRUCTIVE-CMD', quote: 'git checkout / negative control fault injection' }
+          ],
+          unknowns: [],
+          s1Signals: {
+            riskProbs: { safe_routine: 0.03, needs_review: 0.08, destructive_block: 0.89 },
+            riskEntropy: 0.19,
+            promptInjectionProb: 0.04,
+            shouldEscalateS2: false
+          },
+          cached: false,
+          createdAt: nowIso
+        };
+      }
+
+      // Demo Case 2: S1 high entropy -> S2 deep root-cause synthesis on QA bounce loop (moderation-single-writer / dev-coder4)
+      if (tier === 'system2' || scope === 'slice' || targetKey.includes('coder4')) {
+        const seatId = scope === 'seat' ? targetKey : 'dev-coder4@core-platform';
+        return {
+          evalId: `demo-eval-${Date.now()}`,
+          scope,
+          targetId: targetKey,
+          targetSeatId: seatId,
+          highestTier: tier === 'system1' ? 'system1' : 'system2',
+          providerStatus: 'ok',
+          trace: tier === 'system1'
+            ? [
+                { tier: 'heuristic', status: 'evaluated', durationMs: 2, firedRules: ['E-ESC-S2-QA-LOOP'] },
+                { tier: 'system1', status: 'escalated', model: 'laya-base', durationMs: 16, confidence: 0.44, entropy: 0.96 }
+              ]
+            : [
+                { tier: 'heuristic', status: 'evaluated', durationMs: 2, firedRules: ['E-ESC-S2-QA-LOOP'] },
+                { tier: 'system1', status: 'escalated', model: 'laya-base', durationMs: 16, confidence: 0.44, entropy: 0.96 },
+                { tier: 'system2', status: 'resolved', model: 'gemini-4-hydrogen', durationMs: 8400, confidence: 0.91 }
+              ],
+          riskLevel: 'needs_review',
+          vetoedByExpert: false,
+          hardVetoes: [],
+          firedRules: ['E-ESC-S2-QA-LOOP'],
+          confidence: tier === 'system1' ? 0.44 : 0.91,
+          headline: tier === 'system1'
+            ? (en ? 'S1: Repeated QA bounce loop — high entropy (H=0.96), escalate to 🧠 S2' : 'S1: Петля возвратов QA — высокая энтропия (H=0.96), нужен 🧠 S2')
+            : (en ? 'Root cause: boundary limit+1 missed under 68%+ context pressure' : 'Первопричина: пропуск границы лимит+1 на контексте >68% за 3 круга QA'),
+          rootCause: tier === 'system1'
+            ? (en ? 'Single-pass Laya detected high uncertainty across risk/action heads (H=0.96). Click 🧠 S2 for cross-seat Handoff Flow root cause.' : 'Однопроходный Laya зафиксировал высокую неопределённость (H=0.96). Нажмите 🧠 S2 для разбора Handoff Flow.')
+            : (en ? 'Across 3 QA rounds on moderation-single-writer, coder4 resolved the write-race in round 1 but skipped limit+1 validation as context grew past 68%. Compact before final verification.' : 'За 3 круга QA по moderation-single-writer кодер закрыл гонку записи в 1-м круге, но на перегретом контексте (>68%) пропустил проверку лимита+1. Сожмите контекст и прогоните границы.'),
+          suggestedActions: [
+            { actionId: 'compact_context', seatId, rationale: en ? 'Compact coder4 context' : 'Сжать контекст coder4' },
+            { actionId: 'open_gantt_slice', seatId, rationale: en ? 'Inspect Handoff Flow' : 'Открыть Handoff Flow' }
+          ],
+          draftPrompt: tier === 'system1' ? null : (en
+            ? 'Run boundary checks (0, limit-1, limit, limit+1) from testing/boundary/values.json and include exact exit code in QA handoff.'
+            : 'Прогони граничные кейсы (0, лимит-1, лимит, лимит+1) из testing/boundary/values.json и приложи точный exit code в handoff для QA.'),
+          hypothesesChecked: tier === 'system1' ? [] : [
+            { hypothesis: en ? 'Context fatigue eroding AGENTS.md boundary checklist' : 'Усталость контекста (>68%) вымыла чеклист границ', verdict: 'confirmed', why: en ? 'QA bounces started after CTX > 68%.' : 'Возвраты начались после нагрева контекста >68%.' },
+            { hypothesis: en ? 'Flaky test environment' : 'Нестабильный стенд тестов', verdict: 'rejected', why: en ? 'Deterministic limit+1 failure reproduced twice.' : 'Детерминированное падение limit+1 воспроизведено дважды.' }
+          ],
+          evidenceRefs: [
+            { source: 'gantt', ref: 'slice:moderation-single-writer', quote: en ? 'QA round 2: bounce (limit +1)' : 'Повторный QA: возврат (лимит +1)' }
+          ],
+          unknowns: tier === 'system1' ? [] : [en ? 'Full git diff outside tmux capture not read.' : 'Полный git diff вне буфера tmux не читался.'],
+          s1Signals: {
+            riskProbs: { safe_routine: 0.28, needs_review: 0.44, destructive_block: 0.28 },
+            riskEntropy: 0.96,
+            promptInjectionProb: 0.02,
+            shouldEscalateS2: true
+          },
+          cached: false,
+          createdAt: nowIso
+        };
+      }
+
+      // Default demo S1/S2 for any other seat
+      return {
+        evalId: `demo-eval-${Date.now()}`,
+        scope: 'seat',
+        targetId: targetKey,
+        targetSeatId: targetKey,
+        highestTier: tier === 'system2' ? 'system2' : 'system1',
+        providerStatus: 'ok',
+        trace: [
+          { tier: 'heuristic', status: 'evaluated', durationMs: 1, firedRules: ['E-ESC-S1-STALE-QUEUE'] },
+          { tier: 'system1', status: 'resolved', model: 'laya-base', durationMs: 13, confidence: 0.86, entropy: 0.28 }
+        ],
+        riskLevel: 'needs_review',
+        vetoedByExpert: false,
+        hardVetoes: [],
+        firedRules: ['E-ESC-S1-STALE-QUEUE'],
+        confidence: 0.86,
+        headline: en ? `S1: ${shortSeat(targetKey)} idle with open queue (86%)` : `S1: ${shortSeat(targetKey)} простаивает с открытой очередью (86%)`,
+        rootCause: en ? 'Single-pass S1 classified seat as idle at clean prompt with pending queue items. Send explicit queue-review prompt.' : 'Однопроходный S1 классифицировал простой на чистом промпте при открытой очереди. Отправьте явный разбор очереди.',
+        suggestedActions: [
+          { actionId: 'nudge_queue', seatId: targetKey, rationale: en ? 'Review rig queue list --owned' : 'Разобрать rig queue list --owned' }
+        ],
+        draftPrompt: en ? 'Run `rig queue list --owned` and pick up the highest-priority task.' : 'Проверь `rig queue list --owned` и возьми приоритетную задачу в работу.',
+        hypothesesChecked: [],
+        evidenceRefs: [],
+        unknowns: [],
+        s1Signals: {
+          riskProbs: { safe_routine: 0.10, needs_review: 0.86, destructive_block: 0.04 },
+          riskEntropy: 0.28,
+          promptInjectionProb: 0.02,
+          shouldEscalateS2: false
+        },
+        cached: false,
+        createdAt: nowIso
+      };
+    }
+
+    async function runAiEvaluation(scope, targetId, tier = 'system1', forceRefresh = true) {
+      const cleanScope = ['seat', 'slice', 'fleet'].includes(scope) ? scope : 'seat';
+      const cleanId = String(targetId || '').trim();
+      if (!cleanId) return;
+      const runKey = `${cleanScope}:${cleanId}:${tier}`;
+      if (evalRunningKeys.has(runKey)) return;
+      evalRunningKeys.add(runKey);
+      renderInspectorAndScorecards(false);
+      if (centerViewMode === 'gantt') renderGanttSpanDetail();
+      if (modalSeatId) {
+        const rb = document.getElementById('modalEvalRiskBar');
+        if (rb) rb.innerHTML = renderModalEvalRiskBarHtml(modalSeatId, lastScreenBySeat[modalSeatId] || '');
+      }
+
+      try {
+        let verdict;
+        if (!IS_LIVE) {
+          await new Promise(r => setTimeout(r, 120));
+          verdict = buildDemoEvalVerdict(cleanScope, cleanId, tier);
+        } else {
+          const { res, data } = await deckPostJson('/api/evaluator/run', {
+            scope: cleanScope,
+            targetId: cleanId,
+            tier,
+            lang: deckLang,
+            forceRefresh
+          }, { skipEndpointGuard: true });
+          if (!res.ok || !data.ok || !data.verdict) {
+            throw new Error((data && data.error) || `HTTP ${res.status}`);
+          }
+          verdict = data.verdict;
+          if (data.stats) window.EVALUATOR_STATE.stats = data.stats;
+        }
+        window.EVALUATOR_STATE.verdictsByTarget[`${cleanScope}:${cleanId}`] = verdict;
+      } catch (err) {
+        const toast = document.getElementById('copyToast');
+        if (toast) {
+          toast.textContent = `⚠️ AI Eval: ${err.message || err}`;
+          toast.style.display = 'block';
+          setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+      } finally {
+        evalRunningKeys.delete(runKey);
+        renderInspectorAndScorecards(false);
+        if (centerViewMode === 'gantt') renderGanttSpanDetail();
+        if (modalSeatId) {
+          const rb = document.getElementById('modalEvalRiskBar');
+          if (rb) rb.innerHTML = renderModalEvalRiskBarHtml(modalSeatId, lastScreenBySeat[modalSeatId] || '');
+        }
+      }
+    }
+
+    function insertEvalDraftPrompt(targetSeatId, encodedDraft) {
+      const text = decodeURIComponent(encodedDraft || '');
+      if (!text) return;
+      const modalOpen = document.getElementById('terminalModal')?.classList.contains('open');
+      const input = document.getElementById(modalOpen ? 'modalCmdInput' : 'terminalCmdInput');
+      if (input) {
+        input.value = text;
+        input.focus();
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      const toast = document.getElementById('copyToast');
+      if (toast) {
+        toast.textContent = `📝 ${td('eval.draftInserted')}`;
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 3200);
+      }
+    }
+
+    function triggerEvalSuggestedAction(actionId, seatId, sliceOrPayload = '') {
+      const targetSeat = AGENTS.find(a => a.id === seatId) || { id: seatId, harness: '' };
+      if (actionId === 'open_live_terminal') {
+        openTerminalModal(seatId);
+        return;
+      }
+      if (actionId === 'open_gantt_slice') {
+        openSliceOnGantt(sliceOrPayload || '');
+        return;
+      }
+      if (actionId === 'focus_seat') {
+        if (seatId) selectAgent(seatId);
+        return;
+      }
+      if (actionId === 'nudge_queue') {
+        const desc = buildNudgeQueueAction(seatId, deckLang);
+        sendTerminalRaw(seatId, desc.payload, 'cmdSendStatus', 'nudge_queue');
+        return;
+      }
+      if (actionId === 'compact_context') {
+        const desc = resolveActionFromFinding({ kind: 'compact_seat', seatTarget: seatId }, targetSeat);
+        if (desc && desc.transport === 'clipboard') copyCmd(desc.payload);
+        else sendTerminalRaw(seatId, '/compact', 'cmdSendStatus', 'compact_context');
+        return;
+      }
+      if (actionId === 'copy_restart_seat' || actionId === 'copy_restart_shell') {
+        copyCmd(`rig restart ${seatId}`);
+        return;
+      }
+      if (actionId === 'wake_parked_seat') {
+        sendTerminalKey(seatId, 'Enter', 'cmdSendStatus', 'wake_parked_seat');
+        return;
+      }
+      if (actionId === 'cancel_prompt') {
+        sendTerminalKey(seatId, 'Escape', 'cmdSendStatus', 'cancel_prompt');
+        return;
+      }
+      if (actionId === 'proceed_prompt') {
+        sendTerminalKey(seatId, '1 Enter', 'cmdSendStatus', 'proceed_prompt');
+        return;
+      }
+      if (actionId === 'interrupt_execution') {
+        sendTerminalKey(seatId, 'C-c', 'cmdSendStatus', 'interrupt_execution');
+      }
+    }
+
+    function renderEvaluatorVerdictCardHtml(scope, targetId) {
+      const v = getLatestEvalVerdict(scope, targetId);
+      if (!v) return '';
+      const riskCls = v.riskLevel === 'destructive_block' ? 'is-block' : (v.riskLevel === 'safe_routine' ? 'is-safe' : 'is-review');
+      const riskLabel = v.riskLevel === 'destructive_block' ? td('eval.riskBlock') : (v.riskLevel === 'safe_routine' ? td('eval.riskSafe') : td('eval.riskReview'));
+      const breadcrumb = typeof buildCascadeBreadcrumb === 'function' ? buildCascadeBreadcrumb(v, deckLang) : v.highestTier;
+      const isDegraded = v.providerStatus && v.providerStatus !== 'ok' && v.providerStatus !== 'tier0_resolved';
+
+      const s1Strip = v.s1Signals && v.s1Signals.riskProbs ? `
+        <div class="eval-probs-strip">
+          <span>S1:</span>
+          <span style="color:#6ee7b7;">Safe ${Math.round((v.s1Signals.riskProbs.safe_routine || 0) * 100)}%</span>
+          <span style="color:#fde68a;">Review ${Math.round((v.s1Signals.riskProbs.needs_review || 0) * 100)}%</span>
+          <span style="color:#fda4af;">Block ${Math.round((v.s1Signals.riskProbs.destructive_block || 0) * 100)}%</span>
+          ${typeof v.s1Signals.riskEntropy === 'number' ? `<span style="color:#a5b4fc;">H=${v.s1Signals.riskEntropy.toFixed(2)}</span>` : ''}
+        </div>
+      ` : '';
+
+      const actionsHtml = Array.isArray(v.suggestedActions) && v.suggestedActions.length > 0 ? `
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+          ${v.suggestedActions.slice(0, 3).map(a => `
+            <button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-act="${escapeHtml(a.actionId)}" data-seat="${escapeHtml(a.seatId || v.targetSeatId || '')}" data-slice="${escapeHtml(scope === 'slice' ? targetId : '')}" title="${escapeHtml(a.rationale || a.actionId)}" onclick="triggerEvalSuggestedAction(this.getAttribute('data-act'), this.getAttribute('data-seat'), this.getAttribute('data-slice'))">⚡ ${escapeHtml(a.actionId)}</button>
+          `).join('')}
+        </div>
+      ` : '';
+
+      const draftHtml = v.draftPrompt ? `
+        <div class="eval-draft-box">
+          <div>${escapeHtml(v.draftPrompt)}</div>
+          <div style="display:flex; justify-content:flex-end;">
+            <button type="button" class="eval-mini-btn" data-seat="${escapeHtml(v.targetSeatId || '')}" data-draft="${encodeURIComponent(v.draftPrompt)}" onclick="insertEvalDraftPrompt(this.getAttribute('data-seat'), this.getAttribute('data-draft'))">${escapeHtml(td('eval.insertDraft'))}</button>
+          </div>
+        </div>
+      ` : '';
+
+      const hasDetails = (Array.isArray(v.evidenceRefs) && v.evidenceRefs.length > 0) || (Array.isArray(v.hypothesesChecked) && v.hypothesesChecked.length > 0);
+      const detailsHtml = hasDetails ? `
+        <details class="eval-evidence-details">
+          <summary>🔎 ${escapeHtml(td('eval.evidenceTitle'))} (${(v.evidenceRefs?.length || 0) + (v.hypothesesChecked?.length || 0)})</summary>
+          <div class="eval-evidence-list">
+            ${(v.hypothesesChecked || []).map(h => `<div>• [${escapeHtml(h.verdict)}] <b>${escapeHtml(h.hypothesis)}</b> — ${escapeHtml(h.why)}</div>`).join('')}
+            ${(v.evidenceRefs || []).map(e => `<div>• <code>${escapeHtml(e.source)}:${escapeHtml(e.ref)}</code> ${escapeHtml(e.quote)}</div>`).join('')}
+            ${v.rulePatchSuggestion ? `<div style="color:#fde68a;">💡 AGENTS.md: ${escapeHtml(v.rulePatchSuggestion)}</div>` : ''}
+          </div>
+        </details>
+      ` : '';
+
+      return `
+        <div class="eval-verdict-card ${riskCls}" data-eval-id="${escapeHtml(v.evalId || '')}">
+          <div class="eval-verdict-head">
+            <span class="eval-breadcrumb">${escapeHtml(breadcrumb)}</span>
+            <span style="display:inline-flex; align-items:center; gap:4px;">
+              ${v.vetoedByExpert ? `<span class="eval-veto-pill">${escapeHtml(td('eval.vetoBadge'))}</span>` : ''}
+              <span class="eval-risk-pill ${riskCls}">${escapeHtml(riskLabel)}</span>
+            </span>
+          </div>
+          <div style="font-weight:700; color:#f8fafc; line-height:1.35;">${escapeHtml(v.headline || '')}</div>
+          ${v.rootCause ? `<div style="color:#cbd5e1; line-height:1.4;">${escapeHtml(v.rootCause)}</div>` : ''}
+          ${s1Strip}
+          ${isDegraded ? `<div style="font-size:10px; color:#fde68a; display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap;"><span>⚠️ ${escapeHtml(td('eval.offlineHint'))}</span><button type="button" class="eval-mini-btn" onclick="openGuardrailsModal('evaluator')">${escapeHtml(td('eval.configureBtn'))}</button></div>` : ''}
+          ${actionsHtml}
+          ${draftHtml}
+          ${detailsHtml}
+        </div>
+      `;
+    }
+
+    function renderModalEvalRiskBarHtml(seatId, screenText) {
+      const opts = parseInteractivePromptOptions(screenText || '');
+      const v = getLatestEvalVerdict('seat', seatId);
+      if (opts.length < 2 && !v) return '';
+      const busy = isEvalRunning('seat', seatId, 'system1');
+      const riskPill = v
+        ? `<span class="eval-risk-pill ${v.riskLevel === 'destructive_block' ? 'is-block' : (v.riskLevel === 'safe_routine' ? 'is-safe' : 'is-review')}">${v.vetoedByExpert ? escapeHtml(td('eval.vetoBadge')) : escapeHtml(v.riskLevel)} • ${escapeHtml(v.headline || '')}</span>`
+        : `<span style="color:#94a3b8;">⚙️ Tier 0 HITL Guard</span>`;
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; padding:4px 8px; background:rgba(15,23,42,0.72); border:1px solid rgba(56,189,248,0.22); border-radius:6px; font-family:var(--font-mono); font-size:10px; flex-wrap:wrap;">
+          <span>${riskPill}</span>
+          <button type="button" class="eval-mini-btn" ${busy ? 'disabled' : ''} data-seat="${escapeHtml(seatId)}" onclick="runAiEvaluation('seat', this.getAttribute('data-seat'), 'system1')">${busy ? '⏳ S1...' : escapeHtml(td('eval.modalCheckS1'))}</button>
+        </div>
+      `;
+    }
+
+    function setGuardrailsTab(tab) {
+      activeGuardrailsTab = tab === 'evaluator' ? 'evaluator' : 'guardrails';
+      const bMain = document.getElementById('btnGuardTabMain');
+      const bEval = document.getElementById('btnGuardTabEval');
+      if (bMain) {
+        bMain.classList.toggle('active', activeGuardrailsTab === 'guardrails');
+        bMain.textContent = td('eval.guardTabMain');
+      }
+      if (bEval) {
+        bEval.classList.toggle('active', activeGuardrailsTab === 'evaluator');
+        bEval.textContent = td('eval.tabTitle');
+      }
+      const titleEl = document.getElementById('guardrailsModalTitle');
+      if (titleEl) {
+        titleEl.textContent = activeGuardrailsTab === 'evaluator' ? td('eval.settingsTitle') : td('guard.title');
+      }
+      if (activeGuardrailsTab === 'evaluator' && IS_LIVE && !window.EVALUATOR_STATE.config) {
+        fetch('/api/evaluator/status').then(r => r.json()).then(d => {
+          if (d && d.config) {
+            window.EVALUATOR_STATE.config = d.config;
+            if (d.stats) window.EVALUATOR_STATE.stats = d.stats;
+            if (d.verdictsByTarget) window.EVALUATOR_STATE.verdictsByTarget = d.verdictsByTarget;
+            renderGuardrailsModal();
+          }
+        }).catch(() => {});
+      }
+      renderGuardrailsModal();
+    }
+
+    function openGuardrailsModal(tab = 'guardrails') {
       const modal = document.getElementById('guardrailsModal');
       if (modal) modal.classList.add('open');
+      setGuardrailsTab(tab === 'evaluator' ? 'evaluator' : 'guardrails');
+    }
+
+    function applyEvalHardwareProfile(profileId) {
+      if (!Array.isArray(EVAL_HARDWARE_PROFILES) || !EVAL_SLOT_PRESETS) return;
+      const prof = EVAL_HARDWARE_PROFILES.find(p => p.id === profileId);
+      if (!prof) return;
+      const cfg = getEvalConfigSafe();
+      const s1p = EVAL_SLOT_PRESETS.system1[prof.s1Preset];
+      const s2p = EVAL_SLOT_PRESETS.system2[prof.s2Preset];
+      cfg.privacyMode = prof.privacyMode;
+      if (s1p) cfg.system1 = { ...cfg.system1, presetId: s1p.id, dialect: s1p.dialect, baseUrl: s1p.baseUrl, model: s1p.model, timeoutMs: s1p.timeoutMs, enabled: s1p.dialect !== 'disabled' };
+      if (s2p) cfg.system2 = { ...cfg.system2, presetId: s2p.id, dialect: s2p.dialect, baseUrl: s2p.baseUrl, model: s2p.model, thinkingLevel: s2p.thinkingLevel || 'medium', timeoutMs: s2p.timeoutMs, enabled: s2p.dialect !== 'disabled' };
+      window.EVALUATOR_STATE.config = cfg;
+      window.EVALUATOR_STATE.statusMessage = deckLang === 'en' ? `Profile applied — click Save AI Slots.` : `Профиль подставлен — нажмите «Сохранить слоты AI».`;
       renderGuardrailsModal();
+    }
+
+    function applyEvalSlotPreset(slotRole, presetId) {
+      if (!EVAL_SLOT_PRESETS || !EVAL_SLOT_PRESETS[slotRole]) return;
+      const p = EVAL_SLOT_PRESETS[slotRole][presetId];
+      if (!p) return;
+      const cfg = getEvalConfigSafe();
+      cfg[slotRole] = {
+        ...cfg[slotRole],
+        presetId: p.id,
+        dialect: p.dialect,
+        baseUrl: p.baseUrl,
+        model: p.model,
+        timeoutMs: p.timeoutMs,
+        enabled: p.dialect !== 'disabled',
+        ...(slotRole === 'system2' ? { thinkingLevel: p.thinkingLevel || 'medium' } : {})
+      };
+      window.EVALUATOR_STATE.config = cfg;
+      renderGuardrailsModal();
+    }
+
+    function readEvaluatorFormPayload() {
+      const val = (id) => (document.getElementById(id)?.value || '').trim();
+      const chk = (id) => Boolean(document.getElementById(id)?.checked);
+      return {
+        privacyMode: val('evalPrivacySelect') || 'local_only',
+        autoSystem1Hitl: chk('evalAutoS1Check'),
+        autoEscalateS2: chk('evalAutoS2Check'),
+        maxCallsPerHour: Number(val('evalMaxCallsInput')) || 60,
+        maxDailyUsd: Number(val('evalMaxUsdInput')) || 2.0,
+        system1: {
+          enabled: val('evalS1Dialect') !== 'disabled',
+          presetId: val('evalS1Preset'),
+          dialect: val('evalS1Dialect'),
+          baseUrl: val('evalS1BaseUrl'),
+          model: val('evalS1Model'),
+          apiKey: val('evalS1ApiKey')
+        },
+        system2: {
+          enabled: val('evalS2Dialect') !== 'disabled',
+          presetId: val('evalS2Preset'),
+          dialect: val('evalS2Dialect'),
+          baseUrl: val('evalS2BaseUrl'),
+          model: val('evalS2Model'),
+          thinkingLevel: val('evalS2Thinking') || 'medium',
+          apiKey: val('evalS2ApiKey')
+        }
+      };
+    }
+
+    async function saveEvaluatorConfig() {
+      const payload = readEvaluatorFormPayload();
+      try {
+        if (!IS_LIVE) {
+          window.EVALUATOR_STATE.config = sanitizeEvaluatorConfig(payload, getEvalConfigSafe());
+          window.EVALUATOR_STATE.statusMessage = deckLang === 'en' ? '✓ [DEMO] AI Evaluator slots updated.' : '✓ [DEMO] Слоты AI Evaluator обновлены.';
+        } else {
+          const { res, data } = await deckPostJson('/api/evaluator/config', payload);
+          if (!res.ok || !data.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+          window.EVALUATOR_STATE.config = data.config;
+          window.EVALUATOR_STATE.statusMessage = deckLang === 'en' ? '✓ AI Evaluator config saved (0600).' : '✓ Конфиг AI Evaluator сохранён (0600).';
+        }
+      } catch (err) {
+        window.EVALUATOR_STATE.statusMessage = `✕ ${err.message || err}`;
+      }
+      renderGuardrailsModal();
+    }
+
+    async function loadEvalSlotModels(slotRole) {
+      const payload = readEvaluatorFormPayload();
+      const binding = payload[slotRole];
+      try {
+        if (!IS_LIVE) {
+          window.EVALUATOR_STATE.discoveredModels[slotRole] = slotRole === 'system1'
+            ? [{ id: 'laya-base' }, { id: 'von-395m-cpu' }, { id: 'jev-latest' }, { id: 'embeddinggemma:300m' }]
+            : [{ id: 'gemini-4-hydrogen' }, { id: 'glm-5.3' }, { id: 'qwen3.8:27b' }, { id: 'qwen3.6:35b-a3b' }];
+          window.EVALUATOR_STATE.statusMessage = deckLang === 'en' ? '✓ [DEMO] Sample models loaded.' : '✓ [DEMO] Загружен список моделей.';
+        } else {
+          const { res, data } = await deckPostJson('/api/evaluator/models', { slot: slotRole, binding }, { skipEndpointGuard: true });
+          if (!res.ok || !data.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+          window.EVALUATOR_STATE.discoveredModels[slotRole] = Array.isArray(data.models) ? data.models : [];
+          window.EVALUATOR_STATE.statusMessage = data.reachable
+            ? (deckLang === 'en' ? `✓ Connected: ${data.models.length} model(s) discovered.` : `✓ Подключено: найдено моделей — ${data.models.length}.`)
+            : `⚠️ ${data.error || 'Endpoint unreachable'}`;
+        }
+      } catch (err) {
+        window.EVALUATOR_STATE.statusMessage = `✕ ${err.message || err}`;
+      }
+      renderGuardrailsModal();
+    }
+
+    function renderAiEvaluatorSettingsHtml() {
+      const cfg = getEvalConfigSafe();
+      const stats = window.EVALUATOR_STATE.stats || { callsLastHour: 0, estDailyUsd: 0 };
+      const en = deckLang === 'en';
+      const s1Presets = Object.values((EVAL_SLOT_PRESETS && EVAL_SLOT_PRESETS.system1) || {});
+      const s2Presets = Object.values((EVAL_SLOT_PRESETS && EVAL_SLOT_PRESETS.system2) || {});
+      const profiles = Array.isArray(EVAL_HARDWARE_PROFILES) ? EVAL_HARDWARE_PROFILES : [];
+      const s1Models = window.EVALUATOR_STATE.discoveredModels.system1 || [];
+      const s2Models = window.EVALUATOR_STATE.discoveredModels.system2 || [];
+
+      return `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="background:rgba(15,23,42,0.68); border:1px solid rgba(168,85,247,0.28); border-radius:9px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span style="font-family:var(--font-mono); font-size:11px; color:#cbd5e1; font-weight:700;">${escapeHtml(td('eval.profileLabel'))}</span>
+              <span style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8;">${en ? 'Calls/1h' : 'Вызовы/1ч'}: <b style="color:#7dd3fc;">${stats.callsLastHour || 0}/${cfg.maxCallsPerHour}</b> • ${en ? 'Today' : 'Сегодня'}: <b style="color:#fde68a;">$${Number(stats.estDailyUsd || 0).toFixed(3)}/$${cfg.maxDailyUsd}</b></span>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              ${profiles.map(p => `
+                <button type="button" class="action-pill" style="font-size:10.5px; padding:4px 9px;" onclick="applyEvalHardwareProfile('${escapeHtml(p.id)}')">${escapeHtml(en ? p.labelEn : p.labelRu)}</button>
+              `).join('')}
+            </div>
+            <div style="font-size:10.5px; color:#6ee7b7; font-family:var(--font-mono);">🛡️ ${escapeHtml(td('eval.advisoryNote'))}</div>
+          </div>
+
+          <div class="eval-slot-grid">
+            <!-- SLOT 1: SYSTEM 1 -->
+            <div class="eval-slot-card">
+              <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:800; color:#7dd3fc;">${escapeHtml(td('eval.slot1Title'))}</div>
+              <div>
+                <label class="eval-field-label">Preset (Nov 2026)</label>
+                <select id="evalS1Preset" class="eval-field-input" onchange="applyEvalSlotPreset('system1', this.value)">
+                  ${s1Presets.map(p => `<option value="${escapeHtml(p.id)}" ${cfg.system1.presetId === p.id ? 'selected' : ''}>${escapeHtml(p.label)}</option>`).join('')}
+                </select>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div>
+                  <label class="eval-field-label">Dialect</label>
+                  <select id="evalS1Dialect" class="eval-field-input">
+                    <option value="systemone_http" ${cfg.system1.dialect === 'systemone_http' ? 'selected' : ''}>/v1/systemone (Jev/Laya/Von)</option>
+                    <option value="classifier_http" ${cfg.system1.dialect === 'classifier_http' ? 'selected' : ''}>Classifier HTTP (Infinity/TEI)</option>
+                    <option value="embed_router" ${cfg.system1.dialect === 'embed_router' ? 'selected' : ''}>Embed Router (/api/embed)</option>
+                    <option value="fast_enum_fallback" ${cfg.system1.dialect === 'fast_enum_fallback' ? 'selected' : ''}>Fast Enum Fallback</option>
+                    <option value="disabled" ${cfg.system1.dialect === 'disabled' ? 'selected' : ''}>Disabled</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="eval-field-label">Model ID</label>
+                  <input id="evalS1Model" class="eval-field-input" value="${escapeHtml(cfg.system1.model || '')}" placeholder="laya-base / jev-latest / von" />
+                </div>
+              </div>
+              <div>
+                <label class="eval-field-label">Base URL</label>
+                <input id="evalS1BaseUrl" class="eval-field-input" value="${escapeHtml(cfg.system1.baseUrl || '')}" placeholder="http://127.0.0.1:8000" />
+              </div>
+              <div style="display:flex; gap:8px; align-items:flex-end;">
+                <div style="flex:1;">
+                  <label class="eval-field-label">API Key (${cfg.system1.hasApiKey ? escapeHtml(cfg.system1.maskedApiKey) : 'optional for local'})</label>
+                  <input id="evalS1ApiKey" type="password" class="eval-field-input" value="" placeholder="${cfg.system1.hasApiKey ? escapeHtml(cfg.system1.maskedApiKey) : 'optional'}" />
+                </div>
+                <button type="button" class="action-pill" style="padding:5px 9px; font-size:10.5px;" onclick="loadEvalSlotModels('system1')">${escapeHtml(td('eval.loadModelsBtn'))}</button>
+              </div>
+              ${s1Models.length > 0 ? `<div style="display:flex; gap:4px; flex-wrap:wrap;">${s1Models.slice(0, 10).map(m => `<button type="button" class="eval-model-chip" onclick="document.getElementById('evalS1Model').value='${escapeHtml(m.id)}'">${escapeHtml(m.id)}${m.sizeGb ? ` (${m.sizeGb}GB)` : ''}</button>`).join('')}</div>` : ''}
+            </div>
+
+            <!-- SLOT 2: SYSTEM 2 -->
+            <div class="eval-slot-card is-s2">
+              <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:800; color:#e9d5ff;">${escapeHtml(td('eval.slot2Title'))}</div>
+              <div>
+                <label class="eval-field-label">Preset (Nov 2026)</label>
+                <select id="evalS2Preset" class="eval-field-input" onchange="applyEvalSlotPreset('system2', this.value)">
+                  ${s2Presets.map(p => `<option value="${escapeHtml(p.id)}" ${cfg.system2.presetId === p.id ? 'selected' : ''}>${escapeHtml(p.label)}</option>`).join('')}
+                </select>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div>
+                  <label class="eval-field-label">Dialect</label>
+                  <select id="evalS2Dialect" class="eval-field-input">
+                    <option value="gemini_native" ${cfg.system2.dialect === 'gemini_native' ? 'selected' : ''}>Gemini 4 Native (thinkingLevel)</option>
+                    <option value="openai_compat" ${cfg.system2.dialect === 'openai_compat' ? 'selected' : ''}>OpenAI-Compat (GLM-5 / GPT-6 / Proxy)</option>
+                    <option value="ollama_native" ${cfg.system2.dialect === 'ollama_native' ? 'selected' : ''}>Ollama / MLX Local</option>
+                    <option value="anthropic_native" ${cfg.system2.dialect === 'anthropic_native' ? 'selected' : ''}>Anthropic Native (Claude 5.5)</option>
+                    <option value="disabled" ${cfg.system2.dialect === 'disabled' ? 'selected' : ''}>Disabled</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="eval-field-label">Model ID</label>
+                  <input id="evalS2Model" class="eval-field-input" value="${escapeHtml(cfg.system2.model || '')}" placeholder="gemini-4-hydrogen / glm-5.3 / qwen3.8:27b" />
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:2fr 1fr; gap:8px;">
+                <div>
+                  <label class="eval-field-label">Base URL</label>
+                  <input id="evalS2BaseUrl" class="eval-field-input" value="${escapeHtml(cfg.system2.baseUrl || '')}" placeholder="http://127.0.0.1:11434" />
+                </div>
+                <div>
+                  <label class="eval-field-label">Thinking</label>
+                  <select id="evalS2Thinking" class="eval-field-input">
+                    ${['none', 'low', 'medium', 'high', 'xhigh'].map(lv => `<option value="${lv}" ${(cfg.system2.thinkingLevel || 'medium') === lv ? 'selected' : ''}>${lv}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div style="display:flex; gap:8px; align-items:flex-end;">
+                <div style="flex:1;">
+                  <label class="eval-field-label">API Key (${cfg.system2.hasApiKey ? escapeHtml(cfg.system2.maskedApiKey) : 'optional for local'})</label>
+                  <input id="evalS2ApiKey" type="password" class="eval-field-input" value="" placeholder="${cfg.system2.hasApiKey ? escapeHtml(cfg.system2.maskedApiKey) : 'optional'}" />
+                </div>
+                <button type="button" class="action-pill" style="padding:5px 9px; font-size:10.5px;" onclick="loadEvalSlotModels('system2')">${escapeHtml(td('eval.loadModelsBtn'))}</button>
+              </div>
+              ${s2Models.length > 0 ? `<div style="display:flex; gap:4px; flex-wrap:wrap;">${s2Models.slice(0, 10).map(m => `<button type="button" class="eval-model-chip" onclick="document.getElementById('evalS2Model').value='${escapeHtml(m.id)}'">${escapeHtml(m.id)}${m.sizeGb ? ` (${m.sizeGb}GB)` : ''}</button>`).join('')}</div>` : ''}
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; align-items:end; background:rgba(15,23,42,0.55); border:1px solid rgba(148,163,184,0.18); border-radius:9px; padding:10px 12px;">
+            <div>
+              <label class="eval-field-label">Privacy Boundary</label>
+              <select id="evalPrivacySelect" class="eval-field-input">
+                <option value="local_only" ${cfg.privacyMode === 'local_only' ? 'selected' : ''}>${escapeHtml(td('eval.privacyLocal'))}</option>
+                <option value="configured_endpoints" ${cfg.privacyMode === 'configured_endpoints' ? 'selected' : ''}>${escapeHtml(td('eval.privacyConfigured'))}</option>
+              </select>
+            </div>
+            <div>
+              <label class="eval-field-label">Max Calls / 1h</label>
+              <input id="evalMaxCallsInput" type="number" min="1" max="500" class="eval-field-input" value="${cfg.maxCallsPerHour}" />
+            </div>
+            <div>
+              <label class="eval-field-label">Max USD / Day</label>
+              <input id="evalMaxUsdInput" type="number" step="0.1" min="0.1" max="100" class="eval-field-input" value="${cfg.maxDailyUsd}" />
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <div style="display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:#cbd5e1;">
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="evalAutoS1Check" ${cfg.autoSystem1Hitl ? 'checked' : ''} /> ${escapeHtml(td('eval.autoS1Label'))}</label>
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="evalAutoS2Check" ${cfg.autoEscalateS2 ? 'checked' : ''} /> ${escapeHtml(td('eval.autoS2Label'))}</label>
+            </div>
+            <button type="button" class="action-pill key-proceed" style="padding:6px 14px; font-weight:800;" onclick="saveEvaluatorConfig()">${escapeHtml(td('eval.saveBtn'))}</button>
+          </div>
+          <div id="evalConfigStatus" style="font-family:var(--font-mono); font-size:11px; color:#6ee7b7; min-height:15px;">${escapeHtml(window.EVALUATOR_STATE.statusMessage || '')}</div>
+        </div>
+      `;
     }
 
     function closeGuardrailsModal() {
@@ -6169,6 +6872,16 @@
       const body = document.getElementById('guardrailsModalBody');
       const badge = document.getElementById('modalGuardStatusBadge');
       if (!body) return;
+      if (activeGuardrailsTab === 'evaluator') {
+        const cfg = getEvalConfigSafe();
+        if (badge) {
+          badge.textContent = cfg.privacyMode === 'local_only' ? 'LOCAL ONLY' : 'REDACTED HTTPS';
+          badge.style.borderColor = '#a855f7';
+          badge.style.color = '#e9d5ff';
+        }
+        body.innerHTML = renderAiEvaluatorSettingsHtml();
+        return;
+      }
       const br = window.GUARDRAILS_STATE.breaker;
       const tg = window.GUARDRAILS_STATE.telegram;
       const cfg = br.config;
@@ -7357,6 +8070,12 @@
         showTrackToast(deckLang === 'en'
           ? '📱 Scan QR with your phone camera to open Mobile PWA'
           : '📱 Наведи камеру телефона на QR, чтобы открыть Mobile PWA');
+      } else if (track === 'evaluator' || track === 'ai') {
+        selectAgent('dev-coder4@core-platform');
+        runAiEvaluation('seat', 'dev-coder4@core-platform', 'system2', true);
+        showTrackToast(deckLang === 'en'
+          ? '🧠 UX Track: 3-Tier AI Evaluator (Expert ➔ System 1 Laya ➔ System 2 Gemini 4 Hydrogen)'
+          : '🧠 UX-трек: 3-уровневый AI Evaluator (Эксперт ➔ System 1 Laya ➔ System 2 Gemini 4 Hydrogen)');
       } else if (track === 'update') {
         openUpdateModal();
       } else if (track === 'tour') {

@@ -72,6 +72,7 @@ Every widget includes a top-right **`(?)`** icon showing its purpose and how to 
 
 - **FinOps:** Open **Fleet Advisor → Budget** to compare real API-equivalent spend (PAYG) against prorated subscription plans across `24h`, `7d`, and `session` windows, plus Prompt Cache Hit %.
 - **Budget Circuit-Breaker:** Open **Guardrails / TG** to configure `maxSessionUsd`, `maxSeatUsd`, `maxUsdPerHour`, and `maxQaRounds` in `alert_only` or `auto_stop` (`Ctrl+C`) mode.
+- **3-Tier AI Evaluator (`Heuristic + Expert ➔ System 1 ➔ System 2`):** Switch to the **`🧠 AI Evaluator`** tab inside **Guardrails / TG** to configure independent **Slot S1** (non-generative single-pass `/v1/systemone` for **TypeSafe Jev**, local Apache-2.0 **Laya**, local ~15ms CPU **Von**, **GLiClass-v3**, or **EmbeddingGemma-300M**) and **Slot S2** (deliberative reasoners: **Gemini 4 Hydrogen**, **GLM-5.3**, **GPT-6.2 Sol**, **Claude 5.5**, or local Apple MLX/Ollama **Qwen3.8 / Qwen3.6 MoE / Qwen3.5 / LFM2.5**). Strictly **Advisory-Only** with **Tier 0 Expert Vetoes**, secret redaction, and `Localhost Only` default privacy mode.
 - **Telegram HITL Bridge:** Create a bot in `@BotFather`, enter Bot Token + your personal Chat ID in **Guardrails / TG** (or pass `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID`). Only your authorized chat can approve HITL inline buttons or run `/status`, `/budget`, `/stop <seat>`, and `/arm_breaker`.
 
 ---

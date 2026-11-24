@@ -448,13 +448,13 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.ont.l">Онтология</div>
-        <div class="kpi-val" style="color:var(--lavender);">v2.1 Live</div>
-        <div class="kpi-note" data-i18n="kpi.ont.n">7 Objects • 10 Actions • Postcondition Audit</div>
+        <div class="kpi-val" style="color:var(--lavender);">v2.2 Live</div>
+        <div class="kpi-note" data-i18n="kpi.ont.n">8 Objects • 10 Actions • 3-Tier Evaluator</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">88 / 88 PASS</div>
-        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 18 наборов (~1s)</div>
+        <div class="kpi-val" style="color:var(--emerald);">98 / 98 PASS</div>
+        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 19 наборов (~1s)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
@@ -540,15 +540,15 @@
     <section id="components">
       <div class="sec-head">
         <h2 data-i18n="s2.title">2. Модульная структура и карта зависимостей (C4 Level 3)</h2>
-        <span class="sec-tag">ZERO-BUILD ESM • 14 PURE DOMAIN MODULES</span>
+        <span class="sec-tag">ZERO-BUILD ESM • 15 PURE DOMAIN MODULES</span>
       </div>
       <div class="grid-3">
         <div class="subcard">
           <h3>🎨 Frontend (openrig/)</h3>
           <ul>
-            <li><code>index.html</code> — 7 проекций UI (Адаптивный граф, Гант + Handoff Flow, Радар, Инспектор + <code>SeatDiagnosis</code>) + in-place DOM patching</li>
+            <li><code>index.html</code> — 7 проекций UI (Адаптивный граф, Гант + Handoff Flow, Радар, Инспектор + <code>SeatDiagnosis</code> + <code>AI Evaluator</code>) + in-place DOM patching</li>
             <li><code>assets/styles/deck.css</code> — дизайн-токены Dark Cockpit, 6-band терморейка, мобильный 5-tab док</li>
-            <li><code>assets/domain/*</code> (14 модулей + <code>index.js</code>) — чистые функции без DOM: <code>topology-layout</code>, <code>gantt-model</code>, <code>action-guard</code>, <code>thermal</code>, <code>finops</code>, <code>prompt-parser</code>, <code>edge-state</code>, <code>i18n</code>, <code>preferences</code>, <code>qr</code>, <code>quest</code>, <code>semver</code>, <code>share-card</code>, <code>audio</code></li>
+            <li><code>assets/domain/*</code> (15 модулей + <code>index.js</code>) — чистые функции без DOM: <code>evaluator-model</code>, <code>topology-layout</code>, <code>gantt-model</code>, <code>action-guard</code>, <code>thermal</code>, <code>finops</code>, <code>prompt-parser</code>, <code>edge-state</code>, <code>i18n</code>, <code>preferences</code>, <code>qr</code>, <code>quest</code>, <code>semver</code>, <code>share-card</code>, <code>audio</code></li>
             <li><code>assets/ontology/actions.js</code> — единый реестр <code>ACTION_DEFINITIONS</code>, <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></li>
             <li><code>assets/ontology/snapshot.js</code> — <code>buildOntologySnapshot</code> + чистые селекторы и эксклюзивные пулы моделей</li>
           </ul>
@@ -557,10 +557,10 @@
           <h3>⚡ Backend BFF (openrig/)</h3>
           <ul>
             <li><code>server.mjs</code> — HTTP-роутер, Security Gate, <code>ServerIdempotencyCache</code>, динамический Live PWA <code>manifest.webmanifest</code>, <code>classifyTerminalScreen()</code></li>
+            <li><code>lib/ai-evaluator/*</code> — 3-уровневый AI Evaluator (<code>expert-rules</code>, <code>redactor</code>, <code>s1-adapters</code> `/v1/systemone`, <code>s2-adapters</code>, <code>router</code>)</li>
             <li><code>lib/fleet-intelligence/*</code> — Facade + RingBuffer + <strong>6 детекторов</strong> (<code>LiveBlocker</code>, <code>Bottleneck</code>, <code>ContextEntropy</code>, <code>Ceremony</code>, <code>ModelMismatch</code>, <code>ZombieSeat</code>) + per-rig кэш</li>
-            <li><code>lib/action-audit.mjs</code> — кольцевой <code>ActionAuditLog</code> + сверка <code>postcondition</code> (вкл. <code>nudge_queue</code>)</li>
-            <li><code>lib/remote-access.mjs</code> — QR + 8-симв. PIN pairing, SHA-256 cookie (<code>0600</code>), origin pinning и отзыв устройств</li>
-            <li><code>lib/self-update.mjs</code>, <code>circuit-breaker.mjs</code>, <code>telegram-bridge.mjs</code>, <code>universal-discovery.mjs</code></li>
+            <li><code>lib/action-audit.mjs</code> — кольцевой <code>ActionAuditLog</code> + сверка <code>postcondition</code> (вкл. <code>nudge_queue</code> и <code>evalId</code>)</li>
+            <li><code>lib/remote-access.mjs</code>, <code>self-update.mjs</code>, <code>circuit-breaker.mjs</code>, <code>telegram-bridge.mjs</code>, <code>universal-discovery.mjs</code></li>
           </ul>
         </div>
         <div class="subcard">
@@ -569,8 +569,8 @@
             <li><code>bin/cli.mjs</code> — точка запуска <code>npx rig-commander</code> + супервизор автообновления (<code>exit 75</code>) + <code>--public-url</code> / <code>--universal</code></li>
             <li><code>scripts/sync-public.mjs</code> — <code>npm run sync:public</code> (единый источник правды для Vercel <code>public/</code>)</li>
             <li><code>landing/index.html</code>, <code>landing/guide.html</code>, <code>landing/passport.html</code> — публичные страницы EN/RU</li>
-            <li><code>tests/*.test.mjs</code> — <strong>18 тестовых наборов</strong> (88 проверок) на встроенном <code>node --test</code></li>
-            <li><code>openrig/docs/*</code> — <strong>ADR-0001..0011</strong>, C4, операционная онтология <strong>v2.1</strong>, <code>docs/USER_GUIDE.md</code></li>
+            <li><code>tests/*.test.mjs</code> — <strong>19 тестовых наборов</strong> (98 проверок) на встроенном <code>node --test</code></li>
+            <li><code>openrig/docs/*</code> — <strong>ADR-0001..0012</strong>, C4, операционная онтология <strong>v2.2</strong>, <code>docs/USER_GUIDE.md</code></li>
           </ul>
         </div>
       </div>
@@ -705,13 +705,14 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 88/88</span>
+        <span class="sec-tag">NODE --TEST • 98/98</span>
       </div>
       <table>
         <thead>
-          <tr><th>Test Suite (18)</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
+          <tr><th>Test Suite (19)</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
         </thead>
         <tbody>
+          <tr><td><code>tests/ai-evaluator.test.mjs</code></td><td>3-уровневый AI Evaluator (<code>L0 Heuristic+Expert ➔ S1 /v1/systemone Jev/Laya/Von, GLiClass-v3, EmbeddingGemma ➔ S2 Gemini 4 Hydrogen/GLM-5.3/Qwen3.8</code>), <code>Expert Veto</code>, <code>SecretRedactor</code>, <code>H_norm</code> энтропия, grounding и <code>0600</code> конфиг</td><td><span class="badge-ok">10 PASS</span></td></tr>
           <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, инкрементальный JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>applyTerminalPromptProbes</code>, PWA-статика, <code>computeHistoryStats</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
           <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi и <code>shellExited</code>, канонический <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
           <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, <code>inferActionId</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>nudge_queue</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">5 PASS</span></td></tr>
@@ -768,9 +769,9 @@
         'kpi.arch.n': 'Local-First + Zero-Build ES Modules',
         'kpi.deps.l': 'Зависимости',
         'kpi.ont.l': 'Онтология',
-        'kpi.ont.n': '7 Objects • 10 Actions • Postcondition Audit',
+        'kpi.ont.n': '8 Objects • 10 Actions • 3-Tier Evaluator',
         'kpi.tests.l': 'Автотесты',
-        'kpi.tests.n': 'node --test • 18 наборов (~1s)',
+        'kpi.tests.n': 'node --test • 19 наборов (~1s)',
         'kpi.sec.l': 'Граница доверия',
         'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
         's1.title': '1. Контекст системы и границы доверия (C4 Level 1)',
@@ -815,9 +816,9 @@
         'kpi.arch.n': 'Local-First + Zero-Build ES Modules',
         'kpi.deps.l': 'Dependencies',
         'kpi.ont.l': 'Ontology',
-        'kpi.ont.n': '7 Objects • 10 Actions • Postcondition Audit',
+        'kpi.ont.n': '8 Objects • 10 Actions • 3-Tier Evaluator',
         'kpi.tests.l': 'Automated Tests',
-        'kpi.tests.n': 'node --test • 18 suites (~1s)',
+        'kpi.tests.n': 'node --test • 19 suites (~1s)',
         'kpi.sec.l': 'Trust Boundary',
         'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
         's1.title': '1. System Context & Trust Boundaries (C4 Level 1)',

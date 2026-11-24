@@ -14,6 +14,8 @@ import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
 import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
 import { RemoteAccessGuard, buildLiveManifest, detectTailscaleServeUrl } from './lib/remote-access.mjs';
 import { SelfUpdater, RESTART_FOR_UPDATE_EXIT_CODE, readInstalledVersion } from './lib/self-update.mjs';
+import { AiEvaluatorService } from './lib/ai-evaluator/index.mjs';
+import { normalizeGanttSpans, buildHandoffSequenceModel } from './assets/domain/gantt-model.js';
 import { ServerIdempotencyCache, buildSeatSendKey } from './assets/domain/action-guard.js';
 import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
 
@@ -21,6 +23,7 @@ import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScree
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalThrottleMs: 3000 });
 const actionAudit = new ActionAuditLog({ maxRecords: 100 });
+const aiEvaluator = new AiEvaluatorService();
 const sendIdempotency = new ServerIdempotencyCache();
 const latestSeatBaselines = new Map();
 const universalTmuxTargets = new Map();
@@ -1662,6 +1665,7 @@ const server = http.createServer(async (req, res) => {
         telegram: telegramBridge.getStatus()
       },
       update: selfUpdater.getStatus(),
+      evaluator: aiEvaluator.getTelemetrySummary(),
       intelligence: null
     };
 
@@ -1682,16 +1686,32 @@ const server = http.createServer(async (req, res) => {
       } catch {
         // non-blocking breaker error
       }
-      if (telegramBridge.isConfigured()) {
+      if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1()) {
         for (const n of nodes) {
           const disp = (n && n.activityState && n.activityState.display) || '';
           const needsCount = (n && n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
           if ((disp === 'needs-input' || needsCount > 0) && n.canonicalSessionName) {
             try {
-              const scr = await captureSeatScreen(n.canonicalSessionName, 36);
-              await telegramBridge.notifyHitlPrompt(n.canonicalSessionName, scr);
+              const scr = await captureSeatScreen(n.canonicalSessionName, 45);
+              if (telegramBridge.isConfigured()) {
+                await telegramBridge.notifyHitlPrompt(n.canonicalSessionName, scr);
+              }
+              if (aiEvaluator.canAutoRunLocalS1()) {
+                await aiEvaluator.runEvaluation({
+                  scope: 'seat',
+                  targetId: n.canonicalSessionName,
+                  requestedTier: 'auto',
+                  seat: n,
+                  nodes,
+                  openQueue: activeQueue,
+                  findings: (payload.intelligence && payload.intelligence.allFindings) || [],
+                  screenText: scr,
+                  auditRecords: actionAudit.list(15, n.canonicalSessionName),
+                  lang: 'ru'
+                });
+              }
             } catch {
-              // ignore capture/telegram transient failure
+              // ignore capture/telegram/evaluator transient failure
             }
           }
         }
@@ -1796,6 +1816,135 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 1.4 Tiered AI Evaluator (Heuristic + Expert -> System 1 /v1/systemone -> System 2) endpoints
+  if (url.pathname === '/api/evaluator/status' && req.method === 'GET') {
+    await sendJson(req, res, 200, {
+      timestamp: new Date().toISOString(),
+      ...aiEvaluator.getStatus()
+    });
+    return;
+  }
+
+  if (
+    url.pathname === '/api/evaluator/config' ||
+    url.pathname === '/api/evaluator/models' ||
+    url.pathname === '/api/evaluator/run'
+  ) {
+    const origin = req.headers.origin || '';
+    const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
+    if (req.method !== 'POST') return deny(405, 'Method not allowed');
+    if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
+    if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
+    if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
+
+    let bodyStr = '';
+    let tooLarge = false;
+    req.on('data', chunk => {
+      if (tooLarge) return;
+      bodyStr += chunk;
+      if (bodyStr.length > 64 * 1024) {
+        tooLarge = true;
+        sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
+        req.resume();
+      }
+    });
+    req.on('end', async () => {
+      if (tooLarge) return;
+      try {
+        const body = JSON.parse(bodyStr || '{}');
+        if (url.pathname === '/api/evaluator/config') {
+          const config = aiEvaluator.updateConfig(body);
+          await sendJson(req, res, 200, { ok: true, config, stats: aiEvaluator.router.getUsageStats() });
+          return;
+        }
+        if (url.pathname === '/api/evaluator/models') {
+          const slotRole = body.slot === 'system2' ? 'system2' : 'system1';
+          const result = await aiEvaluator.discoverSlotModels(slotRole, body.binding || null);
+          await sendJson(req, res, 200, { ok: true, slot: slotRole, ...result });
+          return;
+        }
+        if (url.pathname === '/api/evaluator/run') {
+          const scope = ['seat', 'slice', 'fleet'].includes(body.scope) ? body.scope : 'seat';
+          const targetId = String(body.targetId || '').trim().slice(0, 140);
+          const requestedTier = ['auto', 'heuristic', 'system1', 'system2'].includes(body.tier) ? body.tier : 'auto';
+          const lang = body.lang === 'en' ? 'en' : 'ru';
+          const forceRefresh = Boolean(body.forceRefresh);
+
+          const snap = latestFleetSnapshot || {};
+          const nodes = Array.isArray(snap.nodes) ? snap.nodes : [];
+          const openQueue = Array.isArray(snap.activeQueue) ? snap.activeQueue : [];
+          const ganttItems = Array.isArray(snap.history?.ganttItems) ? snap.history.ganttItems : [];
+          const findings = Array.isArray(snap.intelligence?.allFindings) ? snap.intelligence.allFindings : [];
+          const parkedMap = snap.parkedSeats || {};
+
+          const seatNode = scope === 'seat'
+            ? (nodes.find(n => (n.canonicalSessionName || n.logicalId) === targetId) || null)
+            : null;
+          const seatWithParked = seatNode
+            ? { ...seatNode, parkedData: parkedMap[seatNode.canonicalSessionName] || seatNode.parkedData || null }
+            : null;
+
+          let handoffSequence = null;
+          let sliceMetrics = null;
+          if (scope === 'slice' && ganttItems.length > 0) {
+            const gModel = normalizeGanttSpans(ganttItems, { nowMs: Date.now(), windowH: 24, hideNoise: true });
+            const chainKey = targetId.startsWith('slice:') || targetId.startsWith('q:') ? targetId : `slice:${targetId}`;
+            handoffSequence = buildHandoffSequenceModel(gModel.allWindowSpans, { focusChain: chainKey });
+            const chainSpans = gModel.allWindowSpans.filter(sp => sp.chain === handoffSequence.activeChain || sp.slice === targetId);
+            const maxWaitMs = chainSpans.reduce((mx, sp) => Math.max(mx, sp.waitMs || 0), 0);
+            const totalWaitMs = chainSpans.reduce((acc, sp) => acc + (sp.waitMs || 0), 0);
+            const totalWorkMs = chainSpans.reduce((acc, sp) => acc + (sp.workMs || 0), 0);
+            sliceMetrics = {
+              qaRounds: handoffSequence.stats?.bounceCount ? handoffSequence.stats.bounceCount + 1 : 1,
+              bounceCount: handoffSequence.stats?.bounceCount || 0,
+              maxWaitMin: Math.round(maxWaitMs / 60_000),
+              wwr: totalWorkMs > 0 ? +(totalWaitMs / totalWorkMs).toFixed(2) : 0
+            };
+          }
+
+          let screenText = '';
+          const screenBySeat = {};
+          if (scope === 'seat' && targetId && /^[a-zA-Z0-9._@-]+$/.test(targetId)) {
+            screenText = await captureSeatScreen(targetId, requestedTier === 'system2' ? 72 : 48).catch(() => '');
+            if (screenText) screenBySeat[targetId] = screenText;
+          } else if (scope === 'slice' && handoffSequence && Array.isArray(handoffSequence.participants)) {
+            const topSeats = handoffSequence.participants.filter(s => /^[a-zA-Z0-9._@-]+$/.test(s)).slice(0, 3);
+            const captures = await Promise.all(topSeats.map(s => captureSeatScreen(s, 52).catch(() => '')));
+            topSeats.forEach((s, i) => { if (captures[i]) screenBySeat[s] = captures[i]; });
+          }
+
+          const verdict = await aiEvaluator.runEvaluation({
+            scope,
+            targetId: targetId || (scope === 'fleet' ? 'fleet' : ''),
+            requestedTier,
+            forceRefresh,
+            seat: seatWithParked,
+            nodes,
+            openQueue,
+            ganttItems,
+            handoffSequence,
+            findings,
+            screenText,
+            screenBySeat,
+            auditRecords: actionAudit.list(20, scope === 'seat' ? targetId : null),
+            sliceMetrics,
+            fleetKpis: {
+              healthScore: snap.intelligence?.healthScore ?? null,
+              burnUsdPerHour: circuitBreaker.getState()?.burnUsdPerHour ?? 0
+            },
+            lang
+          });
+
+          await sendJson(req, res, 200, { ok: true, verdict, stats: aiEvaluator.router.getUsageStats() });
+          return;
+        }
+      } catch (err) {
+        await sendJson(req, res, 500, { ok: false, error: err.message });
+      }
+    });
+    return;
+  }
+
   // 2. Live tmux terminal capture endpoint
   if (url.pathname === '/api/capture') {
     const seat = url.searchParams.get('seat') || 'dev-owner@core-platform';
@@ -1842,6 +1991,7 @@ const server = http.createServer(async (req, res) => {
           const text = String(payload.text || '');
           const type = String(payload.type || 'msg').trim(); // 'msg' | 'raw' | 'key' | 'interact'
           const actionId = String(payload.actionId || '').trim();
+          const evalId = String(payload.evalId || '').trim() || null;
           const baseline = latestSeatBaselines.get(seat) || null;
 
           if (!/^[a-zA-Z0-9._@-]+$/.test(seat)) {
@@ -1926,7 +2076,8 @@ const server = http.createServer(async (req, res) => {
               }
             }
 
-            const auditRec = actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
+            const auditRec = actionAudit.record({ actionId, evalId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
+            aiEvaluator.invalidateSeat(seat);
             const okBody = { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() };
             idem.complete(200, okBody);
             await sendJson(req, res, 200, okBody);

@@ -75,3 +75,28 @@ export {
   estimateNodeBox,
   computeTopologyLayout
 } from './topology-layout.js';
+export {
+  EVAL_TIERS,
+  EVAL_RISK_LEVELS,
+  EVAL_S1_DIALECTS,
+  EVAL_S2_DIALECTS,
+  ALLOWED_EVAL_ACTION_IDS,
+  SYSTEM1_QUESTIONS,
+  SYSTEM1_PROTOTYPE_ANCHORS,
+  EVAL_SLOT_PRESETS,
+  EVAL_HARDWARE_PROFILES,
+  DEFAULT_EVALUATOR_CONFIG,
+  isLoopbackEndpoint,
+  sanitizeBaseUrl,
+  sanitizeSlotBinding,
+  sanitizeEvaluatorConfig,
+  normalizedShannonEntropy,
+  cosineSimilarity,
+  scorePrototypeCentroids,
+  evaluateS1EscalationGate,
+  renderS1TemplateSummary,
+  extractStructuredJson,
+  validateAndNormalizeVerdict,
+  buildSystem2Prompts,
+  buildCascadeBreadcrumb
+} from './evaluator-model.js';
