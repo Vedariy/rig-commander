@@ -695,3 +695,60 @@ export function computeTopologyLayout({
     dormantCount: dormantNodes.length
   };
 }
+
+/**
+ * Computes edge-clamped, flip-aware coordinates for an anchored popover (e.g. Edge X-Ray)
+ * inside a container (.canvas-wrap) so it opens right beside the click point without clipping.
+ */
+export function computeAnchoredPopoverRect({
+  anchorX,
+  anchorY,
+  containerW,
+  containerH,
+  popoverW,
+  popoverH,
+  pad = 12,
+  offset = 16
+} = {}) {
+  const cw = Math.max(0, Number(containerW) || 0);
+  const ch = Math.max(0, Number(containerH) || 0);
+  const pw = Math.max(0, Number(popoverW) || 0);
+  const ph = Math.max(0, Number(popoverH) || 0);
+  const p = Math.max(0, Number(pad) || 0);
+  const gap = Math.max(0, Number(offset) || 0);
+
+  const ax = Number.isFinite(Number(anchorX)) ? Number(anchorX) : cw / 2;
+  const ay = Number.isFinite(Number(anchorY)) ? Number(anchorY) : ch / 2;
+
+  const bound = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const maxLeft = Math.max(p, cw - p - pw);
+  const maxTop = Math.max(p, ch - p - ph);
+
+  const desiredLeft = ax - pw / 2;
+  const left = Math.round(bound(desiredLeft, p, maxLeft));
+
+  const belowTop = ay + gap;
+  const aboveTop = ay - gap - ph;
+
+  let top;
+  let placement;
+  if (belowTop + ph <= ch - p) {
+    top = belowTop;
+    placement = 'below';
+  } else if (aboveTop >= p) {
+    top = aboveTop;
+    placement = 'above';
+  } else {
+    // Tight viewport: pick the side with more vertical room and clamp safely inside bounds
+    const roomBelow = ch - p - ay;
+    const roomAbove = ay - p;
+    top = roomBelow >= roomAbove ? bound(belowTop, p, maxTop) : bound(aboveTop, p, maxTop);
+    placement = 'clamped';
+  }
+
+  return {
+    left,
+    top: Math.round(bound(top, p, maxTop)),
+    placement
+  };
+}

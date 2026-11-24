@@ -162,6 +162,8 @@ export function buildSystem2Bundle({
   handoffSequence = null,
   screenBySeat = {},
   auditRecords = [],
+  seatCompactions = {},
+  decisions = [],
   tier0 = null,
   s1Verdict = null,
   fleetKpis = null,
@@ -195,6 +197,9 @@ export function buildSystem2Bundle({
       const rawScreen = screenBySeat[sid] || '';
       const redScreen = stripAnsiAndRedact(clipLines(rawScreen, 55, 1600), { redactPaths });
       redactionCount += redScreen.redactionCount;
+      const rawRecap = (seatCompactions && seatCompactions[sid] && (seatCompactions[sid].recapText || seatCompactions[sid].recapSnippet)) || '';
+      const redRecap = rawRecap ? stripAnsiAndRedact(String(rawRecap).slice(0, 420), { redactPaths }) : { text: '', redactionCount: 0 };
+      redactionCount += redRecap.redactionCount;
       return {
         seatId: sid,
         harness: n.runtime || n.harness || '',
@@ -203,6 +208,7 @@ export function buildSystem2Bundle({
         ctxPct: n.ctxPct ?? n.contextUsage?.usedPercentage ?? null,
         isParked: Boolean(n.parkedData?.parked || n.isParked),
         shellExited: Boolean(n.shellExited),
+        recapExcerpt: redRecap.text || undefined,
         tmuxExcerpt: redScreen.text
       };
     });
@@ -212,12 +218,28 @@ export function buildSystem2Bundle({
     if (id) allowedRefIds.add(id);
     const s = stripAnsiAndRedact(String(q.summary || q.title || '').slice(0, 140), { redactPaths });
     redactionCount += s.redactionCount;
+    const tags = Array.isArray(q.tags) ? q.tags : [];
+    const pickTag = (pref) => {
+      const hit = tags.find(t => typeof t === 'string' && t.startsWith(pref));
+      return hit ? hit.slice(pref.length) : undefined;
+    };
+    const rawBlocked = typeof q.blockedOn === 'string' && q.blockedOn.trim() ? q.blockedOn.trim() : '';
+    const redBlocked = rawBlocked ? stripAnsiAndRedact(rawBlocked.slice(0, 120), { redactPaths }) : { text: '', redactionCount: 0 };
+    redactionCount += redBlocked.redactionCount;
     return {
       qitemId: id,
       from: q.sourceSession || q.from || '',
       to: q.destinationSession || q.to || '',
       state: q.state || 'pending',
-      slice: q.slice || '',
+      slice: q.slice || pickTag('slice:') || '',
+      project: q.project || pickTag('project:'),
+      mission: q.mission || pickTag('mission:'),
+      parent: q.parent || pickTag('parent:'),
+      gate: q.gate || pickTag('gate:'),
+      bodyContextRef: q.bodyContextRef || pickTag('body-context:'),
+      blockedOn: redBlocked.text || undefined,
+      handedOffFrom: q.handedOffFrom || undefined,
+      handedOffTo: q.handedOffTo || undefined,
       summary: s.text
     };
   });
@@ -255,6 +277,15 @@ export function buildSystem2Bundle({
     at: r.executedAt
   }));
 
+  const relatedDecisions = (Array.isArray(decisions) ? decisions : [])
+    .filter(d => !targetId || scope !== 'slice' || String(d.slice || '').toLowerCase().includes(String(targetId).replace(/^slice:/, '').toLowerCase()))
+    .slice(0, 4)
+    .map(d => {
+      const dec = stripAnsiAndRedact(`${d.decision || ''} (${d.reason || ''})`.slice(0, 180), { redactPaths });
+      redactionCount += dec.redactionCount;
+      return { time: d.time || '', slice: d.slice || '', text: dec.text };
+    });
+
   const bundleObj = {
     scope,
     targetId,
@@ -275,6 +306,7 @@ export function buildSystem2Bundle({
     participantSeats: seatsSummary,
     openQueue: queueRows,
     handoffFlow: flowSteps,
+    relatedDecisions: relatedDecisions.length ? relatedDecisions : undefined,
     recentActionAudit: auditSummary
   };
 

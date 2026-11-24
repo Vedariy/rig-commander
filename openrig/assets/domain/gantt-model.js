@@ -156,7 +156,18 @@ export function normalizeGanttSpans(rawItems = [], {
       qaRound: 0,
       isQaStep: isQaSeatId(raw.to),
       isBounceBack: false,
-      chainQaRounds: 0
+      chainQaRounds: 0,
+      blockedOn: raw.blockedOn || '',
+      blockedOnQitemId: raw.blockedOnQitemId || '',
+      handedOffFrom: raw.handedOffFrom || '',
+      handedOffTo: raw.handedOffTo || '',
+      parent: raw.parent || '',
+      project: raw.project || '',
+      mission: raw.mission || '',
+      gate: raw.gate || '',
+      bodyContextRef: raw.bodyContextRef || '',
+      evidenceRef: raw.evidenceRef || '',
+      targetRepo: raw.targetRepo || ''
     });
   }
 

@@ -13,6 +13,9 @@ import {
   classifyTerminalScreen,
   classifyEdgeQueueStatus,
   getContextThermal,
+  evalThermalCurveHeightPct,
+  buildThermalCurvePaths,
+  buildThermalCurveSvgHtml,
   formatTokensShort,
   computeBurn,
   getAgentAudioProfile,
@@ -199,6 +202,21 @@ test('domain thermal, audio and gantt helpers work deterministically', () => {
   assert.equal(critT.color, '#ff0055');
   assert.equal(critT.band, 'red');
   assert.equal(critT.tier, 'crit');
+
+  // Exponential thermal wedge curve: flat baseline in optimal zone (<=35%), strictly convex flare past 35%
+  assert.equal(evalThermalCurveHeightPct(0), 6);
+  assert.equal(evalThermalCurveHeightPct(20), 6);
+  assert.equal(evalThermalCurveHeightPct(35), 6);
+  const h55 = evalThermalCurveHeightPct(55);
+  const h75 = evalThermalCurveHeightPct(75);
+  const h95 = evalThermalCurveHeightPct(95);
+  assert.ok(h55 > 6 && h75 > h55 && h95 > h75 && evalThermalCurveHeightPct(100) === 96);
+  assert.ok((h95 - h75) > (h55 - 6) * 2, `Expected exponential convexity: (${h95}-${h75}) > 2*(${h55}-6)`);
+  const paths = buildThermalCurvePaths(2.5);
+  assert.ok(paths.areaPath.startsWith('M 0 94') && paths.areaPath.endsWith('L 100 100 L 0 100 Z'));
+  const svgHtml = buildThermalCurveSvgHtml();
+  assert.match(svgHtml, /url\(#rigThermalWedgeGrad\)/);
+  assert.match(svgHtml, /url\(#rigThermalRidgeGrad\)/);
 
   assert.equal(formatTokensShort(1_250_000), '1.25M');
   assert.equal(formatTokensShort(42_300), '42K');

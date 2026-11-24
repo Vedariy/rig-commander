@@ -413,7 +413,24 @@ export const DECK_I18N = {
     'eval.loadModelsBtn': '🔄 Load models',
     'eval.slot1Title': '⚡ SLOT 1: SYSTEM 1 (Single-Pass /v1/systemone • Jev / Laya / Von / GLiClass)',
     'eval.slot2Title': '🧠 SLOT 2: SYSTEM 2 (Deliberative Reasoner • Gemini 4 Hydrogen / GLM-5.3 / Qwen3.8)',
-    'eval.advisoryNote': 'Advisory-Only: AI never auto-executes commands. Tier 0 Expert Vetoes override any false safe verdict.'
+    'eval.advisoryNote': 'Advisory-Only: AI never auto-executes commands. Tier 0 Expert Vetoes override any false safe verdict.',
+    'ctx.openBtn': '📄 Context',
+    'ctx.openTip': 'Inspect full transferred context, lineage, blockers and artifacts',
+    'ctx.modalTitle': '🔗 SHARED TASK CONTEXT & LINEAGE',
+    'ctx.loading': 'Loading full qitem context (rig queue show --full)...',
+    'ctx.lineageTitle': 'HANDOFF & DEPENDENCY LINEAGE',
+    'ctx.blockedBy': '🧱 Blocked by:',
+    'ctx.waitingOnThis': '⏳ Tasks waiting on this:',
+    'ctx.parentTask': '🔗 Parent:',
+    'ctx.artifactsTitle': 'REFERENCED ARTIFACTS & SHARED CONTEXT',
+    'ctx.decisionsTitle': 'RELATED RIG DECISIONS',
+    'ctx.bodyTitle': 'TRANSFERRED PAYLOAD (BODY)',
+    'ctx.emptyBody': 'No inline body recorded on this queue item.',
+    'ctx.resolutionTitle': 'RESOLUTION / OUTCOME',
+    'ctx.siblingsTitle': 'OTHER HANDOFFS IN THIS SLICE',
+    'ctx.driftPack': '⚠️ Context-pack drift across slice: {vals}',
+    'ctx.driftBlockers': '🧱 {n} active upstream blocker(s) in this chain',
+    'ctx.copyFullCmd': 'Copy rig queue show'
   },
   ru: {
     'doc.title': 'RIGCOMMANDER // NEURAL COMMAND DECK v3.1',
@@ -829,7 +846,24 @@ export const DECK_I18N = {
     'eval.loadModelsBtn': '🔄 Подтянуть модели',
     'eval.slot1Title': '⚡ СЛОТ 1: SYSTEM 1 (Однопроходный /v1/systemone • Jev / Laya / Von / GLiClass)',
     'eval.slot2Title': '🧠 СЛОТ 2: SYSTEM 2 (Делиберативный синтез • Gemini 4 Hydrogen / GLM-5.3 / Qwen3.8)',
-    'eval.advisoryNote': 'Режим Advisory-Only: AI никогда не отправляет команды сам. Вето Tier 0 Эксперта перекрывает любой ложный safe-вердикт.'
+    'eval.advisoryNote': 'Режим Advisory-Only: AI никогда не отправляет команды сам. Вето Tier 0 Эксперта перекрывает любой ложный safe-вердикт.',
+    'ctx.openBtn': '📄 Контекст',
+    'ctx.openTip': 'Открыть полный переданный контекст, цепочку зависимостей, блокеры и артефакты',
+    'ctx.modalTitle': '🔗 ОБЩИЙ КОНТЕКСТ ЗАДАЧИ И ЦЕПОЧКА ПЕРЕДАЧ',
+    'ctx.loading': 'Загрузка полного контекста задачи (rig queue show --full)...',
+    'ctx.lineageTitle': 'ЦЕПОЧКА ПЕРЕДАЧ И ЗАВИСИМОСТЕЙ',
+    'ctx.blockedBy': '🧱 Заблокировано на:',
+    'ctx.waitingOnThis': '⏳ Ждут эту задачу:',
+    'ctx.parentTask': '🔗 Родительская задача:',
+    'ctx.artifactsTitle': 'АРТЕФАКТЫ И ПРИВЯЗАННЫЙ ОБЩИЙ КОНТЕКСТ',
+    'ctx.decisionsTitle': 'СВЯЗАННЫЕ РЕШЕНИЯ РИГА',
+    'ctx.bodyTitle': 'ПЕРЕДАННЫЙ КОНТЕКСТ (BODY)',
+    'ctx.emptyBody': 'В этом конверте нет текстового тела (body пустой).',
+    'ctx.resolutionTitle': 'ИТОГ / РЕЗОЛЮЦИЯ',
+    'ctx.siblingsTitle': 'ДРУГИЕ ПЕРЕДАЧИ В ЭТОМ СЛАЙСЕ',
+    'ctx.driftPack': '⚠️ Дрейф context-pack внутри слайса: {vals}',
+    'ctx.driftBlockers': '🧱 Активных блокеров в этой цепочке: {n}',
+    'ctx.copyFullCmd': 'Скопировать rig queue show'
   }
 };
 

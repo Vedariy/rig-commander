@@ -18,6 +18,12 @@ import { AiEvaluatorService } from './lib/ai-evaluator/index.mjs';
 import { normalizeGanttSpans, buildHandoffSequenceModel } from './assets/domain/gantt-model.js';
 import { ServerIdempotencyCache, buildSeatSendKey } from './assets/domain/action-guard.js';
 import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
+import {
+  extractItemContextMeta,
+  extractContextArtifacts,
+  buildSharedContextGraph,
+  matchRelatedDecisions
+} from './assets/domain/context-lineage.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
@@ -992,6 +998,7 @@ async function readSeatCompactions() {
             const files = await fs.readdir(seatPath);
             let count = 0;
             let recapSnippet = '';
+            let recapText = '';
             if (files.includes('recap-superseded')) {
               try {
                 const sup = await fs.readdir(path.join(seatPath, 'recap-superseded'));
@@ -1004,11 +1011,13 @@ async function readSeatCompactions() {
                 const content = await fs.readFile(path.join(seatPath, 'RECAP.md'), 'utf-8');
                 const firstLine = content.split('\n').find(l => l.trim().length > 0 && !l.startsWith('#')) || '';
                 recapSnippet = firstLine.slice(0, 160);
+                recapText = content.trim().slice(0, 2400);
               } catch {}
             }
             result[fullSeatId] = {
               compactionsCount: count,
-              recapSnippet: recapSnippet
+              recapSnippet: recapSnippet,
+              recapText: recapText
             };
           } catch {}
         }
@@ -1057,6 +1066,97 @@ async function safeTextExec(bin, args) {
   } catch (err) {
     return (err && err.stdout) || (err && err.stderr) || (err && err.message) || '';
   }
+}
+
+async function execWithStatus(bin, args, timeoutMs = 20000) {
+  try {
+    const { stdout, stderr } = await execFileAsync(bin, args, { timeout: timeoutMs, maxBuffer: 5 * 1024 * 1024 });
+    const output = (stdout || stderr || '').trim();
+    return { ok: true, code: 0, stdout: stdout || '', stderr: stderr || '', output };
+  } catch (err) {
+    const stdout = (err && err.stdout) || '';
+    const stderr = (err && err.stderr) || '';
+    const output = (stdout || stderr || (err && err.message) || 'Command failed').trim();
+    return { ok: false, code: typeof err?.code === 'number' ? err.code : 1, stdout, stderr, output };
+  }
+}
+
+function sleepMs(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const WRAPPER_REFUSAL_RE = /behind a wrapper|could not verify its expected .* agent/i;
+
+async function sendPacedTmuxRaw({ target, cleanText, execFn, waitFn, tmuxBin }) {
+  // Paced TUI-safe sequence (prevents Codex/Claude slash autocomplete race & partial C-u truncation)
+  const escRes = await execFn(tmuxBin, ['send-keys', '-t', target, 'Escape'], 8000);
+  if (!escRes.ok) {
+    return { ok: false, statusCode: 409, output: escRes.output, error: escRes.output || 'tmux target unavailable' };
+  }
+  await waitFn(80);
+  await execFn(tmuxBin, ['send-keys', '-t', target, 'C-e'], 8000);
+  await execFn(tmuxBin, ['send-keys', '-t', target, 'C-u'], 8000);
+  await waitFn(80);
+  const literalRes = await execFn(tmuxBin, ['send-keys', '-t', target, '-l', cleanText], 8000);
+  if (!literalRes.ok) {
+    return { ok: false, statusCode: 409, output: literalRes.output, error: literalRes.output || 'tmux literal send failed' };
+  }
+  await waitFn(cleanText.startsWith('/') ? 320 : 240);
+  const enterRes = await execFn(tmuxBin, ['send-keys', '-t', target, 'Enter'], 8000);
+  if (!enterRes.ok) {
+    return { ok: false, statusCode: 409, output: enterRes.output, error: enterRes.output || 'tmux Enter send failed' };
+  }
+  return { ok: true, statusCode: 200, output: enterRes.output };
+}
+
+/**
+ * Safely dispatches raw slash commands & prompts (e.g. /compact, nudge_queue):
+ * - For OpenRig-managed seats: delegates to native `rig send --raw <seat> <text>`, which handles
+ *   two-step paste -> wait -> Enter and input-box / permission guards.
+ *   If OpenRig refuses ONLY because the agent runs behind a bash wrapper script ("running behind a wrapper"),
+ *   verifies via live screen capture that the pane is NOT a bare OS shell and NOT blocked on HITL, then
+ *   delivers through the paced TUI-safe tmux sequence.
+ * - For standalone universal tmux panes: runs the paced TUI-safe tmux sequence directly.
+ */
+async function dispatchRawCommand({
+  seat,
+  cleanText,
+  universalTarget = null,
+  execFn = execWithStatus,
+  waitFn = sleepMs,
+  captureScreenFn = (s) => captureSeatScreen(s, 36),
+  rigBin = RIG_BIN,
+  tmuxBin = TMUX_BIN
+}) {
+  if (!universalTarget) {
+    const res = await execFn(rigBin, ['send', '--raw', seat, cleanText], 20000);
+    if (res.ok) {
+      return { ok: true, statusCode: 200, output: res.output, via: 'rig_raw' };
+    }
+    if (WRAPPER_REFUSAL_RE.test(res.output || '')) {
+      const screen = await Promise.resolve(captureScreenFn(seat)).catch(() => '');
+      const verdict = classifyTerminalScreen(screen || '');
+      if (String(screen || '').trim() && !verdict.shellExited && !verdict.blocked) {
+        const fb = await sendPacedTmuxRaw({ target: seat, cleanText, execFn, waitFn, tmuxBin });
+        return { ...fb, via: 'tmux_wrapper_fallback' };
+      }
+      const guardReason = verdict.shellExited
+        ? 'Live screen shows a bare OS shell (agent exited) — refusing to send prompt.'
+        : verdict.blocked
+          ? 'Live screen shows an active HITL permission prompt — resolve it first.'
+          : res.output;
+      return { ok: false, statusCode: 409, output: res.output, error: guardReason || res.output };
+    }
+    return {
+      ok: false,
+      statusCode: 409,
+      output: res.output,
+      error: res.output || `rig send --raw failed for ${seat}`
+    };
+  }
+
+  const res = await sendPacedTmuxRaw({ target: universalTarget, cleanText, execFn, waitFn, tmuxBin });
+  return { ...res, via: 'tmux_universal' };
 }
 
 async function readRecentDecisions(limit = 12, nodes = []) {
@@ -1143,6 +1243,7 @@ function computeHistoryStats(allQueue) {
         const qId = q.qitemId || q.id || '';
         const createdIso = q.tsCreated || q.createdAt || extractTsFromQitemId(qId);
         const updatedIso = q.tsUpdated || q.updatedAt || q.tsClosed || q.tsClaimed || createdIso;
+        const ctxMeta = extractItemContextMeta(q);
         pairEnvelopes[key].push({
           id: qId,
           from: src,
@@ -1152,7 +1253,18 @@ function computeHistoryStats(allQueue) {
           pickupState: (q.pickup && q.pickup.state) || '',
           summary: q.summary || q.title || q.subject || '',
           createdAt: createdIso,
-          updatedAt: updatedIso
+          updatedAt: updatedIso,
+          blockedOn: ctxMeta.blockedOn,
+          blockedOnQitemId: ctxMeta.blockedOnQitemId,
+          handedOffFrom: ctxMeta.handedOffFrom,
+          handedOffTo: ctxMeta.handedOffTo,
+          parent: ctxMeta.parent,
+          project: ctxMeta.project,
+          mission: ctxMeta.mission,
+          gate: ctxMeta.gate,
+          bodyContextRef: ctxMeta.bodyContextRef,
+          evidenceRef: ctxMeta.evidenceRef,
+          targetRepo: ctxMeta.targetRepo
         });
       }
     }
@@ -1284,6 +1396,7 @@ function buildGanttItems(allQueue) {
       endAt = updatedStr || (hasLaterTask ? new Date(nextCreatedMs).toISOString() : null) || q.claimedAt || createdStr;
     }
 
+    const ctxMeta = extractItemContextMeta(q);
     return {
       id,
       from: q.sourceSession || '',
@@ -1294,20 +1407,80 @@ function buildGanttItems(allQueue) {
       state,
       createdAt: createdStr,
       claimedAt: q.claimedAt || null,
-      endAt
+      endAt,
+      blockedOn: ctxMeta.blockedOn,
+      blockedOnQitemId: ctxMeta.blockedOnQitemId,
+      handedOffFrom: ctxMeta.handedOffFrom,
+      handedOffTo: ctxMeta.handedOffTo,
+      parent: ctxMeta.parent,
+      project: ctxMeta.project,
+      mission: ctxMeta.mission,
+      gate: ctxMeta.gate,
+      bodyContextRef: ctxMeta.bodyContextRef,
+      evidenceRef: ctxMeta.evidenceRef,
+      targetRepo: ctxMeta.targetRepo
     };
   });
 }
 
-let cachedHistory = { ts: 0, data: null };
+let cachedHistory = { ts: 0, data: null, rawQueue: [] };
+const queueItemDetailCache = new Map(); // qitemId -> { ts, payload }
+const QUEUE_ITEM_DETAIL_TTL_MS = 8000;
+
 async function getHistoryStats() {
   if (Date.now() - cachedHistory.ts < 20000 && cachedHistory.data) {
     return cachedHistory.data;
   }
   const allQueue = await safeJsonExec(RIG_BIN, ['queue', 'list', '-a', '-A', '--limit', '2500', '--json']);
   const data = computeHistoryStats(allQueue);
-  cachedHistory = { ts: Date.now(), data };
+  cachedHistory = { ts: Date.now(), data, rawQueue: Array.isArray(allQueue) ? allQueue : [] };
   return data;
+}
+
+async function fetchQueueItemContextDetail(qitemId, { execFn = execWithStatus, rigBin = RIG_BIN } = {}) {
+  const safeId = String(qitemId || '').trim();
+  if (!safeId || !/^[a-zA-Z0-9._:-]{3,120}$/.test(safeId)) {
+    return { ok: false, statusCode: 400, error: 'Invalid qitem identifier' };
+  }
+  const cached = queueItemDetailCache.get(safeId);
+  if (cached && Date.now() - cached.ts < QUEUE_ITEM_DETAIL_TTL_MS) {
+    return { ok: true, statusCode: 200, ...cached.payload, cached: true };
+  }
+
+  let rawItem = null;
+  const res = await execFn(rigBin, ['queue', 'show', safeId, '--full', '--json'], 12000);
+  if (res.ok && res.stdout) {
+    try {
+      const parsed = JSON.parse(res.stdout);
+      rawItem = Array.isArray(parsed) ? (parsed[0] || null) : parsed;
+    } catch {
+      rawItem = null;
+    }
+  }
+
+  const combinedQueue = [
+    ...(Array.isArray(cachedHistory.rawQueue) ? cachedHistory.rawQueue : []),
+    ...(Array.isArray(latestFleetSnapshot?.activeQueue) ? latestFleetSnapshot.activeQueue : [])
+  ];
+  if (!rawItem) {
+    rawItem = combinedQueue.find(q => (q && (q.qitemId || q.id)) === safeId) || null;
+  }
+  if (!rawItem) {
+    return { ok: false, statusCode: 404, error: `Queue item ${safeId} not found` };
+  }
+
+  const item = extractItemContextMeta(rawItem);
+  const graph = buildSharedContextGraph([...combinedQueue, rawItem]);
+  const lineage = graph.getLineage(item);
+  const artifacts = extractContextArtifacts(`${item.summary}\n${item.body}\n${item.resolution}`, {
+    selfId: item.id,
+    evidenceRef: item.evidenceRef
+  });
+  const relatedDecisions = matchRelatedDecisions(latestFleetSnapshot?.decisions || [], item);
+
+  const payload = { item, artifacts, lineage, relatedDecisions };
+  boundedMapSet(queueItemDetailCache, safeId, { ts: Date.now(), payload }, 80);
+  return { ok: true, statusCode: 200, ...payload, cached: false };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -1927,6 +2100,8 @@ const server = http.createServer(async (req, res) => {
             screenText,
             screenBySeat,
             auditRecords: actionAudit.list(20, scope === 'seat' ? targetId : null),
+            seatCompactions: snap.seatCompactions || {},
+            decisions: snap.decisions || [],
             sliceMetrics,
             fleetKpis: {
               healthScore: snap.intelligence?.healthScore ?? null,
@@ -1942,6 +2117,14 @@ const server = http.createServer(async (req, res) => {
         await sendJson(req, res, 500, { ok: false, error: err.message });
       }
     });
+    return;
+  }
+
+  // 1.25 Full Shared Context & Lineage for a single queue item (read-only lazy loader)
+  if (url.pathname === '/api/queue/item' && req.method === 'GET') {
+    const qitemId = url.searchParams.get('id') || '';
+    const detail = await fetchQueueItemContextDetail(qitemId);
+    await sendJson(req, res, detail.statusCode || (detail.ok ? 200 : 400), detail);
     return;
   }
 
@@ -2044,11 +2227,21 @@ const server = http.createServer(async (req, res) => {
                 return;
               }
 
-              // 3. Prompt line hygiene: Send C-u first to clear any dirty/pending input in the terminal buffer!
-              // This prevents duplicate concatenation like /compact/compact when prompt already had a slash.
-              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'C-u']);
-              await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', cleanText]);
-              output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+              // 3. Deliver cleanly via native `rig send --raw` (two-step paste + input-box guard)
+              //    for OpenRig seats, or paced TUI-safe tmux sequence for standalone universal panes.
+              const rawRes = await dispatchRawCommand({
+                seat,
+                cleanText,
+                universalTarget: universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : null
+              });
+              if (!rawRes.ok) {
+                actionAudit.record({ actionId, evalId, seatId: seat, type, payload: cleanText, httpStatus: rawRes.statusCode, ok: false, baseline });
+                const errBody = { ok: false, error: rawRes.error };
+                idem.complete(rawRes.statusCode, errBody);
+                await sendJson(req, res, rawRes.statusCode, errBody);
+                return;
+              }
+              output = rawRes.output;
             } else if (type === 'interact') {
               if (universalTarget) {
                 await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
@@ -2177,6 +2370,8 @@ export {
   parseAllowedTmuxKeys,
   resolveSafeStaticPath,
   applyTerminalPromptProbes,
+  dispatchRawCommand,
+  fetchQueueItemContextDetail,
   buildLiveManifest,
   transcriptUsageCache,
   seatGuidanceCache

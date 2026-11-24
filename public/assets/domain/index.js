@@ -4,7 +4,18 @@ export {
   detectTerminalIdleAtPrompt,
   classifyTerminalScreen
 } from './prompt-parser.js';
-export { getContextThermal, formatTokensShort, computeBurn } from './thermal.js';
+export {
+  THERMAL_CURVE_OPTIMAL_PCT,
+  THERMAL_CURVE_BASE_H,
+  THERMAL_CURVE_MAX_H,
+  THERMAL_CURVE_EXP_K,
+  evalThermalCurveHeightPct,
+  buildThermalCurvePaths,
+  buildThermalCurveSvgHtml,
+  getContextThermal,
+  formatTokensShort,
+  computeBurn
+} from './thermal.js';
 export { getAgentAudioProfile } from './audio.js';
 export {
   GANTT_LONG_WAIT_MS,
@@ -73,7 +84,8 @@ export {
   classifyNodeActivityTier,
   getRolePlacementInfo,
   estimateNodeBox,
-  computeTopologyLayout
+  computeTopologyLayout,
+  computeAnchoredPopoverRect
 } from './topology-layout.js';
 export {
   EVAL_TIERS,
@@ -100,3 +112,10 @@ export {
   buildSystem2Prompts,
   buildCascadeBreadcrumb
 } from './evaluator-model.js';
+export {
+  extractItemContextMeta,
+  extractContextArtifacts,
+  buildSharedContextGraph,
+  getContextDriftSignals,
+  matchRelatedDecisions
+} from './context-lineage.js';

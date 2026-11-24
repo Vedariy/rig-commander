@@ -1,3 +1,46 @@
+export const THERMAL_CURVE_OPTIMAL_PCT = 35;
+export const THERMAL_CURVE_BASE_H = 6;
+export const THERMAL_CURVE_MAX_H = 96;
+export const THERMAL_CURVE_EXP_K = 1.3;
+
+/**
+ * Computes the height (% of card height from bottom edge) of the non-linear thermal wedge:
+ * flat baseline (6% ≈ 3px) across optimal context (0..35%), then exponential flare upward to 96%.
+ */
+export function evalThermalCurveHeightPct(pct) {
+  const x = Math.min(100, Math.max(0, Number(pct) || 0));
+  if (x <= THERMAL_CURVE_OPTIMAL_PCT) return THERMAL_CURVE_BASE_H;
+  const t = (x - THERMAL_CURVE_OPTIMAL_PCT) / (100 - THERMAL_CURVE_OPTIMAL_PCT);
+  const expNorm = (Math.exp(THERMAL_CURVE_EXP_K * t) - 1) / (Math.exp(THERMAL_CURVE_EXP_K) - 1);
+  return +(THERMAL_CURVE_BASE_H + (THERMAL_CURVE_MAX_H - THERMAL_CURVE_BASE_H) * expNorm).toFixed(2);
+}
+
+/**
+ * Generates SVG path commands (in a 0..100 x 0..100 coordinate box with bottom edge y=100)
+ * for the exponential thermal wedge area and its luminous top ridge curve.
+ */
+export function buildThermalCurvePaths(step = 2.5) {
+  const safeStep = Math.max(0.5, Math.min(10, Number(step) || 2.5));
+  const points = [];
+  for (let x = 0; x <= 100 + 1e-6; x += safeStep) {
+    const cx = Math.min(100, +x.toFixed(2));
+    const y = +(100 - evalThermalCurveHeightPct(cx)).toFixed(2);
+    points.push([cx, y]);
+  }
+  const last = points[points.length - 1];
+  if (!last || last[0] < 100) {
+    points.push([100, +(100 - evalThermalCurveHeightPct(100)).toFixed(2)]);
+  }
+  const ridgePath = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ');
+  const areaPath = `${ridgePath} L 100 100 L 0 100 Z`;
+  return { areaPath, ridgePath, points };
+}
+
+export function buildThermalCurveSvgHtml() {
+  const { areaPath, ridgePath } = buildThermalCurvePaths(2.5);
+  return `<svg class="node-thermal-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${areaPath}" fill="url(#rigThermalWedgeGrad)"/><rect x="0" y="94.5" width="100" height="5.5" fill="url(#rigThermalRidgeGrad)" opacity="0.9"/><path d="${ridgePath}" fill="none" stroke="url(#rigThermalRidgeGrad)" stroke-width="1.8" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
 export function getContextThermal(ctxPct, ctxWindowSize) {
   if (ctxPct === null || ctxPct === undefined || !Number.isFinite(Number(ctxPct))) {
     return {

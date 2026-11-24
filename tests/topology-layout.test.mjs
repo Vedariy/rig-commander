@@ -4,7 +4,8 @@ import {
   GRAPH_LAYOUT_MODES,
   classifyNodeActivityTier,
   estimateNodeBox,
-  computeTopologyLayout
+  computeTopologyLayout,
+  computeAnchoredPopoverRect
 } from '../openrig/assets/domain/topology-layout.js';
 
 function makeAgent(id, opts = {}) {
@@ -200,4 +201,40 @@ test('handles all edge counts cleanly: 0 active, 1 active, 2 active, all active,
   const rMultiB = computeTopologyLayout({ agents: multi, edges: [], mode: 'dynamic', canvasWidth: 700, canvasHeight: 440 });
   assert.deepEqual(rMultiA, rMultiB);
   assertNoRectOverlaps(multi, rMultiA, 700, 440);
+});
+
+test('computeAnchoredPopoverRect places popover near cursor with vertical flip and horizontal edge clamping', () => {
+  // 1) Center click: opens directly below cursor, centered horizontally
+  const center = computeAnchoredPopoverRect({
+    anchorX: 500, anchorY: 180, containerW: 1200, containerH: 600, popoverW: 340, popoverH: 220, pad: 12, offset: 16
+  });
+  assert.equal(center.placement, 'below');
+  assert.equal(center.left, 330);
+  assert.equal(center.top, 196);
+
+  // 2) Near bottom edge: flips cleanly above cursor so bottom never clips
+  const bottom = computeAnchoredPopoverRect({
+    anchorX: 500, anchorY: 500, containerW: 1200, containerH: 600, popoverW: 340, popoverH: 220, pad: 12, offset: 16
+  });
+  assert.equal(bottom.placement, 'above');
+  assert.equal(bottom.top, 264);
+  assert.ok(bottom.top >= 12 && bottom.top + 220 <= 588);
+
+  // 3) Near right & left edges: clamped with 12px margin
+  const right = computeAnchoredPopoverRect({
+    anchorX: 1170, anchorY: 120, containerW: 1200, containerH: 600, popoverW: 340, popoverH: 220, pad: 12, offset: 16
+  });
+  assert.equal(right.left, 848);
+  const left = computeAnchoredPopoverRect({
+    anchorX: 40, anchorY: 120, containerW: 1200, containerH: 600, popoverW: 340, popoverH: 220, pad: 12, offset: 16
+  });
+  assert.equal(left.left, 12);
+
+  // 4) Very tight vertical container: clamped safely without negative coords
+  const tight = computeAnchoredPopoverRect({
+    anchorX: 200, anchorY: 160, containerW: 400, containerH: 280, popoverW: 340, popoverH: 220, pad: 12, offset: 16
+  });
+  assert.equal(tight.placement, 'clamped');
+  assert.ok(tight.left >= 12 && tight.left + 340 <= 388);
+  assert.ok(tight.top >= 12 && tight.top + 220 <= 268);
 });

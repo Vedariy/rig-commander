@@ -224,6 +224,24 @@
       <div class="canvas-wrap">
         <svg class="topology-svg" id="topologySvg" viewBox="0 0 1000 510" preserveAspectRatio="none">
           <defs>
+            <linearGradient id="rigThermalWedgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.22"/>
+              <stop offset="28%" stop-color="#60a5fa" stop-opacity="0.24"/>
+              <stop offset="48%" stop-color="#38bdf8" stop-opacity="0.28"/>
+              <stop offset="60%" stop-color="#facc15" stop-opacity="0.34"/>
+              <stop offset="70%" stop-color="#fb923c" stop-opacity="0.42"/>
+              <stop offset="82%" stop-color="#ff0055" stop-opacity="0.48"/>
+              <stop offset="100%" stop-color="#ff0055" stop-opacity="0.54"/>
+            </linearGradient>
+            <linearGradient id="rigThermalRidgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#a78bfa"/>
+              <stop offset="28%" stop-color="#60a5fa"/>
+              <stop offset="48%" stop-color="#38bdf8"/>
+              <stop offset="60%" stop-color="#facc15"/>
+              <stop offset="70%" stop-color="#fb923c"/>
+              <stop offset="82%" stop-color="#ff0055"/>
+              <stop offset="100%" stop-color="#ff2a6d"/>
+            </linearGradient>
             <marker id="arr-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
               <path d="M 0 1 L 10 5 L 0 9 z" fill="#00f0ff"/>
             </marker>
@@ -450,6 +468,23 @@
         </div>
       </div>
       <div class="modal-fleet-body" id="updateModalBody"></div>
+    </div>
+  </div>
+
+  <!-- SHARED TASK CONTEXT & LINEAGE MODAL -->
+  <div class="modal-overlay" id="contextLineageModal" onclick="if (event.target === this) closeContextLineageModal()">
+    <div class="modal-fleet-card" style="max-width:860px;">
+      <div class="modal-fleet-header">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="contextLineageModalTitle" style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#7dd3fc;" data-i18n="ctx.modalTitle">
+            🔗 ОБЩИЙ КОНТЕКСТ ЗАДАЧИ И ЦЕПОЧКА ПЕРЕДАЧ
+          </span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="action-pill" onclick="closeContextLineageModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        </div>
+      </div>
+      <div class="modal-fleet-body" id="contextLineageModalBody"></div>
     </div>
   </div>
 
@@ -2074,10 +2109,12 @@
             ${hasSeat ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-seat="${escapeHtml(sp.to)}" onclick="focusSeatDiagnosis(this.getAttribute('data-seat'))">${escapeHtml(td('gantt.spanFocusSeat'))}</button>` : ''}
             ${hasSeat ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-seat="${escapeHtml(sp.to)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${escapeHtml(td('gantt.spanScreen'))}</button>` : ''}
             <button type="button" class="action-pill" style="padding:2px 7px; font-size:10px; border-color:rgba(168,85,247,0.48); color:#e9d5ff;" data-slice="${escapeHtml(sp.slice || sp.chain)}" onclick="runAiEvaluation('slice', this.getAttribute('data-slice'), 'system2')">${escapeHtml(td('eval.ganttAnalyzeS2'))}</button>
+            ${sp.id ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px; border-color:rgba(56,189,248,0.48); color:#7dd3fc;" data-qid="${escapeHtml(sp.id)}" title="${escapeHtml(td('ctx.openTip'))}" onclick="openQueueItemContext(this.getAttribute('data-qid'))">${escapeHtml(td('ctx.openBtn'))}</button>` : ''}
             ${showCmd ? `<button type="button" class="env-copy-btn" data-cmd="${escapeHtml(showCmd)}" title="${escapeHtml(showCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>` : ''}
             <button type="button" class="action-pill" style="padding:2px 6px; font-size:10px; border-color:rgba(148,163,184,0.3); color:#94a3b8;" onclick="selectGanttSpan(null)">✕</button>
           </div>
         </div>
+        ${renderContextBadgesHtml(sp)}
         ${sp.summary ? `<div class="gantt-span-detail-summary">${escapeHtml(sp.summary)}</div>` : ''}
         ${renderEvaluatorVerdictCardHtml('slice', sp.slice || sp.chain)}
       `;
@@ -2850,9 +2887,9 @@
                 </div>
               </div>
 
-              <!-- Integrated 3px progressive 6-band thermal spectrum rail -->
+              <!-- Integrated non-linear exponential thermal spectrum wedge (under content, above card background) -->
               <div class="node-bottom-meter">
-                <div class="node-bottom-meter-fill"></div>
+                <div class="node-bottom-meter-fill">${typeof buildThermalCurveSvgHtml === 'function' ? buildThermalCurveSvgHtml() : ''}</div>
               </div>
             </div>
           `;
@@ -3196,14 +3233,12 @@
           </div>
         `;
       } else if (activeInspectorTab === 'memory') {
-        const recapText = agent.recapSnippet || 'Свежая контрольная точка без замечаний.';
+        const recapText = agent.recapText || agent.recapSnippet || 'Свежая контрольная точка без замечаний.';
         return `
           <div style="font-family:var(--font-mono); font-size:10.5px; font-weight:800; color:#a7f3d0; margin-bottom:5px;">
             🧠 БЕЗОПАСНАЯ ТОЧКА (RECAP.md):
           </div>
-          <div style="font-family:var(--font-mono); font-size:11px; line-height:1.45; color:#cbd5e1; background:rgba(0,0,0,0.35); padding:8px; border-radius:5px; border-left:3px solid var(--emerald); word-break:break-word;">
-            ${escapeHtml(recapText)}
-          </div>
+          <pre style="margin:0; font-family:var(--font-mono); font-size:10.5px; line-height:1.45; color:#cbd5e1; background:rgba(0,0,0,0.38); padding:8px; border-radius:5px; border-left:3px solid var(--emerald); max-height:210px; overflow:auto; white-space:pre-wrap; word-break:break-word;">${escapeHtml(recapText)}</pre>
           <div style="font-size:11px; color:#94a3b8; margin-top:6px;">
             Всего сжатий и свапов сессии за историю: <b>${agent.compactionsCount || 0}</b>. Память сиденья сохраняется в <code>~/.openrig/topology/.../seats/${agent.shortName}/</code>.
           </div>
@@ -3932,12 +3967,14 @@
                 <span style="color:${q.color};">${escapeHtml(q.state)}</span>
                 ${tsStr ? `<span style="color:#94a3b8; font-weight:500;">${escapeHtml(tsStr)}</span>` : ''}
                 ${hasHistory ? `<span class="env-history-toggle ${isExpanded ? 'open' : ''}">📜 ${td('xray.eventsCount', { n: related.length })} ${isExpanded ? '▴' : '▾'}</span>` : ''}
+                ${q.id ? `<button type="button" class="env-copy-btn" style="border-color:rgba(56,189,248,0.45); color:#7dd3fc;" title="${escapeHtml(td('ctx.openTip'))}" onclick="event.stopPropagation(); openQueueItemContext('${escapeHtml(q.id)}')">${escapeHtml(td('ctx.openBtn'))}</button>` : ''}
                 <button type="button" class="env-copy-btn" title="rig queue show ${escapeHtml(q.id)} --full" onclick="event.stopPropagation(); copyCmd('rig queue show ${escapeHtml(q.id)} --full')">${CMD_COPY_LABEL_HTML}</button>
               </span>
             </div>
             <div style="font-family:var(--font-mono); font-size:11px; color:#e2e8f0; margin: 3px 0;">
               ${escapeHtml(fromDisp)} ──▶ ${escapeHtml(toDisp)} <span style="color:#94a3b8;">(${escapeHtml(q.slice)})</span>
             </div>
+            ${renderContextBadgesHtml(q)}
             <div style="font-size:12px; color:#cbd5e1; line-height:1.38;">${escapeHtml(q.summary || td('xray.emptySummary', { id: String(q.id || '').slice(-8) }))}</div>
             ${historyHtml}
           </div>
@@ -4162,6 +4199,7 @@
             target.lastSwapAt = sess.lastSwapAt;
             target.compactionsCount = sess.compactionsCount;
             target.recapSnippet = sess.recapSnippet;
+            target.recapText = sess.recapText || '';
             target.usage = sess.usage;
             target.model = sess.model;
             if (sess.effort) target.effort = sess.effort;
@@ -4200,7 +4238,8 @@
         // Update active queue envelopes (empty queue → empty list, no stale snapshot)
         {
           LIVE_QITEMS = openQueue.map(q => {
-            const sliceTag = (q.tags || []).find(t => t.startsWith('slice:')) || 'project:core-platform';
+            const meta = typeof extractItemContextMeta === 'function' ? extractItemContextMeta(q) : {};
+            const sliceTag = (q.tags || []).find(t => t.startsWith('slice:')) || (meta.project ? `project:${meta.project}` : 'project:core-platform');
             const isWorking = q.state === 'in-progress';
             return {
               id: q.qitemId,
@@ -4212,6 +4251,17 @@
               to: shortSeat(q.destinationSession || ''),
               slice: sliceTag,
               ts: q.tsUpdated || q.tsCreated || q.updatedAt || q.createdAt || '',
+              blockedOn: meta.blockedOn || '',
+              blockedOnQitemId: meta.blockedOnQitemId || '',
+              handedOffFrom: meta.handedOffFrom || '',
+              handedOffTo: meta.handedOffTo || '',
+              parent: meta.parent || '',
+              project: meta.project || '',
+              mission: meta.mission || '',
+              gate: meta.gate || '',
+              bodyContextRef: meta.bodyContextRef || '',
+              evidenceRef: meta.evidenceRef || '',
+              targetRepo: meta.targetRepo || '',
               summary: q.summary || q.title || q.subject || ''
             };
           });
@@ -5130,6 +5180,12 @@
             statusEl.className = 'ctrl-status err';
             statusEl.textContent = `✕ Ошибка: ${err.message}`;
           }
+          const errToast = document.getElementById('copyToast');
+          if (errToast) {
+            errToast.textContent = `⚠️ ${shortSeat(seat)}: ${String(err.message || 'Ошибка отправки').slice(0, 120)}`;
+            errToast.style.display = 'block';
+            setTimeout(() => { errToast.style.display = 'none'; }, 4200);
+          }
           return { ok: false, __skipCooldown: true };
         } finally {
           if (controlEl && (!guard || !guard.isLocked(scopeKey, fingerprint))) {
@@ -5903,7 +5959,7 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeUpdateModal(); closeSaTour(); }
+      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeContextLineageModal(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeUpdateModal(); closeSaTour(); }
     });
 
     // ===== Stage 7: Viral Daily Fleet Receipt / Share Card PNG Export (Item 6) =====
@@ -7048,9 +7104,73 @@
     }
 
     // ===== Stage 4: Edge X-ray =====
+    let edgeXrayAnchor = null; // { x, y } in .canvas-wrap pixel coordinates
+
+    function computeEdgeFallbackAnchor(edge, wrapEl) {
+      if (!edge || !wrapEl) return null;
+      const cw = wrapEl.clientWidth || 0;
+      const ch = wrapEl.clientHeight || 0;
+      if (!cw || !ch) return null;
+      const fromNode = AGENTS.find(a => a.id === edge.from);
+      const toNode = AGENTS.find(a => a.id === edge.to);
+      if (fromNode && toNode) {
+        return {
+          x: (((fromNode.x + toNode.x) / 2) / 100) * cw,
+          y: (((fromNode.y + toNode.y) / 2) / 100) * ch
+        };
+      }
+      return { x: cw / 2, y: ch / 2 };
+    }
+
+    function positionEdgeXrayDrawer(edgeOverride = null) {
+      const drawer = document.getElementById('edgeXrayDrawer');
+      if (!drawer || drawer.style.display === 'none') return;
+      const wrapEl = drawer.parentElement;
+      if (!wrapEl) return;
+      const edge = edgeOverride || (selectedEdgeIdx !== null ? EDGES[selectedEdgeIdx] : null);
+      const anchor = edgeXrayAnchor || computeEdgeFallbackAnchor(edge, wrapEl);
+      if (!anchor) return;
+      const cw = wrapEl.clientWidth || 0;
+      const ch = wrapEl.clientHeight || 0;
+      const pw = drawer.offsetWidth || 340;
+      const ph = drawer.offsetHeight || 220;
+      const pos = typeof computeAnchoredPopoverRect === 'function'
+        ? computeAnchoredPopoverRect({
+            anchorX: anchor.x,
+            anchorY: anchor.y,
+            containerW: cw,
+            containerH: ch,
+            popoverW: pw,
+            popoverH: ph,
+            pad: 12,
+            offset: 16
+          })
+        : { left: 12, top: 12, placement: 'clamped' };
+      drawer.style.left = `${pos.left}px`;
+      drawer.style.top = `${pos.top}px`;
+      drawer.style.right = 'auto';
+      drawer.setAttribute('data-placement', pos.placement);
+    }
+
     function selectEdge(idx, ev) {
       if (ev && ev.stopPropagation) ev.stopPropagation();
-      selectedEdgeIdx = selectedEdgeIdx === idx ? null : idx;
+      if (selectedEdgeIdx === idx) {
+        selectedEdgeIdx = null;
+        edgeXrayAnchor = null;
+      } else {
+        selectedEdgeIdx = idx;
+        const drawer = document.getElementById('edgeXrayDrawer');
+        const wrapEl = drawer && drawer.parentElement;
+        if (ev && typeof ev.clientX === 'number' && typeof ev.clientY === 'number' && wrapEl) {
+          const rect = wrapEl.getBoundingClientRect();
+          edgeXrayAnchor = {
+            x: ev.clientX - rect.left,
+            y: ev.clientY - rect.top
+          };
+        } else {
+          edgeXrayAnchor = computeEdgeFallbackAnchor(EDGES[idx], wrapEl);
+        }
+      }
       renderEdgeXray();
     }
 
@@ -7071,6 +7191,7 @@
 
     function closeEdgeXray() {
       selectedEdgeIdx = null;
+      edgeXrayAnchor = null;
       renderEdgeXray();
     }
 
@@ -7099,13 +7220,25 @@
           summary: h.summary || '',
           createdAt: h.createdAt || '',
           updatedAt: h.updatedAt || h.createdAt || '',
+          blockedOn: h.blockedOn || '',
+          blockedOnQitemId: h.blockedOnQitemId || '',
+          handedOffFrom: h.handedOffFrom || '',
+          handedOffTo: h.handedOffTo || '',
+          parent: h.parent || '',
+          project: h.project || '',
+          mission: h.mission || '',
+          gate: h.gate || '',
+          bodyContextRef: h.bodyContextRef || '',
+          evidenceRef: h.evidenceRef || '',
+          targetRepo: h.targetRepo || '',
           isLive: false
         });
       }
       for (const q of openRows) {
         const id = q.qitemId || q.id || '';
         const prev = id ? byId.get(id) : null;
-        const slice = ((q.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', '') || (prev && prev.slice) || '';
+        const meta = typeof extractItemContextMeta === 'function' ? extractItemContextMeta(q) : {};
+        const slice = meta.slice || (prev && prev.slice) || '';
         const ts = q.tsUpdated || q.tsCreated || q.updatedAt || q.createdAt || (prev && prev.updatedAt) || '';
         byId.set(id || `live-${Math.random()}`, {
           id,
@@ -7116,6 +7249,17 @@
           summary: q.summary || q.title || q.subject || (prev && prev.summary) || '',
           createdAt: q.tsCreated || q.createdAt || (prev && prev.createdAt) || ts,
           updatedAt: ts,
+          blockedOn: meta.blockedOn || (prev && prev.blockedOn) || '',
+          blockedOnQitemId: meta.blockedOnQitemId || (prev && prev.blockedOnQitemId) || '',
+          handedOffFrom: meta.handedOffFrom || (prev && prev.handedOffFrom) || '',
+          handedOffTo: meta.handedOffTo || (prev && prev.handedOffTo) || '',
+          parent: meta.parent || (prev && prev.parent) || '',
+          project: meta.project || (prev && prev.project) || '',
+          mission: meta.mission || (prev && prev.mission) || '',
+          gate: meta.gate || (prev && prev.gate) || '',
+          bodyContextRef: meta.bodyContextRef || (prev && prev.bodyContextRef) || '',
+          evidenceRef: meta.evidenceRef || (prev && prev.evidenceRef) || '',
+          targetRepo: meta.targetRepo || (prev && prev.targetRepo) || '',
           isLive: true
         });
       }
@@ -7196,9 +7340,11 @@
               </span>
               <span style="display:flex; align-items:center; gap:5px;">
                 ${hasHistory ? `<span class="env-history-toggle ${isExpanded ? 'open' : ''}">📜 ${td('xray.eventsCount', { n: env.events.length })} ${isExpanded ? '▴' : '▾'}</span>` : ''}
+                ${lead.id ? `<button type="button" class="env-copy-btn" style="border-color:rgba(56,189,248,0.48); color:#7dd3fc;" title="${escapeHtml(td('ctx.openTip'))}" onclick="event.stopPropagation(); openQueueItemContext('${escapeHtml(lead.id)}')">${escapeHtml(td('ctx.openBtn'))}</button>` : ''}
                 ${lead.id ? `<button type="button" class="env-copy-btn" title="rig queue show ${escapeHtml(lead.id)} --full" onclick="event.stopPropagation(); copyCmd('rig queue show ${escapeHtml(lead.id)} --full')">${CMD_COPY_LABEL_HTML}</button>` : ''}
               </span>
             </div>
+            ${renderContextBadgesHtml(lead)}
             <div style="font-size:11.5px; color:#cbd5e1; line-height:1.38; margin-top:4px;">${escapeHtml(leadSummary).slice(0, 320)}</div>
             ${timelineHtml}
           </div>
@@ -7219,6 +7365,245 @@
         ${envelopes.length ? cardsHtml : `<div style="font-size:11.5px; color:#94a3b8; margin-top:6px;">${td('xray.noHistory')}</div>`}
       `;
       drawer.style.display = 'block';
+      positionEdgeXrayDrawer(edge);
+    }
+
+    // ===== Shared Context Lineage Badges & Modal =====
+    function renderContextBadgesHtml(meta) {
+      if (!meta || typeof meta !== 'object') return '';
+      const chips = [];
+      if (meta.blockedOn || meta.blockedOnQitemId) {
+        const blkId = meta.blockedOnQitemId || '';
+        const blkText = String(meta.blockedOn || blkId).slice(0, 44);
+        if (blkId) {
+          chips.push(`<button type="button" class="ctx-chip is-blocker is-clickable" title="${escapeHtml(meta.blockedOn || blkId)}" onclick="event.stopPropagation(); openQueueItemContext('${escapeHtml(blkId)}')">🧱 ${escapeHtml(blkText)}</button>`);
+        } else {
+          chips.push(`<span class="ctx-chip is-blocker" title="${escapeHtml(meta.blockedOn)}">🧱 ${escapeHtml(blkText)}</span>`);
+        }
+      }
+      if (meta.bodyContextRef) {
+        chips.push(`<span class="ctx-chip is-pack" title="body-context:${escapeHtml(meta.bodyContextRef)}">📦 ${escapeHtml(meta.bodyContextRef)}</span>`);
+      }
+      if (meta.gate) {
+        chips.push(`<span class="ctx-chip is-gate" title="gate:${escapeHtml(meta.gate)}">🛡️ gate:${escapeHtml(meta.gate)}</span>`);
+      }
+      if (meta.mission) {
+        chips.push(`<span class="ctx-chip" title="mission:${escapeHtml(meta.mission)}">🎯 ${escapeHtml(meta.mission)}</span>`);
+      }
+      if (meta.project) {
+        chips.push(`<span class="ctx-chip" title="project:${escapeHtml(meta.project)}">🏛️ ${escapeHtml(meta.project)}</span>`);
+      }
+      if (meta.parent) {
+        chips.push(`<button type="button" class="ctx-chip is-clickable" title="parent:${escapeHtml(meta.parent)}" onclick="event.stopPropagation(); openQueueItemContext('${escapeHtml(meta.parent)}')">🔗 parent:${escapeHtml(String(meta.parent).slice(-8))}</button>`);
+      }
+      if (meta.handedOffFrom) {
+        chips.push(`<button type="button" class="ctx-chip is-clickable" title="handedOffFrom: ${escapeHtml(meta.handedOffFrom)}" onclick="event.stopPropagation(); openQueueItemContext('${escapeHtml(meta.handedOffFrom)}')">↖ ${escapeHtml(String(meta.handedOffFrom).slice(-8))}</button>`);
+      }
+      if (meta.handedOffTo) {
+        chips.push(`<button type="button" class="ctx-chip is-clickable" title="handedOffTo: ${escapeHtml(meta.handedOffTo)}" onclick="event.stopPropagation(); openQueueItemContext('${escapeHtml(meta.handedOffTo)}')">↘ ${escapeHtml(String(meta.handedOffTo).slice(-8))}</button>`);
+      }
+      if (meta.evidenceRef) {
+        chips.push(`<span class="ctx-chip is-artifact" title="${escapeHtml(meta.evidenceRef)}">📎 ${escapeHtml(meta.evidenceRef.split('/').pop())}</span>`);
+      }
+      if (meta.targetRepo) {
+        chips.push(`<span class="ctx-chip" title="repo: ${escapeHtml(meta.targetRepo)}">📁 ${escapeHtml(meta.targetRepo)}</span>`);
+      }
+      return chips.length ? `<div class="ctx-chip-row">${chips.join('')}</div>` : '';
+    }
+
+    function closeContextLineageModal() {
+      const overlay = document.getElementById('contextLineageModal');
+      if (overlay) overlay.classList.remove('open');
+    }
+
+    function buildDemoContextDetail(qitemId) {
+      const allDemo = [
+        ...LIVE_QITEMS.map(q => ({
+          qitemId: q.id,
+          sourceSession: q.fromId || q.from,
+          destinationSession: q.toId || q.to,
+          state: q.state || 'done',
+          tags: [q.slice ? (q.slice.startsWith('slice:') ? q.slice : `slice:${q.slice}`) : 'slice:demo', 'project:core-platform', 'body-context:packs/architecture-v2'],
+          summary: q.summary || '',
+          evidenceRef: 'docs/tasks/qa/PROOF.md',
+          body: `${q.summary || ''}\n\nShared context references:\n- Spec: docs/tasks/pre-push-e2e-gate.md\n- Architecture: ADR-0012\n- Proof: docs/tasks/qa/PROOF.md\n- Candidate commit: 6512c14`
+        })),
+        ...Object.values(PAIR_ENVELOPES).flat().map(e => ({
+          qitemId: e.id,
+          sourceSession: e.from,
+          destinationSession: e.to,
+          state: e.state || 'done',
+          tags: [e.slice ? `slice:${e.slice}` : 'slice:demo', 'project:core-platform', 'gate:qa', 'body-context:packs/qa-boundaries'],
+          summary: e.summary || '',
+          evidenceRef: 'docs/tasks/qa/PROOF.md',
+          body: `${e.summary || ''}\n\nTransferred artifacts:\n- Spec: docs/tasks/${e.slice || 'slice'}.md\n- Architecture: ADR-0012\n- Evidence: docs/tasks/qa/PROOF.md`
+        }))
+      ];
+      const hit = allDemo.find(r => r.qitemId === qitemId) || allDemo[0];
+      const item = typeof extractItemContextMeta === 'function' ? extractItemContextMeta(hit) : hit;
+      const graph = typeof buildSharedContextGraph === 'function' ? buildSharedContextGraph(allDemo) : null;
+      const lineage = graph ? graph.getLineage(item) : { ancestors: [], descendants: [], blocker: null, dependents: [], parentRef: null, siblings: [], driftSignals: [] };
+      const artifacts = typeof extractContextArtifacts === 'function'
+        ? extractContextArtifacts(`${item.summary}\n${item.body}`, { selfId: item.id, evidenceRef: item.evidenceRef })
+        : { docs: [], adrs: [], commits: [], linkedQitems: [], mentionedSeats: [] };
+      const relatedDecisions = typeof matchRelatedDecisions === 'function'
+        ? matchRelatedDecisions(RECENT_DECISIONS, item)
+        : [];
+      return { ok: true, item, artifacts, lineage, relatedDecisions };
+    }
+
+    async function openQueueItemContext(qitemId) {
+      const id = String(qitemId || '').trim();
+      if (!id) return;
+      const overlay = document.getElementById('contextLineageModal');
+      const bodyEl = document.getElementById('contextLineageModalBody');
+      const titleEl = document.getElementById('contextLineageModalTitle');
+      if (!overlay || !bodyEl) return;
+      if (titleEl) titleEl.textContent = `${td('ctx.modalTitle')} • ${id.slice(-12)}`;
+      bodyEl.innerHTML = `<div style="font-family:var(--font-mono); font-size:12px; color:#94a3b8; padding:16px 4px;">⏳ ${escapeHtml(td('ctx.loading'))}</div>`;
+      overlay.classList.add('open');
+
+      try {
+        let data = null;
+        if (IS_LIVE) {
+          const res = await fetch(`/api/queue/item?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+          const json = await res.json();
+          if (res.ok && json && json.ok) data = json;
+          else throw new Error((json && json.error) || `HTTP ${res.status}`);
+        } else {
+          data = buildDemoContextDetail(id);
+        }
+        renderContextLineageModal(data);
+      } catch (err) {
+        bodyEl.innerHTML = `<div style="font-family:var(--font-mono); font-size:12px; color:#fda4af; padding:12px; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.35); border-radius:7px;">⚠️ ${escapeHtml(err.message || 'Failed to load context')}</div>`;
+      }
+    }
+
+    function renderContextLineageModal(data) {
+      const bodyEl = document.getElementById('contextLineageModalBody');
+      if (!bodyEl || !data || !data.item) return;
+      const it = data.item;
+      const lin = data.lineage || { ancestors: [], descendants: [], blocker: null, dependents: [], parentRef: null, siblings: [], driftSignals: [] };
+      const art = data.artifacts || { docs: [], adrs: [], commits: [], linkedQitems: [], mentionedSeats: [] };
+      const decs = Array.isArray(data.relatedDecisions) ? data.relatedDecisions : [];
+
+      const renderNodeCard = (ref, isCurrent = false) => {
+        if (!ref) return '';
+        const route = ref.from || ref.to ? `${shortSeat(ref.from || '?')} ▶ ${shortSeat(ref.to || '?')}` : ref.id.slice(-10);
+        const clickAttr = !isCurrent && ref.id ? `onclick="openQueueItemContext('${escapeHtml(ref.id)}')"` : '';
+        return `
+          <button type="button" class="ctx-lineage-node ${isCurrent ? 'is-current' : ''}" ${clickAttr} title="${escapeHtml(ref.summary || ref.id)}">
+            <span style="font-weight:800; color:${isCurrent ? '#00f0ff' : '#e2e8f0'};">${escapeHtml(route)}</span>
+            <span style="font-size:9.5px; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(ref.state || '')}${ref.id ? ` · #${escapeHtml(ref.id.slice(-8))}` : ''}</span>
+          </button>
+        `;
+      };
+
+      const chainCards = [
+        ...(lin.ancestors || []).map(a => renderNodeCard(a, false)),
+        renderNodeCard({ id: it.id, from: it.from, to: it.to, state: it.state, summary: it.summary }, true),
+        ...(lin.descendants || []).map(d => renderNodeCard(d, false))
+      ].join('<span style="color:#64748b; font-weight:800;">→</span>');
+
+      const driftHtml = (lin.driftSignals || []).map(s => {
+        if (s.kind === 'context_pack_drift') {
+          return `<div style="font-family:var(--font-mono); font-size:11px; color:#fde68a; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:6px; padding:6px 9px;">${escapeHtml(td('ctx.driftPack', { vals: (s.values || []).join(' ≠ ') }))}</div>`;
+        }
+        if (s.kind === 'active_blocker_chain') {
+          return `<div style="font-family:var(--font-mono); font-size:11px; color:#fed7aa; background:rgba(251,146,60,0.12); border:1px solid rgba(251,146,60,0.42); border-radius:6px; padding:6px 9px;">${escapeHtml(td('ctx.driftBlockers', { n: s.count || 1 }))}</div>`;
+        }
+        return '';
+      }).filter(Boolean).join('');
+
+      const artifactChips = [
+        ...art.docs.map(d => `<span class="ctx-chip is-artifact" title="${escapeHtml(d)}">📄 ${escapeHtml(d)}</span>`),
+        ...art.adrs.map(a => `<span class="ctx-chip is-pack">📐 ${escapeHtml(a)}</span>`),
+        ...art.commits.map(c => `<span class="ctx-chip">🔖 ${escapeHtml(c)}</span>`),
+        ...art.linkedQitems.map(q => `<button type="button" class="ctx-chip is-clickable" onclick="openQueueItemContext('${escapeHtml(q)}')">🔗 #${escapeHtml(q.slice(-8))}</button>`)
+      ];
+
+      const fullCmd = `rig queue show ${it.id} --full`;
+
+      bodyEl.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; background:rgba(15,23,42,0.72); border:1px solid rgba(56,189,248,0.22); border-radius:8px; padding:10px 12px;">
+            <div style="min-width:0; flex:1;">
+              <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:800; color:#7dd3fc;">
+                ${escapeHtml(shortSeat(it.from || '?'))} ▶ ${escapeHtml(shortSeat(it.to || '?'))}
+                <span style="color:#6ee7b7; margin-left:6px;">[${escapeHtml(it.state)}]</span>
+                ${it.slice ? `<span style="color:#fcd34d; margin-left:6px;">🏷️ ${escapeHtml(it.slice)}</span>` : ''}
+              </div>
+              <div style="font-size:12.5px; color:#f8fafc; margin-top:4px; line-height:1.4;">${escapeHtml(it.summary || it.id)}</div>
+              ${renderContextBadgesHtml(it)}
+            </div>
+            <button type="button" class="action-pill" title="${escapeHtml(fullCmd)}" onclick="copyCmd('${escapeHtml(fullCmd)}')">${CMD_COPY_LABEL_HTML}</button>
+          </div>
+
+          ${driftHtml}
+
+          <div>
+            <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:5px; letter-spacing:0.5px;">${escapeHtml(td('ctx.lineageTitle'))}</div>
+            <div class="ctx-lineage-rail">${chainCards}</div>
+            ${lin.blocker ? `
+              <div class="ctx-chip-row" style="margin-top:6px;">
+                <span style="font-family:var(--font-mono); font-size:10.5px; color:#fed7aa; font-weight:700;">${escapeHtml(td('ctx.blockedBy'))}</span>
+                ${lin.blocker.id
+                  ? `<button type="button" class="ctx-chip is-blocker is-clickable" onclick="openQueueItemContext('${escapeHtml(lin.blocker.id)}')">🧱 #${escapeHtml(lin.blocker.id.slice(-8))} ${escapeHtml(lin.blocker.summary || lin.blocker.to || '')}</button>`
+                  : `<span class="ctx-chip is-blocker">🧱 ${escapeHtml(lin.blocker.summary)}</span>`}
+              </div>
+            ` : ''}
+            ${lin.dependents && lin.dependents.length ? `
+              <div class="ctx-chip-row" style="margin-top:6px;">
+                <span style="font-family:var(--font-mono); font-size:10.5px; color:#7dd3fc; font-weight:700;">${escapeHtml(td('ctx.waitingOnThis'))}</span>
+                ${lin.dependents.map(dep => `<button type="button" class="ctx-chip is-clickable" onclick="openQueueItemContext('${escapeHtml(dep.id)}')">⏳ ${escapeHtml(shortSeat(dep.to || ''))} · #${escapeHtml(dep.id.slice(-8))}</button>`).join('')}
+              </div>
+            ` : ''}
+            ${lin.parentRef ? `
+              <div class="ctx-chip-row" style="margin-top:6px;">
+                <span style="font-family:var(--font-mono); font-size:10.5px; color:#cbd5e1; font-weight:700;">${escapeHtml(td('ctx.parentTask'))}</span>
+                <button type="button" class="ctx-chip is-clickable" onclick="openQueueItemContext('${escapeHtml(lin.parentRef.id)}')">🔗 #${escapeHtml(lin.parentRef.id.slice(-8))} ${escapeHtml(lin.parentRef.summary || '')}</button>
+              </div>
+            ` : ''}
+          </div>
+
+          ${artifactChips.length ? `
+            <div>
+              <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:5px; letter-spacing:0.5px;">${escapeHtml(td('ctx.artifactsTitle'))}</div>
+              <div class="ctx-chip-row">${artifactChips.join('')}</div>
+            </div>
+          ` : ''}
+
+          ${decs.length ? `
+            <div>
+              <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:5px; letter-spacing:0.5px;">${escapeHtml(td('ctx.decisionsTitle'))}</div>
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                ${decs.map(d => `<div style="font-size:11px; color:#cbd5e1; background:rgba(15,23,42,0.55); border-left:2px solid #a855f7; padding:5px 8px; border-radius:4px;"><b style="color:#e9d5ff;">${escapeHtml(d.time || '')}</b> ${escapeHtml(d.decision || '')}${d.reason ? ` — <span style="color:#94a3b8;">${escapeHtml(d.reason)}</span>` : ''}</div>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div>
+            <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:5px; letter-spacing:0.5px;">${escapeHtml(td('ctx.bodyTitle'))}</div>
+            <pre class="ctx-body-pre">${escapeHtml(it.body || td('ctx.emptyBody'))}</pre>
+          </div>
+
+          ${it.resolution ? `
+            <div>
+              <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#6ee7b7; margin-bottom:5px; letter-spacing:0.5px;">${escapeHtml(td('ctx.resolutionTitle'))}</div>
+              <pre class="ctx-body-pre" style="max-height:130px; border-color:rgba(16,185,129,0.35);">${escapeHtml(it.resolution)}</pre>
+            </div>
+          ` : ''}
+
+          ${lin.siblings && lin.siblings.length ? `
+            <div>
+              <div style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:5px; letter-spacing:0.5px;">${escapeHtml(td('ctx.siblingsTitle'))}</div>
+              <div class="ctx-chip-row">
+                ${lin.siblings.map(s => `<button type="button" class="ctx-chip is-clickable" onclick="openQueueItemContext('${escapeHtml(s.id)}')">${escapeHtml(shortSeat(s.from || '?'))}▶${escapeHtml(shortSeat(s.to || '?'))} (${escapeHtml(s.state)})</button>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
     }
 
     // ===== Stage 5: Audio radar & tab title =====
@@ -8219,10 +8604,17 @@
           setCenterView(centerViewMode === 'gantt' ? 'graph' : 'gantt');
         }
       });
-      window.addEventListener('resize', () => renderTopology());
+      window.addEventListener('resize', () => { renderTopology(); positionEdgeXrayDrawer(); });
       if (typeof ResizeObserver === 'function') {
         const canvasWrapEl = document.querySelector('#panelCenter .canvas-wrap');
         if (canvasWrapEl) {
+          canvasWrapEl.addEventListener('click', (e) => {
+            if (selectedEdgeIdx === null) return;
+            if (e.target && e.target.closest && (e.target.closest('#edgeXrayDrawer') || e.target.closest('.edge-group') || e.target.closest('.agent-node'))) {
+              return;
+            }
+            closeEdgeXray();
+          });
           let roRaf = null;
           topologyResizeObserver = new ResizeObserver(() => {
             if (centerViewMode === 'gantt') return;
@@ -8230,6 +8622,7 @@
             roRaf = requestAnimationFrame(() => {
               roRaf = null;
               renderTopology();
+              positionEdgeXrayDrawer();
             });
           });
           topologyResizeObserver.observe(canvasWrapEl);

@@ -14,15 +14,15 @@
   <meta name="description" content="Архитектурный и операционный паспорт RigCommander: DSS SA методология, C4-контекст и компоненты, операционная онтология (Objects, Links, Actions, Audit), безопасность и покрытие тестами.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
-  <meta property="og:title" content="RigCommander — Architecture & Operational Passport (C4 + Ontology v2.1)">
-  <meta property="og:description" content="C4 Level 1 & Level 3 diagrams, 7-object Operational Ontology v2.1, paired Mobile PWA & idempotency controls, and 88-test 0-dependency matrix.">
+  <meta property="og:title" content="RigCommander — Architecture & Operational Passport (C4 + Ontology v2.2)">
+  <meta property="og:description" content="C4 Level 1 & Level 3 diagrams, 8-object Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, paired Mobile PWA & 106-test 0-dependency matrix.">
   <meta property="og:url" content="https://rig-commander.vercel.app/passport">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Architecture & Operational Passport">
-  <meta name="twitter:description" content="C4 diagrams, Operational Ontology v2.1, Remote PWA & 409 idempotency security controls, and 88-test 0-dep suite.">
+  <meta name="twitter:description" content="C4 diagrams, Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, Remote PWA & 106-test 0-dep suite.">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -425,7 +425,7 @@
       <div class="eyebrow" data-i18n="hero.eyebrow">Архитектурный и операционный паспорт системы</div>
       <h1 data-i18n="hero.title">RigCommander // Neural Command Deck</h1>
       <p class="hero-sub" data-i18n="hero.sub">
-        Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux &amp; JSONL). Объединяет адаптивный граф (Динам/Фикс), операционную онтологию v2.1 (Objects • Links • Actions • Audit), поддорожечный Гант + Handoff Flow, FinOps-мониторинг, Remote Mobile PWA и идемпотентный Human-in-the-Loop write-back.
+        Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux &amp; JSONL). Объединяет адаптивный граф (Динам/Фикс + X-Ray у курсора), операционную онтологию v2.2, 3-уровневый AI Evaluator (Advisory-Only), граф общего контекста задач (`blockedOn` + `body` + `RECAP.md`), поддорожечный Гант + Handoff Flow, FinOps, Remote Mobile PWA и идемпотентный HITL write-back.
       </p>
     </div>
 
@@ -453,8 +453,8 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">99 / 99 PASS</div>
-        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 19 наборов (~1s)</div>
+        <div class="kpi-val" style="color:var(--emerald);">106 / 106 PASS</div>
+        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 20 наборов (~1s)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
@@ -540,15 +540,15 @@
     <section id="components">
       <div class="sec-head">
         <h2 data-i18n="s2.title">2. Модульная структура и карта зависимостей (C4 Level 3)</h2>
-        <span class="sec-tag">ZERO-BUILD ESM • 15 PURE DOMAIN MODULES</span>
+        <span class="sec-tag">ZERO-BUILD ESM • 16 PURE DOMAIN MODULES</span>
       </div>
       <div class="grid-3">
         <div class="subcard">
           <h3>🎨 Frontend (openrig/)</h3>
           <ul>
-            <li><code>index.html</code> — 7 проекций UI (Адаптивный граф, Гант + Handoff Flow, Радар, Инспектор + <code>SeatDiagnosis</code> + <code>AI Evaluator</code>) + in-place DOM patching</li>
-            <li><code>assets/styles/deck.css</code> — дизайн-токены Dark Cockpit, 6-band терморейка, мобильный 5-tab док</li>
-            <li><code>assets/domain/*</code> (15 модулей + <code>index.js</code>) — чистые функции без DOM: <code>evaluator-model</code>, <code>topology-layout</code>, <code>gantt-model</code>, <code>action-guard</code>, <code>thermal</code>, <code>finops</code>, <code>prompt-parser</code>, <code>edge-state</code>, <code>i18n</code>, <code>preferences</code>, <code>qr</code>, <code>quest</code>, <code>semver</code>, <code>share-card</code>, <code>audio</code></li>
+            <li><code>index.html</code> — 7 проекций UI (Адаптивный граф + X-Ray у курсора, Гант + Handoff Flow, Контекст задач, Инспектор + <code>SeatDiagnosis</code> + <code>AI Evaluator</code>) + in-place DOM patching</li>
+            <li><code>assets/styles/deck.css</code> — дизайн-токены Dark Cockpit, экспоненциальная термокривая, мобильный 5-tab док</li>
+            <li><code>assets/domain/*</code> (16 модулей + <code>index.js</code>) — чистые функции без DOM: <code>context-lineage</code>, <code>evaluator-model</code>, <code>topology-layout</code>, <code>gantt-model</code>, <code>action-guard</code>, <code>thermal</code>, <code>finops</code>, <code>prompt-parser</code>, <code>edge-state</code>, <code>i18n</code>, <code>preferences</code>, <code>qr</code>, <code>quest</code>, <code>semver</code>, <code>share-card</code>, <code>audio</code></li>
             <li><code>assets/ontology/actions.js</code> — единый реестр <code>ACTION_DEFINITIONS</code>, <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></li>
             <li><code>assets/ontology/snapshot.js</code> — <code>buildOntologySnapshot</code> + чистые селекторы и эксклюзивные пулы моделей</li>
           </ul>
@@ -556,7 +556,7 @@
         <div class="subcard">
           <h3>⚡ Backend BFF (openrig/)</h3>
           <ul>
-            <li><code>server.mjs</code> — HTTP-роутер, Security Gate, <code>ServerIdempotencyCache</code>, динамический Live PWA <code>manifest.webmanifest</code>, <code>classifyTerminalScreen()</code></li>
+            <li><code>server.mjs</code> — HTTP-роутер, Security Gate, <code>ServerIdempotencyCache</code>, <code>GET /api/queue/item</code>, <code>dispatchRawCommand</code> (<code>rig send --raw</code> + TUI-фолбэк), <code>classifyTerminalScreen()</code></li>
             <li><code>lib/ai-evaluator/*</code> — 3-уровневый AI Evaluator (<code>expert-rules</code>, <code>redactor</code>, <code>s1-adapters</code> `/v1/systemone`, <code>s2-adapters</code>, <code>router</code>)</li>
             <li><code>lib/fleet-intelligence/*</code> — Facade + RingBuffer + <strong>6 детекторов</strong> (<code>LiveBlocker</code>, <code>Bottleneck</code>, <code>ContextEntropy</code>, <code>Ceremony</code>, <code>ModelMismatch</code>, <code>ZombieSeat</code>) + per-rig кэш</li>
             <li><code>lib/action-audit.mjs</code> — кольцевой <code>ActionAuditLog</code> + сверка <code>postcondition</code> (вкл. <code>nudge_queue</code> и <code>evalId</code>)</li>
@@ -569,7 +569,7 @@
             <li><code>bin/cli.mjs</code> — точка запуска <code>npx rig-commander</code> + супервизор автообновления (<code>exit 75</code>) + <code>--public-url</code> / <code>--universal</code></li>
             <li><code>scripts/sync-public.mjs</code> — <code>npm run sync:public</code> (единый источник правды для Vercel <code>public/</code>)</li>
             <li><code>landing/index.html</code>, <code>landing/guide.html</code>, <code>landing/passport.html</code> — публичные страницы EN/RU</li>
-            <li><code>tests/*.test.mjs</code> — <strong>19 тестовых наборов</strong> (98 проверок) на встроенном <code>node --test</code></li>
+            <li><code>tests/*.test.mjs</code> — <strong>20 тестовых наборов</strong> (106 проверок) на встроенном <code>node --test</code></li>
             <li><code>openrig/docs/*</code> — <strong>ADR-0001..0012</strong>, C4, операционная онтология <strong>v2.2</strong>, <code>docs/USER_GUIDE.md</code></li>
           </ul>
         </div>
@@ -578,7 +578,7 @@
       <div class="rules-bar">
         <div class="rule-item">
           <b data-i18n="r1.t">1. Чистый слой domain &amp; ontology</b>
-          <span data-i18n="r1.d">Все 14 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.</span>
+          <span data-i18n="r1.d">Все 16 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.</span>
         </div>
         <div class="rule-item">
           <b data-i18n="r2.t">2. Единый источник правды</b>
@@ -598,7 +598,7 @@
     <!-- SECTION 3: OPERATIONAL ONTOLOGY -->
     <section id="ontology">
       <div class="sec-head">
-        <h2 data-i18n="s3.title">3. Операционная онтология v2.1 (Objects • Links • Actions)</h2>
+        <h2 data-i18n="s3.title">3. Операционная онтология v2.2 (Objects • Links • Actions)</h2>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <span class="sec-tag">PALANTIR-STYLE DIGITAL TWIN</span>
           <a class="cta-btn" href="/demo?track=ontology" data-i18n="s3.tryDemo">▶ Открыть в демо</a>
@@ -606,7 +606,7 @@
       </div>
       <div class="grid-2">
         <div class="subcard">
-          <h3 data-i18n="s3.obj.t">7 Типов объектов (Objects)</h3>
+          <h3 data-i18n="s3.obj.t">8 Типов объектов (Objects)</h3>
           <table>
             <thead>
               <tr><th>Object</th><th>PK</th><th data-i18n="s3.src">Источник / Роль</th></tr>
@@ -614,11 +614,12 @@
             <tbody>
               <tr><td><code>Rig</code></td><td><code>rigId</code></td><td>OpenRig <code>ps</code> / <code>/api/rigs</code> / Universal Discovery</td></tr>
               <tr><td><code>Seat</code></td><td><code>seatId</code></td><td>5-state FSM + <code>shellExited</code> + <code>activityTier</code> (12s гистерезис)</td></tr>
-              <tr><td><code>OccupantSession</code></td><td><code>sessionKey</code></td><td><code>ctxPct</code>, 6-band Inferno/Plasma, 24h/7d токены, <code>estUsd</code></td></tr>
+              <tr><td><code>OccupantSession</code></td><td><code>sessionKey</code></td><td><code>ctxPct</code>, экспоненциальная термокривая, 24h/7d токены, <code>recapText</code></td></tr>
               <tr><td><code>WorkChain</code></td><td><code>chainId</code></td><td><code>slice:</code> или union-find <code>q:</code>, <code>qaRounds</code>, <code>isBounceBack</code>, <code>HandoffFlow</code></td></tr>
-              <tr><td><code>QueueObligation</code></td><td><code>qitemId</code></td><td>Отрезок Ганта (<code>subRow</code> bin-pack, Wait vs Work, <code>isNoise</code>)</td></tr>
+              <tr><td><code>QueueObligation</code></td><td><code>qitemId</code></td><td>Отрезок Ганта + <code>blockedOn</code> + <code>bodyContextRef</code> + <code>GET /api/queue/item</code></td></tr>
               <tr><td><code>Situation</code></td><td><code>situationId</code></td><td>Единое исключение <code>P0–P3</code> + <code>remediation</code> + <code>SeatDiagnosis</code></td></tr>
               <tr><td><code>ActionRecord</code></td><td><code>execId</code></td><td>Write-back след + <code>X-Idempotency-Key</code> + статус <code>postcondition</code></td></tr>
+              <tr><td><code>EvaluationRecord</code></td><td><code>evalId</code></td><td>Вердикт 3-Tier AI Evaluator (<code>L0 Veto → S1 → S2</code>, Advisory-Only)</td></tr>
             </tbody>
           </table>
         </div>
@@ -705,20 +706,21 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 98/98</span>
+        <span class="sec-tag">NODE --TEST • 106/106</span>
       </div>
       <table>
         <thead>
-          <tr><th>Test Suite (19)</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
+          <tr><th>Test Suite (20)</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
         </thead>
         <tbody>
           <tr><td><code>tests/ai-evaluator.test.mjs</code></td><td>3-уровневый AI Evaluator (<code>L0 Heuristic+Expert ➔ S1 /v1/systemone Jev/Laya/Von, GLiClass-v3, EmbeddingGemma ➔ S2 Gemini 4 Hydrogen/GLM-5.3/Qwen3.8</code>), <code>Expert Veto</code>, <code>SecretRedactor</code>, <code>H_norm</code> энтропия, grounding и <code>0600</code> конфиг</td><td><span class="badge-ok">10 PASS</span></td></tr>
-          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, инкрементальный JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>applyTerminalPromptProbes</code>, PWA-статика, <code>computeHistoryStats</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
+          <tr><td><code>tests/context-lineage.test.mjs</code></td><td><code>openrig/assets/domain/context-lineage.js</code>: разбор тегов <code>blockedOn / project / mission / parent / gate / body-context</code>, извлечение артефактов (спеки, ADR, коммиты), граф предков/блокеров, детектор дрейфа контекст-паков и матчинг <code>decisions</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
+          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>dispatchRawCommand</code> (<code>rig send --raw</code> + wrapper-проверка), <code>fetchQueueItemContextDetail</code>, PWA-статика, <code>computeHistoryStats</code></td><td><span class="badge-ok">13 PASS</span></td></tr>
           <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi и <code>shellExited</code>, канонический <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
           <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, <code>inferActionId</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>nudge_queue</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">5 PASS</span></td></tr>
           <tr><td><code>tests/ontology-snapshot.test.mjs</code></td><td><code>shouldIncludeLiveNode</code>, сброс <code>ctxHistory</code> при свапе, <code>buildOntologySnapshot</code>, чистые селекторы и эксклюзивные пулы <code>computeModelPools</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш, 6 детекторов), шумоочистка <code>BottleneckDetector</code> &amp; <code>remediation</code>, <code>classifyTerminalScreen</code>, <code>LiveBlocker</code>, <code>Ceremony</code>, <code>DECK_I18N</code> EN/RU паритет</td><td><span class="badge-ok">14 PASS</span></td></tr>
-          <tr><td><code>tests/topology-layout.test.mjs</code></td><td><code>openrig/assets/domain/topology-layout.js</code>: классификация <code>activityTier</code> с 12с гистерезисом, режим <code>Dynamic</code> (Stage + Dormant Bench, clearance &ge;130px), режим <code>Fixed</code> (инвариантные ярусы без коллизий) и крайние размеры 0..17 узлов</td><td><span class="badge-ok">4 PASS</span></td></tr>
+          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш, 6 детекторов), шумоочистка <code>BottleneckDetector</code> &amp; <code>remediation</code>, <code>classifyTerminalScreen</code>, экспоненциальная термокривая <code>thermal.js</code>, <code>LiveBlocker</code>, <code>Ceremony</code>, <code>DECK_I18N</code> EN/RU паритет</td><td><span class="badge-ok">15 PASS</span></td></tr>
+          <tr><td><code>tests/topology-layout.test.mjs</code></td><td><code>openrig/assets/domain/topology-layout.js</code>: классификация <code>activityTier</code> с 12с гистерезисом, режим <code>Dynamic</code> (clearance &ge;130px), режим <code>Fixed</code>, крайние размеры 0..17 узлов и <code>computeAnchoredPopoverRect</code> (X-Ray у курсора)</td><td><span class="badge-ok">5 PASS</span></td></tr>
           <tr><td><code>tests/gantt-model.test.mjs</code></td><td><code>openrig/assets/domain/gantt-model.js</code>: фильтр шума <code>isGanttItemNoise</code>, поддорожечная упаковка <code>packLaneIntervals</code> без перекрытий, <code>Wait vs Work</code> KPI, <code>By Agent</code> / <code>By Slice</code> и <code>Handoff Flow</code></td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/universal-discovery.test.mjs</code></td><td>Универсальное автообнаружение Claude Code / Codex JSONL + <code>tmux</code> панелей (без OpenRig), HITL-детектор и валидация target</td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/circuit-breaker.test.mjs</code></td><td><code>BudgetCircuitBreaker</code>: лимиты сессии и сиденья, burn-rate <code>$/ч</code>, QA bounce-back петли, режим <code>auto_stop (C-c)</code>, fleet cooldown и сброс</td><td><span class="badge-ok">4 PASS</span></td></tr>
@@ -736,7 +738,7 @@
 
       <div class="cmd-strip">
         <div class="cmd-box"><span>Запуск локальной деки (:7440)</span>npm start</div>
-        <div class="cmd-box"><span>Прогон всех 88 юнит-тестов</span>npm test</div>
+        <div class="cmd-box"><span>Прогон всех 106 юнит-тестов</span>npm test</div>
         <div class="cmd-box"><span>Синхронизация артефактов для Vercel</span>npm run sync:public</div>
       </div>
     </section>
@@ -762,7 +764,7 @@
         'nav.demo': '▶ Live Demo',
         'hero.eyebrow': 'Архитектурный и операционный паспорт системы',
         'hero.title': 'RigCommander // Neural Command Deck',
-        'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux & JSONL). Объединяет адаптивный граф (Динам/Фикс), операционную онтологию v2.1 (Objects • Links • Actions • Audit), поддорожечный Гант + Handoff Flow, FinOps-мониторинг, Remote Mobile PWA и идемпотентный Human-in-the-Loop write-back.',
+        'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux & JSONL). Объединяет адаптивный граф (Динам/Фикс + X-Ray у курсора), операционную онтологию v2.2, 3-уровневый AI Evaluator (Advisory-Only), граф общего контекста задач (blockedOn + body + RECAP.md), поддорожечный Гант + Handoff Flow, FinOps, Remote Mobile PWA и идемпотентный HITL write-back.',
         'kpi.class.l': 'Класс системы',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Архитектура',
@@ -771,22 +773,22 @@
         'kpi.ont.l': 'Онтология',
         'kpi.ont.n': '8 Objects • 10 Actions • 3-Tier Evaluator',
         'kpi.tests.l': 'Автотесты',
-        'kpi.tests.n': 'node --test • 19 наборов (~1s)',
+        'kpi.tests.n': 'node --test • 20 наборов (~1s)',
         'kpi.sec.l': 'Граница доверия',
         'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
         's1.title': '1. Контекст системы и границы доверия (C4 Level 1)',
         's2.title': '2. Модульная структура и карта зависимостей (C4 Level 3)',
         'r1.t': '1. Чистый слой domain & ontology',
-        'r1.d': 'Все 14 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.',
+        'r1.d': 'Все 16 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.',
         'r2.t': '2. Единый источник правды',
         'r2.d': 'Правки вносятся только в openrig/ и landing/; папка public/ генерируется командой npm run sync:public.',
         'r3.t': '3. Неблокирующая аналитика',
         'r3.d': 'FleetIntelligenceEngine принимает снапшоты через setImmediate с изоляцией сбоев 6 детекторов и шумоочисткой.',
         'r4.t': '4. Действия по причине и с защитой',
         'r4.d': 'Все UI-поверхности берут кнопки из actions.js; у здорового idle-узла 0 write-back кнопок; двойные клики гасятся ActionFlightGuard + 409.',
-        's3.title': '3. Операционная онтология v2.1 (Objects • Links • Actions)',
+        's3.title': '3. Операционная онтология v2.2 (Objects • Links • Actions)',
         's3.tryDemo': '▶ Открыть в демо',
-        's3.obj.t': '7 Типов объектов (Objects)',
+        's3.obj.t': '8 Типов объектов (Objects)',
         's3.src': 'Источник / Роль',
         's3.act.t': 'Реестр действий (10 Actions + Postconditions)',
         's3.pre': 'Предусловие',
@@ -809,7 +811,7 @@
         'nav.demo': '▶ Live Demo',
         'hero.eyebrow': 'Architectural & Operational System Passport',
         'hero.title': 'RigCommander // Neural Command Deck',
-        'hero.sub': 'Local-first DSS SA Mission Control for autonomous AI coding fleets (OpenRig / Universal tmux & JSONL). Unifies adaptive Dynamic/Fixed topology, Operational Ontology v2.1 (Objects • Links • Actions • Audit), sub-lane Task Gantt + Handoff Flow, FinOps tracking, paired Live Mobile PWA, and idempotent HITL write-back.',
+        'hero.sub': 'Local-first DSS SA Mission Control for autonomous AI coding fleets (OpenRig / Universal tmux & JSONL). Unifies adaptive Dynamic/Fixed topology with anchored Route X-Ray, Operational Ontology v2.2, 3-Tier Advisory-Only AI Evaluator, Shared Context Lineage (blockedOn + full body + RECAP.md), sub-lane Task Gantt + Handoff Flow, FinOps tracking, paired Live Mobile PWA, and idempotent HITL write-back.',
         'kpi.class.l': 'System Class',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Architecture',
@@ -818,22 +820,22 @@
         'kpi.ont.l': 'Ontology',
         'kpi.ont.n': '8 Objects • 10 Actions • 3-Tier Evaluator',
         'kpi.tests.l': 'Automated Tests',
-        'kpi.tests.n': 'node --test • 19 suites (~1s)',
+        'kpi.tests.n': 'node --test • 20 suites (~1s)',
         'kpi.sec.l': 'Trust Boundary',
         'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
         's1.title': '1. System Context & Trust Boundaries (C4 Level 1)',
         's2.title': '2. Modular Structure & Dependency Rules (C4 Level 3)',
         'r1.t': '1. Pure domain & ontology layer',
-        'r1.d': 'All 14 modules in assets/domain/ and assets/ontology/ have zero DOM coupling and are imported directly by node --test.',
+        'r1.d': 'All 16 modules in assets/domain/ and assets/ontology/ have zero DOM coupling and are imported directly by node --test.',
         'r2.t': '2. Single source of truth',
         'r2.d': 'Edits happen only in openrig/ and landing/; public/ is generated deterministically via npm run sync:public.',
         'r3.t': '3. Non-blocking analytics',
         'r3.d': 'FleetIntelligenceEngine ingests snapshots via setImmediate with fault isolation across 6 noise-filtered detectors.',
         'r4.t': '4. Reason-driven, idempotent actions',
         'r4.d': 'All UI surfaces source buttons from actions.js; healthy idle seats render 0 write-back buttons; double-sends are blocked by ActionFlightGuard + 409.',
-        's3.title': '3. Operational Ontology v2.1 (Objects • Links • Actions)',
+        's3.title': '3. Operational Ontology v2.2 (Objects • Links • Actions)',
         's3.tryDemo': '▶ Open in Demo',
-        's3.obj.t': '7 Object Types',
+        's3.obj.t': '8 Object Types',
         's3.src': 'Source / Role',
         's3.act.t': 'Action Registry (10 Actions + Postconditions)',
         's3.pre': 'Precondition',

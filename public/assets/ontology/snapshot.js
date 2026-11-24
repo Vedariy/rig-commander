@@ -212,6 +212,7 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
       burn,
       compactionsCount: comp.compactionsCount || 0,
       recapSnippet: comp.recapSnippet || '',
+      recapText: comp.recapText || '',
       lastSwapAt: (liveNode.activityState && liveNode.activityState.lastSwap && liveNode.activityState.lastSwap.at) || null,
       usage
     };
