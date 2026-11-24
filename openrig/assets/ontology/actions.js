@@ -166,7 +166,7 @@ export const ACTION_DEFINITIONS = [
     id: 'wake_parked_seat',
     transport: 'tmux_key',
     reversibility: 'fully_reversible',
-    precondition: (ctx) => ctx.isParked && !ctx.isShellExited,
+    precondition: (ctx) => ctx.isParked && !ctx.isShellExited && !ctx.isUrgent && !ctx.hasParsedOptions,
     buildDescriptor: (ctx) => ({
       id: 'wake_parked_seat',
       transport: 'tmux_key',
@@ -289,6 +289,17 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
   }
 
   if (actionPlan.kind === 'wake_seat' && seatId) {
+    if (targetSeat && targetSeat.state === 'urgent') {
+      return {
+        id: 'open_live_terminal',
+        transport: 'modal_terminal',
+        seatId,
+        payload: '',
+        label: actionPlan.label || '🚨 Ответить на запрос (HITL)',
+        title: actionPlan.commandPreview || `Узел ждёт HITL — открыть живой экран ${seatId} вместо слепого Enter`,
+        tone: 'proceed'
+      };
+    }
     if (targetSeat && targetSeat.shellExited) {
       return {
         id: 'copy_restart_shell',

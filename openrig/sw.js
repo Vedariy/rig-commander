@@ -5,7 +5,7 @@
  * - Stale-while-revalidate for static assets (/assets/*, /manifest.webmanifest).
  */
 const CACHE_PREFIX = 'rigcommander-pwa-';
-const CACHE_NAME = 'rigcommander-pwa-v3.2.0';
+const CACHE_NAME = 'rigcommander-pwa-v3.2.1';
 
 const OFFLINE_FALLBACK_HTML = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#030712"><title>RigCommander — Offline</title>
@@ -82,18 +82,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: stale-while-revalidate
+  // Static assets: network-first with cache fallback so updated HTML never pairs with stale i18n.js / deck.css
   if (url.pathname.startsWith('/assets/') || url.pathname === '/manifest.webmanifest') {
     event.respondWith(
-      caches.open(CACHE_NAME).then(cache =>
-        cache.match(req).then(cached => {
-          const networkFetch = fetch(req).then(res => {
-            if (res && res.ok) cache.put(req, res.clone()).catch(() => {});
-            return res;
-          }).catch(() => cached);
-          return cached || networkFetch;
+      fetch(req)
+        .then(res => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then(c => c.put(req, copy)).catch(() => {});
+          }
+          return res;
         })
-      )
+        .catch(() => caches.match(req))
     );
   }
 });

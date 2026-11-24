@@ -307,7 +307,7 @@
       <div class="panel-header">
         <span data-i18n="insp.header">🔬 ПАСПОРТ УЗЛА, ЭКРАН TMUX & КОНВЕРТЫ L3</span>
         <span style="display:flex; align-items:center; gap:6px;">
-          <span id="selectedNodeHeaderBadge" style="color:var(--emerald)">SELECTED</span>
+          <span id="selectedNodeHeaderBadge" style="color:#00f0ff; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.45); border-radius:999px; padding:1px 7px; font-size:10px; letter-spacing:0.4px;">◎ SELECTED</span>
           <button type="button" class="widget-hint" data-hint-key="hint.inspector" aria-label="Info">?</button>
         </span>
       </div>
@@ -2727,6 +2727,13 @@
           const ledEl = el.querySelector('.status-led');
           if (ledEl) {
             ledEl.className = `status-led ${ledClass}`;
+            if (agent.state === 'urgent') {
+              ledEl.setAttribute('role', 'button');
+              ledEl.setAttribute('title', td('node.urgentBadgeTip'));
+            } else {
+              ledEl.removeAttribute('role');
+              ledEl.removeAttribute('title');
+            }
             const nextLedHtml = renderStateIndicatorHtml(agent);
             const ledKey = `${agent.state}:${agent.activityLabel}:${agent.shellExited ? 1 : 0}`;
             if (ledEl.getAttribute('data-state-key') !== ledKey) {
@@ -2826,7 +2833,7 @@
                 </div>
                 <span class="node-dormant-flag" title="${escapeHtml(agent.activityLabel || '')}">${escapeHtml(renderDormantFlagHtml(agent))}</span>
                 <span class="${getNodeCtxValClass(thermal)}" title="${escapeHtml(thermal.label || '')}">${escapeHtml(getNodeCtxValText(agent, thermal))}</span>
-                <span class="status-led ${ledClass}" data-state-key="${agent.state}:${agent.activityLabel}:${agent.shellExited ? 1 : 0}">${renderStateIndicatorHtml(agent)}</span>
+                <span class="status-led ${ledClass}" data-seat-id="${escapeHtml(agent.id)}" data-state-key="${agent.state}:${agent.activityLabel}:${agent.shellExited ? 1 : 0}"${agent.state === 'urgent' ? ` role="button" title="${escapeHtml(td('node.urgentBadgeTip'))}"` : ''} onmousedown="handleNodeLedMouseDown(event, this)" onclick="handleNodeLedClick(event, this)">${renderStateIndicatorHtml(agent)}</span>
               </div>
 
               <div class="node-meta-row">${renderNodeMetaRowHtml(agent, thermal)}</div>
@@ -3077,6 +3084,8 @@
       }
 
       if (agent.state === 'urgent') {
+        const hasP0Diag = getActiveFindingsForSeat(agent.id).some(f => f && f.severity === 'p0_urgent');
+        if (hasP0Diag) return '';
         return `
           <div style="background:rgba(255,0,85,0.12); border:1px solid rgba(255,0,85,0.5); border-radius:6px; padding:7px 9px;">
             <div style="font-family:var(--font-mono); font-size:10.5px; font-weight:800; color:#fda4af;">${deckLang === 'en' ? '🚨 WAITING FOR HUMAN INPUT' : '🚨 ЖДЁТ РЕШЕНИЯ ЧЕЛОВЕКА'}</div>
@@ -3116,50 +3125,33 @@
     function renderWarningSignsHtml(agent, thermal) {
       const isCoder = agent.id.includes('dev-coder');
       const compCount = agent.compactionsCount || 0;
-      const isHot = typeof agent.ctxPct === 'number' && agent.ctxPct >= 65;
-      const isCrit = typeof agent.ctxPct === 'number' && agent.ctxPct >= 75;
       const frequentSwaps = compCount >= 5;
       const retCount = typeof agent.returnCount === 'number'
         ? agent.returnCount
         : (Array.isArray(agent.reworkHistory) ? agent.reworkHistory.filter(r => r > 1).length : 0);
       const isReworkWarn = isCoder && (agent.reworkAvg || 1.0) > 2.0;
 
-      const alerts = [];
-      if (isHot) {
-        alerts.push(`
-          <div style="background:rgba(255,42,109,0.12); border:1px solid ${isCrit ? '#ff0055' : 'rgba(245,158,11,0.5)'}; border-radius:5px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
-            <span style="font-size:11px; color:${isCrit ? '#fda4af' : '#fde68a'}; font-weight:700;">${isCrit ? (deckLang === 'en' ? '🔥 75% threshold passed' : '🔥 Порог 75% пройден') : (deckLang === 'en' ? '🌡️ Context warming up' : '🌡️ Контекст греется')} (${agent.ctxPct}%)</span>
-            <span style="font-family:var(--font-mono); font-size:10px; color:#cbd5e1;">${computeBurn(agent, deckLang).label}</span>
-          </div>
-        `);
-      }
+      // Note: context % + burn rate + ETA are already rendered in the top context pulse strip (#inspValContext),
+      // so we avoid duplicating a tall "Context warming up" card and render secondary signals in one compact strip.
+      const chips = [];
       if (frequentSwaps) {
-        alerts.push(`
-          <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.35); border-radius:5px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:11px; color:#fde68a;">🔄 Частые свапы: <b>${compCount}</b></span>
-            <span style="font-size:10px; color:#94a3b8;">${agent.lastSwapAt ? ageLabel(agent.lastSwapAt) + ' назад' : 'в сессии'}</span>
-          </div>
-        `);
+        const swapMeta = agent.lastSwapAt ? ` · ${ageLabel(agent.lastSwapAt)}` : '';
+        chips.push(`<span class="insp-signal-chip">🔄 ${deckLang === 'en' ? 'Swaps' : 'Свапы'}: <b>${compCount}</b>${escapeHtml(swapMeta)}</span>`);
       }
       if (isReworkWarn) {
-        alerts.push(`
-          <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.35); border-radius:5px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:11px; color:#fde68a;">🪃 Возвраты QA: <b>${retCount}</b> (${agent.reworkAvg} кр)</span>
-            <span style="font-size:10px; color:#cbd5e1;">1-й пас: ${agent.firstPassPct || '—'}</span>
-          </div>
-        `);
+        chips.push(`<span class="insp-signal-chip">🪃 ${deckLang === 'en' ? 'QA returns' : 'Возвраты QA'}: <b>${retCount}</b> (${agent.reworkAvg}${deckLang === 'en' ? 'r' : ' кр'})</span>`);
       }
 
-      if (alerts.length === 0) {
+      if (chips.length === 0) {
         return `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 9px; background:rgba(15,23,42,0.45); border:1px solid rgba(148,163,184,0.14); border-radius:6px; font-family:var(--font-mono); font-size:10.5px; color:#94a3b8;">
-            <span style="color:#6ee7b7;">🛡️ Штатно</span>
-            <span>🔄 ${compCount} свап.${isCoder ? ` • 🪃 Avg ${agent.reworkAvg || 1.0}` : ''}</span>
+          <div class="insp-signals-strip">
+            <span style="color:#6ee7b7;">🛡️ ${deckLang === 'en' ? 'Nominal' : 'Штатно'}</span>
+            <span>🔄 ${compCount} ${deckLang === 'en' ? 'swaps' : 'свап.'}${isCoder ? ` • 🪃 Avg ${agent.reworkAvg || 1.0}` : ''}</span>
           </div>
         `;
       }
 
-      return `<div style="display:flex; flex-direction:column; gap:5px;">${alerts.join('')}</div>`;
+      return `<div class="insp-signals-strip has-warn">${chips.join('<span style="opacity:0.35;">·</span>')}</div>`;
     }
 
     function renderGuidanceHtml(agent) {
@@ -3445,7 +3437,25 @@
 
     function renderSeatDiagnosisHtml(agent) {
       if (!agent || !agent.id) return '';
-      const findings = getActiveFindingsForSeat(agent.id);
+      const findings = [...getActiveFindingsForSeat(agent.id)];
+      if (agent.state === 'urgent' && !findings.some(f => f && f.severity === 'p0_urgent')) {
+        const sName = shortSeat(agent.id);
+        findings.unshift({
+          id: `live-hitl-${agent.id}`,
+          detectorId: 'topology.live_blocker',
+          severity: 'p0_urgent',
+          title: deckLang === 'en'
+            ? `🚨 ${sName} is waiting for human confirmation (HITL)`
+            : `🚨 ${sName} ждёт подтверждения человека (HITL)`,
+          summary: agent.needsInputReason || (deckLang === 'en'
+            ? 'Agent paused on an interactive terminal confirmation prompt.'
+            : 'Агент остановлен на подтверждении в терминале. Откройте окно HITL и выберите ответ.'),
+          remediation: deckLang === 'en'
+            ? 'Click "Resolve HITL prompt" to inspect the full terminal context, review AI risk, and pick an option.'
+            : 'Нажмите «Ответить на запрос (HITL)», проверьте контекст в широком терминале и выберите вариант ответа.',
+          actionPlan: { kind: 'open_modal', seatTarget: agent.id }
+        });
+      }
       const evalVerdictHtml = renderEvaluatorVerdictCardHtml('seat', agent.id);
       const s1Busy = isEvalRunning('seat', agent.id, 'system1');
       const s2Busy = isEvalRunning('seat', agent.id, 'system2');
@@ -3501,20 +3511,21 @@
         }
       }
 
+      const maxDiagSamples = agent.state === 'urgent' ? 2 : 3;
       const queueBoxHtml = (samples.length > 0 || noiseCount > 0) ? `
         <div class="diag-queue-box">
           <div class="diag-queue-head">
             <span>📦 ${escapeHtml(td('diag.queueWaiting'))} ${totalPending > 0 ? `<b>${totalPending}</b>` : '0'}</span>
             ${noiseCount > 0 ? `<span style="color:#94a3b8;">${escapeHtml(td('diag.noiseNote', { n: noiseCount }))}</span>` : ''}
           </div>
-          ${samples.slice(0, 3).map(item => `
+          ${samples.slice(0, maxDiagSamples).map(item => `
             <div class="diag-queue-row">
               ${item.slice ? `<span style="color:var(--cyan); font-weight:700;">${escapeHtml(item.slice)}</span> · ` : ''}
               <span style="color:#94a3b8;">${escapeHtml(shortSeat(item.from || ''))}</span>
               ${item.summary ? ` — ${escapeHtml(item.summary)}` : ''}
             </div>
           `).join('')}
-          ${totalPending > 3 ? `<div style="font-family:var(--font-mono); font-size:9.5px; color:#64748b;">${escapeHtml(td('diag.moreTasks', { n: totalPending - 3 }))}</div>` : ''}
+          ${totalPending > maxDiagSamples ? `<div style="font-family:var(--font-mono); font-size:9.5px; color:#64748b;">${escapeHtml(td('diag.moreTasks', { n: totalPending - maxDiagSamples }))}</div>` : ''}
         </div>
       ` : '';
 
@@ -3533,15 +3544,21 @@
       // Build actionable 1-click buttons (skip useless select_seat since we are already on this seat!)
       const actionBtns = [];
       const seenActionIds = new Set();
-      const pushAction = (desc, extraStyle = '') => {
+      const pushAction = (desc, extraStyle = '', extraClass = '') => {
         if (!desc || !desc.id || seenActionIds.has(desc.id)) return;
         seenActionIds.add(desc.id);
-        actionBtns.push(renderOntologyActionBtn(desc, { statusElId: 'cmdSendStatus', style: extraStyle }));
+        const opts = { statusElId: 'cmdSendStatus', style: extraStyle };
+        if (extraClass) opts.className = extraClass;
+        actionBtns.push(renderOntologyActionBtn(desc, opts));
       };
 
       const resolvedPrimary = primary.actionPlan ? resolveActionFromFinding(primary.actionPlan, agent) : null;
       if (resolvedPrimary && resolvedPrimary.transport !== 'select_seat') {
-        pushAction(resolvedPrimary);
+        if (agent.state === 'urgent' && resolvedPrimary.transport === 'modal_terminal') {
+          pushAction({ ...resolvedPrimary, label: td('diag.resolveHitlBtn') }, '', 'action-pill diag-hitl-primary');
+        } else {
+          pushAction(resolvedPrimary);
+        }
       }
 
       const isQueueOrParkedIssue =
@@ -3617,8 +3634,9 @@
       const box = document.getElementById('nodeInspector');
       const headerBadge = document.getElementById('selectedNodeHeaderBadge');
       if (headerBadge) {
-        headerBadge.textContent = td('insp.selected', { name: getNodeDisplayTitle(agent).toUpperCase() });
-        headerBadge.style.color = thermal.color;
+        headerBadge.textContent = `◎ ${td('insp.selected', { name: getNodeDisplayTitle(agent).toUpperCase() })}`;
+        headerBadge.style.color = '#7dd3fc';
+        headerBadge.style.borderColor = 'rgba(0, 240, 255, 0.55)';
       }
 
       const lastActStr = agent.lastActivityAt
@@ -3770,11 +3788,11 @@
                 </div>
                 <span id="inspValHarness" style="font-family:var(--font-mono); font-size:10.5px; color:#e9d5ff; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(`${agent.harness} • ${agent.model}`)}">${escapeHtml(`${agent.harness} • ${agent.model}`)}</span>
               </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <div style="flex:1; height:5px; background:rgba(148,163,184,0.16); border-radius:999px; overflow:hidden;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <div style="flex:1 1 56px; min-width:44px; height:5px; background:rgba(148,163,184,0.16); border-radius:999px; overflow:hidden;">
                   <div id="inspCtxBarFill" style="width:${thermal.pct}%; height:100%; background:${thermal.color}; transition:width 0.3s ease;"></div>
                 </div>
-                <span id="inspValContext" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.color}; white-space:nowrap;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
+                <span id="inspValContext" style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:${thermal.color}; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
               </div>
             </div>
 
@@ -3788,11 +3806,12 @@
             <div id="inspWarningSignsGrid">${renderWarningSignsHtml(agent, thermal)}</div>
 
             <!-- SA Level 3: Live Tmux & Contextual Action Controls (Immediately visible) -->
-            <div style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:6px;">
-              <span>🖥️ LIVE TMUX</span>
-              <span style="display:flex; gap:5px;">
-                <button class="action-pill" id="btnAutoFollow" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
-                <button class="action-pill" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
+            <div style="font-family:var(--font-mono); font-size:10px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:4px; flex-wrap:nowrap;">
+              <span style="white-space:nowrap; font-weight:700;">🖥️ TMUX</span>
+              <span style="display:flex; gap:4px; flex-shrink:0; align-items:center;">
+                <button class="action-pill" type="button" style="padding:2px 5px; font-size:9.5px;" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
+                <button class="action-pill" id="btnAutoFollow" style="padding:2px 5px; font-size:9.5px; white-space:nowrap;" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
+                <button class="action-pill" style="padding:2px 5px; font-size:9.5px; white-space:nowrap;" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
               </span>
             </div>
             <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(liveScreenCapture)}</div>
@@ -4757,6 +4776,20 @@
       if (hoveredAgentId === id) return;
       hoveredAgentId = id;
       applyHoverClasses();
+    }
+
+    function handleNodeLedMouseDown(ev, ledEl) {
+      if (!ledEl || !ledEl.classList.contains('led-urgent')) return;
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+    }
+
+    function handleNodeLedClick(ev, ledEl) {
+      if (!ledEl || !ledEl.classList.contains('led-urgent')) return;
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+      const seatId = ledEl.getAttribute('data-seat-id') || (ledEl.closest('.agent-node') && ledEl.closest('.agent-node').getAttribute('data-agent-id'));
+      if (!seatId) return;
+      selectAgent(seatId);
+      openTerminalModal(seatId);
     }
 
     function selectAgent(id, ev) {

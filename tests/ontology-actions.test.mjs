@@ -212,3 +212,23 @@ test('buildNudgeQueueAction and resolveActionFromFinding(nudge_queue) enforce ca
   assert.equal(guarded.transport, 'clipboard');
   assert.equal(guarded.payload, 'rig restart dev-operator@rig');
 });
+
+test('parked urgent (NEEDS INPUT) seat never exposes blind wake_parked_seat Enter', () => {
+  const urgentParkedSeat = {
+    id: 'dev-senior-architect@rig',
+    harness: 'codex',
+    state: 'urgent',
+    ctxPct: 65,
+    parkedData: { parked: true }
+  };
+  const actions = getSeatContextualActions(urgentParkedSeat, 'Waiting for confirmation...');
+  assert.equal(actions.some(a => a.id === 'wake_parked_seat'), false);
+  assert.equal(actions.some(a => a.id === 'cancel_prompt'), true);
+
+  const resolvedWake = resolveActionFromFinding(
+    { kind: 'wake_seat', seatTarget: 'dev-senior-architect@rig' },
+    urgentParkedSeat
+  );
+  assert.equal(resolvedWake.id, 'open_live_terminal');
+  assert.equal(resolvedWake.transport, 'modal_terminal');
+});
