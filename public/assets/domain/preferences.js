@@ -15,7 +15,10 @@ export const DEFAULT_DECK_PREFS = Object.freeze({
   radarFilter: 'all', // 'all' | 'blockers' | 'tasks'
   centerView: 'graph', // 'graph' | 'gantt'
   graphLayout: 'dynamic', // 'dynamic' | 'fixed'
-  ganttWindowH: 6, // 1 | 6 | 24
+  ganttWindowH: 6, // 0.5 | 1 | 6 | 24
+  ganttMode: 'timeline', // 'timeline' | 'sequence'
+  ganttGroupBy: 'agent', // 'agent' | 'chain'
+  ganttHideNoise: true,
   density: 'fit', // 'fit' | 'detailed'
   sidebarLeftCollapsed: false,
   sidebarRightCollapsed: false,
@@ -31,7 +34,9 @@ export const DEFAULT_DECK_PREFS = Object.freeze({
 const VALID_RADAR = new Set(['all', 'blockers', 'tasks']);
 const VALID_CENTER = new Set(['graph', 'gantt']);
 const VALID_GRAPH_LAYOUT = new Set(['dynamic', 'fixed']);
-const VALID_GANTT_H = new Set([1, 6, 24]);
+const VALID_GANTT_H = new Set([0.5, 1, 6, 24]);
+const VALID_GANTT_MODE = new Set(['timeline', 'sequence']);
+const VALID_GANTT_GROUP = new Set(['agent', 'chain']);
 const VALID_DENSITY = new Set(['fit', 'detailed']);
 const VALID_INSP_TAB = new Set(['rules', 'fallback', 'memory']);
 const VALID_BUDGET_WIN = new Set(BUDGET_WINDOWS);
@@ -55,6 +60,9 @@ export function sanitizeDeckPrefs(raw = {}) {
     centerView: VALID_CENTER.has(src.centerView) ? src.centerView : DEFAULT_DECK_PREFS.centerView,
     graphLayout: VALID_GRAPH_LAYOUT.has(src.graphLayout) ? src.graphLayout : DEFAULT_DECK_PREFS.graphLayout,
     ganttWindowH: VALID_GANTT_H.has(ganttNum) ? ganttNum : DEFAULT_DECK_PREFS.ganttWindowH,
+    ganttMode: VALID_GANTT_MODE.has(src.ganttMode) ? src.ganttMode : DEFAULT_DECK_PREFS.ganttMode,
+    ganttGroupBy: VALID_GANTT_GROUP.has(src.ganttGroupBy) ? src.ganttGroupBy : DEFAULT_DECK_PREFS.ganttGroupBy,
+    ganttHideNoise: typeof src.ganttHideNoise === 'boolean' ? src.ganttHideNoise : DEFAULT_DECK_PREFS.ganttHideNoise,
     density: VALID_DENSITY.has(src.density) ? src.density : DEFAULT_DECK_PREFS.density,
     sidebarLeftCollapsed: typeof src.sidebarLeftCollapsed === 'boolean' ? src.sidebarLeftCollapsed : DEFAULT_DECK_PREFS.sidebarLeftCollapsed,
     sidebarRightCollapsed: typeof src.sidebarRightCollapsed === 'boolean' ? src.sidebarRightCollapsed : DEFAULT_DECK_PREFS.sidebarRightCollapsed,

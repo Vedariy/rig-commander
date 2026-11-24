@@ -252,25 +252,41 @@
         <div class="edge-xray-drawer" id="edgeXrayDrawer"></div>
       </div>
 
-      <!-- GANTT VIEW: who did which task and when (one chain = one color) -->
+      <!-- GANTT VIEW: Operational Timeline (Sub-lane packed) & Chronological Handoff Flow -->
       <div class="gantt-wrap" id="ganttWrap" style="display:none;">
-        <div class="gantt-toolbar">
-          <span style="display:flex; gap:6px; align-items:center;">
+        <div class="gantt-toolbar" id="ganttToolbar">
+          <span class="gantt-toolbar-group">
             <span data-i18n="gantt.window">ОКНО:</span>
-            <button class="hud-segment-btn" data-gantt-window="1" onclick="setGanttWindow(1)" data-i18n="gantt.h1">1ч</button>
-            <button class="hud-segment-btn" data-gantt-window="6" onclick="setGanttWindow(6)" data-i18n="gantt.h6">6ч</button>
-            <button class="hud-segment-btn" data-gantt-window="24" onclick="setGanttWindow(24)" data-i18n="gantt.h24">24ч</button>
-            <button class="hud-segment-btn" id="btnGanttClearFocus" onclick="setGanttFocus(null)" style="display:none;" data-i18n="gantt.clearFocus">✕ Сбросить фокус</button>
+            <div class="gantt-seg" role="group" aria-label="Time window">
+              <button type="button" class="hud-segment-btn" data-gantt-window="0.5" onclick="setGanttWindow(0.5)" data-i18n="gantt.m30">30м</button>
+              <button type="button" class="hud-segment-btn" data-gantt-window="1" onclick="setGanttWindow(1)" data-i18n="gantt.h1">1ч</button>
+              <button type="button" class="hud-segment-btn" data-gantt-window="6" onclick="setGanttWindow(6)" data-i18n="gantt.h6">6ч</button>
+              <button type="button" class="hud-segment-btn" data-gantt-window="24" onclick="setGanttWindow(24)" data-i18n="gantt.h24">24ч</button>
+            </div>
+            <div class="gantt-seg" id="ganttModeSwitch" role="group" aria-label="Gantt view mode">
+              <button type="button" class="hud-segment-btn active" id="btnGanttModeTimeline" onclick="setGanttMode('timeline')" data-i18n="gantt.modeTimeline">📊 Таймлайн</button>
+              <button type="button" class="hud-segment-btn" id="btnGanttModeSequence" onclick="setGanttMode('sequence')" data-i18n="gantt.modeSequence">🔀 Поток передач</button>
+            </div>
+            <div class="gantt-seg" id="ganttGroupSwitch" role="group" aria-label="Gantt grouping">
+              <button type="button" class="hud-segment-btn active" id="btnGanttGroupAgent" onclick="setGanttGroupBy('agent')" data-i18n="gantt.groupAgent">По агентам</button>
+              <button type="button" class="hud-segment-btn" id="btnGanttGroupChain" onclick="setGanttGroupBy('chain')" data-i18n="gantt.groupChain">По задачам</button>
+            </div>
           </span>
-          <span class="gantt-legend">
-            <span><i style="background:repeating-linear-gradient(45deg, rgba(148,163,184,0.55) 0 3px, transparent 3px 6px); border:1px solid rgba(148,163,184,0.6);"></i><span data-i18n="gantt.legWait">ждёт взятия</span></span>
-            <span><i style="background:#38bdf8;"></i><span data-i18n="gantt.legWork">в работе</span></span>
-            <span><i style="background:transparent; border:2px solid #f59e0b;"></i><span data-i18n="gantt.legLong">долгое ожидание</span></span>
-            <span data-i18n="gantt.legRework">🪃 &gt;2 круга QA</span>
-            <span style="color:#64748b;" data-i18n="gantt.legHint">цвет = цепочка • клик = фокус + инспектор</span>
+          <span class="gantt-toolbar-group">
+            <button type="button" class="hud-segment-btn active" id="btnGanttHideNoise" onclick="toggleGanttHideNoise()">Шум: СКРЫТ</button>
+            <button type="button" class="hud-segment-btn" id="btnGanttBottlenecks" onclick="toggleGanttBottlenecks()" data-i18n="gantt.onlyBottlenecks">🔥 Узкие места</button>
+            <span class="gantt-seg" id="ganttZoomGroup" role="group" aria-label="Zoom">
+              <button type="button" class="hud-segment-btn" onclick="adjustGanttZoom(-1)" title="Zoom out">−</button>
+              <span id="ganttZoomLabel" style="padding:0 4px; color:#cbd5e1; font-size:10px;">1×</span>
+              <button type="button" class="hud-segment-btn" onclick="adjustGanttZoom(1)" title="Zoom in">+</button>
+            </span>
+            <button type="button" class="hud-segment-btn" id="btnGanttClearFocus" onclick="setGanttFocus(null)" style="display:none; border-color:rgba(245,158,11,0.5); color:#fde68a;" data-i18n="gantt.clearFocus">✕ Сбросить фокус</button>
           </span>
         </div>
+        <div class="gantt-kpi-strip" id="ganttKpiStrip"></div>
         <div class="gantt-body" id="ganttBody"></div>
+        <div class="gantt-span-detail" id="ganttSpanDetail"></div>
+        <div class="gantt-tooltip" id="ganttTooltip" role="tooltip"></div>
       </div>
 
       <!-- PROPORTIONAL SLICE SWIMLANES -->
@@ -1005,11 +1021,19 @@
     let topologyTweenRaf = null;
     let topologyHasInitialLayout = false;
     let topologyResizeObserver = null;
-    let ganttWindowH = [1, 6, 24].includes(Number(localStorage.getItem('openrig_gantt_window')))
+    let ganttWindowH = [0.5, 1, 6, 24].includes(Number(localStorage.getItem('openrig_gantt_window')))
       ? Number(localStorage.getItem('openrig_gantt_window'))
       : 6;
+    let ganttMode = 'timeline'; // 'timeline' | 'sequence'
+    let ganttGroupBy = 'agent'; // 'agent' | 'chain'
+    let ganttHideNoise = true;
+    let ganttOnlyBottlenecks = false;
+    let ganttZoom = 1; // 1 | 2 | 4
     let ganttFocusChain = null;
     let ganttHoverChain = null;
+    let ganttSelectedSpanId = null;
+    let ganttSpanById = new Map();
+    let ganttLastTopBottleneck = null;
     const expandedRadarGroups = new Set();
     let liveScreenCapture = 'Нажми «🔄 Обновить экран tmux» или выбери узел для живого захвата rig capture...';
     let activeInspectorTab = 'rules'; // 'rules' | 'fallback' | 'memory'
@@ -1868,30 +1892,230 @@
     }
 
     function setGanttWindow(hours) {
-      ganttWindowH = hours;
-      persistDeckPref({ ganttWindowH: hours });
-      document.querySelectorAll('[data-gantt-window]').forEach(b => {
-        b.classList.toggle('active', Number(b.getAttribute('data-gantt-window')) === hours);
-      });
+      ganttWindowH = [0.5, 1, 6, 24].includes(Number(hours)) ? Number(hours) : 6;
+      persistDeckPref({ ganttWindowH });
+      syncGanttControlsUi();
       renderGantt();
     }
 
-    function setGanttFocus(chain) {
-      ganttFocusChain = chain;
-      const btn = document.getElementById('btnGanttClearFocus');
-      if (btn) btn.style.display = chain ? '' : 'none';
-      applyGanttFocus();
+    function setGanttMode(mode, skipPersist = false) {
+      ganttMode = mode === 'sequence' ? 'sequence' : 'timeline';
+      if (!skipPersist) persistDeckPref({ ganttMode });
+      syncGanttControlsUi();
+      renderGantt();
     }
 
-    function ganttHover(chain) {
+    function setGanttGroupBy(groupBy, skipPersist = false) {
+      ganttGroupBy = groupBy === 'chain' ? 'chain' : 'agent';
+      if (!skipPersist) persistDeckPref({ ganttGroupBy });
+      syncGanttControlsUi();
+      renderGantt();
+    }
+
+    function toggleGanttHideNoise() {
+      ganttHideNoise = !ganttHideNoise;
+      persistDeckPref({ ganttHideNoise });
+      syncGanttControlsUi();
+      renderGantt();
+    }
+
+    function toggleGanttBottlenecks() {
+      ganttOnlyBottlenecks = !ganttOnlyBottlenecks;
+      syncGanttControlsUi();
+      renderGantt();
+    }
+
+    function adjustGanttZoom(delta) {
+      const levels = [1, 2, 4];
+      const idx = levels.indexOf(ganttZoom);
+      const nextIdx = Math.max(0, Math.min(levels.length - 1, (idx === -1 ? 0 : idx) + delta));
+      ganttZoom = levels[nextIdx];
+      syncGanttControlsUi();
+      renderGantt();
+      const body = document.getElementById('ganttBody');
+      if (body && ganttZoom > 1) {
+        body.scrollLeft = body.scrollWidth;
+      }
+    }
+
+    function syncGanttControlsUi(hiddenNoiseCount = 0) {
+      document.querySelectorAll('[data-gantt-window]').forEach(b => {
+        b.classList.toggle('active', Number(b.getAttribute('data-gantt-window')) === ganttWindowH);
+      });
+      const bTm = document.getElementById('btnGanttModeTimeline');
+      const bSq = document.getElementById('btnGanttModeSequence');
+      if (bTm) bTm.classList.toggle('active', ganttMode === 'timeline');
+      if (bSq) bSq.classList.toggle('active', ganttMode === 'sequence');
+
+      const grpSw = document.getElementById('ganttGroupSwitch');
+      const zoomGrp = document.getElementById('ganttZoomGroup');
+      if (grpSw) grpSw.style.display = ganttMode === 'timeline' ? '' : 'none';
+      if (zoomGrp) zoomGrp.style.display = ganttMode === 'timeline' ? '' : 'none';
+      const bAg = document.getElementById('btnGanttGroupAgent');
+      const bCh = document.getElementById('btnGanttGroupChain');
+      if (bAg) bAg.classList.toggle('active', ganttGroupBy === 'agent');
+      if (bCh) bCh.classList.toggle('active', ganttGroupBy === 'chain');
+
+      const bNoise = document.getElementById('btnGanttHideNoise');
+      if (bNoise) {
+        bNoise.classList.toggle('active', ganttHideNoise);
+        const baseLbl = ganttHideNoise ? td('gantt.noiseHidden') : td('gantt.noiseShown');
+        bNoise.textContent = ganttHideNoise && hiddenNoiseCount > 0 ? `${baseLbl} (${hiddenNoiseCount})` : baseLbl;
+      }
+      const bBot = document.getElementById('btnGanttBottlenecks');
+      if (bBot) {
+        bBot.classList.toggle('active', ganttOnlyBottlenecks);
+        bBot.style.display = ganttMode === 'timeline' ? '' : 'none';
+      }
+      const zLbl = document.getElementById('ganttZoomLabel');
+      if (zLbl) zLbl.textContent = `${ganttZoom}×`;
+      const btnClr = document.getElementById('btnGanttClearFocus');
+      if (btnClr) btnClr.style.display = ganttFocusChain ? '' : 'none';
+    }
+
+    function setGanttFocus(chain, skipRerender = false) {
+      ganttFocusChain = chain;
+      syncGanttControlsUi();
+      if (!skipRerender && centerViewMode === 'gantt') {
+        renderGantt();
+      } else {
+        applyGanttFocus();
+      }
+    }
+
+    function ganttHover(chain, spanId = '', ev = null) {
       ganttHoverChain = chain;
       applyGanttFocus();
+      const tipEl = document.getElementById('ganttTooltip');
+      if (!tipEl) return;
+      if (!spanId) {
+        tipEl.classList.remove('visible');
+        return;
+      }
+      const sp = ganttSpanById.get(spanId);
+      if (!sp) {
+        tipEl.classList.remove('visible');
+        return;
+      }
+      const dur = (ms) => formatGanttDuration(ms, deckLang);
+      const fromStr = shortSeat(sp.from || '?');
+      const toStr = shortSeat(sp.to || '?');
+      const flags = [];
+      if (sp.isLongWait) flags.push(`<span style="color:#fbbf24;">⚠️ ${escapeHtml(td('gantt.legLong'))}</span>`);
+      if (sp.isBounceBack) flags.push(`<span style="color:#fb923c;">${escapeHtml(td('gantt.seqBounceBadge'))}</span>`);
+      if (sp.isOpen) flags.push(`<span style="color:#00ff9d;">● LIVE</span>`);
+      tipEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; gap:8px; align-items:center; margin-bottom:3px;">
+          <strong style="color:${sp.color};">${escapeHtml(sp.slice || sp.label)}</strong>
+          <span style="color:#94a3b8; font-size:9.5px;">${escapeHtml(sp.state || '')}</span>
+        </div>
+        <div style="color:#cbd5e1; margin-bottom:4px;">${escapeHtml(fromStr)} → <b>${escapeHtml(toStr)}</b></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:${sp.summary ? '4px' : '0'};">
+          <span style="color:${sp.isLongWait ? '#fbbf24' : '#94a3b8'};">⏳ ${escapeHtml(td('gantt.kpiWait'))}: <b>${dur(sp.waitMs)}</b></span>
+          <span style="color:#6ee7b7;">⚡ ${escapeHtml(td('gantt.kpiWork'))}: <b>${dur(sp.workMs)}</b></span>
+          ${flags.join(' ')}
+        </div>
+        ${sp.summary ? `<div style="font-family:var(--font-sans); font-size:11px; color:#94a3b8; border-top:1px dashed rgba(148,163,184,0.18); padding-top:4px;">${escapeHtml(String(sp.summary).slice(0, 160))}</div>` : ''}
+      `;
+      tipEl.classList.add('visible');
+      ganttMoveTip(ev);
+    }
+
+    function ganttMoveTip(ev) {
+      if (!ev) return;
+      const tipEl = document.getElementById('ganttTooltip');
+      if (!tipEl || !tipEl.classList.contains('visible')) return;
+      const pad = 14;
+      const tw = tipEl.offsetWidth || 280;
+      const th = tipEl.offsetHeight || 90;
+      let left = ev.clientX + pad;
+      let top = ev.clientY + pad;
+      if (left + tw > window.innerWidth - 10) left = Math.max(10, ev.clientX - tw - pad);
+      if (top + th > window.innerHeight - 10) top = Math.max(10, ev.clientY - th - pad);
+      tipEl.style.left = `${Math.round(left)}px`;
+      tipEl.style.top = `${Math.round(top)}px`;
+    }
+
+    function renderGanttSpanDetail() {
+      const box = document.getElementById('ganttSpanDetail');
+      if (!box) return;
+      const sp = ganttSelectedSpanId ? ganttSpanById.get(ganttSelectedSpanId) : null;
+      if (!sp) {
+        box.classList.remove('open');
+        box.innerHTML = '';
+        return;
+      }
+      const dur = (ms) => formatGanttDuration(ms, deckLang);
+      const tFmt = (ms) => Number.isFinite(ms)
+        ? new Date(ms).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+        : '—';
+      const hasSeat = AGENTS.some(a => a.id === sp.to);
+      const isFocused = ganttFocusChain === sp.chain;
+      const showCmd = sp.id && !String(sp.id).startsWith('demo-') ? `rig queue show ${sp.id}` : '';
+      box.style.setProperty('--span-color', sp.color || 'var(--cyan)');
+      box.classList.add('open');
+      box.innerHTML = `
+        <div class="gantt-span-detail-top">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="color:${sp.color}; font-weight:800;">🏷️ ${escapeHtml(sp.slice || sp.label)}</span>
+            <span style="color:#94a3b8;">${escapeHtml(shortSeat(sp.from || '?'))} → <b style="color:#f8fafc;">${escapeHtml(shortSeat(sp.to))}</b></span>
+            <span style="color:${sp.isLongWait ? '#fbbf24' : '#94a3b8'};">⏳ ${dur(sp.waitMs)}</span>
+            <span style="color:#6ee7b7;">⚡ ${dur(sp.workMs)}</span>
+            <span style="color:#64748b; font-size:9.5px;">${tFmt(sp.created)} → ${sp.isOpen ? 'LIVE' : tFmt(sp.endT)}</span>
+            ${sp.isBounceBack ? `<span style="color:#fb923c; font-weight:800;">${escapeHtml(td('gantt.seqBounceBadge'))}</span>` : ''}
+          </div>
+          <div class="gantt-span-detail-actions">
+            ${ganttMode !== 'sequence' ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-chain="${escapeHtml(sp.chain)}" onclick="openChainInSequence(this.getAttribute('data-chain'))">${escapeHtml(td('gantt.spanOpenFlow'))}</button>` : ''}
+            <button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-chain="${escapeHtml(sp.chain)}" onclick="setGanttFocus(ganttFocusChain === this.getAttribute('data-chain') ? null : this.getAttribute('data-chain'))">${escapeHtml(isFocused ? td('gantt.spanClearChain') : td('gantt.spanFocusChain'))}</button>
+            ${hasSeat ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-seat="${escapeHtml(sp.to)}" onclick="focusSeatDiagnosis(this.getAttribute('data-seat'))">${escapeHtml(td('gantt.spanFocusSeat'))}</button>` : ''}
+            ${hasSeat ? `<button type="button" class="action-pill" style="padding:2px 7px; font-size:10px;" data-seat="${escapeHtml(sp.to)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${escapeHtml(td('gantt.spanScreen'))}</button>` : ''}
+            ${showCmd ? `<button type="button" class="env-copy-btn" data-cmd="${escapeHtml(showCmd)}" title="${escapeHtml(showCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>` : ''}
+            <button type="button" class="action-pill" style="padding:2px 6px; font-size:10px; border-color:rgba(148,163,184,0.3); color:#94a3b8;" onclick="selectGanttSpan(null)">✕</button>
+          </div>
+        </div>
+        ${sp.summary ? `<div class="gantt-span-detail-summary">${escapeHtml(sp.summary)}</div>` : ''}
+      `;
+    }
+
+    function selectGanttSpan(spanId) {
+      ganttSelectedSpanId = spanId || null;
+      renderGanttSpanDetail();
+      const body = document.getElementById('ganttBody');
+      if (body) {
+        body.querySelectorAll('.g-chain, .gantt-seq-step').forEach(el => {
+          el.classList.toggle('is-selected', Boolean(spanId && el.getAttribute('data-span-id') === spanId));
+        });
+      }
+    }
+
+    function openChainInSequence(chain) {
+      ganttFocusChain = chain || ganttFocusChain;
+      ganttMode = 'sequence';
+      persistDeckPref({ ganttMode });
+      syncGanttControlsUi();
+      renderGantt();
+    }
+
+    function jumpToGanttBottleneck() {
+      const b = ganttLastTopBottleneck;
+      if (!b) return;
+      ganttFocusChain = b.chain;
+      ganttSelectedSpanId = b.id;
+      syncGanttControlsUi();
+      renderGantt();
+      if (b.to && AGENTS.some(a => a.id === b.to)) {
+        selectAgent(b.to);
+      }
     }
 
     function ganttClick(el, ev) {
       if (ev && ev.stopPropagation) ev.stopPropagation();
       const chain = el.getAttribute('data-chain');
       const seat = el.getAttribute('data-seat');
+      const spanId = el.getAttribute('data-span-id') || '';
+      if (spanId) {
+        ganttSelectedSpanId = spanId;
+      }
       setGanttFocus(ganttFocusChain === chain ? null : chain);
       if (seat && AGENTS.some(a => a.id === seat)) selectAgent(seat);
     }
@@ -1900,11 +2124,15 @@
       const body = document.getElementById('ganttBody');
       if (!body) return;
       const active = ganttHoverChain || ganttFocusChain;
-      const dimOpacity = ganttHoverChain ? '0.6' : '0.38';
+      const dimOpacity = ganttHoverChain ? '0.52' : '0.32';
       body.querySelectorAll('.g-chain').forEach(g => {
         const isMatch = !active || g.getAttribute('data-chain') === active;
         g.style.opacity = isMatch ? '1' : dimOpacity;
-        g.style.filter = active && isMatch ? 'drop-shadow(0 0 4px rgba(255,255,255,0.35))' : 'none';
+        g.style.filter = active && isMatch ? 'drop-shadow(0 0 4px rgba(255,255,255,0.32))' : 'none';
+      });
+      body.querySelectorAll('.g-handoff-link').forEach(p => {
+        const isMatch = active && p.getAttribute('data-chain') === active;
+        p.style.opacity = active ? (isMatch ? '0.92' : '0.06') : '0.24';
       });
     }
 
@@ -1948,165 +2176,332 @@
       return IS_LIVE ? [] : buildDemoGanttItems();
     }
 
+    function renderGanttKpiStrip(kpis) {
+      const strip = document.getElementById('ganttKpiStrip');
+      if (!strip) return;
+      const dur = (ms) => formatGanttDuration(ms, deckLang);
+      ganttLastTopBottleneck = kpis.topBottleneck || null;
+
+      const topBtn = kpis.topBottleneck
+        ? `<button type="button" class="gantt-bottleneck-btn" onclick="jumpToGanttBottleneck()" title="${escapeHtml(`${shortSeat(kpis.topBottleneck.to)} • ${kpis.topBottleneck.slice}`)}">🔥 ${escapeHtml(td('gantt.kpiTopDelay'))} ${escapeHtml(shortSeat(kpis.topBottleneck.to))} (${dur(kpis.topBottleneck.waitMs)} · ${escapeHtml(kpis.topBottleneck.slice)})</button>`
+        : '';
+
+      const bounceBadge = kpis.qaBounceCount > 0
+        ? `<span style="color:#fb923c; font-weight:700;">🪃 ${escapeHtml(td('gantt.kpiBounces'))} <b>${kpis.qaBounceCount}</b></span>`
+        : '';
+
+      strip.innerHTML = `
+        <div class="gantt-kpi-left">
+          <span>${escapeHtml(td('gantt.kpiTasks'))} <b>${kpis.visibleSpans}</b> <span style="color:#64748b;">(${kpis.chainCount})</span></span>
+          <span class="gantt-ratio-wrap" title="${escapeHtml(`${td('gantt.kpiWait')} ${dur(kpis.totalWaitMs)} / ${td('gantt.kpiWork')} ${dur(kpis.totalWorkMs)}`)}">
+            <span style="color:#fbbf24;">⏳ ${kpis.waitPct}%</span>
+            <span class="gantt-ratio-track"><span class="gantt-ratio-wait" style="width:${kpis.waitPct}%"></span><span class="gantt-ratio-work" style="width:${kpis.workPct}%"></span></span>
+            <span style="color:#6ee7b7;">⚡ ${kpis.workPct}%</span>
+          </span>
+          ${topBtn}
+          ${bounceBadge}
+        </div>
+        <span class="gantt-kpi-legend">
+          <span><i style="background:repeating-linear-gradient(45deg, rgba(148,163,184,0.55) 0 3px, transparent 3px 6px); border:1px solid rgba(148,163,184,0.6);"></i>${escapeHtml(td('gantt.legWait'))}</span>
+          <span><i style="background:#38bdf8;"></i>${escapeHtml(td('gantt.legWork'))}</span>
+          <span><i style="background:transparent; border:2px solid #f59e0b;"></i>${escapeHtml(td('gantt.legLong'))}</span>
+        </span>
+      `;
+    }
+
+    function renderHandoffSequenceView(body, allWindowSpans) {
+      const seq = buildHandoffSequenceModel(allWindowSpans, { focusChain: ganttFocusChain });
+      if (!seq.activeChain || seq.steps.length === 0) {
+        body.innerHTML = `<div class="gantt-empty">${escapeHtml(td('gantt.empty', { h: ganttWindowH }))}</div>`;
+        return;
+      }
+
+      const dur = (ms) => formatGanttDuration(ms, deckLang);
+      const tFmt = (ms) => new Date(ms).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+      const chainPillsHtml = seq.chains.map(c => {
+        const isAct = c.chain === seq.activeChain;
+        return `
+          <button type="button" class="gantt-seq-pill ${isAct ? 'active' : ''}" data-chain="${escapeHtml(c.chain)}" onclick="setGanttFocus(this.getAttribute('data-chain'))">
+            <span style="width:7px; height:7px; border-radius:50%; background:${c.color}; display:inline-block;"></span>
+            <span>${escapeHtml(c.label)}</span>
+            <span style="color:#94a3b8; font-weight:600;">(${c.stepCount})</span>
+            ${c.bounceCount > 0 ? `<span style="color:#fb923c;">🪃${c.bounceCount}</span>` : ''}
+          </button>
+        `;
+      }).join('');
+
+      const cols = seq.participants;
+      const W = Math.max(580, body.clientWidth - 28);
+      const PAD_X = 96;
+      const colStep = cols.length > 1 ? (W - PAD_X * 2) / (cols.length - 1) : 0;
+      const colX = (i) => cols.length === 1 ? W / 2 : PAD_X + i * colStep;
+      const HEAD_H = 44;
+      const STEP_H = 54;
+      const H = HEAD_H + seq.steps.length * STEP_H + 16;
+
+      let headerSvg = '';
+      cols.forEach((seatId, i) => {
+        const cx = colX(i);
+        const ag = AGENTS.find(a => a.id === seatId);
+        const title = ag ? getNodeDisplayTitle(ag) : shortSeat(seatId);
+        const label = ((ag && ag.icon) ? `${ag.icon} ` : '') + (title.length > 20 ? title.slice(0, 19) + '…' : title);
+        const boxW = Math.min(168, Math.max(96, label.length * 7.2 + 18));
+        headerSvg += `
+          <line x1="${cx}" y1="${HEAD_H - 6}" x2="${cx}" y2="${H - 8}" stroke="rgba(148,163,184,0.2)" stroke-dasharray="4 4" />
+          <rect x="${cx - boxW / 2}" y="6" width="${boxW}" height="28" rx="6" fill="rgba(14,23,42,0.95)" stroke="${seatId === selectedAgentId ? '#00f0ff' : 'rgba(56,189,248,0.38)'}" stroke-width="1.2" />
+          <text x="${cx}" y="24" text-anchor="middle" fill="#f8fafc" font-size="10.5" font-weight="700" font-family="var(--font-mono)">${escapeHtml(label)}</text>
+        `;
+      });
+
+      let stepsSvg = '';
+      seq.steps.forEach((st, idx) => {
+        const yTop = HEAD_H + idx * STEP_H;
+        const yArrow = yTop + 20;
+        const x1 = colX(st.fromIdx);
+        const x2 = colX(st.toIdx);
+        const isSelf = st.fromIdx === st.toIdx;
+        const isSel = ganttSelectedSpanId === st.id;
+        const strokeCol = st.isBounceBack ? '#fb923c' : (st.isOpen ? '#00ff9d' : seq.activeColor);
+        const markerId = st.isBounceBack ? 'seqArrWarn' : (st.isOpen ? 'seqArrLive' : 'seqArrCyan');
+
+        let arrowSvg = '';
+        if (isSelf) {
+          arrowSvg = `<path d="M ${x1} ${yArrow - 6} C ${x1 + 48} ${yArrow - 6}, ${x1 + 48} ${yArrow + 12}, ${x1 + 4} ${yArrow + 12}" fill="none" stroke="${strokeCol}" stroke-width="2" marker-end="url(#${markerId})" />`;
+        } else {
+          const dir = x2 > x1 ? 1 : -1;
+          arrowSvg = `<line x1="${x1 + dir * 4}" y1="${yArrow}" x2="${x2 - dir * 8}" y2="${yArrow}" stroke="${strokeCol}" stroke-width="${st.isBounceBack ? 2.4 : 2}" ${st.isBounceBack ? 'stroke-dasharray="6 4"' : ''} marker-end="url(#${markerId})" />`;
+        }
+
+        const midX = isSelf ? (x1 + 56) : (x1 + x2) / 2;
+        const waitTxt = st.waitMs >= 60_000 ? td('gantt.seqWaitBadge', { t: dur(st.waitMs) }) : '';
+        const workTxt = st.workMs > 0 ? td('gantt.seqWorkBadge', { t: dur(st.workMs) }) : (st.isOpen ? '● LIVE' : '');
+        const metaLine = [
+          `#${st.stepNum}`,
+          tFmt(st.created),
+          waitTxt,
+          workTxt,
+          st.isBounceBack ? td('gantt.seqBounceBadge') : ''
+        ].filter(Boolean).join(' · ');
+
+        const sumClip = String(st.summary || `${shortSeat(st.from || '?')} → ${shortSeat(st.to)}`).slice(0, 74);
+        const pillW = Math.min(W - 40, Math.max(150, metaLine.length * 6.4 + 16));
+        const pillX = Math.max(12, Math.min(W - pillW - 12, midX - pillW / 2));
+
+        stepsSvg += `
+          <g class="gantt-seq-step ${isSel ? 'is-selected' : ''}" data-span-id="${escapeHtml(st.id)}" data-chain="${escapeHtml(st.chain)}" data-seat="${escapeHtml(st.to)}"
+             onmouseenter="ganttHover(this.getAttribute('data-chain'), this.getAttribute('data-span-id'), event)"
+             onmousemove="ganttMoveTip(event)"
+             onmouseleave="ganttHover(null, '')"
+             onclick="selectGanttSpan(this.getAttribute('data-span-id')); if (this.getAttribute('data-seat') && AGENTS.some(a => a.id === this.getAttribute('data-seat'))) selectAgent(this.getAttribute('data-seat'));">
+            <rect class="seq-step-bg" x="6" y="${yTop + 2}" width="${W - 12}" height="${STEP_H - 4}" rx="6" fill="${idx % 2 === 0 ? 'rgba(15,23,42,0.34)' : 'transparent'}" />
+            <circle cx="${x1}" cy="${yArrow}" r="3.5" fill="${strokeCol}" />
+            ${arrowSvg}
+            <rect x="${pillX}" y="${yTop + 5}" width="${pillW}" height="17" rx="4" fill="rgba(6,12,26,0.95)" stroke="${st.isLongWait || st.isBounceBack ? '#f59e0b' : 'rgba(148,163,184,0.32)'}" stroke-width="1" />
+            <text x="${pillX + pillW / 2}" y="${yTop + 16.5}" text-anchor="middle" fill="${st.isBounceBack ? '#fdba74' : (st.isLongWait ? '#fde68a' : '#e2e8f0')}" font-size="9.5" font-weight="700" font-family="var(--font-mono)">${escapeHtml(metaLine)}</text>
+            <text x="${Math.max(16, Math.min(W - 16, midX))}" y="${yTop + 39}" text-anchor="middle" fill="#94a3b8" font-size="10.5" font-family="var(--font-sans)">${escapeHtml(sumClip)}${String(st.summary || '').length > 74 ? '…' : ''}</text>
+          </g>
+        `;
+      });
+
+      body.innerHTML = `
+        <div class="gantt-seq-shell">
+          <div class="gantt-seq-chains">${chainPillsHtml}</div>
+          <div class="gantt-seq-meta">
+            <span><b style="color:${seq.activeColor};">🏷️ ${escapeHtml(seq.activeLabel)}</b> · ${escapeHtml(td('gantt.seqTitle'))}</span>
+            <span>
+              ${escapeHtml(td('gantt.seqLead'))} <b style="color:#f8fafc;">${dur(seq.stats.totalLeadMs)}</b> ·
+              ${escapeHtml(td('gantt.seqHandoffs'))} <b style="color:#7dd3fc;">${seq.stats.handoffCount}</b> ·
+              <span style="color:#fbbf24;">⏳ ${seq.stats.waitPct}%</span> / <span style="color:#6ee7b7;">⚡ ${seq.stats.workPct}%</span>
+              ${seq.stats.bounceCount > 0 ? ` · <span style="color:#fb923c; font-weight:800;">🪃 ${seq.stats.bounceCount}</span>` : ''}
+            </span>
+          </div>
+          <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+            <defs>
+              <marker id="seqArrCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+              </marker>
+              <marker id="seqArrLive" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#00ff9d" />
+              </marker>
+              <marker id="seqArrWarn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#fb923c" />
+              </marker>
+            </defs>
+            ${headerSvg}
+            ${stepsSvg}
+          </svg>
+        </div>
+      `;
+    }
+
     function renderGantt() {
       if (centerViewMode !== 'gantt') return;
       const body = document.getElementById('ganttBody');
       if (!body) return;
 
-      const now = Date.now();
-      const spanMs = ganttWindowH * 3600 * 1000;
-      const t0 = now - spanMs;
-      const rigOk = id => currentRigFilter === 'all' || String(id).endsWith('@' + currentRigFilter);
+      const model = normalizeGanttSpans(getGanttItems(), {
+        nowMs: Date.now(),
+        windowH: ganttWindowH,
+        rigFilter: currentRigFilter,
+        hideNoise: ganttHideNoise,
+        onlyBottlenecks: ganttMode === 'timeline' && ganttOnlyBottlenecks
+      });
 
-      const items = getGanttItems().map(it => {
-        const created = Date.parse(it.createdAt);
-        const claimed = it.claimedAt ? Date.parse(it.claimedAt) : NaN;
-        const end = it.endAt ? Date.parse(it.endAt) : NaN;
-        return { ...it, created, claimed, end, isOpen: !it.endAt };
-      }).filter(it =>
-        Number.isFinite(it.created) &&
-        rigOk(it.to) &&
-        (it.isOpen ? now : (Number.isFinite(it.end) ? it.end : it.created)) >= t0 &&
-        it.created <= now
-      );
+      ganttSpanById = new Map(model.allWindowSpans.map(sp => [sp.id, sp]));
+      if (ganttSelectedSpanId && !ganttSpanById.has(ganttSelectedSpanId)) {
+        ganttSelectedSpanId = null;
+      }
 
-      if (items.length === 0) {
-        body.innerHTML = `<div class="gantt-empty">Нет задач очереди за последние ${ganttWindowH} ч${currentRigFilter !== 'all' ? ' в риге ' + escapeHtml(currentRigFilter) : ''}.</div>`;
+      syncGanttControlsUi(model.kpis.hiddenNoiseCount);
+      renderGanttKpiStrip(model.kpis);
+      renderGanttSpanDetail();
+
+      if (model.allWindowSpans.length === 0) {
+        const winTxt = ganttWindowH < 1 ? `${Math.round(ganttWindowH * 60)}м` : `${ganttWindowH}ч`;
+        body.innerHTML = `<div class="gantt-empty">${escapeHtml(td('gantt.empty', { h: winTxt }))}${model.kpis.hiddenNoiseCount > 0 ? ` (${escapeHtml(td('gantt.noiseHidden'))}: ${model.kpis.hiddenNoiseCount})` : ''}</div>`;
         return;
       }
 
-      // Rework marker: chains that went through a checker more than twice
-      const checkRounds = {};
-      items.forEach(it => {
-        if (/check|qa/.test(it.to)) checkRounds[it.chain] = (checkRounds[it.chain] || 0) + 1;
-      });
+      if (ganttMode === 'sequence') {
+        renderHandoffSequenceView(body, model.allWindowSpans);
+        return;
+      }
 
-      const lanes = [...new Set(items.map(it => it.to))]
-        .sort((a, b) => ganttRoleRank(a) - ganttRoleRank(b) || a.localeCompare(b));
-      const laneIdx = Object.fromEntries(lanes.map((id, i) => [id, i]));
+      if (model.spans.length === 0) {
+        body.innerHTML = `<div class="gantt-empty">🔥 ${deckLang === 'en' ? 'No long waits or QA bounces in this window — fleet flow is smooth!' : 'Долгих ожиданий и возвратов QA в этом окне нет — поток идёт ровно!'}</div>`;
+        return;
+      }
 
-      const W = Math.max(640, body.clientWidth - 4);
-      const LABEL = 178;
-      const RIGHT = 14;
-      const TOP = 24;
-      const ROW = 28;
+      const { t0, nowMs: now, spanMs, spans } = model;
+      const baseW = Math.max(640, body.clientWidth - 4);
+      const LABEL = 186;
+      const RIGHT = 16;
+      const plotW = Math.max(360, (baseW - LABEL - RIGHT) * ganttZoom);
+      const W = LABEL + plotW + RIGHT;
+      const minGapMs = Math.max(1000, (6 / Math.max(1, plotW)) * spanMs);
+      const minSpanMs = Math.max(1000, (14 / Math.max(1, plotW)) * spanMs);
+
+      const lanes = buildGanttLanes(spans, { groupBy: ganttGroupBy, minGapMs, minSpanMs });
+      const TOP = 26;
+      const SUB_ROW = 22;
+      const LANE_PAD = 8;
       const BAR = 16;
-      const H = TOP + lanes.length * ROW + 8;
-      const plotW = W - LABEL - RIGHT;
-      const xOf = t => LABEL + Math.min(1, Math.max(0, (t - t0) / spanMs)) * plotW;
-      const yOf = lane => TOP + laneIdx[lane] * ROW + (ROW - BAR) / 2;
 
-      const stepMin = ganttWindowH <= 1 ? 10 : ganttWindowH <= 6 ? 60 : 180;
+      // Compute exact non-overlapping vertical layout per lane using sub-lane track counts
+      const laneLayout = [];
+      let curY = TOP;
+      for (const lane of lanes) {
+        const height = LANE_PAD + lane.trackCount * SUB_ROW;
+        laneLayout.push({ lane, y: curY, height });
+        curY += height;
+      }
+      const H = curY + 10;
+      const xOf = t => LABEL + Math.min(1, Math.max(0, (t - t0) / spanMs)) * plotW;
+
+      const nowX = xOf(now);
+      const stepMin = ganttWindowH <= 0.5 ? 5 : (ganttWindowH <= 1 ? 10 : (ganttWindowH <= 6 ? 60 : 180));
       const stepMs = stepMin * 60 * 1000;
       let ticks = '';
       for (let t = Math.ceil(t0 / stepMs) * stepMs; t <= now; t += stepMs) {
         const x = xOf(t);
-        const label = new Date(t).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        ticks += `<line x1="${x}" y1="${TOP - 4}" x2="${x}" y2="${H}" stroke="rgba(148,163,184,0.12)" />`;
-        ticks += `<text x="${x}" y="${TOP - 9}" fill="#64748b" font-size="10" text-anchor="middle" font-family="var(--font-mono)">${label}</text>`;
+        const label = new Date(t).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false });
+        ticks += `<line x1="${x}" y1="${TOP - 4}" x2="${x}" y2="${H}" stroke="rgba(148,163,184,0.11)" />`;
+        if (nowX - x >= 48 && x - LABEL >= 24) {
+          ticks += `<text x="${x}" y="${TOP - 9}" fill="#64748b" font-size="10" text-anchor="middle" font-family="var(--font-mono)">${label}</text>`;
+        }
       }
 
+      const spanCoordsById = new Map();
       let laneRows = '';
-      lanes.forEach((id, i) => {
-        const y = TOP + i * ROW;
-        const ag = AGENTS.find(a => a.id === id);
-        const title = ag ? getNodeDisplayTitle(ag) : shortSeat(id);
-        const isSel = id === selectedAgentId;
-        if (i % 2 === 0) laneRows += `<rect x="0" y="${y}" width="${W}" height="${ROW}" fill="rgba(15,23,42,0.35)" />`;
-        laneRows += `<text x="8" y="${y + ROW / 2 + 4}" fill="${isSel ? '#00f0ff' : '#cbd5e1'}" font-size="11" font-weight="${isSel ? 800 : 600}" font-family="var(--font-mono)">${escapeHtml(((ag && ag.icon) ? ag.icon + ' ' : '') + (title.length > 22 ? title.slice(0, 21) + '…' : title))}<title>${escapeHtml(id)}</title></text>`;
-      });
-
-      const fmtMin = ms => {
-        const m = Math.max(0, Math.round(ms / 60000));
-        return m >= 60 ? `${Math.floor(m / 60)}ч ${m % 60}м` : `${m}м`;
-      };
-
-      // Group bars by chain, compute handoffs, then render longer periods under shorter/newer ones
-      const byChain = {};
-      items.forEach(it => { (byChain[it.chain] = byChain[it.chain] || []).push(it); });
-
-      const segments = [];
-      Object.entries(byChain).forEach(([chain, list]) => {
-        const color = ganttChainColor(chain);
-        list.sort((a, b) => a.created - b.created);
-        list.forEach((it, idx) => {
-          const endT = it.isOpen ? now : (Number.isFinite(it.end) ? it.end : it.created);
-          const span = Math.max(0, endT - it.created);
-          segments.push({
-            chain,
-            color,
-            it,
-            endT,
-            span,
-            next: list[idx + 1] || null,
-            isLastInChain: idx === list.length - 1
-          });
-        });
-      });
-
-      // Longest periods first (underneath), shorter / newer periods on top
-      segments.sort((a, b) => (b.span - a.span) || (a.it.created - b.it.created));
-
       let chainsSvg = '';
-      segments.forEach(({ chain, color, it, endT, next, isLastInChain }) => {
-        const y = yOf(it.to);
-        let workStart;
-        if (Number.isFinite(it.claimed)) workStart = it.claimed;
-        else workStart = it.isOpen ? endT : it.created; // never claimed & open => pure wait
-        const waitMs = Math.max(0, workStart - it.created);
-        const workMs = Math.max(0, endT - workStart);
-        const longWait = waitMs > GANTT_LONG_WAIT_MS && waitMs > workMs;
 
-        const xw0 = xOf(it.created);
-        const xw1 = xOf(workStart);
-        const xk1 = Math.max(xOf(endT), xw1 + 2);
-        const chainLabel = it.slice || (it.summary || '').slice(0, 40);
-        const tip = [
-          `${chainLabel || chain}`,
-          it.summary && it.summary !== chainLabel ? it.summary : '',
-          `${shortSeat(it.from || '?')} → ${shortSeat(it.to)} • ${it.state}`,
-          `ждал: ${fmtMin(waitMs)} • работа: ${fmtMin(workMs)}${it.isOpen ? ' (идёт)' : ''}`
-        ].filter(Boolean).join('\n');
-
-        let g = '';
-        if (xw1 - xw0 >= 1) {
-          g += `<rect x="${xw0}" y="${y + 3}" width="${Math.max(1, xw1 - xw0)}" height="${BAR - 6}" rx="2" fill="url(#ganttWaitHatch)" stroke="${longWait ? '#f59e0b' : '#060e1e'}" stroke-width="${longWait ? '2' : '1.2'}" />`;
+      laneLayout.forEach(({ lane, y, height }, i) => {
+        if (i % 2 === 0) {
+          laneRows += `<rect x="0" y="${y}" width="${W}" height="${height}" fill="rgba(15,23,42,0.34)" />`;
         }
-        if (workMs > 0 || !it.isOpen || Number.isFinite(it.claimed)) {
-          g += `<rect x="${xw1}" y="${y}" width="${xk1 - xw1}" height="${BAR}" rx="3" fill="${color}" fill-opacity="${it.isOpen ? 0.95 : 0.82}" stroke="${longWait ? '#f59e0b' : '#060e1e'}" stroke-width="${longWait ? '2' : '1.2'}" />`;
-          if (it.isOpen) {
-            g += `<rect x="${xk1 - 3}" y="${y}" width="3" height="${BAR}" fill="#fff" fill-opacity="0.85"><animate attributeName="fill-opacity" values="0.9;0.2;0.9" dur="1.6s" repeatCount="indefinite"/></rect>`;
+        laneRows += `<line x1="0" y1="${y + height}" x2="${W}" y2="${y + height}" stroke="rgba(148,163,184,0.08)" />`;
+
+        if (lane.mode === 'agent') {
+          const ag = AGENTS.find(a => a.id === lane.key);
+          const title = ag ? getNodeDisplayTitle(ag) : shortSeat(lane.key);
+          const isSel = lane.key === selectedAgentId;
+          const prefix = (ag && ag.icon) ? `${ag.icon} ` : '';
+          const txt = prefix + (title.length > 20 ? title.slice(0, 19) + '…' : title);
+          laneRows += `<text x="8" y="${y + height / 2 + 3.5}" fill="${isSel ? '#00f0ff' : '#cbd5e1'}" font-size="11" font-weight="${isSel ? 800 : 600}" font-family="var(--font-mono)">${escapeHtml(txt)}<title>${escapeHtml(lane.key)}</title></text>`;
+          if (lane.trackCount > 1) {
+            laneRows += `<text x="${LABEL - 6}" y="${y + 13}" text-anchor="end" fill="#64748b" font-size="9" font-family="var(--font-mono)">×${lane.trackCount}</text>`;
           }
-        } else if (longWait) {
-          g += `<rect x="${xw0}" y="${y + 3}" width="${Math.max(1, xw1 - xw0)}" height="${BAR - 6}" rx="2" fill="none" stroke="#f59e0b" stroke-width="2" />`;
+        } else {
+          const title = lane.label.length > 21 ? lane.label.slice(0, 20) + '…' : lane.label;
+          const isFoc = ganttFocusChain === lane.key;
+          laneRows += `<circle cx="12" cy="${y + height / 2}" r="4" fill="${lane.color}" />`;
+          laneRows += `<text x="22" y="${y + height / 2 + 3.5}" fill="${isFoc ? '#fff' : '#cbd5e1'}" font-size="10.5" font-weight="${isFoc ? 800 : 700}" font-family="var(--font-mono)" style="cursor:pointer;" data-chain="${escapeHtml(lane.key)}" onclick="setGanttFocus(ganttFocusChain === this.getAttribute('data-chain') ? null : this.getAttribute('data-chain'))">${escapeHtml(title)}<title>${escapeHtml(lane.label)}</title></text>`;
+          if (lane.qaRounds > 1) {
+            laneRows += `<text x="${LABEL - 6}" y="${y + height / 2 + 3.5}" text-anchor="end" fill="#fb923c" font-size="9.5" font-family="var(--font-mono)">🪃${lane.qaRounds}</text>`;
+          }
         }
 
-        const barW = xk1 - xw1;
-        if (barW > 64 && chainLabel) {
-          const maxChars = Math.floor((barW - 8) / 6.4);
-          const txt = chainLabel.length > maxChars ? chainLabel.slice(0, Math.max(1, maxChars - 1)) + '…' : chainLabel;
-          g += `<text x="${xw1 + 5}" y="${y + BAR / 2 + 3.5}" fill="#0b1220" font-size="10" font-weight="700" font-family="var(--font-mono)" pointer-events="none">${escapeHtml(txt)}</text>`;
+        for (const sp of lane.spans) {
+          const barY = y + LANE_PAD / 2 + sp.subRow * SUB_ROW + (SUB_ROW - BAR) / 2;
+          const xw0 = xOf(sp.created);
+          const xw1 = xOf(sp.workStart);
+          const xk1 = Math.max(xOf(sp.endT), xw1 + 3);
+          spanCoordsById.set(sp.id, { xStart: xw0, xEnd: xk1, yMid: barY + BAR / 2, sp });
+
+          let g = '';
+          if (xw1 - xw0 >= 1.5) {
+            g += `<rect x="${xw0}" y="${barY + 3}" width="${Math.max(2, xw1 - xw0)}" height="${BAR - 6}" rx="2" fill="url(#ganttWaitHatch)" stroke="${sp.isLongWait ? '#f59e0b' : 'rgba(148,163,184,0.35)'}" stroke-width="${sp.isLongWait ? '1.8' : '1'}" />`;
+          }
+          if (sp.workMs > 0 || !sp.isOpen || Number.isFinite(sp.claimed)) {
+            g += `<rect x="${xw1}" y="${barY}" width="${Math.max(3, xk1 - xw1)}" height="${BAR}" rx="3.5" fill="${sp.color}" fill-opacity="${sp.isOpen ? 0.96 : 0.84}" stroke="${sp.isBounceBack ? '#fb923c' : (sp.isLongWait ? '#f59e0b' : '#060e1e')}" stroke-width="${sp.isBounceBack || sp.isLongWait ? '1.8' : '1'}" />`;
+            if (sp.isOpen) {
+              g += `<rect x="${xk1 - 3}" y="${barY}" width="3" height="${BAR}" fill="#fff" fill-opacity="0.88"><animate attributeName="fill-opacity" values="0.9;0.2;0.9" dur="1.6s" repeatCount="indefinite"/></rect>`;
+            }
+          }
+
+          const barW = xk1 - xw1;
+          const innerLabel = lane.mode === 'chain'
+            ? `${shortSeat(sp.to)}${sp.isBounceBack ? ' 🪃' : ''}`
+            : (sp.slice || sp.label);
+          if (barW > 46 && innerLabel) {
+            const maxChars = Math.floor((barW - 8) / 6.2);
+            const txt = innerLabel.length > maxChars ? innerLabel.slice(0, Math.max(1, maxChars - 1)) + '…' : innerLabel;
+            g += `<text x="${xw1 + 5}" y="${barY + BAR / 2 + 3.5}" fill="#060e1e" font-size="9.5" font-weight="800" font-family="var(--font-mono)" pointer-events="none">${escapeHtml(txt)}</text>`;
+          }
+          if (sp.isBounceBack && barW <= 46) {
+            g += `<text x="${xk1 + 2}" y="${barY + BAR / 2 + 3.5}" font-size="10" pointer-events="none">🪃</text>`;
+          }
+
+          g += `<rect x="${xw0}" y="${barY - 2}" width="${Math.max(8, xk1 - xw0)}" height="${BAR + 4}" fill="transparent" />`;
+          const isSel = ganttSelectedSpanId === sp.id;
+          chainsSvg += `<g class="g-chain ${isSel ? 'is-selected' : ''}" data-span-id="${escapeHtml(sp.id)}" data-chain="${escapeHtml(sp.chain)}" data-seat="${escapeHtml(sp.to)}" onmouseenter="ganttHover(this.getAttribute('data-chain'), this.getAttribute('data-span-id'), event)" onmousemove="ganttMoveTip(event)" onmouseleave="ganttHover(null, '')" onclick="ganttClick(this, event)">${g}</g>`;
         }
-
-        if (isLastInChain && (checkRounds[chain] || 0) > 2) {
-          g += `<text x="${xk1 + 3}" y="${y + BAR / 2 + 4}" font-size="11" pointer-events="none">🪃</text>`;
-        }
-
-        // Handoff arrow to the next segment of the same chain on another lane
-        if (next && next.to !== it.to) {
-          const ax = Math.min(xk1, xOf(next.created));
-          const ay = y + BAR / 2;
-          const bx = xOf(next.created);
-          const by = yOf(next.to) + BAR / 2;
-          g += `<path d="M ${ax} ${ay} C ${ax + 10} ${ay}, ${bx - 10} ${by}, ${bx} ${by}" fill="none" stroke="${color}" stroke-width="1.2" stroke-opacity="0.75" marker-end="url(#ganttArrow)" pointer-events="none" />`;
-        }
-
-        g += `<rect x="${xw0}" y="${y - 2}" width="${Math.max(6, xk1 - xw0)}" height="${BAR + 4}" fill="transparent"><title>${escapeHtml(tip)}</title></rect>`;
-
-        chainsSvg += `<g class="g-chain" data-chain="${escapeHtml(chain).replace(/"/g, '&quot;')}" data-seat="${escapeHtml(it.to).replace(/"/g, '&quot;')}" onmouseenter="ganttHover(this.getAttribute('data-chain'))" onmouseleave="ganttHover(null)" onclick="ganttClick(this, event)">${g}</g>`;
       });
 
-      const nowX = xOf(now);
+      // Draw subtle handoff connectors between consecutive spans of the same chain (brightens cleanly on hover/focus!)
+      let handoffsSvg = '';
+      if (ganttGroupBy === 'agent') {
+        const byChain = new Map();
+        for (const sp of spans) {
+          if (!byChain.has(sp.chain)) byChain.set(sp.chain, []);
+          byChain.get(sp.chain).push(sp);
+        }
+        for (const [chain, list] of byChain.entries()) {
+          list.sort((a, b) => a.created - b.created);
+          for (let i = 0; i < list.length - 1; i++) {
+            const a = spanCoordsById.get(list[i].id);
+            const b = spanCoordsById.get(list[i + 1].id);
+            if (!a || !b || list[i].to === list[i + 1].to) continue;
+            const ax = Math.min(a.xEnd, b.xStart);
+            const ay = a.yMid;
+            const bx = b.xStart;
+            const by = b.yMid;
+            handoffsSvg += `<path class="g-handoff-link" data-chain="${escapeHtml(chain)}" d="M ${ax.toFixed(1)} ${ay.toFixed(1)} C ${(ax + 12).toFixed(1)} ${ay.toFixed(1)}, ${(bx - 12).toFixed(1)} ${by.toFixed(1)}, ${bx.toFixed(1)} ${by.toFixed(1)}" fill="none" stroke="${list[i].color}" stroke-width="1.3" opacity="0.24" marker-end="url(#ganttArrow)" pointer-events="none" />`;
+          }
+        }
+      }
+
       body.innerHTML = `
         <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
           <defs>
@@ -2121,6 +2516,7 @@
           ${laneRows}
           <line x1="${LABEL}" y1="${TOP - 4}" x2="${LABEL}" y2="${H}" stroke="rgba(56,189,248,0.25)" />
           ${ticks}
+          ${handoffsSvg}
           ${chainsSvg}
           <line x1="${nowX}" y1="${TOP - 6}" x2="${nowX}" y2="${H}" stroke="#ff2a6d" stroke-width="1.2" stroke-dasharray="3 3" />
           <text x="${nowX - 4}" y="${TOP - 9}" fill="#ff2a6d" font-size="10" font-weight="700" text-anchor="end" font-family="var(--font-mono)">${td('gantt.now')}</text>
@@ -2884,7 +3280,25 @@
         const fp = typeof buildSeatSendKey === 'function' ? buildSeatSendKey(desc.seatId, sendType, desc.payload) : '';
         lockAttrs = getControlLockAttrs(scopeKey, fp);
       }
-      return `<button type="button" class="${baseClass}"${toneStyle ? ` style="${toneStyle}"` : ''} title="${escapeHtml(btnTitle)}" data-action-id="${escapeHtml(desc.id || '')}" data-transport="${escapeHtml(desc.transport || '')}" data-seat="${escapeHtml(desc.seatId || '')}" data-payload="${escapeHtml(desc.payload || '')}" data-status="${escapeHtml(statusElId)}" data-close-modal="${escapeHtml(closeModal)}"${lockAttrs} onclick="${stop}dispatchOntologyAction(this)">${btnLabelHtml}</button>`;
+      return `<button type="button" class="${baseClass}"${toneStyle ? ` style="${toneStyle}"` : ''} title="${escapeHtml(btnTitle)}" data-action-id="${escapeHtml(desc.id || '')}" data-transport="${escapeHtml(desc.transport || '')}" data-seat="${escapeHtml(desc.seatId || '')}" data-payload="${escapeHtml(desc.payload || '')}" data-finding-id="${escapeHtml(desc.findingId || '')}" data-status="${escapeHtml(statusElId)}" data-close-modal="${escapeHtml(closeModal)}"${lockAttrs} onclick="${stop}dispatchOntologyAction(this)">${btnLabelHtml}</button>`;
+    }
+
+    let focusedDiagnosisSeatId = '';
+    let focusedDiagnosisFindingId = '';
+    let focusedDiagnosisUntil = 0;
+
+    function focusSeatDiagnosis(seatId, findingId = '') {
+      if (!seatId) return;
+      const layout = document.getElementById('mainLayout');
+      if (layout && layout.classList.contains('right-collapsed') && typeof toggleSidebar === 'function') {
+        toggleSidebar('right');
+      }
+      focusedDiagnosisSeatId = seatId;
+      focusedDiagnosisFindingId = findingId || '';
+      focusedDiagnosisUntil = Date.now() + 2600;
+      selectAgent(seatId);
+      const body = document.getElementById('inspectorPanelBody');
+      if (body) body.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function dispatchOntologyAction(btn) {
@@ -2893,6 +3307,7 @@
       const transport = btn.getAttribute('data-transport') || '';
       const seatId = btn.getAttribute('data-seat') || '';
       const payload = btn.getAttribute('data-payload') || '';
+      const findingId = btn.getAttribute('data-finding-id') || '';
       const requestedStatus = btn.getAttribute('data-status') || 'cmdSendStatus';
       const statusElId = document.getElementById(requestedStatus) ? requestedStatus : 'cmdSendStatus';
       const closeModal = btn.getAttribute('data-close-modal') || '';
@@ -2905,7 +3320,7 @@
         selectAgent(seatId);
         openTerminalModal(seatId);
       } else if (transport === 'select_seat' && seatId) {
-        selectAgent(seatId);
+        focusSeatDiagnosis(seatId, findingId);
       } else if (transport === 'gantt_slice') {
         openSliceOnGantt(payload);
       } else if (transport === 'clipboard' && payload) {
@@ -2989,6 +3404,187 @@
       `;
     }
 
+    function isNoiseQueueItemUi(q) {
+      if (!q) return false;
+      const src = String(q.sourceSession || q.from || '').toLowerCase();
+      const sum = String(q.summary || '').toLowerCase();
+      const tags = Array.isArray(q.tags) ? q.tags.map(t => String(t || '').toLowerCase()) : [];
+      return src.includes('change-detector') ||
+        src.includes('context-guardian-observer') ||
+        src.includes('opgate') ||
+        tags.some(t => t.startsWith('stuck-sweep') || t.startsWith('recovery-for:') || t.startsWith('wake-')) ||
+        sum.includes('undelivered-wake') || sum.includes('stalled-after-claim') || sum.includes('stuck-sweep');
+    }
+
+    function getActiveFindingsForSeat(seatId) {
+      if (!seatId) return [];
+      const all = (window.LIVE_INTELLIGENCE && Array.isArray(window.LIVE_INTELLIGENCE.allFindings))
+        ? window.LIVE_INTELLIGENCE.allFindings
+        : [];
+      const matching = all.filter(f => {
+        if (!f || f.severity === 'p3_info') return false;
+        const target = f.actionPlan && f.actionPlan.seatTarget;
+        const affected = Array.isArray(f.metrics && f.metrics.affectedSeats) ? f.metrics.affectedSeats : [];
+        return target === seatId || affected.includes(seatId);
+      });
+      if (focusedDiagnosisFindingId && focusedDiagnosisSeatId === seatId) {
+        const idx = matching.findIndex(f => f.id === focusedDiagnosisFindingId);
+        if (idx > 0) {
+          const [hit] = matching.splice(idx, 1);
+          matching.unshift(hit);
+        }
+      }
+      return matching;
+    }
+
+    function renderSeatDiagnosisHtml(agent) {
+      if (!agent || !agent.id) return '';
+      const findings = getActiveFindingsForSeat(agent.id);
+      if (findings.length === 0) return '';
+
+      const primary = findings[0];
+      const extras = findings.slice(1, 3);
+      const sevClass = primary.severity === 'p0_urgent' ? 'is-p0' : (primary.severity === 'p1_high' ? 'is-p1' : 'is-p2');
+      const sevBadge = primary.severity === 'p0_urgent' ? 'P0' : (primary.severity === 'p1_high' ? 'P1' : 'P2');
+      const isSpotlight = focusedDiagnosisSeatId === agent.id && Date.now() <= focusedDiagnosisUntil;
+
+      // Collect concrete pending/open tasks for this seat so the operator sees WHAT is actually waiting
+      let samples = Array.isArray(primary.metrics && primary.metrics.pendingSamples)
+        ? primary.metrics.pendingSamples
+        : [];
+      let totalPending = Number(primary.metrics && primary.metrics.pendingCount) || samples.length;
+      let noiseCount = Number(primary.metrics && primary.metrics.noisePendingCount) || 0;
+
+      if (samples.length === 0 && Array.isArray(LIVE_OPEN_QUEUE) && LIVE_OPEN_QUEUE.length > 0) {
+        const forSeat = LIVE_OPEN_QUEUE.filter(q => q.destinationSession === agent.id && q.state !== 'done' && q.state !== 'terminal');
+        const realRows = [];
+        for (const q of forSeat) {
+          if (isNoiseQueueItemUi(q)) {
+            noiseCount++;
+            continue;
+          }
+          const slice = ((q.tags || []).find(t => typeof t === 'string' && t.startsWith('slice:')) || '').replace(/^slice:/, '');
+          realRows.push({
+            from: q.sourceSession || '',
+            slice,
+            summary: String(q.summary || q.title || '').trim().slice(0, 120),
+            state: q.state || 'pending'
+          });
+        }
+        if (realRows.length > 0 && (primary.detectorId === 'topology.bottleneck' || primary.detectorId === 'topology.live_blocker' || primary.detectorId === 'parked_seat')) {
+          samples = realRows.slice(0, 3);
+          totalPending = realRows.length;
+        }
+      }
+
+      const queueBoxHtml = (samples.length > 0 || noiseCount > 0) ? `
+        <div class="diag-queue-box">
+          <div class="diag-queue-head">
+            <span>📦 ${escapeHtml(td('diag.queueWaiting'))} ${totalPending > 0 ? `<b>${totalPending}</b>` : '0'}</span>
+            ${noiseCount > 0 ? `<span style="color:#94a3b8;">${escapeHtml(td('diag.noiseNote', { n: noiseCount }))}</span>` : ''}
+          </div>
+          ${samples.slice(0, 3).map(item => `
+            <div class="diag-queue-row">
+              ${item.slice ? `<span style="color:var(--cyan); font-weight:700;">${escapeHtml(item.slice)}</span> · ` : ''}
+              <span style="color:#94a3b8;">${escapeHtml(shortSeat(item.from || ''))}</span>
+              ${item.summary ? ` — ${escapeHtml(item.summary)}` : ''}
+            </div>
+          `).join('')}
+          ${totalPending > 3 ? `<div style="font-family:var(--font-mono); font-size:9.5px; color:#64748b;">${escapeHtml(td('diag.moreTasks', { n: totalPending - 3 }))}</div>` : ''}
+        </div>
+      ` : '';
+
+      // Remediation guidance text
+      const fallbackRemediation = agent.shellExited
+        ? (deckLang === 'en'
+            ? `Agent exited to bare shell — restart the seat with rig restart ${agent.id}.`
+            : `Агент вышел в shell — перезапустите сиденье командой rig restart ${agent.id}.`)
+        : (primary.detectorId === 'topology.bottleneck' || primary.detectorId === 'topology.live_blocker' || primary.detectorId === 'parked_seat')
+          ? (deckLang === 'en'
+              ? 'Click "Process queue" to send an explicit instruction (empty Enter on an idle prompt does nothing), or inspect tasks on Gantt.'
+              : 'Нажмите «Разобрать очередь», чтобы отправить агенту явную задачу проверить rig queue list --owned (пустой Enter на чистом промпте не запускает работу), либо откройте Гант.')
+          : '';
+      const remediationText = primary.remediation || fallbackRemediation;
+
+      // Build actionable 1-click buttons (skip useless select_seat since we are already on this seat!)
+      const actionBtns = [];
+      const seenActionIds = new Set();
+      const pushAction = (desc, extraStyle = '') => {
+        if (!desc || !desc.id || seenActionIds.has(desc.id)) return;
+        seenActionIds.add(desc.id);
+        actionBtns.push(renderOntologyActionBtn(desc, { statusElId: 'cmdSendStatus', style: extraStyle }));
+      };
+
+      const resolvedPrimary = primary.actionPlan ? resolveActionFromFinding(primary.actionPlan, agent) : null;
+      if (resolvedPrimary && resolvedPrimary.transport !== 'select_seat') {
+        pushAction(resolvedPrimary);
+      }
+
+      const isQueueOrParkedIssue =
+        primary.detectorId === 'topology.bottleneck' ||
+        primary.detectorId === 'topology.live_blocker' ||
+        primary.detectorId === 'parked_seat';
+
+      if (isQueueOrParkedIssue && !agent.shellExited && agent.state !== 'urgent') {
+        const nudgePayload = deckLang === 'en'
+          ? 'Check your open queue (`rig queue list --owned`): pick up active tasks or close stale/duplicate stuck-sweep and HELD items.'
+          : 'Проверь открытую очередь (`rig queue list --owned`): возьми актуальные задачи в работу, а устаревшие или служебные stuck-sweep/HELD закрой.';
+        pushAction({
+          id: 'nudge_queue',
+          transport: 'tmux_raw',
+          seatId: agent.id,
+          payload: nudgePayload,
+          label: td('diag.nudgeQueueBtn'),
+          title: td('diag.nudgeQueueTip'),
+          tone: 'proceed'
+        }, 'border-color:rgba(0,255,157,0.55); color:#6ee7b7; background:rgba(0,255,157,0.12);');
+
+        pushAction({
+          id: 'open_diag_gantt',
+          transport: 'gantt_slice',
+          seatId: agent.id,
+          payload: (primary.metrics && primary.metrics.affectedSlices && primary.metrics.affectedSlices[0]) || '',
+          label: td('diag.openGanttBtn'),
+          title: td('diag.openGanttBtn'),
+          tone: 'default'
+        });
+
+        pushAction({
+          id: 'copy_queue_cmd',
+          transport: 'clipboard',
+          seatId: agent.id,
+          payload: 'rig queue list --owned',
+          label: 'Cmd',
+          title: 'rig queue list --owned',
+          tone: 'default'
+        });
+      }
+
+      const extrasHtml = extras.length > 0 ? `
+        <div class="diag-extra-row">
+          <div style="font-family:var(--font-mono); font-size:9.5px; color:#94a3b8; font-weight:700;">${escapeHtml(td('diag.moreFindings', { n: extras.length }))}:</div>
+          ${extras.map(ex => `
+            <div style="font-size:10.5px; color:#cbd5e1;">• <b>${escapeHtml(ex.title || '')}</b>${ex.summary ? ` — ${escapeHtml(String(ex.summary).slice(0, 120))}` : ''}</div>
+          `).join('')}
+        </div>
+      ` : '';
+
+      return `
+        <div class="seat-diagnosis-card ${sevClass} ${isSpotlight ? 'is-spotlight' : ''}" id="seatDiagnosisCard">
+          <div class="diag-kicker">
+            <span>${sevBadge} • ${escapeHtml(td('diag.header'))}</span>
+            ${primary.metrics && primary.metrics.roiEstimate ? `<span style="color:#94a3b8; font-weight:600;">${escapeHtml(primary.metrics.roiEstimate)}</span>` : ''}
+          </div>
+          <div class="diag-title">${escapeHtml(primary.title || '')}</div>
+          ${primary.summary ? `<div class="diag-summary">${escapeHtml(primary.summary)}</div>` : ''}
+          ${queueBoxHtml}
+          ${remediationText ? `<div class="diag-remediation"><b style="color:var(--cyan);">${escapeHtml(td('diag.whatToDo'))}</b> ${escapeHtml(remediationText)}</div>` : ''}
+          ${actionBtns.length > 0 ? `<div class="diag-actions">${actionBtns.join('')}</div>` : ''}
+          ${extrasHtml}
+        </div>
+      `;
+    }
+
     function formatSeatUsageMeta(agent) {
       const u = agent && agent.usage;
       if (!u || !u.totalTokens) return '';
@@ -3045,6 +3641,15 @@
         if (elCtxBar) {
           elCtxBar.style.width = `${thermal.pct}%`;
           elCtxBar.style.background = thermal.color;
+        }
+
+        const elDiag = document.getElementById('inspSeatDiagnosis');
+        if (elDiag) {
+          const diagHtml = renderSeatDiagnosisHtml(agent);
+          if (elDiag.getAttribute('data-cache-key') !== diagHtml) {
+            elDiag.innerHTML = diagHtml;
+            elDiag.setAttribute('data-cache-key', diagHtml);
+          }
         }
 
         const elTask = document.getElementById('inspCurrentTask');
@@ -3152,6 +3757,9 @@
                 <span id="inspValContext" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.color}; white-space:nowrap;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
               </div>
             </div>
+
+            <!-- SA Level 1.5: Actionable Fleet Intelligence Diagnosis (What is wrong & how to fix it) -->
+            <div id="inspSeatDiagnosis">${renderSeatDiagnosisHtml(agent)}</div>
 
             <!-- SA Level 2: Current Task -->
             <div id="inspCurrentTask">${renderCurrentTaskHtml(agent)}</div>
@@ -3892,39 +4500,64 @@
 
       // Fleet Intelligence Recommendations (ADR-0009 Modular Monolith)
       if (window.LIVE_INTELLIGENCE && Array.isArray(window.LIVE_INTELLIGENCE.topRecommendations)) {
+        const allIntel = Array.isArray(window.LIVE_INTELLIGENCE.allFindings) ? window.LIVE_INTELLIGENCE.allFindings : [];
         for (const rec of window.LIVE_INTELLIGENCE.topRecommendations) {
           const prio = rec.severity === 'p0_urgent' ? 0.5 : rec.severity === 'p1_high' ? 1.2 : rec.severity === 'p2_medium' ? 2.2 : 3.2;
           const seatId = rec.actionPlan?.seatTarget || rec.metrics?.affectedSeats?.[0] || '';
           const seatObj = AGENTS.find(x => x.id === seatId) || null;
-          const action = resolveActionFromFinding(rec.actionPlan, seatObj) ||
-            { id: 'focus_seat', transport: 'select_seat', seatId, payload: '', label: '🔍 Осмотреть', tone: 'default' };
+          const baseAction = resolveActionFromFinding(rec.actionPlan, seatObj) ||
+            { id: 'focus_seat', transport: 'select_seat', seatId, payload: '', label: td('diag.inspectBtn'), tone: 'default' };
+          const action = { ...baseAction, findingId: rec.id || '' };
+          if (action.transport === 'select_seat') {
+            action.label = td('diag.inspectBtn');
+          }
+          const seatFindingCount = seatId
+            ? allIntel.filter(f => f && f.severity !== 'p3_info' && (f.actionPlan?.seatTarget === seatId || (f.metrics?.affectedSeats || []).includes(seatId))).length
+            : 1;
+          const sevShort = rec.severity === 'p0_urgent' ? 'P0' : rec.severity === 'p1_high' ? 'P1' : 'P2';
+          const compactTitle = rec.shortTitle
+            ? `${rec.severity === 'p0_urgent' ? '🚨' : (rec.severity === 'p1_high' ? '🟠' : '💡')} ${rec.shortTitle}`
+            : rec.title;
           candidates.push({
             prio,
             type: rec.severity === 'p0_urgent' ? 'p0-urgent' : rec.severity === 'p1_high' ? 'p1-hot' : 'p2-release',
-            tag: `💡 ${rec.category.toUpperCase()}`,
-            title: rec.title,
-            desc: `${rec.metrics?.roiEstimate ? `[${rec.metrics.roiEstimate}] ` : ''}${rec.summary}`,
+            tag: seatFindingCount > 1 ? `${sevShort} · ${seatFindingCount}` : sevShort,
+            title: compactTitle,
+            fullTitle: rec.title,
+            desc: rec.summary || rec.metrics?.roiEstimate || '',
             action,
-            targetAgentId: seatId || null
+            targetAgentId: seatId || null,
+            findingId: rec.id || ''
           });
         }
       }
 
-      // Sort candidates by priority score
+      // Sort candidates by priority score & deduplicate per seat so one seat never eats 2 of 3 top triage slots
       candidates.sort((a, b) => a.prio - b.prio);
+      const dedupedCandidates = [];
+      const seenCandidateSeats = new Set();
+      for (const c of candidates) {
+        if (c.targetAgentId) {
+          if (seenCandidateSeats.has(c.targetAgentId)) continue;
+          seenCandidateSeats.add(c.targetAgentId);
+        }
+        dedupedCandidates.push(c);
+      }
 
       // If still fewer than 3, add active working queue row or working agent
-      if (candidates.length < 3) {
+      if (dedupedCandidates.length < 3) {
         for (const q of LIVE_OPEN_QUEUE) {
           if (q.state === 'in-progress') {
+            if (q.destinationSession && seenCandidateSeats.has(q.destinationSession)) continue;
             const sliceTag = ((q.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', '') || 'task';
-            candidates.push({
+            if (q.destinationSession) seenCandidateSeats.add(q.destinationSession);
+            dedupedCandidates.push({
               prio: 4,
               type: 'p2-release',
-              tag: 'В РАБОТЕ',
+              tag: 'WORK',
               title: `🟢 ${shortSeat(q.destinationSession)}: ${sliceTag}`,
               desc: q.summary || 'Обработка задачи',
-              action: { id: 'focus_seat', transport: 'select_seat', seatId: q.destinationSession || '', payload: '', label: '🔍 Сессия', tone: 'default' },
+              action: { id: 'focus_seat', transport: 'select_seat', seatId: q.destinationSession || '', payload: '', label: td('triage.sessionBtn'), tone: 'default' },
               targetAgentId: q.destinationSession
             });
           }
@@ -3932,7 +4565,7 @@
       }
 
       // Take top 3
-      const top3 = candidates.slice(0, 3);
+      const top3 = dedupedCandidates.slice(0, 3);
       const healthScore = window.LIVE_INTELLIGENCE?.healthScore;
       const healthSuffix = typeof healthScore === 'number' ? ` • ${td('triage.health')}: ${healthScore}%` : '';
 
@@ -3963,11 +4596,13 @@
           </div>
         `;
       } else {
-        container.innerHTML = top3.map(c => `
-          <div class="triage-card ${c.type}" data-seat="${escapeHtml(c.targetAgentId || '')}" data-slice="${escapeHtml(c.targetSliceId || '')}" onclick="if (this.getAttribute('data-seat')) selectAgent(this.getAttribute('data-seat')); else if (this.getAttribute('data-slice')) setSliceFilter(this.getAttribute('data-slice'));" title="Нажмите для перехода к узлу">
+        container.innerHTML = top3.map(c => {
+          const hoverTip = [c.fullTitle || c.title, c.desc].filter(Boolean).join('\n');
+          return `
+          <div class="triage-card ${c.type}" data-seat="${escapeHtml(c.targetAgentId || '')}" data-slice="${escapeHtml(c.targetSliceId || '')}" data-finding-id="${escapeHtml(c.findingId || '')}" onclick="if (this.getAttribute('data-seat')) focusSeatDiagnosis(this.getAttribute('data-seat'), this.getAttribute('data-finding-id') || ''); else if (this.getAttribute('data-slice')) setSliceFilter(this.getAttribute('data-slice'));" title="${escapeHtml(hoverTip)}">
             <div class="triage-card-info">
               <div class="triage-card-header">
-                <span class="triage-card-tag">${c.tag}</span>
+                <span class="triage-card-tag">${escapeHtml(c.tag)}</span>
                 <span class="triage-card-title">${escapeHtml(c.title)}</span>
               </div>
               <div class="triage-card-desc">${escapeHtml(c.desc)}</div>
@@ -3976,7 +4611,8 @@
               ${renderOntologyActionBtn(c.action, { className: 'triage-btn' })}
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
       }
     }
 
@@ -6748,6 +7384,9 @@
       centerViewMode = prefs.centerView;
       graphLayoutMode = prefs.graphLayout || 'dynamic';
       ganttWindowH = prefs.ganttWindowH;
+      ganttMode = prefs.ganttMode || 'timeline';
+      ganttGroupBy = prefs.ganttGroupBy || 'agent';
+      ganttHideNoise = typeof prefs.ganttHideNoise === 'boolean' ? prefs.ganttHideNoise : true;
       autoFollow = prefs.autoFollow;
       audioRadarOn = prefs.audioRadarOn;
       activeInspectorTab = prefs.inspectorTab;
@@ -6797,6 +7436,7 @@
       }
       document.body.classList.toggle('density-detailed', prefs.density === 'detailed');
       updateGraphLayoutSwitchUi();
+      syncGanttControlsUi();
     }
 
     // Initial render + start live polling loop (invoked after /assets/domain/index.js loads)

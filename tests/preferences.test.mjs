@@ -27,6 +27,9 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
     centerView: 'gantt',
     graphLayout: 'fixed',
     ganttWindowH: 24,
+    ganttMode: 'sequence',
+    ganttGroupBy: 'chain',
+    ganttHideNoise: false,
     density: 'detailed',
     sidebarLeftCollapsed: true,
     sidebarRightCollapsed: false,
@@ -43,6 +46,9 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
   assert.equal(clean.centerView, 'gantt');
   assert.equal(clean.graphLayout, 'fixed');
   assert.equal(clean.ganttWindowH, 24);
+  assert.equal(clean.ganttMode, 'sequence');
+  assert.equal(clean.ganttGroupBy, 'chain');
+  assert.equal(clean.ganttHideNoise, false);
   assert.equal(clean.density, 'detailed');
   assert.equal(clean.sidebarLeftCollapsed, true);
   assert.equal(clean.autoFollow, false);
@@ -57,6 +63,8 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
     centerView: 'table',
     graphLayout: 'chaotic',
     ganttWindowH: 999,
+    ganttMode: 'uml',
+    ganttGroupBy: 'random',
     density: 'huge',
     selectedAgentId: 'bad;rm -rf /',
     inspectorTab: 'evil'

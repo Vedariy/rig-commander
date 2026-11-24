@@ -39,37 +39,107 @@ export function resolveModelTier(modelName = '') {
 }
 
 /**
- * Calculates Wait-to-Work Ratio and queue lead times per seat
+ * Identifies automated watchdog / sweep noise rows that should not inflate
+ * real user task bottleneck counts.
  */
-export function computeQueueKinetics(queueItems = []) {
+export function isQueueSystemNoise(q = {}) {
+  const src = String(q.sourceSession || q.from || '').toLowerCase();
+  const sum = String(q.summary || '').toLowerCase();
+  const tags = Array.isArray(q.tags) ? q.tags.map(t => String(t || '').toLowerCase()) : [];
+  if (src.includes('change-detector') || src.includes('context-guardian-observer') || src.includes('opgate')) {
+    return true;
+  }
+  if (tags.some(t => t.startsWith('stuck-sweep') || t.startsWith('recovery-for:') || t.startsWith('wake-'))) {
+    return true;
+  }
+  if (sum.includes('undelivered-wake') || sum.includes('stalled-after-claim') || sum.includes('stuck-sweep')) {
+    return true;
+  }
+  return false;
+}
+
+function extractShortSliceTag(q = {}) {
+  if (q.slice) return String(q.slice).replace(/^slice:/, '');
+  const tags = Array.isArray(q.tags) ? q.tags : [];
+  const sliceTag = tags.find(t => typeof t === 'string' && t.startsWith('slice:'));
+  if (sliceTag) return sliceTag.slice('slice:'.length);
+  const meaningful = tags.find(t => typeof t === 'string' && t.trim() && !/^(project:|stuck-sweep|recovery-for:|wake-|prompt-)/.test(t));
+  return meaningful || '';
+}
+
+/**
+ * Calculates Wait-to-Work Ratio and queue lead times per seat.
+ * Deduplicates by qitemId/id and separates real tasks from system sweep noise.
+ */
+export function computeQueueKinetics(queueItems = [], nowMs = Date.now()) {
   const seatStats = {};
+  const seenIds = new Set();
 
   for (const q of queueItems) {
-    const dest = q.destinationSession || 'unknown';
+    if (!q || typeof q !== 'object') continue;
+    const itemId = q.qitemId || q.id || '';
+    if (itemId) {
+      if (seenIds.has(itemId)) continue;
+      seenIds.add(itemId);
+    }
+
+    const dest = q.destinationSession || q.to || 'unknown';
     if (!seatStats[dest]) {
       seatStats[dest] = {
         totalItems: 0,
         completedItems: 0,
+        waitSampleCount: 0,
         inboxWaitSumMs: 0,
         workDurationSumMs: 0,
         pendingCount: 0,
-        inProgressCount: 0
+        noisePendingCount: 0,
+        inProgressCount: 0,
+        pendingSamples: []
       };
     }
     const stat = seatStats[dest];
+    const isNoise = isQueueSystemNoise(q);
+    const state = String(q.state || '').toLowerCase();
+    const created = q.tsCreated || q.createdAt ? new Date(q.tsCreated || q.createdAt).getTime() : 0;
+    const claimed = q.claimedAt ? new Date(q.claimedAt).getTime() : 0;
+    const updated = q.tsUpdated || q.updatedAt || q.endAt ? new Date(q.tsUpdated || q.updatedAt || q.endAt).getTime() : 0;
+
+    if (isNoise) {
+      if (state === 'pending' || state === 'open' || state === 'claimed') {
+        stat.noisePendingCount++;
+      }
+      continue;
+    }
+
     stat.totalItems++;
 
-    if (q.state === 'pending') stat.pendingCount++;
-    if (q.state === 'in-progress') stat.inProgressCount++;
-
-    const created = q.tsCreated ? new Date(q.tsCreated).getTime() : 0;
-    const claimed = q.claimedAt ? new Date(q.claimedAt).getTime() : 0;
-    const updated = q.tsUpdated ? new Date(q.tsUpdated).getTime() : 0;
+    if (state === 'pending' || state === 'open') {
+      stat.pendingCount++;
+      const ageMin = created > 0 && nowMs >= created ? Math.round((nowMs - created) / 60000) : 0;
+      if (stat.pendingSamples.length < 4) {
+        stat.pendingSamples.push({
+          id: String(itemId),
+          from: String(q.sourceSession || q.from || ''),
+          slice: extractShortSliceTag(q),
+          summary: String(q.summary || q.title || '').trim().slice(0, 140),
+          state,
+          ageMin
+        });
+      }
+      if (created > 0 && nowMs >= created) {
+        // Cap single open item wait at 24h so ancient stale rows don't explode averages
+        stat.inboxWaitSumMs += Math.min(nowMs - created, 24 * 3600 * 1000);
+        stat.waitSampleCount++;
+      }
+    } else if (state === 'in-progress') {
+      stat.inProgressCount++;
+    }
 
     if (created > 0 && claimed >= created) {
       stat.inboxWaitSumMs += (claimed - created);
+      stat.waitSampleCount++;
     }
-    if (claimed > 0 && updated >= claimed && (q.state === 'done' || q.state === 'handed-off')) {
+    if (claimed > 0 && updated >= claimed && (state === 'done' || state === 'handed-off')) {
       stat.workDurationSumMs += (updated - claimed);
       stat.completedItems++;
     }
@@ -77,9 +147,12 @@ export function computeQueueKinetics(queueItems = []) {
 
   const results = {};
   for (const [seat, stat] of Object.entries(seatStats)) {
-    const avgWaitMin = stat.totalItems > 0 ? (stat.inboxWaitSumMs / stat.totalItems) / 60000 : 0;
+    const waitDenom = stat.waitSampleCount > 0 ? stat.waitSampleCount : Math.max(1, stat.totalItems);
+    const avgWaitMin = stat.waitSampleCount > 0 ? (stat.inboxWaitSumMs / waitDenom) / 60000 : 0;
     const avgWorkMin = stat.completedItems > 0 ? (stat.workDurationSumMs / stat.completedItems) / 60000 : 0;
-    const wwr = avgWorkMin > 0 ? Number((avgWaitMin / avgWorkMin).toFixed(2)) : (avgWaitMin > 10 ? 2.5 : 1.0);
+    const wwr = avgWorkMin > 0
+      ? Number((avgWaitMin / avgWorkMin).toFixed(2))
+      : (avgWaitMin > 10 ? 2.0 : 0);
 
     results[seat] = {
       seat,
@@ -87,8 +160,10 @@ export function computeQueueKinetics(queueItems = []) {
       avgWorkMin: Number(avgWorkMin.toFixed(1)),
       wwr,
       pendingCount: stat.pendingCount,
+      noisePendingCount: stat.noisePendingCount,
       inProgressCount: stat.inProgressCount,
-      totalCount: stat.totalItems
+      totalCount: stat.totalItems,
+      pendingSamples: stat.pendingSamples
     };
   }
   return results;

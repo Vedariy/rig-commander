@@ -9,6 +9,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Operational Task Gantt & Chronological Handoff Flow (`openrig/assets/domain/gantt-model.js`, `openrig/index.html`, `deck.css`):**
+  - **Sub-lane interval bin packing (`packLaneIntervals`):** concurrent tasks on the same agent or slice expand cleanly into non-overlapping sub-rows (eliminating smashed overlapping labels).
+  - **Dual Timeline Grouping (`[By Agent | By Slice]`):** switch between agent utilization/concurrency and per-slice Trace Waterfall with QA bounce-back counters.
+  - **Chronological Handoff Flow (`[📊 Timeline | 🔀 Handoff Flow]`):** lightweight sequence trace scoped strictly to the 2–5 agents participating in the selected slice, annotating every handoff with wait duration, work duration, and QA bounce-back arrows (`🪃`).
+  - **Wait-vs-Work KPI Strip, Signal/Noise Filter & Interactive Span Inspector:** hides `Wake escalation` / `recovery-for` / `stuck-sweep` noise by default with 1-click toggle, surfaces Wait % vs Work % and a clickable `🔥 Top delay` chip, adds `30m/1h/6h/24h` + `1×/2×/4×` zoom, instant hover popover, and bottom Span Detail drawer (`Open Flow`, `Seat`, `Screen`, `rig queue show`).
 - **Dual Graph Layout Modes (`Dynamic` vs `Fixed`) & Ultra-Compact Dormant Nodes (`openrig/assets/domain/topology-layout.js`, `deck.css`, `openrig/index.html`):**
   - Added pure pixel-aware topology layout engine (`computeTopologyLayout`) with a header switcher (`[Dynamic | Fixed]` / `[Динам | Фикс]`) persisted in `rigcommander_prefs_v1.graphLayout`.
   - **Dynamic mode (default):** gives working, urgent, and actively communicating nodes the upper Active Stage with guaranteed collision & edge-badge clearance (`≥130px` clear span) plus 12s stage hysteresis and 60fps lockstep node+edge glide transitions, while docking sleeping/non-communicating nodes into a compact bottom bench (`DORMANT · N`).
@@ -24,6 +29,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Changelog:** Added `CHANGELOG.md` linked from `README.md`, npm package, and `/guide`.
 
 ### Changed
+- **Actionable Seat Diagnosis in Node Inspector, Clean Triage Cards & Noise-Free `BottleneckDetector`:**
+  - Added `#inspSeatDiagnosis` (**Диагноз и что исправить** / **Diagnosis & What to Fix**) at the top of the Node Inspector showing the full active finding, exact waiting queue items (`slice`, sender, summary), plain-language remediation steps, and 1-click fixes (including **`📨 Разобрать очередь`** sending an explicit queue-review prompt for idle prompts where bare `Enter` fails, **`📊 Гант`**, and **`Cmd`**).
+  - Compacted Top-3 Triage Strip cards (`P0`/`P1`/`P2` pills + seat-first `shortTitle` so headlines never truncate to 1 character), deduplicated per-seat slots in both `advisory.mjs` and `renderTriageStrip`, auto-expanded collapsed Inspector on click, and added spotlight focus highlight.
+  - Hardened `computeQueueKinetics` and `BottleneckDetector`: deduplicated `activeQueue` + `recentQueue` by `qitemId`, separated real pending tasks from `stuck-sweep`/`undelivered-wake` system noise (downgrading pure sweep noise to `p2_medium` cleanup instead of false `p0_urgent`), and fixed broken `WWR = 1` copy.
 - **Single-Card Graph Node Telemetry, Clean Hover Meta & 6-Band Thermal Spectrum (`thermal.js`, `deck.css`, `openrig/index.html`):**
   - Removed the dangling external neon `.node-bottom-badge` pill below graph nodes and integrated all telemetry cleanly inside one unified Dark-Cockpit card (Row 1: seat name + tabular context %; Row 2: quiet `K/K` token quota + `↓in ↑out` queue envelope traffic with tooltips; 3px progressive 6-band thermal rail via `clip-path`).
   - Replaced legacy 4-chip rainbow hover bar with a calm single-line typographic spec footer (`codex · gpt-6.2-sol`), fixed hardcoded bogus `Spec & Arch` badge on dynamic seats, removed duplicate `ctx%` thermal pill & fabricated `20%/h` idle ETA, and capped compact hover width (`max-width: 256px`).

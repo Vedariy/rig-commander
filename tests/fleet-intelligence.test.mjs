@@ -4,6 +4,8 @@ import { FleetIntelligenceEngine } from '../openrig/lib/fleet-intelligence/index
 import { compileAdvisoryReport, computeHealthScore } from '../openrig/lib/fleet-intelligence/advisory.mjs';
 import { CeremonyAmplifierDetector } from '../openrig/lib/fleet-intelligence/detectors/ceremony.mjs';
 import { LiveBlockerDetector } from '../openrig/lib/fleet-intelligence/detectors/live-blocker.mjs';
+import { BottleneckDetector } from '../openrig/lib/fleet-intelligence/detectors/bottleneck.mjs';
+import { computeQueueKinetics, isQueueSystemNoise } from '../openrig/lib/fleet-intelligence/metrics.mjs';
 import {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
@@ -416,4 +418,74 @@ test('classifyTerminalScreen detects bare OS shell prompt (shellExited) without 
   // Active Codex idle prompt must NOT trigger shellExited
   const codexIdle = '› Ask Codex to do anything\nGPT-6.2-Sol high';
   assert.equal(classifyTerminalScreen(codexIdle, 'codex').shellExited, false);
+});
+
+test('BottleneckDetector filters stuck-sweep noise, deduplicates queue rows, exposes pendingSamples & remediation, and diversifies topRecommendations', () => {
+  const det = new BottleneckDetector();
+  const now = Date.now();
+  const realRow1 = { qitemId: 'q-real-1', sourceSession: 'dev-senior@rig', destinationSession: 'dev-owner@rig', state: 'pending', tags: ['slice:track-L'], summary: 'Review live wiring', tsCreated: new Date(now - 25 * 60000).toISOString() };
+  const realRow2 = { qitemId: 'q-real-2', sourceSession: 'dev-check@rig', destinationSession: 'dev-owner@rig', state: 'pending', tags: ['slice:auth'], summary: 'Approve QA verdict', tsCreated: new Date(now - 15 * 60000).toISOString() };
+  const noiseRows = [1, 2, 3, 4].map(i => ({
+    qitemId: `q-noise-${i}`,
+    sourceSession: 'context-guardian-observer@external',
+    destinationSession: 'dev-operator@rig',
+    state: 'pending',
+    tags: ['stuck-sweep-finding'],
+    summary: 'undelivered-wake'
+  }));
+
+  assert.equal(isQueueSystemNoise(noiseRows[0]), true);
+  assert.equal(isQueueSystemNoise(realRow1), false);
+
+  // Duplicate realRow1 in recentQueue must NOT double-count!
+  const kinetics = computeQueueKinetics([realRow1, realRow2, ...noiseRows, { ...realRow1 }], now);
+  assert.equal(kinetics['dev-owner@rig'].pendingCount, 2);
+  assert.equal(kinetics['dev-owner@rig'].pendingSamples.length, 2);
+  assert.equal(kinetics['dev-operator@rig'].pendingCount, 0);
+  assert.equal(kinetics['dev-operator@rig'].noisePendingCount, 4);
+
+  const findings = det.evaluate({
+    nodes: [
+      { canonicalSessionName: 'dev-owner@rig', activityState: { display: 'idle' } },
+      { canonicalSessionName: 'dev-operator@rig', activityState: { display: 'idle' } }
+    ],
+    activeQueue: [realRow1, realRow2, ...noiseRows],
+    recentQueue: [{ ...realRow1 }]
+  });
+
+  const ownerFinding = findings.find(f => f.id === 'bottleneck-dev-owner@rig');
+  assert.ok(ownerFinding);
+  assert.equal(ownerFinding.severity, 'p1_high');
+  assert.equal(ownerFinding.shortTitle, 'dev-owner: очередь (2)');
+  assert.ok(!ownerFinding.summary.includes('в 1 раза'), 'Must not emit nonsensical WWR=1 copy');
+  assert.ok(ownerFinding.remediation && ownerFinding.remediation.includes('Разобрать очередь'));
+  assert.equal(ownerFinding.metrics.pendingSamples.length, 2);
+
+  // Pure stuck-sweep noise must downgrade to p2_medium cleanup (never a red P0 bottleneck alarm)
+  const opNoiseFinding = findings.find(f => f.id === 'queue-noise-dev-operator@rig');
+  assert.ok(opNoiseFinding);
+  assert.equal(opNoiseFinding.severity, 'p2_medium');
+
+  // compileAdvisoryReport must prefer seat diversity in topRecommendations
+  const extraOwnerParked = {
+    id: 'parked-work-dev-owner@rig',
+    detectorId: 'topology.live_blocker',
+    category: 'topology',
+    severity: 'p1_high',
+    confidence: 0.9,
+    metrics: { riskScore: 80, affectedSeats: ['dev-owner@rig'] },
+    actionPlan: { kind: 'wake_seat', seatTarget: 'dev-owner@rig' }
+  };
+  const thirdSeatFinding = {
+    id: 'parked-work-dev-coder@rig',
+    detectorId: 'topology.live_blocker',
+    category: 'topology',
+    severity: 'p1_high',
+    confidence: 0.9,
+    metrics: { riskScore: 70, affectedSeats: ['dev-coder@rig'] },
+    actionPlan: { kind: 'wake_seat', seatTarget: 'dev-coder@rig' }
+  };
+  const rep = compileAdvisoryReport([ownerFinding, extraOwnerParked, opNoiseFinding, thirdSeatFinding], 'rig');
+  const topSeats = rep.topRecommendations.map(r => r.actionPlan.seatTarget);
+  assert.equal(new Set(topSeats).size, 3, `Expected 3 distinct seats in topRecommendations, got ${topSeats}`);
 });

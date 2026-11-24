@@ -6,7 +6,20 @@ export {
 } from './prompt-parser.js';
 export { getContextThermal, formatTokensShort, computeBurn } from './thermal.js';
 export { getAgentAudioProfile } from './audio.js';
-export { GANTT_LONG_WAIT_MS, ganttChainColor, ganttRoleRank } from './gantt-model.js';
+export {
+  GANTT_LONG_WAIT_MS,
+  GANTT_MODES,
+  GANTT_GROUP_MODES,
+  ganttChainColor,
+  ganttRoleRank,
+  isQaSeatId,
+  isGanttItemNoise,
+  formatGanttDuration,
+  normalizeGanttSpans,
+  packLaneIntervals,
+  buildGanttLanes,
+  buildHandoffSequenceModel
+} from './gantt-model.js';
 export { EDGE_STATUS_META, classifyEdgeQueueStatus } from './edge-state.js';
 export {
   BUDGET_WINDOWS,

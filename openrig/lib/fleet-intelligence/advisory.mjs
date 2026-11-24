@@ -76,9 +76,25 @@ export function compileAdvisoryReport(findings = [], rigId = 'all') {
   const { healthScore, scoreBreakdown } = computeHealthScore(counts);
 
   // 4. Extract Top-3 high-impact live recommendations for the top strip (exclude pure P3 retro info)
-  const topRecommendations = deduped
-    .filter(x => x.severity !== 'p3_info')
-    .slice(0, 3);
+  // Prefer seat diversity so one agent doesn't eat 2 of 3 top triage cards (Inspector shows ALL findings for that seat).
+  const liveCandidates = deduped.filter(x => x.severity !== 'p3_info');
+  const topRecommendations = [];
+  const seenSeats = new Set();
+  const deferred = [];
+  for (const item of liveCandidates) {
+    const seat = item.actionPlan?.seatTarget || item.metrics?.affectedSeats?.[0] || '';
+    if (seat && seenSeats.has(seat)) {
+      deferred.push(item);
+      continue;
+    }
+    if (seat) seenSeats.add(seat);
+    topRecommendations.push(item);
+    if (topRecommendations.length >= 3) break;
+  }
+  for (const item of deferred) {
+    if (topRecommendations.length >= 3) break;
+    topRecommendations.push(item);
+  }
 
   return {
     generatedAt: new Date().toISOString(),
