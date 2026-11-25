@@ -15,7 +15,6 @@ import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
 import { RemoteAccessGuard, buildLiveManifest, detectTailscaleServeUrl } from './lib/remote-access.mjs';
 import { SelfUpdater, RESTART_FOR_UPDATE_EXIT_CODE, readInstalledVersion } from './lib/self-update.mjs';
 import { AiEvaluatorService } from './lib/ai-evaluator/index.mjs';
-import { normalizeGanttSpans, buildHandoffSequenceModel } from './assets/domain/gantt-model.js';
 import { ServerIdempotencyCache, buildSeatSendKey } from './assets/domain/action-guard.js';
 import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
 import {
@@ -24,11 +23,14 @@ import {
   buildSharedContextGraph,
   matchRelatedDecisions
 } from './assets/domain/context-lineage.js';
-import { collectFleetGitRadar, fetchSeatGitDiff } from './lib/git-radar.mjs';
+import { collectFleetGitRadar } from './lib/git-radar.mjs';
 import { ShiftHistoryStore } from './lib/shift-history.mjs';
 import { SsePushHub } from './lib/sse-hub.mjs';
 import { SafePlaybookEngine } from './lib/playbook-engine.mjs';
-import { buildShiftDigest, formatShiftDigestMarkdown } from './assets/domain/shift-digest.js';
+import { registerTelemetryRoutes } from './lib/routes/telemetry.mjs';
+import { registerGuardrailRoutes } from './lib/routes/guardrails.mjs';
+import { registerPlaybookRoutes } from './lib/routes/playbooks.mjs';
+import { registerGitShiftRoutes } from './lib/routes/git-shift.mjs';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
@@ -459,7 +461,7 @@ const gzipAsync = promisify(zlib.gzip);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const INSTALL_ROOT = path.resolve(__dirname, '..');
 const APP_VERSION = readInstalledVersion(INSTALL_ROOT, '3.2.0');
-const PORT = Number(process.env.PORT || 7440);
+const PORT = Number(process.env.PORT || process.env.RIGCOMMANDER_PORT || 7440);
 const BIND_HOST = process.env.RIGCOMMANDER_HOST || '127.0.0.1';
 const remoteAccess = new RemoteAccessGuard({
   port: PORT,
@@ -1798,10 +1800,8 @@ const TELEMETRY_FRESH_TTL_MS = 2200;
 const TELEMETRY_SWR_MAX_MS = 12000;
 const GIT_RADAR_FRESH_TTL_MS = 12000;
 const GIT_RADAR_SWR_MAX_MS = 60000;
-const GIT_DIFF_CACHE_TTL_MS = 5000;
 const gitRadarCacheByKey = new Map(); // rigKey -> { ts, rev, data }
 const gitRadarInFlightByKey = new Map();
-const gitDiffCache = new Map(); // `${seatId}|${file}` -> { ts, payload }
 const EMPTY_GIT_RADAR = {
   workspaces: [],
   bySeatId: {},
@@ -2216,6 +2216,194 @@ async function fetchQueueItemContextDetail(qitemId, { execFn = execWithStatus, r
   return { ok: true, statusCode: 200, ...payload, cached: false };
 }
 
+async function sendToSeat({ req, json, body: payload }) {
+  const seat = String(payload.seat || '').trim();
+  const text = String(payload.text || '');
+  const type = String(payload.type || 'msg').trim(); // 'msg' | 'raw' | 'key' | 'interact'
+  const actionId = String(payload.actionId || '').trim();
+  const evalId = String(payload.evalId || '').trim() || null;
+  const baseline = latestSeatBaselines.get(seat) || null;
+
+  if (!/^[a-zA-Z0-9._@-]+$/.test(seat)) {
+    await json(400, { ok: false, error: 'Invalid seat identifier' });
+    return;
+  }
+
+  // Server-side duplicate-dispatch / double-click idempotency guard
+  const idempotencyKey = String(req.headers['x-idempotency-key'] || payload.idempotencyKey || '').trim();
+  const semanticKey = buildSeatSendKey(seat, type, text);
+  const idem = sendIdempotency.begin({ idempotencyKey, seatId: seat, semanticKey });
+  if (idem.action === 'replay') {
+    await json(idem.status, idem.body);
+    return;
+  }
+  if (idem.action === 'reject') {
+    await json(idem.status, { ok: false, deduplicated: true, error: idem.reason });
+    return;
+  }
+
+  const universalTarget = universalTmuxTargets.get(seat);
+  const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seat;
+
+  let output = '';
+  try {
+    if (type === 'key') {
+      // Specific tmux keystrokes validated against strict allowlist (prevents flag injection)
+      const keyArgs = parseAllowedTmuxKeys(text);
+      if (!keyArgs) {
+        actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 400, ok: false, baseline });
+        const errBody = { ok: false, error: 'Disallowed tmux keystroke' };
+        idem.complete(400, errBody);
+        await json(400, errBody);
+        return;
+      }
+      output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
+      terminalPromptProbeCache.delete(seat);
+    } else if (type === 'raw') {
+      // Harness-aware hygiene and deduplication:
+      // 1. Normalize and deduplicate repeated slash commands (e.g. /compact/compact -> /compact)
+      let cleanText = text.trim();
+      cleanText = cleanText.replace(/(\/[a-zA-Z0-9_-]+)\1+/g, '$1');
+
+      // 2. Pi harness guard: Pi (DeepSeek) does not support slash commands
+      if ((seat.includes('coder3') || seat.includes('pi')) && cleanText.startsWith('/compact')) {
+        actionAudit.record({ actionId, seatId: seat, type, payload: cleanText, httpStatus: 400, ok: false, baseline });
+        const errBody = { ok: false, error: 'Харнес Pi (DeepSeek) не поддерживает команду /compact. Используйте ротацию сиденья.' };
+        idem.complete(400, errBody);
+        await json(400, errBody);
+        return;
+      }
+
+      // 3. Deliver cleanly via native `rig send --raw` (two-step paste + input-box guard)
+      //    for OpenRig seats, or paced TUI-safe tmux sequence for standalone universal panes.
+      const rawRes = await dispatchRawCommand({
+        seat,
+        cleanText,
+        universalTarget: universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : null
+      });
+      if (!rawRes.ok) {
+        actionAudit.record({ actionId, evalId, seatId: seat, type, payload: cleanText, httpStatus: rawRes.statusCode, ok: false, baseline });
+        const errBody = { ok: false, error: rawRes.error };
+        idem.complete(rawRes.statusCode, errBody);
+        await json(rawRes.statusCode, errBody);
+        return;
+      }
+      output = rawRes.output;
+    } else if (type === 'interact') {
+      if (universalTarget) {
+        await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+        output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+      } else {
+        output = await safeTextExec(RIG_BIN, [
+          'send',
+          '--dangerously-interact',
+          '--reason', 'Dashboard interactive prompt answer',
+          seat,
+          text
+        ]);
+        if (!output || output.includes('Error') || output.includes('refused')) {
+          await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+          output += '\n' + await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+        }
+      }
+    } else {
+      // Standard rig send (or direct tmux send-keys for universal standalone tmux panes)
+      if (universalTarget) {
+        await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
+        output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+      } else {
+        output = await safeTextExec(RIG_BIN, ['send', seat, text]);
+      }
+    }
+
+    const auditRec = actionAudit.record({ actionId, evalId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
+    aiEvaluator.invalidateSeat(seat);
+    terminalPromptProbeCache.delete(seat);
+    invalidateTelemetryCache();
+    schedulePostActionSseRefresh(seat, 'send');
+    const okBody = { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() };
+    idem.complete(200, okBody);
+    await json(200, okBody);
+  } catch (innerErr) {
+    idem.abort();
+    throw innerErr;
+  }
+}
+
+const apiRoutes = new Map();
+const registry = {
+  get: (path, handler) => apiRoutes.set(path, { method: 'GET', handler }),
+  post: (path, handler) => apiRoutes.set(path, { method: 'POST', handler })
+};
+const getFleetSnapshot = () => latestFleetSnapshot;
+const getPort = () => server.address()?.port || PORT;
+const guardrailStatus = ({ json }) => json(200, {
+  timestamp: new Date().toISOString(),
+  breaker: circuitBreaker.getState(),
+  telegram: telegramBridge.getStatus(),
+  playbooks: playbookEngine.getState()
+});
+
+registerTelemetryRoutes(registry, {
+  getTelemetryBundle, getSerializedTelemetryVariant, fleetIntelligence, fetchQueueItemContextDetail,
+  sseHub, captureSeatScreen, markTelemetryClient: () => { lastTelemetryClientAt = Date.now(); }
+});
+registerGuardrailRoutes(registry, {
+  guardrailStatus, actionAudit, circuitBreaker, telegramBridge, aiEvaluator, getFleetSnapshot, captureSeatScreen
+});
+registerPlaybookRoutes(registry, { guardrailStatus, playbookEngine, sseHub, getFleetSnapshot, actionAudit, circuitBreaker });
+registerGitShiftRoutes(registry, {
+  getPort, remoteAccess, selfUpdater, getFleetSnapshot, boundedMapSet, getTelemetryBundle, shiftHistory, actionAudit
+});
+registry.post('/api/send', sendToSeat);
+
+async function dispatchApi(req, res, url, isRemote) {
+  const route = apiRoutes.get(url.pathname);
+  const json = (code, data) => sendJson(req, res, code, data);
+  const deny = (code, error) => json(code, { ok: false, error });
+  const remoteSettings = url.pathname.startsWith('/api/remote/');
+  if (isRemote && remoteSettings) {
+    return deny(403, 'Remote pairing settings can only be managed locally on the host machine.');
+  }
+  const updateAction = route?.method === 'POST' && url.pathname.startsWith('/api/update/');
+  if (isRemote && updateAction) {
+    return deny(403, 'Updates can only be triggered locally on the host machine.');
+  }
+  if (!route) return deny(404, 'Not found');
+  if (req.method !== route.method) return deny(405, 'Method not allowed');
+
+  const context = { req, res, url, isRemote, json };
+  try {
+    if (req.method === 'POST') {
+      if (!remoteAccess.isAllowedOrigin(req.headers.origin)) return deny(403, 'Forbidden origin');
+      if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
+      const [mediaType] = String(req.headers['content-type'] || '').split(';');
+      if (mediaType.trim().toLowerCase() !== 'application/json') return deny(415, 'JSON only');
+
+      const limit = remoteSettings ? 16 * 1024 : 64 * 1024;
+      const chunks = [];
+      let bytes = 0;
+      for await (const chunk of req) {
+        // The same reader consumes the rest of a rejected request so the connection can be reused.
+        if (bytes > limit) continue;
+        bytes += chunk.length;
+        if (bytes > limit) {
+          chunks.length = 0;
+          await deny(413, 'Payload too large');
+          continue;
+        }
+        // Update actions have no input fields. Drain and bound their bodies without interpreting them.
+        if (!updateAction) chunks.push(chunk);
+      }
+      if (bytes > limit) return;
+      if (!updateAction) context.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+    }
+    await route.handler(context);
+  } catch (err) {
+    if (!res.destroyed && !res.headersSent) await deny(remoteSettings ? 400 : 500, err.message);
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const isRemote = remoteAccess.isRemoteRequest(req);
@@ -2328,652 +2516,9 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 0.4 Local-only Remote Live PWA configuration & pairing endpoints
-  if (url.pathname.startsWith('/api/remote/')) {
-    if (isRemote) {
-      await sendJson(req, res, 403, { ok: false, error: 'Remote pairing settings can only be managed locally on the host machine.' });
-      return;
-    }
-    if (url.pathname === '/api/remote/status' && req.method === 'GET') {
-      await sendJson(req, res, 200, { ok: true, localPort: PORT, ...remoteAccess.getStatus() });
-      return;
-    }
-    if (
-      url.pathname === '/api/remote/config' ||
-      url.pathname === '/api/remote/pair' ||
-      url.pathname === '/api/remote/revoke'
-    ) {
-      const origin = req.headers.origin || '';
-      const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
-      if (req.method !== 'POST') return deny(405, 'Method not allowed');
-      if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
-      if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
-      if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
-
-      let bodyStr = '';
-      let tooLarge = false;
-      req.on('data', chunk => {
-        if (tooLarge) return;
-        bodyStr += chunk;
-        if (bodyStr.length > 16 * 1024) {
-          tooLarge = true;
-          sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
-          req.resume();
-        }
-      });
-      req.on('end', async () => {
-        if (tooLarge) return;
-        try {
-          const body = JSON.parse(bodyStr || '{}');
-          if (url.pathname === '/api/remote/config') {
-            const out = remoteAccess.setPublicUrl(body.publicUrl || '');
-            if (!out.ok) {
-              await sendJson(req, res, 400, { ok: false, error: out.error });
-              return;
-            }
-            await sendJson(req, res, 200, { ok: true, localPort: PORT, ...out.status });
-            return;
-          }
-          if (url.pathname === '/api/remote/pair') {
-            remoteAccess.mintPairingCode();
-            await sendJson(req, res, 200, { ok: true, localPort: PORT, ...remoteAccess.getStatus() });
-            return;
-          }
-          if (url.pathname === '/api/remote/revoke') {
-            const st = remoteAccess.revokeAllSessions();
-            await sendJson(req, res, 200, { ok: true, localPort: PORT, ...st });
-            return;
-          }
-        } catch (err) {
-          await sendJson(req, res, 400, { ok: false, error: err.message });
-        }
-      });
-      return;
-    }
-    await sendJson(req, res, 404, { ok: false, error: 'Not found' });
+  if (url.pathname.startsWith('/api/')) {
+    await dispatchApi(req, res, url, isRemote);
     return;
-  }
-
-  // 0.5 Self-Update status, npmjs check & 1-click local apply endpoints
-  if (url.pathname.startsWith('/api/update/')) {
-    if (url.pathname === '/api/update/status' && req.method === 'GET') {
-      await sendJson(req, res, 200, { ok: true, isRemote, ...selfUpdater.getStatus() });
-      return;
-    }
-    if (url.pathname === '/api/update/check' || url.pathname === '/api/update/apply') {
-      const origin = req.headers.origin || '';
-      const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
-      if (isRemote) return deny(403, 'Updates can only be triggered locally on the host machine.');
-      if (req.method !== 'POST') return deny(405, 'Method not allowed');
-      if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
-      if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
-      if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
-
-      if (url.pathname === '/api/update/check') {
-        const st = await selfUpdater.check({ force: true });
-        await sendJson(req, res, 200, { ok: true, ...st });
-        return;
-      }
-      const out = await selfUpdater.applyUpdate();
-      await sendJson(req, res, out.ok ? 200 : 500, out);
-      return;
-    }
-    await sendJson(req, res, 404, { ok: false, error: 'Not found' });
-    return;
-  }
-
-  // 1. Live telemetry endpoint — single-flight coalesced, SWR-cached & incremental historyRev/guidanceRev/gitRadarRev
-  if (url.pathname === '/api/telemetry') {
-    const requestedRig = url.searchParams.get('rig') || 'all';
-    const clientHistoryRev = url.searchParams.get('historyRev') || '';
-    const clientGuidanceRev = url.searchParams.get('guidanceRev') || '';
-    const clientGitRadarRev = url.searchParams.get('gitRadarRev') || '';
-    const forceRefresh = url.searchParams.get('force') === '1';
-    lastTelemetryClientAt = Date.now();
-
-    const bundle = await getTelemetryBundle(requestedRig, { forceRefresh });
-    const skipHistory = Boolean(clientHistoryRev && clientHistoryRev === bundle.historyRev);
-    const skipGuidance = Boolean(clientGuidanceRev && clientGuidanceRev === bundle.guidanceRev);
-    const skipGitRadar = Boolean(clientGitRadarRev && clientGitRadarRev === bundle.gitRadarRev);
-    const serialized = await getSerializedTelemetryVariant(bundle, { skipHistory, skipGuidance, skipGitRadar });
-
-    const acceptEncoding = String(req.headers['accept-encoding'] || '');
-    if (acceptEncoding.includes('gzip') && serialized.gzip) {
-      res.writeHead(200, {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Content-Encoding': 'gzip',
-        'Cache-Control': 'no-store'
-      });
-      res.end(serialized.gzip);
-      return;
-    }
-    res.writeHead(200, {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store'
-    });
-    res.end(serialized.json);
-    return;
-  }
-
-  // 1.1 Dedicated Fleet Intelligence recommendations & scorecards endpoint
-  if (url.pathname === '/api/intelligence/recommendations') {
-    const requestedRig = url.searchParams.get('rig') || 'all';
-    const report = fleetIntelligence.getLatestReport(requestedRig);
-    await sendJson(req, res, 200, report);
-    return;
-  }
-
-  // 1.2 Action Audit Log endpoint (read-only)
-  if (url.pathname === '/api/audit') {
-    const seat = url.searchParams.get('seat') || null;
-    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 30));
-    await sendJson(req, res, 200, {
-      timestamp: new Date().toISOString(),
-      records: actionAudit.list(limit, seat)
-    });
-    return;
-  }
-
-  // 1.3 Guardrails (Budget Circuit-Breaker, Telegram HITL Bridge & Safe Playbooks) endpoints
-  if ((url.pathname === '/api/guardrails' || url.pathname === '/api/playbooks') && req.method === 'GET') {
-    await sendJson(req, res, 200, {
-      timestamp: new Date().toISOString(),
-      breaker: circuitBreaker.getState(),
-      telegram: telegramBridge.getStatus(),
-      playbooks: playbookEngine.getState()
-    });
-    return;
-  }
-
-  if (
-    url.pathname === '/api/guardrails/config' ||
-    url.pathname === '/api/guardrails/reset' ||
-    url.pathname === '/api/guardrails/telegram' ||
-    url.pathname === '/api/playbooks/config' ||
-    url.pathname === '/api/playbooks/dry-run' ||
-    url.pathname === '/api/playbooks/reset'
-  ) {
-    const origin = req.headers.origin || '';
-    const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
-    if (req.method !== 'POST') return deny(405, 'Method not allowed');
-    if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
-    if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
-    if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
-
-    let bodyStr = '';
-    let tooLarge = false;
-    req.on('data', chunk => {
-      if (tooLarge) return;
-      bodyStr += chunk;
-      if (bodyStr.length > 64 * 1024) {
-        tooLarge = true;
-        sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
-        req.resume();
-      }
-    });
-    req.on('end', async () => {
-      if (tooLarge) return;
-      try {
-        const body = JSON.parse(bodyStr || '{}');
-        if (url.pathname === '/api/guardrails/config') {
-          circuitBreaker.updateConfig(body);
-          await sendJson(req, res, 200, { ok: true, breaker: circuitBreaker.getState() });
-          return;
-        }
-        if (url.pathname === '/api/guardrails/reset') {
-          const seatId = body.seatId ? String(body.seatId).trim() : null;
-          await sendJson(req, res, 200, { ok: true, breaker: circuitBreaker.reset(seatId) });
-          return;
-        }
-        if (url.pathname === '/api/guardrails/telegram') {
-          const act = String(body.action || 'connect');
-          if (act === 'disconnect') {
-            await sendJson(req, res, 200, { ok: true, telegram: telegramBridge.disconnect() });
-            return;
-          }
-          if (act === 'test') {
-            const resTest = await telegramBridge.sendTestMessage();
-            await sendJson(req, res, 200, { ok: true, result: resTest, telegram: telegramBridge.getStatus() });
-            return;
-          }
-          const botToken = String(body.botToken || '').trim();
-          const chatId = String(body.chatId || '').trim();
-          if (!botToken || !chatId) {
-            await sendJson(req, res, 400, { ok: false, error: 'Bot token and Chat ID are required' });
-            return;
-          }
-          const status = telegramBridge.configure({ botToken, chatId });
-          await sendJson(req, res, 200, { ok: true, telegram: status });
-          return;
-        }
-        if (url.pathname === '/api/playbooks/config') {
-          const state = playbookEngine.updateConfig(body);
-          sseHub.notifyInvalidated('playbooks_config', '');
-          await sendJson(req, res, 200, { ok: true, playbooks: state });
-          return;
-        }
-        if (url.pathname === '/api/playbooks/dry-run') {
-          const snap = latestFleetSnapshot || {};
-          const preview = playbookEngine.dryRun({
-            nodes: snap.nodes || [],
-            parkedSeats: snap.parkedSeats || {},
-            activeQueue: snap.activeQueue || [],
-            gitRadar: snap.gitRadar || null,
-            actionAudit: actionAudit.list(40),
-            breakerState: circuitBreaker.getState()
-          });
-          await sendJson(req, res, 200, { ok: true, dryRun: preview, playbooks: playbookEngine.getState() });
-          return;
-        }
-        if (url.pathname === '/api/playbooks/reset') {
-          const act = String(body.action || 'pause');
-          const state = act === 'reset_cooldowns'
-            ? playbookEngine.resetCooldowns()
-            : playbookEngine.pauseAll();
-          sseHub.notifyInvalidated('playbooks_reset', '');
-          await sendJson(req, res, 200, { ok: true, playbooks: state });
-          return;
-        }
-      } catch (err) {
-        await sendJson(req, res, 500, { ok: false, error: err.message });
-      }
-    });
-    return;
-  }
-
-  // 1.4 Tiered AI Evaluator (Heuristic + Expert -> System 1 /v1/systemone -> System 2) endpoints
-  if (url.pathname === '/api/evaluator/status' && req.method === 'GET') {
-    await sendJson(req, res, 200, {
-      timestamp: new Date().toISOString(),
-      ...aiEvaluator.getStatus()
-    });
-    return;
-  }
-
-  if (
-    url.pathname === '/api/evaluator/config' ||
-    url.pathname === '/api/evaluator/models' ||
-    url.pathname === '/api/evaluator/run'
-  ) {
-    const origin = req.headers.origin || '';
-    const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
-    if (req.method !== 'POST') return deny(405, 'Method not allowed');
-    if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
-    if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
-    if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
-
-    let bodyStr = '';
-    let tooLarge = false;
-    req.on('data', chunk => {
-      if (tooLarge) return;
-      bodyStr += chunk;
-      if (bodyStr.length > 64 * 1024) {
-        tooLarge = true;
-        sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
-        req.resume();
-      }
-    });
-    req.on('end', async () => {
-      if (tooLarge) return;
-      try {
-        const body = JSON.parse(bodyStr || '{}');
-        if (url.pathname === '/api/evaluator/config') {
-          const config = aiEvaluator.updateConfig(body);
-          await sendJson(req, res, 200, { ok: true, config, stats: aiEvaluator.router.getUsageStats() });
-          return;
-        }
-        if (url.pathname === '/api/evaluator/models') {
-          const slotRole = body.slot === 'system2' ? 'system2' : 'system1';
-          const result = await aiEvaluator.discoverSlotModels(slotRole, body.binding || null);
-          await sendJson(req, res, 200, { ok: true, slot: slotRole, ...result });
-          return;
-        }
-        if (url.pathname === '/api/evaluator/run') {
-          const scope = ['seat', 'slice', 'fleet'].includes(body.scope) ? body.scope : 'seat';
-          const targetId = String(body.targetId || '').trim().slice(0, 140);
-          const requestedTier = ['auto', 'heuristic', 'system1', 'system2'].includes(body.tier) ? body.tier : 'auto';
-          const lang = body.lang === 'en' ? 'en' : 'ru';
-          const forceRefresh = Boolean(body.forceRefresh);
-
-          const snap = latestFleetSnapshot || {};
-          const nodes = Array.isArray(snap.nodes) ? snap.nodes : [];
-          const openQueue = Array.isArray(snap.activeQueue) ? snap.activeQueue : [];
-          const ganttItems = Array.isArray(snap.history?.ganttItems) ? snap.history.ganttItems : [];
-          const findings = Array.isArray(snap.intelligence?.allFindings) ? snap.intelligence.allFindings : [];
-          const parkedMap = snap.parkedSeats || {};
-
-          const seatNode = scope === 'seat'
-            ? (nodes.find(n => (n.canonicalSessionName || n.logicalId) === targetId) || null)
-            : null;
-          const seatWithParked = seatNode
-            ? { ...seatNode, parkedData: parkedMap[seatNode.canonicalSessionName] || seatNode.parkedData || null }
-            : null;
-
-          let handoffSequence = null;
-          let sliceMetrics = null;
-          if (scope === 'slice' && ganttItems.length > 0) {
-            const gModel = normalizeGanttSpans(ganttItems, { nowMs: Date.now(), windowH: 24, hideNoise: true });
-            const chainKey = targetId.startsWith('slice:') || targetId.startsWith('q:') ? targetId : `slice:${targetId}`;
-            handoffSequence = buildHandoffSequenceModel(gModel.allWindowSpans, { focusChain: chainKey });
-            const chainSpans = gModel.allWindowSpans.filter(sp => sp.chain === handoffSequence.activeChain || sp.slice === targetId);
-            const maxWaitMs = chainSpans.reduce((mx, sp) => Math.max(mx, sp.waitMs || 0), 0);
-            const totalWaitMs = chainSpans.reduce((acc, sp) => acc + (sp.waitMs || 0), 0);
-            const totalWorkMs = chainSpans.reduce((acc, sp) => acc + (sp.workMs || 0), 0);
-            sliceMetrics = {
-              qaRounds: handoffSequence.stats?.bounceCount ? handoffSequence.stats.bounceCount + 1 : 1,
-              bounceCount: handoffSequence.stats?.bounceCount || 0,
-              maxWaitMin: Math.round(maxWaitMs / 60_000),
-              wwr: totalWorkMs > 0 ? +(totalWaitMs / totalWorkMs).toFixed(2) : 0
-            };
-          }
-
-          let screenText = '';
-          const screenBySeat = {};
-          if (scope === 'seat' && targetId && /^[a-zA-Z0-9._@-]+$/.test(targetId)) {
-            screenText = await captureSeatScreen(targetId, requestedTier === 'system2' ? 72 : 48).catch(() => '');
-            if (screenText) screenBySeat[targetId] = screenText;
-          } else if (scope === 'slice' && handoffSequence && Array.isArray(handoffSequence.participants)) {
-            const topSeats = handoffSequence.participants.filter(s => /^[a-zA-Z0-9._@-]+$/.test(s)).slice(0, 3);
-            const captures = await Promise.all(topSeats.map(s => captureSeatScreen(s, 52).catch(() => '')));
-            topSeats.forEach((s, i) => { if (captures[i]) screenBySeat[s] = captures[i]; });
-          }
-
-          const verdict = await aiEvaluator.runEvaluation({
-            scope,
-            targetId: targetId || (scope === 'fleet' ? 'fleet' : ''),
-            requestedTier,
-            forceRefresh,
-            seat: seatWithParked,
-            nodes,
-            openQueue,
-            ganttItems,
-            handoffSequence,
-            findings,
-            screenText,
-            screenBySeat,
-            auditRecords: actionAudit.list(20, scope === 'seat' ? targetId : null),
-            seatCompactions: snap.seatCompactions || {},
-            decisions: snap.decisions || [],
-            sliceMetrics,
-            fleetKpis: {
-              healthScore: snap.intelligence?.healthScore ?? null,
-              burnUsdPerHour: circuitBreaker.getState()?.burnUsdPerHour ?? 0
-            },
-            lang
-          });
-
-          await sendJson(req, res, 200, { ok: true, verdict, stats: aiEvaluator.router.getUsageStats() });
-          return;
-        }
-      } catch (err) {
-        await sendJson(req, res, 500, { ok: false, error: err.message });
-      }
-    });
-    return;
-  }
-
-  // 1.25 Full Shared Context & Lineage for a single queue item (read-only lazy loader)
-  if (url.pathname === '/api/queue/item' && req.method === 'GET') {
-    const qitemId = url.searchParams.get('id') || '';
-    const detail = await fetchQueueItemContextDetail(qitemId);
-    await sendJson(req, res, detail.statusCode || (detail.ok ? 200 : 400), detail);
-    return;
-  }
-
-  // 1.26 Read-only secret-redacted git diff for a live seat workspace (never accepts arbitrary paths)
-  if (url.pathname === '/api/git/diff' && req.method === 'GET') {
-    const seatId = String(url.searchParams.get('seat') || '').trim();
-    const file = String(url.searchParams.get('file') || '').trim();
-    if (!seatId || !/^[a-zA-Z0-9._@-]{2,140}$/.test(seatId)) {
-      await sendJson(req, res, 400, { ok: false, error: 'Invalid seat identifier' });
-      return;
-    }
-    const cacheKey = `${seatId}|${file}`;
-    const cached = gitDiffCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < GIT_DIFF_CACHE_TTL_MS) {
-      await sendJson(req, res, 200, { ...cached.payload, cached: true });
-      return;
-    }
-    const snap = latestFleetSnapshot || {};
-    const nodes = Array.isArray(snap.nodes) ? snap.nodes : [];
-    const node = nodes.find(n => (n.canonicalSessionName || n.logicalId) === seatId) || null;
-    if (!node || !node.cwd) {
-      await sendJson(req, res, 404, { ok: false, error: `Workspace path unavailable for ${seatId}` });
-      return;
-    }
-    const detail = await fetchSeatGitDiff({ seatId, cwd: node.cwd, file });
-    if (detail.ok) {
-      boundedMapSet(gitDiffCache, cacheKey, { ts: Date.now(), payload: detail }, 60);
-    }
-    await sendJson(req, res, detail.statusCode || (detail.ok ? 200 : 400), detail);
-    return;
-  }
-
-  // 1.27 Shift Catch-Up / Overnight Digest endpoint (fuses persisted JSONL + live fleet state)
-  if (url.pathname === '/api/digest' && req.method === 'GET') {
-    const requestedRig = url.searchParams.get('rig') || 'all';
-    const rawHours = Number(url.searchParams.get('hours'));
-    const windowHours = Number.isFinite(rawHours) && rawHours > 0 ? Math.min(168, Math.max(0.25, rawHours)) : 8;
-    const rawSinceMs = Number(url.searchParams.get('sinceMs'));
-    const sinceMs = Number.isFinite(rawSinceMs) && rawSinceMs > 0 ? rawSinceMs : 0;
-    const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'ru';
-    const nowMs = Date.now();
-    const effectiveCutoff = sinceMs > 0 && sinceMs < nowMs ? sinceMs : (nowMs - windowHours * 3600 * 1000);
-
-    const bundle = await getTelemetryBundle(requestedRig, { forceRefresh: false });
-    const snap = (bundle && bundle.payload) || latestFleetSnapshot || {};
-    const events = shiftHistory.queryEvents({ sinceMs: effectiveCutoff, untilMs: nowMs, rigId: requestedRig, limit: 1000 });
-    const digest = buildShiftDigest({
-      windowHours,
-      sinceMs,
-      nowMs,
-      rigFilter: requestedRig,
-      events,
-      ganttItems: (snap.history && snap.history.ganttItems) || [],
-      activeQueue: snap.activeQueue || [],
-      decisions: snap.decisions || [],
-      nodes: snap.nodes || [],
-      parkedSeats: snap.parkedSeats || {},
-      seatUsage: snap.seatUsage || {},
-      fleetUsageSummary: snap.fleetUsageSummary || {},
-      gitRadar: snap.gitRadar || null,
-      actionAudit: actionAudit.list(100),
-      intelligence: snap.intelligence || null,
-      historyMeta: shiftHistory.getSummaryMeta()
-    });
-    const markdown = formatShiftDigestMarkdown(digest, lang);
-    await sendJson(req, res, 200, { ok: true, digest, markdown });
-    return;
-  }
-
-  // 1.28 Read-only persisted shift history events query
-  if (url.pathname === '/api/history/events' && req.method === 'GET') {
-    const requestedRig = url.searchParams.get('rig') || 'all';
-    const rawHours = Number(url.searchParams.get('hours'));
-    const windowHours = Number.isFinite(rawHours) && rawHours > 0 ? Math.min(168, Math.max(0.25, rawHours)) : 24;
-    const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || 100));
-    const sinceMs = Date.now() - windowHours * 3600 * 1000;
-    const events = shiftHistory.queryEvents({ sinceMs, rigId: requestedRig, limit });
-    await sendJson(req, res, 200, { ok: true, events, meta: shiftHistory.getSummaryMeta() });
-    return;
-  }
-
-  // 1.29 SSE Fleet Push Stream (zero-dep Server-Sent Events, notifies clients on real delta)
-  if (url.pathname === '/api/events' && req.method === 'GET') {
-    const requestedRig = url.searchParams.get('rig') || 'all';
-    lastTelemetryClientAt = Date.now();
-    sseHub.subscribeEvents(req, res, { rigKey: requestedRig });
-    return;
-  }
-
-  // 2.0 SSE Live TMUX Capture Stream (deduplicated per seat+lines, SHA-1 delta push, 650ms->1500ms adaptive)
-  if (url.pathname === '/api/capture/stream' && req.method === 'GET') {
-    const seat = url.searchParams.get('seat') || '';
-    const lines = url.searchParams.get('lines') || '80';
-    lastTelemetryClientAt = Date.now();
-    sseHub.subscribeTmux(req, res, { seatId: seat, lines });
-    return;
-  }
-
-  // 2. Live tmux terminal capture endpoint
-  if (url.pathname === '/api/capture') {
-    const seat = url.searchParams.get('seat') || 'dev-owner@core-platform';
-    const lines = url.searchParams.get('lines') || '38';
-    if (!/^[a-zA-Z0-9._@-]+$/.test(seat)) {
-      await sendJson(req, res, 400, { error: 'Invalid seat identifier' });
-      return;
-    }
-    const screen = await captureSeatScreen(seat, lines);
-    await sendJson(req, res, 200, { seat, timestamp: new Date().toISOString(), screen });
-    return;
-  }
-
-  // 3. Interactive send command/keystroke to seat endpoint
-  // Guarded: same-origin only (no CORS grant) + per-process token from the served page.
-  if (url.pathname === '/api/send') {
-    const origin = req.headers.origin || '';
-    const deny = async (code, error) => {
-      await sendJson(req, res, code, { ok: false, error });
-    };
-    if (req.method !== 'POST') return deny(405, 'Method not allowed');
-    if (!remoteAccess.isAllowedOrigin(origin)) return deny(403, 'Forbidden origin');
-    if (!tokenMatches(req.headers['x-deck-token'])) return deny(403, 'Bad or missing deck token');
-    if (!String(req.headers['content-type'] || '').startsWith('application/json')) return deny(415, 'JSON only');
-
-    {
-      let bodyStr = '';
-      let tooLarge = false;
-      req.on('data', chunk => {
-        if (tooLarge) return;
-        bodyStr += chunk;
-        if (bodyStr.length > 64 * 1024) {
-          tooLarge = true;
-          sendJson(req, res, 413, { ok: false, error: 'Payload too large' }).catch(() => {});
-          req.resume();
-        }
-      });
-
-      req.on('end', async () => {
-        if (tooLarge) return;
-        try {
-          const payload = JSON.parse(bodyStr || '{}');
-          const seat = String(payload.seat || '').trim();
-          const text = String(payload.text || '');
-          const type = String(payload.type || 'msg').trim(); // 'msg' | 'raw' | 'key' | 'interact'
-          const actionId = String(payload.actionId || '').trim();
-          const evalId = String(payload.evalId || '').trim() || null;
-          const baseline = latestSeatBaselines.get(seat) || null;
-
-          if (!/^[a-zA-Z0-9._@-]+$/.test(seat)) {
-            await sendJson(req, res, 400, { ok: false, error: 'Invalid seat identifier' });
-            return;
-          }
-
-          // Server-side duplicate-dispatch / double-click idempotency guard
-          const idempotencyKey = String(req.headers['x-idempotency-key'] || payload.idempotencyKey || '').trim();
-          const semanticKey = buildSeatSendKey(seat, type, text);
-          const idem = sendIdempotency.begin({ idempotencyKey, seatId: seat, semanticKey });
-          if (idem.action === 'replay') {
-            await sendJson(req, res, idem.status, idem.body);
-            return;
-          }
-          if (idem.action === 'reject') {
-            await sendJson(req, res, idem.status, { ok: false, deduplicated: true, error: idem.reason });
-            return;
-          }
-
-          const universalTarget = universalTmuxTargets.get(seat);
-          const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seat;
-
-          let output = '';
-          try {
-            if (type === 'key') {
-              // Specific tmux keystrokes validated against strict allowlist (prevents flag injection)
-              const keyArgs = parseAllowedTmuxKeys(text);
-              if (!keyArgs) {
-                actionAudit.record({ actionId, seatId: seat, type, payload: text, httpStatus: 400, ok: false, baseline });
-                const errBody = { ok: false, error: 'Disallowed tmux keystroke' };
-                idem.complete(400, errBody);
-                await sendJson(req, res, 400, errBody);
-                return;
-              }
-              output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
-              terminalPromptProbeCache.delete(seat);
-            } else if (type === 'raw') {
-              // Harness-aware hygiene and deduplication:
-              // 1. Normalize and deduplicate repeated slash commands (e.g. /compact/compact -> /compact)
-              let cleanText = text.trim();
-              cleanText = cleanText.replace(/(\/[a-zA-Z0-9_-]+)\1+/g, '$1');
-
-              // 2. Pi harness guard: Pi (DeepSeek) does not support slash commands
-              if ((seat.includes('coder3') || seat.includes('pi')) && cleanText.startsWith('/compact')) {
-                actionAudit.record({ actionId, seatId: seat, type, payload: cleanText, httpStatus: 400, ok: false, baseline });
-                const errBody = { ok: false, error: 'Харнес Pi (DeepSeek) не поддерживает команду /compact. Используйте ротацию сиденья.' };
-                idem.complete(400, errBody);
-                await sendJson(req, res, 400, errBody);
-                return;
-              }
-
-              // 3. Deliver cleanly via native `rig send --raw` (two-step paste + input-box guard)
-              //    for OpenRig seats, or paced TUI-safe tmux sequence for standalone universal panes.
-              const rawRes = await dispatchRawCommand({
-                seat,
-                cleanText,
-                universalTarget: universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : null
-              });
-              if (!rawRes.ok) {
-                actionAudit.record({ actionId, evalId, seatId: seat, type, payload: cleanText, httpStatus: rawRes.statusCode, ok: false, baseline });
-                const errBody = { ok: false, error: rawRes.error };
-                idem.complete(rawRes.statusCode, errBody);
-                await sendJson(req, res, rawRes.statusCode, errBody);
-                return;
-              }
-              output = rawRes.output;
-            } else if (type === 'interact') {
-              if (universalTarget) {
-                await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-                output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
-              } else {
-                output = await safeTextExec(RIG_BIN, [
-                  'send',
-                  '--dangerously-interact',
-                  '--reason', 'Dashboard interactive prompt answer',
-                  seat,
-                  text
-                ]);
-                if (!output || output.includes('Error') || output.includes('refused')) {
-                  await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-                  output += '\n' + await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
-                }
-              }
-            } else {
-              // Standard rig send (or direct tmux send-keys for universal standalone tmux panes)
-              if (universalTarget) {
-                await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-                output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
-              } else {
-                output = await safeTextExec(RIG_BIN, ['send', seat, text]);
-              }
-            }
-
-            const auditRec = actionAudit.record({ actionId, evalId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
-            aiEvaluator.invalidateSeat(seat);
-            terminalPromptProbeCache.delete(seat);
-            invalidateTelemetryCache();
-            schedulePostActionSseRefresh(seat, 'send');
-            const okBody = { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() };
-            idem.complete(200, okBody);
-            await sendJson(req, res, 200, okBody);
-          } catch (innerErr) {
-            idem.abort();
-            throw innerErr;
-          }
-        } catch (err) {
-          await sendJson(req, res, 500, { ok: false, error: err.message });
-        }
-      });
-      return;
-    }
   }
 
   // 3. Static files (strictly contained within __dirname, safe extensions only)
@@ -3092,7 +2637,8 @@ if (isMainModule) {
     telegramBridge.startPolling();
   }
   server.listen(PORT, BIND_HOST, () => {
-    console.log(`💠 RigCommander // Neural Command Deck v${APP_VERSION} at http://${BIND_HOST}:${PORT}`);
+    remoteAccess.port = getPort();
+    console.log(`💠 RigCommander // Neural Command Deck v${APP_VERSION} at http://${BIND_HOST}:${getPort()}`);
     // Warm the initial telemetry snapshot in background so first browser load is instant
     setTimeout(() => {
       void getTelemetryBundle('all', { forceRefresh: true }).catch(() => {});
@@ -3121,7 +2667,7 @@ if (isMainModule) {
     if (remoteAccess.getStatus().enabled) {
       console.log(`📱 Live Mobile PWA pairing active: ${remoteAccess.getStatus().publicOrigin}`);
     } else {
-      detectTailscaleServeUrl(PORT).then(tsUrl => {
+      detectTailscaleServeUrl(getPort()).then(tsUrl => {
         if (tsUrl && !remoteAccess.getStatus().enabled) {
           const out = remoteAccess.setPublicUrl(tsUrl);
           if (out.ok) {
