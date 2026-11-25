@@ -517,7 +517,7 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     items[0].px = cw * 0.5;
     items[0].py = stageTopY + spanY * 0.48;
   } else if (k === 2) {
-    // Orient primary flow left -> right if an active edge points between them
+    // Orient primary flow left -> right (or top -> bottom inside narrow cluster columns)
     const direct = activeEdges.find(e =>
       (e.from === items[0].agent.id && e.to === items[1].agent.id) ||
       (e.from === items[1].agent.id && e.to === items[0].agent.id)
@@ -526,11 +526,27 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     if (direct && direct.from === items[1].agent.id && items[0].role.bucket === items[1].role.bucket) {
       ordered = [items[1], items[0]];
     }
-    const xs = distributeRowX(ordered, cw, Math.max(20, cw * 0.08));
-    ordered[0].px = xs[0];
-    ordered[1].px = xs[1];
-    ordered[0].py = stageTopY + spanY * 0.48;
-    ordered[1].py = stageTopY + spanY * 0.48;
+    const pairCardW = ordered[0].box.width + ordered[1].box.width;
+    const needsVerticalStack =
+      (cw - pairCardW) < (detailed ? 110 : 140) &&
+      spanY >= (ordered[0].box.height + ordered[1].box.height + 110);
+    if (needsVerticalStack) {
+      // Narrow cluster columns: stack source -> target vertically so edge badges
+      // and expanded selected cards never collide horizontally.
+      if (direct && direct.from === ordered[1].agent.id) {
+        ordered = [ordered[1], ordered[0]];
+      }
+      ordered[0].px = cw * 0.5;
+      ordered[1].px = cw * 0.5;
+      ordered[0].py = stageTopY + spanY * 0.22;
+      ordered[1].py = stageTopY + spanY * 0.78;
+    } else {
+      const xs = distributeRowX(ordered, cw, Math.max(20, cw * 0.08));
+      ordered[0].px = xs[0];
+      ordered[1].px = xs[1];
+      ordered[0].py = stageTopY + spanY * 0.48;
+      ordered[1].py = stageTopY + spanY * 0.48;
+    }
   } else if (k === 3) {
     const byBucket = new Map([[0, []], [1, []], [2, []]]);
     for (const it of items) byBucket.get(it.role.bucket).push(it);

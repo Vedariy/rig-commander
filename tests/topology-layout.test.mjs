@@ -495,3 +495,30 @@ test('proportional multi-rig clusters give 4-seat pod side-by-side coders (no ed
   assert.ok(rcBottomPx <= h - 48 + 1, `Cluster bottom (${rcBottomPx.toFixed(1)}px) must clear bottomReservePx=48 inside h=${h}`);
   assertNoRectOverlaps(agents, res, w, h);
 });
+
+test('narrow multi-rig cluster stacks 2-node active pair vertically so edge badge and expanded selection never collide', () => {
+  const agents = [
+    makeAgent('operator-agent@kernel', { state: 'working', displayTitle: 'operator-agent' }),
+    makeAgent('dev-coder3@rig-commander', { state: 'idle', ctxPct: 80, displayTitle: 'dev-coder3' }),
+    makeAgent('dev-check@rig-commander', { state: 'working', displayTitle: 'dev-check' }),
+    makeAgent('dev-owner@streamdonation-pwa', { state: 'working', displayTitle: 'dev-owner' }),
+    makeAgent('dev-coder4@streamdonation-pwa', { state: 'working', displayTitle: 'dev-coder4' })
+  ];
+  const edges = [
+    { from: 'dev-coder3@rig-commander', to: 'dev-check@rig-commander', queueStatus: 'live', liveActive: true, slice: 'iter7-2' },
+    { from: 'dev-owner@streamdonation-pwa', to: 'dev-coder4@streamdonation-pwa', queueStatus: 'live', liveActive: true, slice: 'auth' }
+  ];
+  const res = computeTopologyLayout({
+    agents,
+    edges,
+    mode: 'dynamic',
+    canvasWidth: 1020,
+    canvasHeight: 580
+  });
+  const w = res.canvasWidth, h = res.canvasHeight;
+  const pC3 = res.positions['dev-coder3@rig-commander'];
+  const pQ1 = res.positions['dev-check@rig-commander'];
+  // Stacked vertically (source above target) with >= 140px vertical separation
+  assert.ok((pQ1.y - pC3.y) * h / 100 >= 140, `Expected vertical stack >= 140px, got ${((pQ1.y - pC3.y) * h / 100).toFixed(1)}px`);
+  assertNoRectOverlaps(agents, res, w, h);
+});

@@ -6,6 +6,7 @@ import { compileAdvisoryReport, computeHealthScore } from '../openrig/lib/fleet-
 import { CeremonyAmplifierDetector } from '../openrig/lib/fleet-intelligence/detectors/ceremony.mjs';
 import { LiveBlockerDetector } from '../openrig/lib/fleet-intelligence/detectors/live-blocker.mjs';
 import { BottleneckDetector } from '../openrig/lib/fleet-intelligence/detectors/bottleneck.mjs';
+import { ContextEntropyDetector } from '../openrig/lib/fleet-intelligence/detectors/context-entropy.mjs';
 import { computeQueueKinetics, isQueueSystemNoise } from '../openrig/lib/fleet-intelligence/metrics.mjs';
 import {
   parseInteractivePromptOptions,
@@ -626,4 +627,31 @@ test('per-rig health counts each deduplicated finding once per affected rig', ()
   assert.deepEqual(compileAdvisoryReport([unscoped], 'south').rigHealthById,
     { south: { healthScore: 97, p0: 0, p1: 0, p2: 1 } });
   assert.deepEqual(compileAdvisoryReport([]).rigHealthById, {});
+});
+
+test('ContextEntropyDetector emits compact_seat for codex dev-coder3 and rotate_seat only for Pi harness', () => {
+  const detector = new ContextEntropyDetector();
+  const findings = detector.evaluate({
+    nodes: [
+      {
+        canonicalSessionName: 'dev-coder3@rig-commander',
+        runtime: 'codex',
+        model: 'gpt-6.2-astra',
+        contextUsage: { usedPercentage: 80 }
+      },
+      {
+        canonicalSessionName: 'dev-coder3@legacy-rig',
+        runtime: 'pi',
+        model: 'deepseek-flash',
+        contextUsage: { usedPercentage: 80 }
+      }
+    ],
+    activeQueue: []
+  });
+  const codexFinding = findings.find(f => f.actionPlan.seatTarget === 'dev-coder3@rig-commander');
+  const piFinding = findings.find(f => f.actionPlan.seatTarget === 'dev-coder3@legacy-rig');
+  assert.equal(codexFinding?.actionPlan.kind, 'compact_seat');
+  assert.equal(codexFinding?.actionPlan.params.isPi, false);
+  assert.equal(piFinding?.actionPlan.kind, 'rotate_seat');
+  assert.equal(piFinding?.actionPlan.params.isPi, true);
 });

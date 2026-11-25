@@ -1775,14 +1775,14 @@
     }
 
     .idle-collapsed-pill {
-      position: absolute;
-      bottom: 12px;
-      left: 14px;
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin: 6px 12px 2px 12px;
       z-index: 30;
       display: none;
       align-items: center;
       gap: 8px;
-      padding: 6px 12px;
+      padding: 5px 12px;
       border-radius: 999px;
       background: rgba(9, 15, 30, 0.92);
       border: 1px solid rgba(148, 163, 184, 0.38);
@@ -1791,7 +1791,7 @@
       font-size: 11px;
       cursor: pointer;
       backdrop-filter: blur(8px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
     }
     .idle-collapsed-pill.visible { display: inline-flex; }
     .idle-collapsed-pill:hover {

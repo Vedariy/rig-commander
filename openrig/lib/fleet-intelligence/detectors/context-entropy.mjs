@@ -15,7 +15,8 @@ export class ContextEntropyDetector {
       const shortName = seat.split('@')[0];
       const ctxPct = node.contextUsage?.usedPercentage;
       const harness = (node.runtime || node.harness || '').toLowerCase();
-      const isPi = harness.includes('pi') || seat.includes('coder3');
+      const model = String(node.model || '').toLowerCase();
+      const isPi = harness.includes('pi') || (!harness && model.includes('deepseek'));
 
       if (typeof ctxPct === 'number' && ctxPct >= 65) {
         const isCritical = ctxPct >= 75;

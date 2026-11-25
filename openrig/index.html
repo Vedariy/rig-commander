@@ -275,9 +275,9 @@
 
         <div class="dormant-bench-divider" id="dormantBenchDivider"><span class="dormant-bench-label" id="dormantBenchLabel"></span></div>
         <div class="nodes-layer" id="nodesLayer"></div>
-        <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()"></div>
         <div class="edge-xray-drawer" id="edgeXrayDrawer" onclick="event.stopPropagation()"></div>
       </div>
+      <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()"></div>
 
       <!-- GANTT VIEW: Operational Timeline (Sub-lane packed) & Chronological Handoff Flow -->
       <div class="gantt-wrap" id="ganttWrap" style="display:none;">
@@ -1903,8 +1903,10 @@
       }
       const isGantt = centerViewMode === 'gantt';
       const canvas = document.querySelector('#panelCenter .canvas-wrap');
+      const idlePill = document.getElementById('idleCollapsedPill');
       const gantt = document.getElementById('ganttWrap');
       if (canvas) canvas.style.display = isGantt ? 'none' : '';
+      if (idlePill) idlePill.style.display = isGantt ? 'none' : '';
       if (gantt) gantt.style.display = isGantt ? 'flex' : 'none';
       const bG = document.getElementById('btnViewGraph');
       const bT = document.getElementById('btnViewGantt');

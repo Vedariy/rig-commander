@@ -393,7 +393,7 @@ export function renderTopology(deps) {
     }
   });
 
-  const bottomReservePx = collapsedIdleIds.size > 0 ? 48 : 0;
+  const bottomReservePx = 0;
   const layoutResult = (typeof computeTopologyLayout === 'function')
     ? computeTopologyLayout({
         agents: visibleAgents.map(a => ({ ...a, displayTitle: resolveCardTitle(a) })),
