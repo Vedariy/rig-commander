@@ -290,3 +290,104 @@ test('anti-collinear arch breaks flat 3-in-a-row top tier (4 active nodes: 3 com
   });
   assert.deepEqual(fix2.positions, fix1.positions);
 });
+
+function segmentIntersectsRect(x1, y1, x2, y2, rect) {
+  let t0 = 0;
+  let t1 = 1;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const checks = [
+    [-dx, x1 - rect.left],
+    [dx, rect.right - x1],
+    [-dy, y1 - rect.top],
+    [dy, rect.bottom - y1]
+  ];
+  for (const [p, q] of checks) {
+    if (Math.abs(p) < 1e-9) {
+      if (q < 0) return false;
+    } else {
+      const r = q / p;
+      if (p < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
+    }
+  }
+  return t0 <= t1;
+}
+
+test('anti-vertical-collinearity breaks 3-tier vertical pole (owner/coder/check) in idle dynamic, active dynamic & fixed modes', () => {
+  const idleThree = [
+    makeAgent('dev-owner@rig-commander', { state: 'idle', ctxPct: 8 }),
+    makeAgent('dev-coder@rig-commander', { state: 'idle', ctxPct: 11 }),
+    makeAgent('dev-check@rig-commander', { state: 'idle' })
+  ];
+  const activeThree = idleThree.map(a => ({ ...a, state: 'working' }));
+  const edges = [
+    { from: 'dev-owner@rig-commander', to: 'dev-coder@rig-commander', queueStatus: 'ghost', liveActive: false },
+    { from: 'dev-owner@rig-commander', to: 'dev-check@rig-commander', queueStatus: 'ghost', liveActive: false },
+    { from: 'dev-coder@rig-commander', to: 'dev-check@rig-commander', queueStatus: 'ghost', liveActive: false }
+  ];
+
+  for (const [label, agents, mode, cw, ch] of [
+    ['dynamic-all-idle-desktop', idleThree, 'dynamic', 1000, 520],
+    ['dynamic-all-active-desktop', activeThree, 'dynamic', 1000, 520],
+    ['fixed-desktop', idleThree, 'fixed', 1000, 520],
+    ['dynamic-all-idle-mobile', idleThree, 'dynamic', 360, 440]
+  ]) {
+    const res = computeTopologyLayout({ agents, edges, mode, canvasWidth: cw, canvasHeight: ch });
+    assertNoRectOverlaps(agents, res, cw, ch);
+
+    const pOwner = res.positions['dev-owner@rig-commander'];
+    const pCoder = res.positions['dev-coder@rig-commander'];
+    const pCheck = res.positions['dev-check@rig-commander'];
+
+    // Preserve semantic top-to-bottom Command -> Builder -> QA hierarchy
+    assert.ok(pOwner.y < pCoder.y && pCoder.y < pCheck.y, `${label}: expected y(owner) < y(coder) < y(check)`);
+
+    // Must NOT collapse into a vertical line
+    const xs = [pOwner.x, pCoder.x, pCheck.x];
+    const spreadPct = Math.max(...xs) - Math.min(...xs);
+    assert.ok(spreadPct >= 35, `${label}: expected wide horizontal spread >=35%, got ${spreadPct.toFixed(1)}%`);
+
+    // Structural edge dev-owner -> dev-check must NOT slice through dev-coder card!
+    const coderRect = getBoxRect(agents[1], pCoder, res.tiers['dev-coder@rig-commander'], cw, ch);
+    const hitsCoder = segmentIntersectsRect(
+      (pOwner.x / 100) * cw, (pOwner.y / 100) * ch,
+      (pCheck.x / 100) * cw, (pCheck.y / 100) * ch,
+      coderRect
+    );
+    assert.equal(hitsCoder, false, `${label}: owner->check edge must not pass through dev-coder box`);
+  }
+
+  // Fixed mode remains strictly invariant when states flip
+  const fixIdle = computeTopologyLayout({ agents: idleThree, edges, mode: 'fixed', canvasWidth: 1000, canvasHeight: 520 });
+  const fixActive = computeTopologyLayout({ agents: activeThree, edges, mode: 'fixed', canvasWidth: 1000, canvasHeight: 520 });
+  assert.deepEqual(fixActive.positions, fixIdle.positions);
+
+  // Mixed [1, 3, 1] topology (owner + 3 coders + check) also clears middle coder on owner->check route
+  const fiveSeats = [
+    makeAgent('dev-owner@rig-commander', { state: 'idle', ctxPct: 12 }),
+    makeAgent('dev-coder@rig-commander', { state: 'idle', ctxPct: 10 }),
+    makeAgent('dev-coder2@rig-commander', { state: 'idle', ctxPct: 15 }),
+    makeAgent('dev-coder3@rig-commander', { state: 'idle', ctxPct: 20 }),
+    makeAgent('dev-check@rig-commander', { state: 'idle' })
+  ];
+  const resFive = computeTopologyLayout({ agents: fiveSeats, edges: [], mode: 'fixed', canvasWidth: 1000, canvasHeight: 520 });
+  assertNoRectOverlaps(fiveSeats, resFive, 1000, 520);
+  const pO5 = resFive.positions['dev-owner@rig-commander'];
+  const pC5 = resFive.positions['dev-check@rig-commander'];
+  const midCoderRect = getBoxRect(fiveSeats[2], resFive.positions['dev-coder2@rig-commander'], 'active', 1000, 520);
+  assert.equal(
+    segmentIntersectsRect(
+      (pO5.x / 100) * 1000, (pO5.y / 100) * 520,
+      (pC5.x / 100) * 1000, (pC5.y / 100) * 520,
+      midCoderRect
+    ),
+    false,
+    '[1,3,1] owner->check edge must not slice through middle coder2'
+  );
+});

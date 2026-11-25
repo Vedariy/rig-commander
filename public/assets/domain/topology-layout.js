@@ -367,6 +367,53 @@ function relaxStageItems(items, activeEdges, cw, stageTopY, stageBottomY, {
   }
 }
 
+/**
+ * Prevents 3+ nodes across distinct vertical rows from stacking on a single
+ * vertical center line (e.g. [1,1,1] Owner/Coder/QA or [1,3,1] Owner/3 Coders/QA),
+ * where a top-to-bottom structural edge would slice straight through a middle card.
+ */
+function breakVerticalCenterCollinearity(rows, cw, minY, maxY) {
+  if (!Array.isArray(rows) || rows.length < 3) return;
+  const centerX = cw / 2;
+  const tolX = Math.max(20, cw * 0.045);
+
+  const centerRows = [];
+  rows.forEach((row, rIdx) => {
+    if (row.some(it => Math.abs(it.px - centerX) <= tolX)) {
+      centerRows.push(rIdx);
+    }
+  });
+  if (centerRows.length < 3) return;
+
+  const allSingle = rows.every(r => r.length === 1);
+  if (allSingle) {
+    // Keep row 0 as the top Command apex at center, stagger lower tiers left/right
+    // into a balanced wide triangle/zig-zag so all 3 structural edges stay unobstructed.
+    rows.forEach((row, rIdx) => {
+      if (rIdx === 0) {
+        row[0].px = cw * 0.5;
+      } else {
+        row[0].px = rIdx % 2 === 1 ? cw * 0.26 : cw * 0.74;
+      }
+      clampItem(row[0], cw, minY, maxY, 14);
+    });
+    return;
+  }
+
+  // Mixed rows (e.g. [1, 3, 1]): offset lower single-node rows off the center pole
+  // so top-to-bottom routes pass through the open corridor between middle cards.
+  let sideToggle = 0;
+  for (const rIdx of centerRows) {
+    if (rIdx === 0) continue;
+    const row = rows[rIdx];
+    if (row.length === 1) {
+      row[0].px = sideToggle % 2 === 0 ? cw * 0.74 : cw * 0.26;
+      sideToggle++;
+      clampItem(row[0], cw, minY, maxY, 14);
+    }
+  }
+}
+
 function layoutFixedRoleGrid(agents, tiers, cw, ch, { detailed = false, measuredBoxes = null, useActiveSizing = true } = {}) {
   const sorted = sortAgentsDeterministically(agents);
   const items = sorted.map(agent => {
@@ -426,6 +473,8 @@ function layoutFixedRoleGrid(agents, tiers, cw, ch, { detailed = false, measured
       clampItem(it, cw, topPad - 10, ch - 18, 14);
     });
   });
+
+  breakVerticalCenterCollinearity(allRows, cw, topPad - 10, ch - 18);
 
   // Run collision-only relaxation (no edge forces in fixed mode -> invariant to queue/status changes!)
   relaxStageItems(items, [], cw, topPad - 10, ch - 18, {
@@ -505,12 +554,13 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
       occupied[1][1].px = botXs[1];
       occupied[1][1].py = stageTopY + spanY * 0.84;
     } else if (occupied.length === 3) {
-      // 3 distinct tiers (e.g. Owner -> Coder -> QA): offset triangle to avoid collinear overlap
-      occupied[0][0].px = cw * 0.28;
-      occupied[0][0].py = stageTopY + spanY * 0.18;
-      occupied[1][0].px = cw * 0.74;
-      occupied[1][0].py = stageTopY + spanY * 0.52;
-      occupied[2][0].px = cw * 0.34;
+      // 3 distinct tiers (e.g. Owner -> Coder -> QA): wide Command-apex triangle
+      // aligned with fixed/idle fallback so waking up never jars the graph.
+      occupied[0][0].px = cw * 0.5;
+      occupied[0][0].py = stageTopY + spanY * 0.16;
+      occupied[1][0].px = cw * 0.26;
+      occupied[1][0].py = stageTopY + spanY * 0.56;
+      occupied[2][0].px = cw * 0.74;
       occupied[2][0].py = stageTopY + spanY * 0.86;
     } else {
       // All 3 in same tier: place highest-degree hub at top center, others below left/right
@@ -615,6 +665,7 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
       const xs = distributeRowX(row, cw, 20);
       row.forEach((it, idx) => { it.px = xs[idx]; });
     }
+    breakVerticalCenterCollinearity(rows, cw, stageTopY, stageBottomY);
   }
 
   relaxStageItems(items, activeEdges, cw, stageTopY, stageBottomY, {
