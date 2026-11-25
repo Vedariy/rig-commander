@@ -80,13 +80,24 @@ function extractPrimaryTag(row) {
   return meaningful || '';
 }
 
-function classifySingleRow(row, seatStatesById = null) {
+const knownSeatStates = new Set(['idle', 'waiting', 'parked', 'working', 'urgent']);
+
+function classifySingleRow(row, seatStatesById, parkedSeatsById) {
   const state = String((row && row.state) || '').toLowerCase();
   const pickupState = String((row && row.pickup && row.pickup.state) || '').toLowerCase();
   const destId = row && row.destinationSession;
   const destState = (seatStatesById && destId && seatStatesById[destId]) || '';
 
-  if (state === 'in-progress') return { rank: 5, status: 'live' };
+  if (state === 'in-progress') {
+    const srcState = seatStatesById?.[row.sourceSession];
+    // Older snapshots can supply the queue row without observations for both endpoints.
+    if (!knownSeatStates.has(srcState) || !knownSeatStates.has(destState) ||
+        srcState === 'working' || destState === 'working' || destState === 'urgent') {
+      return { rank: 5, status: 'live' };
+    }
+    if (pickupState === 'parked' || parkedSeatsById?.[destId]) return { rank: 3, status: 'parked' };
+    return { rank: 1, status: 'pending', stalledInProgress: true };
+  }
   if (state === 'blocked') return { rank: 4, status: 'blocked' };
   // Pending/claimed row whose recipient is actively working or awaiting HITL counts as live work
   if ((state === 'pending' || state === 'claimed') && (destState === 'working' || destState === 'urgent')) {
@@ -101,13 +112,13 @@ function classifySingleRow(row, seatStatesById = null) {
 /**
  * Classifies an edge given all currently open queue rows between its two endpoints.
  */
-export function classifyEdgeQueueStatus(directRows = [], { seatStatesById = null, isDispatchToWorkingCoder = false } = {}) {
+export function classifyEdgeQueueStatus(directRows = [], { seatStatesById = null, parkedSeatsById = null, isDispatchToWorkingCoder = false } = {}) {
   const rows = Array.isArray(directRows) ? directRows.filter(Boolean) : [];
   let best = null;
   let bestRow = null;
 
   for (const row of rows) {
-    const c = classifySingleRow(row, seatStatesById);
+    const c = classifySingleRow(row, seatStatesById, parkedSeatsById);
     if (!best || c.rank > best.rank) {
       best = c;
       bestRow = row;
@@ -119,6 +130,7 @@ export function classifyEdgeQueueStatus(directRows = [], { seatStatesById = null
     const pickupState = String((bestRow && bestRow.pickup && bestRow.pickup.state) || '').toLowerCase();
     return {
       ...meta,
+      ...(best.stalledInProgress && { stalledInProgress: true }),
       rowState: String((bestRow && bestRow.state) || best.status),
       pickupState,
       tag: extractPrimaryTag(bestRow),

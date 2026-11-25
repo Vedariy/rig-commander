@@ -2110,7 +2110,11 @@
       if (centerViewMode === 'gantt') renderGantt();
       TopologyView.renderTopology({
         doc: document, browser: window, viewState: topologyViewState,
-        agents: AGENTS, edges: EDGES, isEdgeInSlice, hoveredAgentId, currentSliceFilter,
+        agents: AGENTS,
+        edges: EDGES.map(edge => edge.stalledInProgress
+          ? { ...edge, statusTooltip: edge.statusTooltip + ' — ' + td('center.stalledInProgress') }
+          : edge),
+        isEdgeInSlice, hoveredAgentId, currentSliceFilter,
         currentRigFilter, hideIdleNodes, selectedAgentId, getNodeDisplayTitle,
         escapeHtml, td, shortSeat, nodeLastActiveAt, nowMs: Date.now(), TOPOLOGY_STAGE_COOLDOWN_MS,
         graphLayoutMode, getContextThermal, computeBurn, deckLang, buildThermalCurveSvgHtml
@@ -2859,9 +2863,10 @@
 
         // Sync EDGES semantics strictly with live node states & activeQueue:
         // Only in-progress / actively-worked tasks animate green; blocked (🚧), parked (🅿️), held (⏸️), pending (⏳) stay static!
-        const seatStatesById = Object.fromEntries(AGENTS.map(a => [a.id, a.state]));
+        const seatStatesById = Object.fromEntries(snapshot.seats.map(seat => [seat.seatId, seat.state]));
+        const parkedSeatsById = Object.fromEntries(snapshot.seats.map(seat => [seat.seatId, Boolean(seat.parkedData?.parked)]));
         for (const edge of EDGES) {
-          const nTo = AGENTS.find(a => a.id === edge.to);
+          const destState = seatStatesById[edge.to];
           const directRows = openQueue.filter(q =>
             (q.sourceSession === edge.from && q.destinationSession === edge.to) ||
             (q.sourceSession === edge.to && q.destinationSession === edge.from)
@@ -2872,12 +2877,10 @@
             fromRig && fromRig === toRig &&
             (/(^|-)(owner|operator)@/.test(edge.from)) &&
             /coder/i.test(edge.to) &&
-            ((nTo && nTo.state === 'working') || openQueue.some(q => q.destinationSession === edge.to && q.state === 'in-progress'));
+            (destState === 'working' || (!destState && openQueue.some(q => q.destinationSession === edge.to && q.state === 'in-progress')));
 
-          const classified = typeof classifyEdgeQueueStatus === 'function'
-            ? classifyEdgeQueueStatus(directRows, { seatStatesById, isDispatchToWorkingCoder })
-            : { status: directRows.length || isDispatchToWorkingCoder ? 'live' : 'ghost', icon: '📨', color: '#00ff9d', marker: 'arr-emerald', animated: true, tag: '', summary: '', rowState: '', pickupState: '' };
-
+          const classified = classifyEdgeQueueStatus(directRows, { seatStatesById, parkedSeatsById, isDispatchToWorkingCoder });
+          edge.stalledInProgress = Boolean(classified.stalledInProgress);
           edge.queueStatus = classified.status;
           edge.liveActive = Boolean(classified.animated);
           edge.color = classified.color;
