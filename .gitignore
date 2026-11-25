@@ -22,6 +22,10 @@ node_modules/
 .env.*.local
 .vercel
 
-# Private companion documentation & internal notes (never committed to public repo)
+# Private companion documentation & local OpenRig runtime files (never committed to public repo)
 .private-docs/
 .private-docs/**
+CLAUDE.local.md
+.claude/
+.mcp.json
+.openrig/
