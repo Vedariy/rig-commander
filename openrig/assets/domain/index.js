@@ -119,3 +119,36 @@ export {
   getContextDriftSignals,
   matchRelatedDecisions
 } from './context-lineage.js';
+export {
+  GIT_STALE_BEHIND_WARN,
+  GIT_STALE_BEHIND_FINDING,
+  parseGitStatusPorcelainV2,
+  parseGitNumstat,
+  mergeGitNumstats,
+  normalizeRepoKey,
+  analyzeFleetGitRadar
+} from './git-radar.js';
+export {
+  SHIFT_DIGEST_WINDOWS_H,
+  CHECKPOINT_INTERVAL_MS,
+  CHECKPOINT_SPEND_DELTA_USD,
+  CTX_WARN_THRESHOLD,
+  CTX_CRIT_THRESHOLD,
+  CTX_COMPACT_DROP_PCT,
+  diffTelemetrySnapshots,
+  buildShiftDigest,
+  formatShiftDigestMarkdown
+} from './shift-digest.js';
+export {
+  PALETTE_SCOPES,
+  QUEUE_STALE_PENDING_MS,
+  QUEUE_STUCK_IN_PROGRESS_MS,
+  PALETTE_RECENT_MAX,
+  PALETTE_GROUP_ORDER,
+  parsePaletteQuery,
+  fuzzyScore,
+  rankPaletteItems,
+  pushRecentPaletteId,
+  triageQueueItems,
+  buildPaletteIndex
+} from './command-palette.js';

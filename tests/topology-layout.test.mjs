@@ -238,3 +238,55 @@ test('computeAnchoredPopoverRect places popover near cursor with vertical flip a
   assert.ok(tight.left >= 12 && tight.left + 340 <= 388);
   assert.ok(tight.top >= 12 && tight.top + 220 <= 268);
 });
+
+test('anti-collinear arch breaks flat 3-in-a-row top tier (4 active nodes: 3 command + 1 QA) in dynamic & fixed modes', () => {
+  const agents = [
+    makeAgent('operator-agent@kernel', { state: 'working', ctxPct: 59, callsIn: 503, callsOut: 93 }),
+    makeAgent('dev-owner@demo-rig', { state: 'working', ctxPct: 59, callsIn: 531, callsOut: 484 }),
+    makeAgent('dev-senior-architector@demo-rig', { shortName: 'dev-senior-architect', displayTitle: 'dev-senior-architect', state: 'idle', ctxPct: 19, callsIn: 80, callsOut: 69 }),
+    makeAgent('dev-check-argon@demo-rig', { state: 'working', callsIn: 33, callsOut: 15 }),
+    makeAgent('dev-coder@demo-rig', { state: 'idle' }),
+    makeAgent('dev-coder2@demo-rig', { state: 'idle' }),
+    makeAgent('dev-coder3@demo-rig', { state: 'idle' }),
+    makeAgent('dev-coder4@demo-rig', { state: 'idle' })
+  ];
+  const edges = [
+    { from: 'operator-agent@kernel', to: 'dev-owner@demo-rig', queueStatus: 'pending', liveActive: false, slice: 'ops' },
+    { from: 'dev-senior-architector@demo-rig', to: 'dev-owner@demo-rig', queueStatus: 'live', liveActive: true, slice: '0147-live' },
+    { from: 'dev-owner@demo-rig', to: 'dev-check-argon@demo-rig', queueStatus: 'live', liveActive: true, slice: '0152-v15-rebase' }
+  ];
+
+  const cw = 1360;
+  const ch = 520;
+  const dyn = computeTopologyLayout({ agents, edges, mode: 'dynamic', canvasWidth: cw, canvasHeight: ch });
+  assertNoRectOverlaps(agents, dyn, cw, ch);
+
+  const top3Y = [
+    (dyn.positions['operator-agent@kernel'].y / 100) * ch,
+    (dyn.positions['dev-owner@demo-rig'].y / 100) * ch,
+    (dyn.positions['dev-senior-architector@demo-rig'].y / 100) * ch
+  ];
+  const spreadPx = Math.max(...top3Y) - Math.min(...top3Y);
+  assert.ok(spreadPx >= 45, `Top 3 command nodes must form a non-collinear arch (>=45px vertical spread), got ${Math.round(spreadPx)}px`);
+  // Central hub dev-owner sits cleanly above its two lateral peers
+  assert.ok(dyn.positions['dev-owner@demo-rig'].y < dyn.positions['operator-agent@kernel'].y);
+  assert.ok(dyn.positions['dev-owner@demo-rig'].y < dyn.positions['dev-senior-architector@demo-rig'].y);
+
+  // Fixed mode also avoids a flat 3-in-a-row line while staying invariant to state changes
+  const fix1 = computeTopologyLayout({ agents, edges, mode: 'fixed', canvasWidth: cw, canvasHeight: ch });
+  assertNoRectOverlaps(agents, fix1, cw, ch);
+  const fixTop3Y = [
+    (fix1.positions['operator-agent@kernel'].y / 100) * ch,
+    (fix1.positions['dev-owner@demo-rig'].y / 100) * ch,
+    (fix1.positions['dev-senior-architector@demo-rig'].y / 100) * ch
+  ];
+  assert.ok(Math.max(...fixTop3Y) - Math.min(...fixTop3Y) >= 16, 'Fixed mode 3-node row must also break collinearity');
+  const fix2 = computeTopologyLayout({
+    agents: agents.map(a => ({ ...a, state: 'idle' })),
+    edges: [],
+    mode: 'fixed',
+    canvasWidth: cw,
+    canvasHeight: ch
+  });
+  assert.deepEqual(fix2.positions, fix1.positions);
+});

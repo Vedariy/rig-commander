@@ -327,24 +327,34 @@ function relaxStageItems(items, activeEdges, cw, stageTopY, stageBottomY, {
         b.py += uy * push;
       }
 
-      // 3. Keep unrelated active nodes clear of the edge midpoint badge
-      const mx = (a.px + b.px) / 2;
-      const my = (a.py + b.py) / 2;
+      // 3. Keep unrelated active nodes clear of the entire edge segment (not just midpoint)
       for (const c of items) {
         if (c === a || c === b) continue;
-        const mdx = c.px - mx;
-        const mdy = c.py - my;
-        const clearX = c.box.width / 2 + badgeEstW / 2 + 12;
-        const clearY = c.box.height / 2 + 20;
+        const proj = (c.px - a.px) * ux + (c.py - a.py) * uy;
+        const t = proj / Math.max(1, dist);
+        if (t < 0.12 || t > 0.88) continue;
+        const cx = a.px + ux * proj;
+        const cy = a.py + uy * proj;
+        const mdx = c.px - cx;
+        const mdy = c.py - cy;
+        const isNearMid = Math.abs(t - 0.5) < 0.24;
+        const clearX = c.box.width / 2 + (isNearMid ? badgeEstW / 2 : 16) + 12;
+        const clearY = c.box.height / 2 + (isNearMid ? 20 : 14);
         if (Math.abs(mdx) < clearX && Math.abs(mdy) < clearY) {
-          // Nudge perpendicular to edge (u, v) away from midpoint
+          // Nudge perpendicular to edge (u, v) away from the segment
           let nx = -uy;
           let ny = ux;
           if (nx * mdx + ny * mdy < 0) {
             nx = -nx;
             ny = -ny;
           }
-          const nudge = Math.min(clearX - Math.abs(mdx), clearY - Math.abs(mdy)) * 0.45 * damping;
+          if (Math.abs(mdx) < 1 && Math.abs(mdy) < 1) {
+            // Exactly collinear: deterministic push away from vertical center
+            nx = -uy;
+            ny = ux >= 0 ? Math.abs(ux) : -Math.abs(ux);
+            if (Math.abs(ny) < 0.1) ny = 1;
+          }
+          const nudge = Math.min(clearX - Math.abs(mdx), clearY - Math.abs(mdy)) * 0.52 * damping;
           c.px += nx * nudge;
           c.py += ny * nudge;
         }
@@ -385,15 +395,35 @@ function layoutFixedRoleGrid(agents, tiers, cw, ch, { detailed = false, measured
   const topPad = detailed ? 74 : 52;
   const bottomPad = detailed ? 68 : 38;
   const rowCount = allRows.length;
+  const rowPitch = rowCount > 1 ? (ch - topPad - bottomPad) / (rowCount - 1) : ch * 0.55;
 
   allRows.forEach((row, rIdx) => {
     const py = rowCount === 1
       ? ch * 0.46
       : topPad + ((ch - topPad - bottomPad) * rIdx) / Math.max(1, rowCount - 1);
     const xs = distributeRowX(row, cw, 14);
+    const maxRowH = Math.max(...row.map(it => it.box.height));
+    const staggerRoom = rowPitch - maxRowH - 22;
+    const stagger = (row.length >= 3 && staggerRoom > 16)
+      ? Math.min(22, Math.max(10, staggerRoom * 0.22))
+      : 0;
     row.forEach((it, idx) => {
       it.px = xs[idx];
-      it.py = py;
+      if (stagger > 0 && row.length === 3) {
+        // Keep apex inside top/bottom bounds instead of clipping against ceiling/floor
+        if (rIdx === 0) {
+          it.py = idx === 1 ? py : py + stagger * 1.35;
+        } else if (rIdx === rowCount - 1 && rowCount > 1) {
+          it.py = idx === 1 ? py : py - stagger * 1.35;
+        } else {
+          it.py = py + (idx === 1 ? -stagger : stagger * 0.75);
+        }
+      } else if (stagger > 0) {
+        it.py = py + (idx % 2 === 0 ? -stagger : stagger);
+      } else {
+        it.py = py;
+      }
+      clampItem(it, cw, topPad - 10, ch - 18, 14);
     });
   });
 
@@ -514,17 +544,61 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     }
 
     const rCount = rows.length;
+    const topFrac = rCount === 2 && rows[0].length >= 3 ? 0.26 : 0.14;
+    const botFrac = 0.88;
+    const rowPitch = rCount > 1 ? (spanY * (botFrac - topFrac)) / (rCount - 1) : spanY * 0.65;
+
     rows.forEach((row, rIdx) => {
-      const frac = rCount === 1 ? 0.48 : (0.14 + (0.74 * rIdx) / Math.max(1, rCount - 1));
+      // For a 3-node row, center the highest-degree hub (or owner/lead) so edges fan out symmetrically
+      if (row.length === 3) {
+        let hubIdx = 1;
+        let bestScore = -1;
+        row.forEach((it, idx) => {
+          const deg = degree.get(it.agent.id) || 0;
+          const isOwner = it.role.bucket === 0 && it.role.subRank === 1 ? 0.5 : 0;
+          const score = deg + isOwner;
+          if (score > bestScore) {
+            bestScore = score;
+            hubIdx = idx;
+          }
+        });
+        if (hubIdx !== 1) {
+          const hub = row[hubIdx];
+          const others = row.filter((_, idx) => idx !== hubIdx);
+          row.splice(0, 3, others[0], hub, others[1]);
+        }
+      }
+
+      const frac = rCount === 1 ? 0.48 : (topFrac + ((botFrac - topFrac) * rIdx) / Math.max(1, rCount - 1));
       const py = stageTopY + spanY * frac;
       const xs = distributeRowX(row, cw, 20);
+      const maxRowH = Math.max(...row.map(it => it.box.height));
+      const freeY = rowPitch - maxRowH - 18;
+      // Anti-collinear arch / stagger: 3+ nodes in one row NEVER sit on a flat horizontal line
+      const archDelta = (row.length === 3 && freeY > 14)
+        ? Math.min(54, Math.max(18, freeY * 0.38))
+        : 0;
+      const waveDelta = (row.length >= 4 && freeY > 14)
+        ? Math.min(34, Math.max(14, freeY * 0.24))
+        : 0;
+
       row.forEach((it, idx) => {
         it.px = xs[idx];
-        it.py = py;
+        if (archDelta > 0) {
+          // Top row forms a crisp diamond apex (^), bottom row forms a bowl (v)
+          const isBottomRow = rCount > 1 && rIdx === rCount - 1;
+          const centerSign = isBottomRow ? 1 : -1;
+          it.py = py + (idx === 1 ? centerSign * archDelta : -centerSign * archDelta);
+        } else if (waveDelta > 0) {
+          it.py = py + (idx % 2 === 0 ? -waveDelta : waveDelta);
+        } else {
+          it.py = py;
+        }
+        clampItem(it, cw, stageTopY, stageBottomY, 14);
       });
     });
 
-    // 1-pass barycenter horizontal reorder to minimize crossing highways
+    // 1-pass barycenter horizontal reorder to minimize crossing highways (preserving anti-collinear stagger)
     const byId = new Map(items.map(it => [it.agent.id, it]));
     for (let rIdx = 1; rIdx < rows.length; rIdx++) {
       const row = rows[rIdx];

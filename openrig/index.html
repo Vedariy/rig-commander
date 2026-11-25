@@ -42,6 +42,14 @@
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
+      <button class="triage-refresh-btn" id="btnShiftDigest" onclick="openShiftDigestModal()" style="border-color:rgba(251,191,36,0.45); color:#fde68a;" title="Shift Catch-Up / Overnight Digest">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span data-i18n="digest.btn">Смена</span><span id="btnShiftDigestBadge" class="digest-btn-badge" style="display:none;">0</span>
+      </button>
+      <button class="triage-refresh-btn" id="btnCommandPalette" onclick="openCommandPalette()" style="border-color:rgba(0,240,255,0.42); color:#a5f3fc;" title="Command Palette (⌘K / Ctrl+K)">
+        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span class="palette-kbd">⌘K</span><span id="btnPaletteTriageBadge" class="digest-btn-badge" style="display:none;">0</span>
+      </button>
       <button class="triage-refresh-btn triage-icon-btn" id="btnShareCard" onclick="openShareCardModal()" style="border-color:rgba(168,85,247,0.45); color:#e9d5ff;" title="Daily Fleet Receipt // Share Card PNG">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </button>
@@ -485,6 +493,57 @@
         </div>
       </div>
       <div class="modal-fleet-body" id="contextLineageModalBody"></div>
+    </div>
+  </div>
+
+  <!-- READ-ONLY GIT DIFF MODAL (SecretRedactor guarded) -->
+  <div class="modal-overlay" id="gitDiffModal" onclick="if (event.target === this) closeGitDiffModal()">
+    <div class="modal-fleet-card" style="max-width:920px;">
+      <div class="modal-fleet-header">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="gitDiffModalTitle" style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#6ee7b7;" data-i18n="git.modalTitle">
+            📄 READ-ONLY ПРОСМОТР GIT DIFF
+          </span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="action-pill" onclick="closeGitDiffModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        </div>
+      </div>
+      <div class="modal-fleet-body" id="gitDiffModalBody"></div>
+    </div>
+  </div>
+
+  <!-- SHIFT CATCH-UP / OVERNIGHT DIGEST MODAL (ADR-0014) -->
+  <div class="modal-overlay" id="shiftDigestModal" onclick="if (event.target === this) closeShiftDigestModal()">
+    <div class="modal-fleet-card" style="max-width:940px;">
+      <div class="modal-fleet-header">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="shiftDigestModalTitle" style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#fde68a;" data-i18n="digest.modalTitle">
+            🌅 СВОДКА СМЕНЫ / CATCH-UP DIGEST
+          </span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button class="action-pill" type="button" onclick="copyShiftDigestMarkdown()" style="border-color:rgba(0,240,255,0.45); color:#7dd3fc;" data-i18n="digest.copyMd">📋 Markdown</button>
+          <button class="action-pill" type="button" onclick="refreshShiftDigestModal()" title="Refresh">↻</button>
+          <button class="action-pill" type="button" onclick="closeShiftDigestModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        </div>
+      </div>
+      <div class="modal-fleet-body" id="shiftDigestModalBody"></div>
+    </div>
+  </div>
+
+  <!-- COMMAND PALETTE (⌘K) + SAFE QUEUE TRIAGE (ADR-0015) -->
+  <div class="palette-overlay" id="commandPalette" onclick="if (event.target === this) closeCommandPalette()" role="dialog" aria-modal="true" aria-label="Command Palette">
+    <div class="palette-card">
+      <div class="palette-input-row">
+        <span class="palette-search-ico">⌘</span>
+        <input type="text" id="paletteInput" class="palette-input" autocomplete="off" spellcheck="false"
+               oninput="onPaletteInput(this.value)" onkeydown="onPaletteKeydown(event)" />
+        <span class="palette-scope-chip" id="paletteScopeChip"></span>
+      </div>
+      <div class="palette-scope-bar" id="paletteScopeBar"></div>
+      <div class="palette-results" id="paletteResults" role="listbox"></div>
+      <div class="palette-footer" id="paletteFooter"></div>
     </div>
   </div>
 
@@ -1826,7 +1885,19 @@
       const callsIn = Number(agent.callsIn) || 0;
       const callsOut = Number(agent.callsOut) || 0;
       const hasCalls = callsIn > 0 || callsOut > 0;
-      if (!tok && !hasCalls) return '';
+      const git = agent && agent.git;
+      let gitAlertSpan = '';
+      if (git && (git.unmergedCount > 0 || git.conflictFilesCount > 0)) {
+        const peers = (git.conflictPeers || []).map(p => shortSeat(p)).join(', ');
+        if (git.unmergedCount > 0) {
+          const tip = td('git.unmergedBanner', { n: git.unmergedCount });
+          gitAlertSpan = `<span class="node-meta-git-conflict" title="${escapeHtml(tip)}">🚨 ${git.unmergedCount}</span>`;
+        } else {
+          const tip = td('git.nodeConflictTip', { peers: peers || 'worktree' });
+          gitAlertSpan = `<span class="node-meta-git-conflict" title="${escapeHtml(tip)}">⚔️ ${git.conflictFilesCount}</span>`;
+        }
+      }
+      if (!tok && !hasCalls && !gitAlertSpan) return '';
       const tokTip = deckLang === 'en'
         ? `Context window used: ${tok}`
         : `Заполнение контекстного окна: ${tok}`;
@@ -1835,7 +1906,7 @@
         : `Передачи очереди: ↓${callsIn} получено / ↑${callsOut} отправлено`;
       const tokSpan = tok ? `<span class="node-meta-tokens" title="${escapeHtml(tokTip)}">${escapeHtml(tok)}</span>` : '';
       const callSpan = hasCalls ? `<span class="node-meta-traffic" title="${escapeHtml(callTip)}">↓${callsIn} ↑${callsOut}</span>` : '';
-      return tokSpan + callSpan;
+      return tokSpan + callSpan + gitAlertSpan;
     }
 
     function renderNodeSpecMetaHtml(agent, burn) {
@@ -3376,6 +3447,8 @@
         focusSeatDiagnosis(seatId, findingId);
       } else if (transport === 'gantt_slice') {
         openSliceOnGantt(payload);
+      } else if (transport === 'git_diff' && seatId) {
+        openGitDiffModal(seatId, payload);
       } else if (transport === 'clipboard' && payload) {
         copyCmd(payload);
       }
@@ -3754,6 +3827,15 @@
           }
         }
 
+        const elGit = document.getElementById('inspGitWorktree');
+        if (elGit) {
+          const gitHtml = renderSeatGitWorktreeHtml(agent);
+          if (elGit.getAttribute('data-cache-key') !== gitHtml) {
+            elGit.innerHTML = gitHtml;
+            elGit.setAttribute('data-cache-key', gitHtml);
+          }
+        }
+
         const elWarnGrid = document.getElementById('inspWarningSignsGrid');
         if (elWarnGrid) {
           const warnHtml = renderWarningSignsHtml(agent, thermal);
@@ -3856,6 +3938,9 @@
 
             <!-- SA Level 2: Current Task -->
             <div id="inspCurrentTask">${renderCurrentTaskHtml(agent)}</div>
+
+            <!-- SA Level 2: Git Worktree & Conflict Status -->
+            <div id="inspGitWorktree">${renderSeatGitWorktreeHtml(agent)}</div>
 
             <!-- SA Level 2: Management-by-Exception Signals -->
             <div id="inspWarningSignsGrid">${renderWarningSignsHtml(agent, thermal)}</div>
@@ -4139,6 +4224,8 @@
     let lastCachedHistory = null;
     let lastGuidanceRev = '';
     let lastCachedGuidance = null;
+    let lastGitRadarRev = '';
+    let lastCachedGitRadar = null;
     let hasDoneInitialCapture = false;
 
     async function refreshTelemetryNow(force = false) {
@@ -4151,11 +4238,14 @@
           lastCachedHistory = null;
           lastGuidanceRev = '';
           lastCachedGuidance = null;
+          lastGitRadarRev = '';
+          lastCachedGitRadar = null;
         }
         const qs = new URLSearchParams();
         if (currentRigFilter !== 'all') qs.set('rig', currentRigFilter);
         if (lastHistoryRev && lastCachedHistory) qs.set('historyRev', lastHistoryRev);
         if (lastGuidanceRev && lastCachedGuidance) qs.set('guidanceRev', lastGuidanceRev);
+        if (lastGitRadarRev && lastCachedGitRadar) qs.set('gitRadarRev', lastGitRadarRev);
         if (force) qs.set('force', '1');
         const qStr = qs.toString();
         const res = await fetch(`/api/telemetry${qStr ? `?${qStr}` : ''}`);
@@ -4177,11 +4267,20 @@
           lastCachedGuidance = data.seatGuidance;
           if (data.guidanceRev) lastGuidanceRev = String(data.guidanceRev);
         }
+        if (data.gitRadarUnchanged && lastCachedGitRadar) {
+          data.gitRadar = lastCachedGitRadar;
+        } else if (data.gitRadar) {
+          lastCachedGitRadar = data.gitRadar;
+          if (data.gitRadarRev) lastGitRadarRev = String(data.gitRadarRev);
+        }
         const snapshot = buildOntologySnapshot(data, window.ONTOLOGY_SNAPSHOT);
         window.ONTOLOGY_SNAPSHOT = snapshot;
         window.LIVE_INTELLIGENCE = snapshot.intelligence;
         window.LIVE_SEAT_USAGE = data.seatUsage || {};
         window.LIVE_FLEET_USAGE = snapshot.fleetUsageSummary;
+        window.LIVE_GIT_RADAR = snapshot.gitRadar || data.gitRadar || null;
+        window.LIVE_SHIFT_META = data.shiftHistoryMeta || null;
+        if (typeof updateShiftDigestBadge === 'function') updateShiftDigestBadge();
         if (data.guardrails) {
           window.GUARDRAILS_STATE = data.guardrails;
           updateGuardrailsBadge();
@@ -4312,6 +4411,7 @@
             target.callsOut = seat.callsOut;
             target.lastActivityAt = seat.lastActivityAt;
             target.tmuxAttachCommand = seat.tmuxAttachCommand;
+            target.git = seat.git || null;
             if (seat.guidance) target.guidance = seat.guidance;
 
             if (seat.state === 'urgent') attnNodes.push(target);
@@ -4321,7 +4421,9 @@
 
         const openQueue = Array.isArray(data.activeQueue) ? data.activeQueue : [];
         LIVE_OPEN_QUEUE = openQueue;
+        window.LIVE_RAW_NODES = Array.isArray(data.nodes) ? data.nodes : [];
         IS_LIVE = true;
+        if (typeof updatePaletteTriageBadge === 'function') updatePaletteTriageBadge();
         if (typeof syncDemoQuestVisibility === 'function') syncDemoQuestVisibility();
         if (data.history && data.history.pairEnvelopes) PAIR_ENVELOPES = data.history.pairEnvelopes;
         window.LIVE_GANTT = (data.history && Array.isArray(data.history.ganttItems)) ? data.history.ganttItems : [];
@@ -5694,6 +5796,9 @@
       summaryHtml += actionPlanHtml;
 
       // Navigation Tabs
+      const liveGitRadar = window.LIVE_GIT_RADAR || (window.ONTOLOGY_SNAPSHOT && window.ONTOLOGY_SNAPSHOT.gitRadar) || null;
+      const gitConflictBadge = ((liveGitRadar && liveGitRadar.conflicts && liveGitRadar.conflicts.length) || 0)
+        + ((liveGitRadar && liveGitRadar.unmergedWorkspaces && liveGitRadar.unmergedWorkspaces.length) || 0);
       let tabsHtml = `
         <div class="fleet-tabs">
           <button class="fleet-tab-btn ${activeFleetTab === 'findings' ? 'active' : ''}" onclick="setFleetAdvisorTab('findings')">
@@ -5707,6 +5812,9 @@
           </button>
           <button class="fleet-tab-btn ${activeFleetTab === 'topology' ? 'active' : ''}" onclick="setFleetAdvisorTab('topology')">
             ${td('advisor.tabTopology')}
+          </button>
+          <button class="fleet-tab-btn ${activeFleetTab === 'worktrees' ? 'active' : ''}" onclick="setFleetAdvisorTab('worktrees')">
+            ${td('git.tabWorktrees')}${gitConflictBadge > 0 ? ` <span style="color:#fda4af; font-weight:800;">(${gitConflictBadge})</span>` : ''}
           </button>
         </div>
       `;
@@ -6038,6 +6146,8 @@
             </tbody>
           </table>
         `;
+      } else if (activeFleetTab === 'worktrees') {
+        tabContentHtml = renderFleetWorktreesTabHtml(liveGitRadar);
       }
 
       if (activeFleetView === 'health') {
@@ -6049,6 +6159,7 @@
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button type="button" class="action-pill" onclick="setFleetAdvisorTab('quality')">${td('advisor.tabQuality')}</button>
               <button type="button" class="action-pill" onclick="setFleetAdvisorTab('budget')">${td('advisor.tabBudget')}</button>
+              <button type="button" class="action-pill" onclick="setFleetAdvisorTab('worktrees')">${td('git.tabWorktrees')}${gitConflictBadge > 0 ? ` (${gitConflictBadge})` : ''}</button>
             </div>
           </div>
         `;
@@ -6059,8 +6170,19 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeContextLineageModal(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeUpdateModal(); closeSaTour(); }
+      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeContextLineageModal(); closeGitDiffModal(); closeShiftDigestModal(); closeCommandPalette(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeUpdateModal(); closeSaTour(); }
     });
+
+    // Global ⌘K / Ctrl+K opens the Command Palette (works even while focus is inside inputs)
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K' || e.key === 'л' || e.key === 'Л' || e.code === 'KeyK')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const pal = document.getElementById('commandPalette');
+        if (pal && pal.classList.contains('open')) closeCommandPalette();
+        else openCommandPalette();
+      }
+    }, true);
 
     // ===== Stage 7: Viral Daily Fleet Receipt / Share Card PNG Export (Item 6) =====
     let shareCardAnonymize = null; // null = auto (true on live fleet, false on demo)
@@ -7516,6 +7638,1072 @@
       if (overlay) overlay.classList.remove('open');
     }
 
+    // ===== Git / Worktree & Conflict Radar UI (L2 Inspector, L3 Diff Modal, Fleet Tab) =====
+    function renderSeatGitWorktreeHtml(agent) {
+      const g = agent && agent.git;
+      if (!g) return '';
+      const hasDanger = g.unmergedCount > 0 || g.conflictFilesCount > 0;
+      const hasWarn = Boolean(g.isSharedWriteHazard) || (g.behind || 0) >= 15;
+      const cardClass = hasDanger ? 'git-worktree-card has-conflict' : (hasWarn ? 'git-worktree-card has-warn' : 'git-worktree-card');
+
+      const branchLabel = g.detached
+        ? `${td('git.detached')} @${String(g.oid || '').slice(0, 7)}`
+        : (g.branch || td('git.detached'));
+      const sharedSeats = Array.isArray(g.sharedWithSeats) ? g.sharedWithSeats : [];
+      const sharedTotal = sharedSeats.length + 1;
+      const typeBadge = g.isSharedCheckout
+        ? `<span class="git-badge is-shared" title="${escapeHtml(sharedSeats.map(shortSeat).join(', '))}">👥 ${escapeHtml(td('git.sharedBadge', { n: sharedTotal }))}</span>`
+        : g.isWorktree
+          ? `<span class="git-badge is-worktree">🌿 ${escapeHtml(td('git.worktreeBadge'))}</span>`
+          : `<span class="git-badge">${escapeHtml(td('git.cloneBadge'))}</span>`;
+
+      const driftBits = [];
+      if (g.ahead > 0) driftBits.push(`↑${g.ahead}`);
+      if (g.behind > 0) driftBits.push(`↓${g.behind}`);
+      const driftBadge = driftBits.length > 0
+        ? `<span class="git-badge ${g.behind >= 15 ? 'is-behind' : ''}" title="${g.behind >= 15 ? escapeHtml(td('git.behindWarn', { n: g.behind })) : ''}">${driftBits.join(' ')}</span>`
+        : '';
+
+      const diffStatBadge = g.dirtyCount === 0
+        ? `<span class="git-badge is-clean">✓ ${escapeHtml(td('git.clean'))}</span>`
+        : `<span class="git-badge">✎ ${escapeHtml(td('git.dirtyFiles', { n: g.dirtyCount }))}${g.insertions || g.deletions ? ` <span style="color:#86efac;">+${g.insertions}</span>/<span style="color:#fda4af;">-${g.deletions}</span>` : ''}</span>`;
+
+      const banners = [];
+      if (g.unmergedCount > 0) {
+        banners.push(`<div class="git-conflict-banner">${escapeHtml(td('git.unmergedBanner', { n: g.unmergedCount }))}</div>`);
+      }
+      if (g.conflictFilesCount > 0) {
+        const peerStr = (g.conflictPeers || []).slice(0, 3).map(shortSeat).join(', ');
+        banners.push(`<div class="git-conflict-banner">${escapeHtml(td('git.conflictBanner', { n: g.conflictFilesCount, peers: peerStr || 'worktree' }))}</div>`);
+      }
+      if (g.isSharedWriteHazard) {
+        banners.push(`<div class="git-conflict-banner is-warn">${escapeHtml(td('git.sharedHazard'))}</div>`);
+      }
+
+      const conflictSet = new Set(g.conflictFiles || []);
+      const allFilePaths = Array.isArray(g.files)
+        ? g.files.map(f => (typeof f === 'string' ? f : f && f.path)).filter(Boolean)
+        : [];
+      const sortedDirty = [...allFilePaths].sort((a, b) => Number(conflictSet.has(b)) - Number(conflictSet.has(a)));
+      const shownFiles = sortedDirty.slice(0, 6);
+      const hiddenCount = Math.max(0, (g.dirtyCount || sortedDirty.length) - shownFiles.length);
+      const filePillsHtml = shownFiles.length > 0
+        ? `<div class="git-file-pills">
+            ${shownFiles.map(fp => {
+              const isConf = conflictSet.has(fp);
+              const shortFp = fp.length > 34 ? '…/' + fp.split('/').slice(-2).join('/') : fp;
+              return `<button type="button" class="git-file-pill ${isConf ? 'is-conflict' : ''}" title="${escapeHtml(fp)}" data-seat="${escapeHtml(agent.id)}" data-file="${escapeHtml(fp)}" onclick="openGitDiffModal(this.getAttribute('data-seat'), this.getAttribute('data-file'))">${isConf ? '⚔️ ' : ''}${escapeHtml(shortFp)}</button>`;
+            }).join('')}
+            ${hiddenCount > 0 ? `<button type="button" class="git-file-pill" data-seat="${escapeHtml(agent.id)}" onclick="openGitDiffModal(this.getAttribute('data-seat'), '')">+${hiddenCount}</button>` : ''}
+          </div>`
+        : '';
+
+      return `
+        <div class="${cardClass}">
+          <div class="git-worktree-head">
+            <span style="font-size:10px; font-weight:800; color:#7dd3fc; letter-spacing:0.4px;">${escapeHtml(td('git.sectionTitle'))}</span>
+            <button type="button" class="action-pill" style="padding:1px 7px; font-size:9.5px;" title="${escapeHtml(td('git.diffTip'))}" data-seat="${escapeHtml(agent.id)}" onclick="openGitDiffModal(this.getAttribute('data-seat'), '')">${escapeHtml(td('git.diffBtn'))}</button>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+            <span class="git-badge is-branch" title="${escapeHtml(g.dirName || '')}">⎇ ${escapeHtml(branchLabel)}</span>
+            ${typeBadge}
+            ${driftBadge}
+            ${diffStatBadge}
+          </div>
+          ${banners.join('')}
+          ${filePillsHtml}
+        </div>
+      `;
+    }
+
+    function renderFleetWorktreesTabHtml(radar) {
+      const en = deckLang === 'en';
+      const allWorkspaces = (radar && Array.isArray(radar.workspaces)) ? radar.workspaces : [];
+      const inRig = (seatIds = []) => currentRigFilter === 'all' || seatIds.some(s => String(s).endsWith('@' + currentRigFilter));
+      const workspaces = allWorkspaces.filter(w => inRig(w.seatIds));
+      const conflicts = ((radar && Array.isArray(radar.conflicts)) ? radar.conflicts : [])
+        .filter(c => currentRigFilter === 'all' || (c.workspaces || []).some(w => inRig(w.seatIds)));
+      const sharedHazards = ((radar && Array.isArray(radar.sharedWriteHazards)) ? radar.sharedWriteHazards : [])
+        .filter(w => inRig(w.allSeatIds || w.activeSeatIds || []));
+
+      const kpis = {
+        workspaces: workspaces.length,
+        worktrees: workspaces.filter(w => w.isWorktree).length,
+        dirty: workspaces.filter(w => w.dirtyCount > 0).length,
+        conflicts: conflicts.length,
+        unmerged: workspaces.filter(w => w.unmergedCount > 0).length,
+        ins: workspaces.reduce((s, w) => s + (w.insertions || 0), 0),
+        del: workspaces.reduce((s, w) => s + (w.deletions || 0), 0)
+      };
+
+      const kpiHtml = `
+        <div class="git-radar-kpi-grid">
+          <div class="git-radar-kpi">
+            <div style="font-size:10px; color:#94a3b8;">${en ? 'WORKSPACES / WT' : 'КОПИИ / WORKTREE'}</div>
+            <div style="font-size:17px; font-weight:800; color:#e2e8f0; margin-top:2px;">${kpis.workspaces} <span style="font-size:11px; color:#6ee7b7;">(${kpis.worktrees} wt)</span></div>
+          </div>
+          <div class="git-radar-kpi">
+            <div style="font-size:10px; color:#94a3b8;">${en ? 'DIRTY REPOS' : 'ИЗМЕНЁННЫЕ'}</div>
+            <div style="font-size:17px; font-weight:800; color:#7dd3fc; margin-top:2px;">${kpis.dirty} / ${kpis.workspaces}</div>
+          </div>
+          <div class="git-radar-kpi ${kpis.conflicts > 0 ? 'is-danger' : ''}">
+            <div style="font-size:10px; color:#94a3b8;">${en ? 'FILE OVERLAPS' : 'ПЕРЕСЕЧЕНИЯ'}</div>
+            <div style="font-size:17px; font-weight:800; color:${kpis.conflicts > 0 ? '#fda4af' : '#6ee7b7'}; margin-top:2px;">${kpis.conflicts}</div>
+          </div>
+          <div class="git-radar-kpi ${kpis.unmerged > 0 ? 'is-danger' : ''}">
+            <div style="font-size:10px; color:#94a3b8;">${en ? 'UNMERGED' : 'UNMERGED'}</div>
+            <div style="font-size:17px; font-weight:800; color:${kpis.unmerged > 0 ? '#fda4af' : '#6ee7b7'}; margin-top:2px;">${kpis.unmerged}</div>
+          </div>
+          <div class="git-radar-kpi">
+            <div style="font-size:10px; color:#94a3b8;">${en ? 'TOTAL DIFF' : 'СУММА DIFF'}</div>
+            <div style="font-size:15px; font-weight:800; margin-top:4px;"><span style="color:#86efac;">+${kpis.ins}</span> <span style="color:#fda4af;">-${kpis.del}</span></div>
+          </div>
+        </div>
+      `;
+
+      const conflictsSection = `
+        <div style="font-family:var(--font-mono); font-size:11px; font-weight:800; color:${conflicts.length > 0 ? '#fda4af' : '#6ee7b7'}; margin-bottom:6px;">
+          ${escapeHtml(td('git.conflictsTitle'))}
+        </div>
+        ${conflicts.length === 0
+          ? `<div style="padding:10px 12px; font-family:var(--font-mono); font-size:11.5px; color:#86efac; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.28); border-radius:7px; margin-bottom:14px;">${escapeHtml(td('git.noConflicts'))}</div>`
+          : `<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+              ${conflicts.map(c => {
+                const cFile = c.filePath || c.file || '';
+                const isHigh = c.severity === 'high' || c.severity === 'p1_high';
+                return `
+                <div class="git-radar-conflict-card">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-size:12px; font-weight:800; color:#fecdd3;">⚔️ ${escapeHtml(cFile)}</span>
+                    <span class="git-badge" style="border-color:${isHigh ? 'rgba(244,63,94,0.6)' : 'rgba(245,158,11,0.5)'}; color:${isHigh ? '#fda4af' : '#fde68a'};">${isHigh ? 'P1 LIVE OVERLAP' : 'P2 OVERLAP'}</span>
+                  </div>
+                  <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                    ${(c.workspaces || []).map(w => {
+                      const seatTarget = (w.seatIds && w.seatIds[0]) || '';
+                      const seatLabels = (w.seatIds || []).map(shortSeat).join(', ');
+                      return `
+                        <span style="display:inline-flex; align-items:center; gap:5px; padding:3px 7px; border-radius:5px; background:rgba(2,6,23,0.75); border:1px solid rgba(251,113,133,0.35); font-size:10.5px; color:#e2e8f0;">
+                          <span style="color:#7dd3fc;">${escapeHtml(w.dirName)}</span>
+                          <span style="color:#94a3b8;">(${escapeHtml(w.branch || 'detached')})</span>
+                          <span style="color:#fde68a;">${escapeHtml(seatLabels)}</span>
+                          ${seatTarget ? `<button type="button" class="action-pill" style="padding:1px 6px; font-size:9.5px; white-space:nowrap;" data-seat="${escapeHtml(seatTarget)}" data-file="${escapeHtml(cFile)}" onclick="openGitDiffModal(this.getAttribute('data-seat'), this.getAttribute('data-file'))">${escapeHtml(td('git.diffBtn'))}</button>` : ''}
+                        </span>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+              }).join('')}
+            </div>`
+        }
+      `;
+
+      const hazardsSection = sharedHazards.length > 0
+        ? `<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px;">
+            ${sharedHazards.map(w => `
+              <div class="git-conflict-banner is-warn" style="font-family:var(--font-mono); font-size:11px;">
+                ${escapeHtml(td('git.sharedHazard'))}: <b>${escapeHtml(w.dirName)}</b> (${escapeHtml((w.activeSeatIds || []).map(shortSeat).join(', '))})
+              </div>
+            `).join('')}
+          </div>`
+        : '';
+
+      const tableSection = workspaces.length === 0
+        ? `<div style="padding:20px; text-align:center; font-family:var(--font-mono); font-size:12px; color:#94a3b8; background:rgba(15,23,42,0.5); border-radius:8px;">${escapeHtml(td('git.noWorkspaces'))}</div>`
+        : `
+          <div style="font-family:var(--font-mono); font-size:11px; font-weight:800; color:#7dd3fc; margin-bottom:6px;">
+            ${escapeHtml(td('git.workspacesTitle'))}
+          </div>
+          <table class="fleet-table">
+            <thead>
+              <tr>
+                <th>${en ? 'WORKSPACE' : 'КОПИЯ'}</th>
+                <th>${en ? 'BRANCH / DRIFT' : 'ВЕТКА / ДРЕЙФ'}</th>
+                <th>${en ? 'TYPE' : 'ТИП'}</th>
+                <th>${en ? 'SEATS' : 'СИДЕНЬЯ'}</th>
+                <th>${en ? 'DIRTY / DIFF' : 'ИЗМЕНЕНИЯ'}</th>
+                <th>${en ? 'ACTIONS' : 'ДЕЙСТВИЯ'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${workspaces.map(w => {
+                const primarySeat = (w.seatIds && w.seatIds[0]) || '';
+                const branchText = w.detached ? `detached @${String(w.oid || '').slice(0, 7)}` : (w.branch || 'detached');
+                const driftText = [w.ahead > 0 ? `↑${w.ahead}` : '', w.behind > 0 ? `↓${w.behind}` : ''].filter(Boolean).join(' ') || '—';
+                const typeCell = w.isSharedCheckout
+                  ? `<span class="git-badge is-shared">👥 ${escapeHtml(td('git.sharedBadge', { n: w.seatIds.length }))}</span>`
+                  : w.isWorktree
+                    ? `<span class="git-badge is-worktree">🌿 ${escapeHtml(td('git.worktreeBadge'))}</span>`
+                    : `<span class="git-badge">${escapeHtml(td('git.cloneBadge'))}</span>`;
+                const seatsHtml = (w.seatIds || []).map(sid => `
+                  <button type="button" class="git-file-pill" data-seat="${escapeHtml(sid)}" onclick="selectAgent(this.getAttribute('data-seat')); closeFleetAdvisorModal();">${escapeHtml(shortSeat(sid))}</button>
+                `).join(' ');
+                const dirtyCell = w.dirtyCount === 0
+                  ? `<span style="color:#6ee7b7;">✓ ${escapeHtml(td('git.clean'))}</span>`
+                  : `<span>${escapeHtml(td('git.dirtyFiles', { n: w.dirtyCount }))}</span>${w.insertions || w.deletions ? ` <span style="color:#86efac;">+${w.insertions}</span>/<span style="color:#fda4af;">-${w.deletions}</span>` : ''}${w.unmergedCount > 0 ? ` <span style="color:#fda4af; font-weight:800;">🚨${w.unmergedCount}</span>` : ''}`;
+                return `
+                  <tr>
+                    <td style="font-weight:700; color:#e2e8f0;">
+                      <div>${escapeHtml(w.dirName)}</div>
+                      <div style="font-size:9.5px; color:#64748b;">${escapeHtml(w.repoKey || '')}</div>
+                    </td>
+                    <td>
+                      <div style="color:#7dd3fc; font-weight:700;">⎇ ${escapeHtml(branchText)}</div>
+                      <div style="font-size:10px; color:${w.behind >= 15 ? '#fdba74' : '#94a3b8'};">${escapeHtml(driftText)}</div>
+                    </td>
+                    <td>${typeCell}</td>
+                    <td><div style="display:flex; flex-wrap:wrap; gap:4px;">${seatsHtml}</div></td>
+                    <td>${dirtyCell}</td>
+                    <td>
+                      ${primarySeat ? `<button type="button" class="action-pill" style="font-size:10px; white-space:nowrap;" data-seat="${escapeHtml(primarySeat)}" onclick="openGitDiffModal(this.getAttribute('data-seat'), '')">${escapeHtml(td('git.diffBtn'))}</button>` : '—'}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        `;
+
+      return `${kpiHtml}${conflictsSection}${hazardsSection}${tableSection}`;
+    }
+
+    function closeGitDiffModal() {
+      const overlay = document.getElementById('gitDiffModal');
+      if (overlay) overlay.classList.remove('open');
+    }
+
+    function renderGitDiffLinesHtml(diffText) {
+      const lines = String(diffText || '').split('\n');
+      return lines.map(line => {
+        let cls = 'diff-line';
+        if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff --git') || line.startsWith('# ===')) {
+          cls += ' diff-meta';
+        } else if (line.startsWith('@@')) {
+          cls += ' diff-hunk';
+        } else if (line.startsWith('+')) {
+          cls += ' diff-add';
+        } else if (line.startsWith('-')) {
+          cls += ' diff-del';
+        }
+        return `<span class="${cls}">${escapeHtml(line)}</span>`;
+      }).join('');
+    }
+
+    function buildDemoGitDiff(seatId, file = '') {
+      const target = AGENTS.find(a => a.id === seatId);
+      const g = target && target.git;
+      const dirName = (g && g.dirName) || 'core-platform';
+      const rel = String(file || '').trim();
+      const isCoder4 = String(seatId).includes('coder4');
+      const sampleDiff = isCoder4
+        ? [
+            'diff --git a/src/core/dispatcher.ts b/src/core/dispatcher.ts',
+            'index 8a4f21c..d2b9104 100644',
+            '--- a/src/core/dispatcher.ts',
+            '+++ b/src/core/dispatcher.ts',
+            '@@ -41,7 +41,11 @@ export async function dispatchChunk(req: ChunkRequest) {',
+            '-  return sendLegacyChunk(req.payload);',
+            '+  if (req.byteLength > STRICT_CHUNK_LIMIT) {',
+            '+    throw new ChunkLimitError(req.byteLength, STRICT_CHUNK_LIMIT);',
+            '+  }',
+            '+  return sendStrictChunk(req.payload, { backoffMs: 250 });',
+            ' }'
+          ].join('\n')
+        : [
+            'diff --git a/src/core/dispatcher.ts b/src/core/dispatcher.ts',
+            'index 8a4f21c..9e1c4a0 100644',
+            '--- a/src/core/dispatcher.ts',
+            '+++ b/src/core/dispatcher.ts',
+            '@@ -39,8 +39,10 @@ export async function dispatchChunk(req: ChunkRequest) {',
+            '   const traceId = ensureTraceId(req);',
+            '-  return sendLegacyChunk(req.payload);',
+            '+  // ELB-001: route through idempotent retry queue',
+            '+  return retryQueue.enqueue(traceId, req.payload);',
+            ' }'
+          ].join('\n');
+      return {
+        ok: true,
+        seatId,
+        dirName,
+        file: rel,
+        truncated: false,
+        redacted: false,
+        stat: ` ${rel || 'src/core/dispatcher.ts'} | 7 +++++--\n 1 file changed, 5 insertions(+), 2 deletions(-)`,
+        diff: sampleDiff
+      };
+    }
+
+    async function openGitDiffModal(seatId, file = '') {
+      const sid = String(seatId || '').trim();
+      const relFile = String(file || '').trim();
+      if (!sid) return;
+      const overlay = document.getElementById('gitDiffModal');
+      const bodyEl = document.getElementById('gitDiffModalBody');
+      const titleEl = document.getElementById('gitDiffModalTitle');
+      if (!overlay || !bodyEl) return;
+
+      if (titleEl) {
+        titleEl.textContent = `${td('git.modalTitle')} • ${shortSeat(sid)}${relFile ? ` • ${relFile}` : ''}`;
+      }
+      bodyEl.innerHTML = `<div style="font-family:var(--font-mono); font-size:12px; color:#94a3b8; padding:16px 4px;">⏳ ${escapeHtml(td('git.loadingDiff'))}</div>`;
+      overlay.classList.add('open');
+
+      try {
+        let data = null;
+        if (IS_LIVE) {
+          const qs = new URLSearchParams({ seat: sid });
+          if (relFile) qs.set('file', relFile);
+          const res = await fetch(`/api/git/diff?${qs.toString()}`, { cache: 'no-store' });
+          const json = await res.json();
+          if (res.ok && json && json.ok) data = json;
+          else throw new Error((json && json.error) || `HTTP ${res.status}`);
+        } else {
+          data = buildDemoGitDiff(sid, relFile);
+        }
+        renderGitDiffModalContent(sid, relFile, data);
+      } catch (err) {
+        bodyEl.innerHTML = `<div style="font-family:var(--font-mono); font-size:12px; color:#fda4af; padding:12px; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.35); border-radius:7px;">⚠️ ${escapeHtml(err.message || 'Failed to load git diff')}</div>`;
+      }
+    }
+
+    function renderGitDiffModalContent(seatId, activeFile, data) {
+      const bodyEl = document.getElementById('gitDiffModalBody');
+      if (!bodyEl) return;
+      const agent = AGENTS.find(a => a.id === seatId);
+      const g = (agent && agent.git) || (window.LIVE_GIT_RADAR && window.LIVE_GIT_RADAR.bySeatId && window.LIVE_GIT_RADAR.bySeatId[seatId]) || null;
+      const conflictSet = new Set((g && g.conflictFiles) || []);
+      const dirtyFiles = ((g && Array.isArray(g.files)) ? g.files.map(f => (typeof f === 'string' ? f : f && f.path)).filter(Boolean) : []).slice(0, 14);
+
+      const fileChipsHtml = dirtyFiles.length > 0
+        ? `<div class="git-file-pills" style="margin-bottom:10px;">
+            <button type="button" class="git-file-pill ${!activeFile ? 'is-active' : ''}" data-seat="${escapeHtml(seatId)}" onclick="openGitDiffModal(this.getAttribute('data-seat'), '')">${escapeHtml(td('git.allFiles'))}</button>
+            ${dirtyFiles.map(fp => {
+              const isConf = conflictSet.has(fp);
+              const isAct = activeFile === fp;
+              return `<button type="button" class="git-file-pill ${isConf ? 'is-conflict' : ''} ${isAct ? 'is-active' : ''}" title="${escapeHtml(fp)}" data-seat="${escapeHtml(seatId)}" data-file="${escapeHtml(fp)}" onclick="openGitDiffModal(this.getAttribute('data-seat'), this.getAttribute('data-file'))">${isConf ? '⚔️ ' : ''}${escapeHtml(fp)}</button>`;
+            }).join('')}
+          </div>`
+        : '';
+
+      const notices = [];
+      if (data.redacted) {
+        notices.push(`<div class="git-conflict-banner is-warn" style="margin-bottom:8px;">${escapeHtml(td('git.redactedNote'))}</div>`);
+      }
+      if (data.truncated) {
+        notices.push(`<div style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; margin-bottom:8px;">ℹ️ ${escapeHtml(td('git.truncatedNote'))}</div>`);
+      }
+
+      const metaBar = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:10px; font-family:var(--font-mono); font-size:11px; color:#94a3b8;">
+          <span>📂 <b style="color:#e2e8f0;">${escapeHtml(data.dirName || (g && g.dirName) || seatId)}</b>${g && g.branch ? ` • ⎇ <b style="color:#7dd3fc;">${escapeHtml(g.branch)}</b>` : ''}</span>
+          ${data.file ? `<span style="color:#fde68a;">${escapeHtml(data.file)}</span>` : ''}
+        </div>
+      `;
+
+      const statHtml = data.stat
+        ? `<pre style="margin:0 0 10px 0; padding:8px 10px; border-radius:6px; background:rgba(15,23,42,0.72); border:1px solid rgba(56,189,248,0.18); font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; overflow-x:auto;">${escapeHtml(data.stat)}</pre>`
+        : '';
+
+      const diffBody = data.diff && data.diff.trim()
+        ? `<pre class="git-diff-pre">${renderGitDiffLinesHtml(data.diff)}</pre>`
+        : `<div style="padding:18px; text-align:center; font-family:var(--font-mono); font-size:12px; color:#94a3b8; background:rgba(15,23,42,0.5); border-radius:8px;">${escapeHtml(td('git.emptyDiff'))}</div>`;
+
+      bodyEl.innerHTML = `${metaBar}${fileChipsHtml}${notices.join('')}${statHtml}${diffBody}`;
+    }
+
+    // ===== Shift Catch-Up / Overnight Digest UI (Iteration 2 / ADR-0014) =====
+    const SHIFT_LAST_SEEN_KEY = 'rigcommander_last_seen_v1';
+    let shiftSessionPrevVisitMs = 0;
+    try {
+      const prevSeen = Number(localStorage.getItem(SHIFT_LAST_SEEN_KEY) || 0);
+      const nowInit = Date.now();
+      if (Number.isFinite(prevSeen) && prevSeen > 0 && nowInit - prevSeen >= 10 * 60 * 1000 && nowInit - prevSeen <= 7 * 24 * 3600 * 1000) {
+        shiftSessionPrevVisitMs = prevSeen;
+      }
+      localStorage.setItem(SHIFT_LAST_SEEN_KEY, String(nowInit));
+    } catch {}
+    window.addEventListener('beforeunload', () => {
+      try { localStorage.setItem(SHIFT_LAST_SEEN_KEY, String(Date.now())); } catch {}
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        try { localStorage.setItem(SHIFT_LAST_SEEN_KEY, String(Date.now())); } catch {}
+      }
+    });
+
+    let activeDigestWindow = 8; // 'visit' | 1 | 4 | 8 | 24
+    let activeDigestFilter = 'all'; // 'all' | 'critical' | 'operator_action' | 'git_alert' | 'ctx_event'
+    let lastLoadedShiftDigest = null;
+    let lastLoadedShiftMarkdown = '';
+
+    function updateShiftDigestBadge() {
+      const badge = document.getElementById('btnShiftDigestBadge');
+      if (!badge) return;
+      const meta = window.LIVE_SHIFT_META;
+      const crit = (meta && Number(meta.criticalLast1h)) || 0;
+      if (crit > 0) {
+        badge.textContent = String(crit > 99 ? '99+' : crit);
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function closeShiftDigestModal() {
+      const overlay = document.getElementById('shiftDigestModal');
+      if (overlay) overlay.classList.remove('open');
+    }
+
+    function setShiftDigestWindow(win) {
+      activeDigestWindow = win === 'visit' ? 'visit' : (Number(win) || 8);
+      refreshShiftDigestModal();
+    }
+
+    function setShiftDigestFilter(filterKey) {
+      activeDigestFilter = filterKey || 'all';
+      if (lastLoadedShiftDigest) renderShiftDigestModalContent(lastLoadedShiftDigest);
+    }
+
+    function copyShiftDigestMarkdown() {
+      const md = lastLoadedShiftMarkdown || (typeof formatShiftDigestMarkdown === 'function' && lastLoadedShiftDigest ? formatShiftDigestMarkdown(lastLoadedShiftDigest, deckLang) : '');
+      if (!md) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(md).then(() => {
+          if (typeof showToast === 'function') showToast(td('digest.copiedMd'));
+        }).catch(() => copyCmd(md));
+      } else {
+        copyCmd(md);
+      }
+    }
+
+    function dispatchShiftAttentionAction(transport, seatId, payload) {
+      closeShiftDigestModal();
+      if (transport === 'modal_terminal' && seatId) {
+        selectAgent(seatId);
+        openTerminalModal(seatId);
+      } else if (transport === 'git_diff' && seatId) {
+        openGitDiffModal(seatId, payload || '');
+      } else if (seatId) {
+        selectAgent(seatId);
+      }
+    }
+
+    function buildDemoShiftDigestPayload(windowHours, sinceMs) {
+      if (typeof buildShiftDigest !== 'function') return null;
+      const snap = window.ONTOLOGY_SNAPSHOT || {};
+      const demoNodes = AGENTS.map(a => ({
+        canonicalSessionName: a.id,
+        rigId: a.id.includes('@') ? a.id.split('@')[1] : 'core-platform',
+        activityState: {
+          display: a.state === 'urgent' ? 'needs-input' : (a.state === 'working' ? 'working' : 'idle'),
+          needsInput: a.state === 'urgent' ? { count: 1, reason: a.needsInputReason || 'permission_prompt' } : { count: 0 },
+          shellExited: Boolean(a.shellExited)
+        },
+        contextUsage: typeof a.ctxPct === 'number' ? { usedPercentage: a.ctxPct } : null,
+        parkedData: a.parkedData || null,
+        assignedWorkCount: a.assignedWorkCount || 0
+      }));
+      const digest = buildShiftDigest({
+        windowHours,
+        sinceMs,
+        nowMs: Date.now(),
+        rigFilter: currentRigFilter,
+        events: Array.isArray(window.DEMO_SHIFT_EVENTS) ? window.DEMO_SHIFT_EVENTS : [],
+        ganttItems: typeof getGanttItems === 'function' ? getGanttItems() : (Array.isArray(window.LIVE_GANTT) ? window.LIVE_GANTT : []),
+        activeQueue: Array.isArray(LIVE_OPEN_QUEUE) ? LIVE_OPEN_QUEUE : [],
+        decisions: Array.isArray(RECENT_DECISIONS) ? RECENT_DECISIONS : [],
+        nodes: demoNodes,
+        seatUsage: window.LIVE_SEAT_USAGE || {},
+        fleetUsageSummary: window.LIVE_FLEET_USAGE || {},
+        gitRadar: window.LIVE_GIT_RADAR || null,
+        actionAudit: Array.isArray(snap.actionRecords) ? snap.actionRecords : [],
+        intelligence: window.LIVE_INTELLIGENCE || null,
+        historyMeta: {
+          fileName: 'shift-events.jsonl',
+          totalStored: (window.DEMO_SHIFT_EVENTS || []).length
+        }
+      });
+      const markdown = typeof formatShiftDigestMarkdown === 'function' ? formatShiftDigestMarkdown(digest, deckLang) : '';
+      return { ok: true, digest, markdown };
+    }
+
+    async function openShiftDigestModal(windowOpt = null) {
+      if (windowOpt !== null && windowOpt !== undefined) {
+        activeDigestWindow = windowOpt === 'visit' ? 'visit' : (Number(windowOpt) || 8);
+      } else if (shiftSessionPrevVisitMs > 0) {
+        activeDigestWindow = 'visit';
+      }
+      const overlay = document.getElementById('shiftDigestModal');
+      if (overlay) overlay.classList.add('open');
+      await refreshShiftDigestModal();
+    }
+
+    async function refreshShiftDigestModal() {
+      const bodyEl = document.getElementById('shiftDigestModalBody');
+      if (!bodyEl) return;
+      bodyEl.innerHTML = `<div style="font-family:var(--font-mono); font-size:12px; color:#94a3b8; padding:18px 4px;">⏳ ${escapeHtml(td('digest.loading'))}</div>`;
+
+      const useVisit = activeDigestWindow === 'visit' && shiftSessionPrevVisitMs > 0;
+      const hours = useVisit ? 8 : (Number(activeDigestWindow) || 8);
+      const sinceMs = useVisit ? shiftSessionPrevVisitMs : 0;
+
+      try {
+        let data = null;
+        if (IS_LIVE) {
+          const qs = new URLSearchParams({ hours: String(hours), rig: currentRigFilter, lang: deckLang });
+          if (sinceMs > 0) qs.set('sinceMs', String(sinceMs));
+          const res = await fetch(`/api/digest?${qs.toString()}`, { cache: 'no-store' });
+          const json = await res.json();
+          if (res.ok && json && json.ok && json.digest) data = json;
+          else throw new Error((json && json.error) || `HTTP ${res.status}`);
+        } else {
+          data = buildDemoShiftDigestPayload(hours, sinceMs);
+        }
+        if (!data || !data.digest) throw new Error('Digest unavailable');
+        lastLoadedShiftDigest = data.digest;
+        lastLoadedShiftMarkdown = data.markdown || '';
+        renderShiftDigestModalContent(data.digest);
+      } catch (err) {
+        bodyEl.innerHTML = `<div style="font-family:var(--font-mono); font-size:12px; color:#fda4af; padding:12px; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.35); border-radius:7px;">⚠️ ${escapeHtml(err.message || 'Failed to load shift digest')}</div>`;
+      }
+    }
+
+    function renderShiftDigestModalContent(digest) {
+      const bodyEl = document.getElementById('shiftDigestModalBody');
+      if (!bodyEl || !digest) return;
+      const k = digest.kpis || {};
+
+      const winButtons = [];
+      if (shiftSessionPrevVisitMs > 0) {
+        winButtons.push(['visit', `⏱ ${td('digest.winVisit')}`]);
+      }
+      winButtons.push([1, td('digest.win1h')], [4, td('digest.win4h')], [8, td('digest.win8h')], [24, td('digest.win24h')]);
+
+      const windowBarHtml = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; font-family:var(--font-mono); font-size:11px;">
+          <div style="display:inline-flex; gap:4px; flex-wrap:wrap;">
+            ${winButtons.map(([wk, lbl]) => `
+              <button type="button" class="hud-segment-btn ${String(activeDigestWindow) === String(wk) ? 'active' : ''}" data-digest-win="${escapeHtml(String(wk))}" onclick="setShiftDigestWindow(${typeof wk === 'number' ? wk : `'${wk}'`})">${escapeHtml(lbl)}</button>
+            `).join('')}
+          </div>
+          <span style="color:#64748b; font-size:10.5px;">
+            ${escapeHtml(new Date(digest.cutoffIso).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit' }))} → ${escapeHtml(new Date(digest.nowIso).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit' }))}
+          </span>
+        </div>
+      `;
+
+      const kpisHtml = `
+        <div class="digest-kpi-grid">
+          <div class="digest-kpi is-ok">
+            <div style="font-size:10px; color:#94a3b8;">${escapeHtml(td('digest.kpiDone'))}</div>
+            <div style="font-size:18px; font-weight:800; color:#6ee7b7; margin-top:2px;">${k.completedSlicesCount || 0} <span style="font-size:11px; color:#94a3b8;">(${k.activeSlicesCount || 0} act)</span></div>
+          </div>
+          <div class="digest-kpi ${(k.openAttentionNowCount || 0) > 0 ? 'is-danger' : 'is-ok'}">
+            <div style="font-size:10px; color:#94a3b8;">${escapeHtml(td('digest.kpiNow'))}</div>
+            <div style="font-size:18px; font-weight:800; color:${(k.openAttentionNowCount || 0) > 0 ? '#fda4af' : '#6ee7b7'}; margin-top:2px;">${k.openAttentionNowCount || 0} <span style="font-size:11px; color:#fecdd3;">(P0: ${k.p0NowCount || 0})</span></div>
+          </div>
+          <div class="digest-kpi">
+            <div style="font-size:10px; color:#94a3b8;">${escapeHtml(td('digest.kpiIncidents'))}</div>
+            <div style="font-size:18px; font-weight:800; color:#fde68a; margin-top:2px;">${k.incidentsCount || 0}</div>
+          </div>
+          <div class="digest-kpi">
+            <div style="font-size:10px; color:#94a3b8;">${escapeHtml(td('digest.kpiActions'))}</div>
+            <div style="font-size:18px; font-weight:800; color:#7dd3fc; margin-top:2px;">${k.actionsCount || 0} <span style="font-size:11px; color:#6ee7b7;">(${k.verifiedActionsCount || 0}✓ · ${k.compactionsCount || 0}c)</span></div>
+          </div>
+          <div class="digest-kpi">
+            <div style="font-size:10px; color:#94a3b8;">${escapeHtml(td('digest.kpiSpend'))}</div>
+            <div style="font-size:17px; font-weight:800; color:#fde68a; margin-top:2px;">~$${(k.spendUsd || 0).toFixed(2)}</div>
+            <div style="font-size:9.5px; color:#64748b;">${formatTokensShort(k.totalTokens || 0)} • ${escapeHtml(k.spendSource === 'checkpoints' ? td('digest.spendDelta') : td('digest.spend24h'))}</div>
+          </div>
+        </div>
+      `;
+
+      const attnItems = Array.isArray(digest.openAttentionNow) ? digest.openAttentionNow : [];
+      const attentionHtml = `
+        <div class="digest-sec-title" style="color:${attnItems.length > 0 ? '#fda4af' : '#6ee7b7'};">
+          <span>${escapeHtml(td('digest.secAttention'))} (${attnItems.length})</span>
+        </div>
+        ${attnItems.length === 0
+          ? `<div style="padding:10px 12px; font-family:var(--font-mono); font-size:11.5px; color:#86efac; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.28); border-radius:7px;">${escapeHtml(td('digest.allQuietNow'))}</div>`
+          : `<div style="display:flex; flex-direction:column; gap:6px;">
+              ${attnItems.map(item => {
+                const btnLabel = item.actionTransport === 'modal_terminal'
+                  ? td('digest.openScreen')
+                  : (item.actionTransport === 'git_diff' ? td('git.diffBtn') : td('digest.openSeat'));
+                return `
+                  <div class="digest-attn-card ${item.severity === 'p1' ? 'is-p1' : ''}">
+                    <div style="min-width:0; flex:1;">
+                      <div style="font-size:11.5px; font-weight:800; color:#fff;">
+                        <span style="color:${item.severity === 'p0' ? '#fda4af' : '#fde68a'};">[${escapeHtml(String(item.severity || 'p1').toUpperCase())}]</span>
+                        ${escapeHtml(item.title)}
+                      </div>
+                      <div style="font-size:10.5px; color:#cbd5e1; margin-top:2px;">${escapeHtml(item.detail || '')}</div>
+                    </div>
+                    ${item.seatId ? `<button type="button" class="action-pill" style="white-space:nowrap; font-size:10px;" data-tr="${escapeHtml(item.actionTransport || 'select_seat')}" data-seat="${escapeHtml(item.seatId)}" data-pl="${escapeHtml(item.actionPayload || '')}" onclick="dispatchShiftAttentionAction(this.getAttribute('data-tr'), this.getAttribute('data-seat'), this.getAttribute('data-pl'))">${escapeHtml(btnLabel)}</button>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>`
+        }
+      `;
+
+      const slices = Array.isArray(digest.completedSlices) ? digest.completedSlices : [];
+      const decisions = Array.isArray(digest.recentDecisions) ? digest.recentDecisions : [];
+      const completedHtml = `
+        <div class="digest-sec-title">
+          <span>${escapeHtml(td('digest.secCompleted'))} (${slices.length}${decisions.length ? ` · ${decisions.length} dec` : ''})</span>
+        </div>
+        ${slices.length === 0 && decisions.length === 0
+          ? `<div style="padding:10px 12px; font-family:var(--font-mono); font-size:11px; color:#94a3b8; background:rgba(15,23,42,0.5); border-radius:7px;">${escapeHtml(td('digest.noSlices'))}</div>`
+          : `<div class="digest-slice-grid">
+              ${slices.map(s => `
+                <div class="digest-slice-card">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                    <span style="font-size:11.5px; font-weight:800; color:#6ee7b7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(s.slice)}">✅ ${escapeHtml(s.slice)}</span>
+                    <button type="button" class="action-pill" style="padding:1px 6px; font-size:9.5px; white-space:nowrap;" data-slice="${escapeHtml(s.slice)}" onclick="closeShiftDigestModal(); openSliceOnGantt(this.getAttribute('data-slice'))">${escapeHtml(td('digest.openGantt'))}</button>
+                  </div>
+                  <div style="font-size:10px; color:#94a3b8;">${s.doneCount} handoffs${s.seats && s.seats.length ? ` · ${escapeHtml(s.seats.join(', '))}` : ''}</div>
+                  ${s.latestSummary ? `<div style="font-size:10.5px; color:#cbd5e1; line-height:1.35;">${escapeHtml(s.latestSummary)}</div>` : ''}
+                </div>
+              `).join('')}
+              ${decisions.slice(0, 4).map(d => `
+                <div class="digest-slice-card" style="border-color:rgba(56,189,248,0.28);">
+                  <div style="font-size:11px; font-weight:800; color:#7dd3fc;">🧭 ${escapeHtml(d.scope || 'decision')}</div>
+                  <div style="font-size:10.5px; color:#e2e8f0; line-height:1.35;">${escapeHtml(d.title)}</div>
+                </div>
+              `).join('')}
+            </div>`
+        }
+      `;
+
+      const allEvents = Array.isArray(digest.timeline) ? digest.timeline : [];
+      const filteredEvents = allEvents.filter(ev => {
+        if (activeDigestFilter === 'all') return true;
+        if (activeDigestFilter === 'critical') return ev.severity === 'critical' || ev.severity === 'warn';
+        return ev.kind === activeDigestFilter;
+      });
+      const filterChips = [
+        ['all', `${td('digest.filterAll')} (${allEvents.length})`],
+        ['critical', td('digest.filterCrit')],
+        ['operator_action', td('digest.filterActions')],
+        ['git_alert', td('digest.filterGit')],
+        ['ctx_event', td('digest.filterCtx')]
+      ];
+      const timelineHtml = `
+        <div class="digest-sec-title">
+          <span>${escapeHtml(td('digest.secTimeline'))}</span>
+          <div style="display:inline-flex; gap:4px; flex-wrap:wrap;">
+            ${filterChips.map(([fk, fl]) => `
+              <button type="button" class="action-pill ${activeDigestFilter === fk ? 'active' : ''}" style="padding:1px 7px; font-size:10px; ${activeDigestFilter === fk ? 'border-color:var(--cyan); color:var(--cyan); background:rgba(0,240,255,0.14);' : ''}" onclick="setShiftDigestFilter('${fk}')">${escapeHtml(fl)}</button>
+            `).join('')}
+          </div>
+        </div>
+        ${filteredEvents.length === 0
+          ? `<div style="padding:12px; font-family:var(--font-mono); font-size:11px; color:#94a3b8; background:rgba(15,23,42,0.5); border-radius:7px;">${escapeHtml(td('digest.noEvents'))}</div>`
+          : `<div class="digest-timeline">
+              ${filteredEvents.map(ev => {
+                const timeTxt = ev.ts ? new Date(ev.ts).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                const kindColor = ev.severity === 'critical' ? '#fda4af' : (ev.severity === 'warn' ? '#fde68a' : (ev.severity === 'success' ? '#6ee7b7' : '#7dd3fc'));
+                return `
+                  <div class="digest-event-row sev-${escapeHtml(ev.severity || 'info')}">
+                    <span style="color:#64748b;">${escapeHtml(timeTxt)}</span>
+                    <span style="color:${kindColor}; font-weight:700; font-size:9.5px; text-transform:uppercase;">${escapeHtml(String(ev.kind || '').replace('_', ' '))}</span>
+                    <div style="min-width:0;">
+                      <div style="color:#e2e8f0; font-weight:700;">${escapeHtml(ev.title || '')}</div>
+                      ${ev.detail ? `<div style="color:#94a3b8; font-size:10px;">${escapeHtml(ev.detail)}</div>` : ''}
+                    </div>
+                    ${ev.seatId ? `<button type="button" class="git-file-pill" data-seat="${escapeHtml(ev.seatId)}" onclick="closeShiftDigestModal(); selectAgent(this.getAttribute('data-seat'))">${escapeHtml(shortSeat(ev.seatId))}</button>` : '<span></span>'}
+                  </div>
+                `;
+              }).join('')}
+            </div>`
+        }
+      `;
+
+      const hMeta = digest.historyMeta || window.LIVE_SHIFT_META || { fileName: 'shift-events.jsonl', totalStored: allEvents.length };
+      const footerHtml = `
+        <div class="digest-footer-meta">
+          <span>💾 ${escapeHtml(td('digest.persistedFooter', { file: hMeta.fileName || 'shift-events.jsonl', n: hMeta.totalStored || 0 }))}</span>
+          <span>${escapeHtml(digest.rigFilter === 'all' ? td('hud.allRigs') : digest.rigFilter)}</span>
+        </div>
+      `;
+
+      bodyEl.innerHTML = `${windowBarHtml}${kpisHtml}${attentionHtml}${completedHtml}${timelineHtml}${footerHtml}`;
+    }
+
+    // ===== Command Palette (⌘K) + Safe Queue Triage (Iteration 3 / ADR-0015) =====
+    const PALETTE_RECENT_KEY = 'rigcommander_palette_recent_v1';
+    const PALETTE_ARM_TTL_MS = 6000;
+    let paletteQuery = '';
+    let paletteResults = [];
+    let paletteActiveIdx = 0;
+    let paletteArmed = null; // { id, at }
+    let paletteRecent = [];
+    let paletteIndexCache = null;
+    try {
+      const rawRecent = JSON.parse(localStorage.getItem(PALETTE_RECENT_KEY) || '[]');
+      paletteRecent = Array.isArray(rawRecent) ? rawRecent.filter(x => typeof x === 'string').slice(0, 8) : [];
+    } catch {}
+
+    function getPaletteSeatSummaries() {
+      return AGENTS.map(a => ({
+        id: a.id,
+        state: a.state,
+        shellExited: Boolean(a.shellExited),
+        parked: Boolean(a.parkedData && a.parkedData.parked),
+        needsInputCount: a.needsInputCount || 0,
+        ctxPct: typeof a.ctxPct === 'number' ? a.ctxPct : null,
+        role: typeof formatRoleForRig === 'function' ? formatRoleForRig(a.role || '') : (a.role || ''),
+        icon: a.icon || '🤖',
+        harness: a.harness || '',
+        model: a.model || ''
+      })).filter(s => currentRigFilter === 'all' || s.id.endsWith('@' + currentRigFilter));
+    }
+
+    function getPaletteOpenQueue() {
+      if (IS_LIVE) return Array.isArray(LIVE_OPEN_QUEUE) ? LIVE_OPEN_QUEUE : [];
+      return Array.isArray(window.DEMO_OPEN_QUEUE) ? window.DEMO_OPEN_QUEUE : [];
+    }
+
+    function computeQueueTriageNow() {
+      if (typeof triageQueueItems !== 'function') return null;
+      // Triage must know ALL fleet seats, including infra/kernel seats hidden from the graph,
+      // otherwise items addressed to them are falsely reported as "orphaned".
+      const seatMap = new Map();
+      const rawNodes = IS_LIVE && Array.isArray(window.LIVE_RAW_NODES) ? window.LIVE_RAW_NODES : [];
+      for (const n of rawNodes) {
+        const id = n && n.canonicalSessionName;
+        if (!id) continue;
+        const disp = (n.activityState && n.activityState.display) || '';
+        seatMap.set(id, {
+          id,
+          state: disp === 'needs-input' ? 'urgent' : (disp === 'working' || disp === 'running' ? 'working' : 'idle'),
+          shellExited: false,
+          parked: false,
+          needsInputCount: (n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0,
+          sessionStatus: n.sessionStatus || '',
+          intentionallyStopped: Boolean(n.intentionallyStopped)
+        });
+      }
+      for (const a of AGENTS) {
+        const base = seatMap.get(a.id) || {};
+        seatMap.set(a.id, {
+          ...base,
+          id: a.id,
+          state: a.state,
+          shellExited: Boolean(a.shellExited),
+          parked: Boolean(a.parkedData && a.parkedData.parked),
+          needsInputCount: a.needsInputCount || 0
+        });
+      }
+      return triageQueueItems({
+        openQueue: getPaletteOpenQueue(),
+        seats: Array.from(seatMap.values()),
+        nowMs: Date.now(),
+        lang: deckLang,
+        rigFilter: currentRigFilter
+      });
+    }
+
+    function updatePaletteTriageBadge(triage) {
+      const badge = document.getElementById('btnPaletteTriageBadge');
+      if (!badge) return;
+      const tri = triage || computeQueueTriageNow();
+      const urgent = tri ? (tri.counts.p0 + tri.counts.p1) : 0;
+      if (urgent > 0) {
+        badge.textContent = String(urgent > 99 ? '99+' : urgent);
+        badge.style.display = 'inline-flex';
+        badge.title = td('palette.triageBadgeTip', { n: urgent }) + (tri.noiseCount ? ` • ${td('palette.noiseHidden', { n: tri.noiseCount })}` : '');
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function buildPaletteIndexNow() {
+      if (typeof buildPaletteIndex !== 'function') return [];
+      const triage = computeQueueTriageNow();
+      updatePaletteTriageBadge(triage);
+      const ganttSlices = (typeof getGanttItems === 'function' ? getGanttItems() : [])
+        .map(it => String((it && (it.slice || it.chain)) || '').replace(/^slice:/, '').trim())
+        .filter(s => s && !/^q:|stuck-sweep|change-detector|opgate/i.test(s));
+      const slices = Array.from(new Set(ganttSlices));
+      const intel = window.LIVE_INTELLIGENCE || {};
+      const findings = Array.isArray(intel.allFindings) ? intel.allFindings : (Array.isArray(intel.findings) ? intel.findings : []);
+      return buildPaletteIndex({
+        seats: getPaletteSeatSummaries(),
+        triage,
+        slices,
+        findings,
+        lang: deckLang,
+        isLive: IS_LIVE
+      });
+    }
+
+    function openCommandPalette(initialQuery = '') {
+      const overlay = document.getElementById('commandPalette');
+      const input = document.getElementById('paletteInput');
+      if (!overlay || !input) return;
+      paletteIndexCache = buildPaletteIndexNow();
+      paletteQuery = String(initialQuery || '');
+      paletteActiveIdx = 0;
+      paletteArmed = null;
+      input.value = paletteQuery;
+      input.placeholder = td('palette.placeholder');
+      overlay.classList.add('open');
+      renderCommandPalette();
+      setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 0);
+    }
+
+    function closeCommandPalette() {
+      const overlay = document.getElementById('commandPalette');
+      if (!overlay || !overlay.classList.contains('open')) return;
+      overlay.classList.remove('open');
+      paletteArmed = null;
+    }
+
+    function onPaletteInput(val) {
+      paletteQuery = String(val || '');
+      paletteActiveIdx = 0;
+      paletteArmed = null;
+      renderCommandPalette();
+    }
+
+    function setPaletteScope(prefix) {
+      const input = document.getElementById('paletteInput');
+      const parsed = typeof parsePaletteQuery === 'function' ? parsePaletteQuery(paletteQuery) : { text: paletteQuery };
+      paletteQuery = `${prefix}${parsed.text ? parsed.text : ''}`;
+      if (input) { input.value = paletteQuery; input.focus(); }
+      paletteActiveIdx = 0;
+      paletteArmed = null;
+      renderCommandPalette();
+    }
+
+    function highlightPaletteTitle(title, indices) {
+      const str = String(title || '');
+      if (!Array.isArray(indices) || indices.length === 0) return escapeHtml(str);
+      const set = new Set(indices);
+      let out = '';
+      for (let i = 0; i < str.length; i++) {
+        const ch = escapeHtml(str.charAt(i));
+        out += set.has(i) ? `<mark>${ch}</mark>` : ch;
+      }
+      return out;
+    }
+
+    function renderCommandPalette() {
+      const resultsEl = document.getElementById('paletteResults');
+      const scopeBar = document.getElementById('paletteScopeBar');
+      const scopeChip = document.getElementById('paletteScopeChip');
+      const footer = document.getElementById('paletteFooter');
+      if (!resultsEl) return;
+      const items = paletteIndexCache || [];
+      paletteResults = typeof rankPaletteItems === 'function'
+        ? rankPaletteItems(items, paletteQuery, { limit: 40, recentIds: paletteRecent })
+        : [];
+      if (paletteActiveIdx >= paletteResults.length) paletteActiveIdx = Math.max(0, paletteResults.length - 1);
+
+      const parsed = typeof parsePaletteQuery === 'function' ? parsePaletteQuery(paletteQuery) : { scope: 'all' };
+      const scopes = [
+        ['', 'all', td('palette.scopeAll')],
+        ['>', 'action', td('palette.scopeActions')],
+        ['@', 'seat', td('palette.scopeSeats')],
+        ['#', 'queue', td('palette.scopeQueue')],
+        ['/', 'nav', td('palette.scopeNav')]
+      ];
+      if (scopeBar) {
+        scopeBar.innerHTML = scopes.map(([pfx, sc, lbl]) => {
+          const count = sc === 'all' ? items.length : items.filter(i => i.kind === sc).length;
+          return `<button type="button" class="palette-scope-btn ${parsed.scope === sc ? 'active' : ''}" data-scope="${sc}" onclick="setPaletteScope('${pfx}')"><b>${pfx || '∗'}</b> ${escapeHtml(lbl)} <span>${count}</span></button>`;
+        }).join('');
+      }
+      if (scopeChip) {
+        scopeChip.textContent = parsed.scope === 'all' ? '' : parsed.scope.toUpperCase();
+        scopeChip.style.display = parsed.scope === 'all' ? 'none' : 'inline-flex';
+      }
+
+      if (paletteResults.length === 0) {
+        const emptyQueue = parsed.scope === 'queue';
+        resultsEl.innerHTML = `<div class="palette-empty">${escapeHtml(emptyQueue ? td('palette.queueClean') : td('palette.noResults'))}</div>`;
+      } else {
+        const groupLabels = {
+          triage: td('palette.groupTriage'),
+          queue: td('palette.groupQueue'),
+          actions: td('palette.groupActions'),
+          seats: td('palette.groupSeats'),
+          findings: td('palette.groupFindings'),
+          slices: td('palette.groupSlices'),
+          navigate: td('palette.groupNav')
+        };
+        const showGroups = !parsed.text;
+        let lastGroup = '';
+        resultsEl.innerHTML = paletteResults.map((it, idx) => {
+          const isActive = idx === paletteActiveIdx;
+          const isArmed = paletteArmed && paletteArmed.id === it.id && Date.now() - paletteArmed.at < PALETTE_ARM_TTL_MS;
+          let header = '';
+          if (showGroups && it.group !== lastGroup) {
+            lastGroup = it.group;
+            header = `<div class="palette-group-label">${escapeHtml(groupLabels[it.group] || it.group)}</div>`;
+          }
+          const sevCls = it.severity ? ` sev-${it.severity}` : '';
+          const riskBadge = it.risk === 'write'
+            ? `<span class="palette-risk-badge" title="${escapeHtml(td('palette.writeTip'))}">✍ ${escapeHtml(td('palette.writeBadge'))}</span>`
+            : '';
+          const recentBadge = !parsed.text && paletteRecent.includes(it.id) ? `<span class="palette-recent-badge">↺</span>` : '';
+          return `${header}
+            <div class="palette-item${isActive ? ' active' : ''}${isArmed ? ' armed' : ''}${sevCls}" role="option" aria-selected="${isActive}" data-idx="${idx}" data-id="${escapeHtml(it.id)}"
+                 onmousemove="setPaletteActive(${idx}, true)" onclick="executePaletteItem(${idx}, event)">
+              <span class="palette-item-ico">${escapeHtml(it.icon || '•')}</span>
+              <div class="palette-item-main">
+                <div class="palette-item-title">${highlightPaletteTitle(it.title, it.matchIndices)}</div>
+                ${isArmed
+                  ? `<div class="palette-item-sub palette-armed-sub">${escapeHtml(td('palette.confirmHint', { seat: shortSeat(it.action.seatId || '') }))}</div>`
+                  : (it.subtitle ? `<div class="palette-item-sub">${escapeHtml(it.subtitle)}</div>` : '')}
+              </div>
+              ${recentBadge}${riskBadge}
+            </div>`;
+        }).join('');
+        const activeEl = resultsEl.querySelector('.palette-item.active');
+        if (activeEl && activeEl.scrollIntoView) activeEl.scrollIntoView({ block: 'nearest' });
+      }
+
+      if (footer) {
+        footer.innerHTML = `
+          <span><kbd>↑</kbd><kbd>↓</kbd> ${escapeHtml(td('palette.kbNav'))}</span>
+          <span><kbd>↵</kbd> ${escapeHtml(td('palette.kbRun'))}</span>
+          <span><kbd>⇧↵</kbd> ${escapeHtml(td('palette.kbSeat'))}</span>
+          <span><kbd>Esc</kbd> ${escapeHtml(td('palette.kbClose'))}</span>
+          <span style="margin-left:auto; color:#64748b;">${escapeHtml(td('palette.safeNote'))}</span>
+        `;
+      }
+    }
+
+    function setPaletteActive(idx, fromMouse = false) {
+      if (idx === paletteActiveIdx) return;
+      paletteActiveIdx = Math.max(0, Math.min(paletteResults.length - 1, idx));
+      if (!fromMouse) paletteArmed = null;
+      const resultsEl = document.getElementById('paletteResults');
+      if (!resultsEl) return;
+      resultsEl.querySelectorAll('.palette-item').forEach(el => {
+        const on = Number(el.getAttribute('data-idx')) === paletteActiveIdx;
+        el.classList.toggle('active', on);
+        el.setAttribute('aria-selected', String(on));
+        if (on && !fromMouse && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+      });
+    }
+
+    function onPaletteKeydown(e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setPaletteActive(paletteActiveIdx + 1 >= paletteResults.length ? 0 : paletteActiveIdx + 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setPaletteActive(paletteActiveIdx - 1 < 0 ? paletteResults.length - 1 : paletteActiveIdx - 1);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          const it = paletteResults[paletteActiveIdx];
+          if (it && it.action && it.action.seatId) {
+            rememberPaletteItem(it.id);
+            closeCommandPalette();
+            selectAgent(it.action.seatId);
+          }
+          return;
+        }
+        executePaletteItem(paletteActiveIdx, e);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (paletteArmed) {
+          paletteArmed = null;
+          renderCommandPalette();
+        } else {
+          closeCommandPalette();
+        }
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const order = ['', '>', '@', '#', '/'];
+        const parsed = typeof parsePaletteQuery === 'function' ? parsePaletteQuery(paletteQuery) : { scope: 'all' };
+        const curIdx = Math.max(0, ['all', 'action', 'seat', 'queue', 'nav'].indexOf(parsed.scope));
+        const nextIdx = (curIdx + (e.shiftKey ? order.length - 1 : 1)) % order.length;
+        setPaletteScope(order[nextIdx]);
+      }
+    }
+
+    function rememberPaletteItem(id) {
+      if (typeof pushRecentPaletteId !== 'function') return;
+      paletteRecent = pushRecentPaletteId(paletteRecent, id);
+      try { localStorage.setItem(PALETTE_RECENT_KEY, JSON.stringify(paletteRecent)); } catch {}
+    }
+
+    function executePaletteItem(idx, ev) {
+      const it = paletteResults[idx];
+      if (!it || !it.action) return;
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+      paletteActiveIdx = idx;
+
+      // Two-step confirmation for any write-back action (no single-keystroke terminal writes)
+      if (it.risk === 'write') {
+        const armedValid = paletteArmed && paletteArmed.id === it.id && Date.now() - paletteArmed.at < PALETTE_ARM_TTL_MS;
+        if (!armedValid) {
+          paletteArmed = { id: it.id, at: Date.now() };
+          renderCommandPalette();
+          setTimeout(() => {
+            if (paletteArmed && paletteArmed.id === it.id && Date.now() - paletteArmed.at >= PALETTE_ARM_TTL_MS) {
+              paletteArmed = null;
+              const pal = document.getElementById('commandPalette');
+              if (pal && pal.classList.contains('open')) renderCommandPalette();
+            }
+          }, PALETTE_ARM_TTL_MS + 50);
+          return;
+        }
+      }
+      paletteArmed = null;
+      rememberPaletteItem(it.id);
+      const { type, seatId, payload } = it.action;
+
+      if (type === 'open_view' && payload === 'queue_triage') {
+        setPaletteScope('#');
+        return;
+      }
+      closeCommandPalette();
+
+      if (type === 'focus_seat' && seatId) {
+        selectAgent(seatId);
+      } else if (type === 'open_screen' && seatId) {
+        selectAgent(seatId);
+        openTerminalModal(seatId);
+      } else if (type === 'open_context' && payload) {
+        openQueueItemContext(payload);
+      } else if (type === 'clipboard' && payload) {
+        copyCmd(payload);
+      } else if (type === 'gantt_slice') {
+        openSliceOnGantt(payload || '');
+      } else if (type === 'nudge_queue' && seatId) {
+        selectAgent(seatId);
+        const desc = buildNudgeQueueAction(seatId, deckLang);
+        sendTerminalRaw(seatId, desc.payload, 'cmdSendStatus', 'nudge_queue');
+      } else if (type === 'compact_context' && seatId) {
+        selectAgent(seatId);
+        triggerEvalSuggestedAction('compact_context', seatId);
+      } else if (type === 'open_view') {
+        runPaletteView(payload);
+      }
+    }
+
+    function runPaletteView(view) {
+      if (view === 'digest') openShiftDigestModal();
+      else if (view === 'advisor') openFleetAdvisorModal('findings');
+      else if (view === 'health') openFleetAdvisorModal('health');
+      else if (view === 'worktrees') openFleetAdvisorModal('worktrees');
+      else if (view === 'budget') openFleetAdvisorModal('budget');
+      else if (view === 'gantt') setCenterView(centerViewMode === 'gantt' ? 'graph' : 'gantt');
+      else if (view === 'guardrails') openGuardrailsModal();
+      else if (view === 'calm') toggleCalmMode();
+      else if (view === 'refresh') refreshTelemetryNow(true);
+      else if (view === 'lang') setDeckLang(deckLang === 'en' ? 'ru' : 'en');
+      else if (view === 'tour') toggleSaTour();
+    }
+
     function buildDemoContextDetail(qitemId) {
       const allDemo = [
         ...LIVE_QITEMS.map(q => ({
@@ -7537,6 +8725,11 @@
           summary: e.summary || '',
           evidenceRef: 'docs/tasks/qa/PROOF.md',
           body: `${e.summary || ''}\n\nTransferred artifacts:\n- Spec: docs/tasks/${e.slice || 'slice'}.md\n- Architecture: ADR-0012\n- Evidence: docs/tasks/qa/PROOF.md`
+        })),
+        ...(Array.isArray(window.DEMO_OPEN_QUEUE) ? window.DEMO_OPEN_QUEUE : []).map(q => ({
+          ...q,
+          tags: [...(q.tags || []), 'project:core-platform'],
+          body: `${q.summary || ''}\n\nShared context references:\n- Spec: docs/tasks/${((q.tags || [])[0] || 'slice:demo').replace('slice:', '')}.md\n- Architecture: ADR-0015`
         }))
       ];
       const hit = allDemo.find(r => r.qitemId === qitemId) || allDemo[0];
@@ -8275,10 +9468,123 @@
 
       window.LIVE_SEAT_USAGE = seatUsage;
       window.LIVE_FLEET_USAGE = fleetUsageSummary;
+
+      let demoGitRadar = null;
+      if (typeof analyzeFleetGitRadar === 'function') {
+        const seatStates = {};
+        for (const a of AGENTS) {
+          seatStates[a.id] = a.state === 'working' ? 'working' : (a.state === 'urgent' ? 'needs-input' : 'idle');
+        }
+        demoGitRadar = analyzeFleetGitRadar([
+          {
+            isGit: true,
+            workspaceId: 'wt-demo-main',
+            repoKey: 'remote:demo/core-platform',
+            repoLabel: 'core-platform',
+            dirName: 'core-platform',
+            isWorktree: false,
+            branch: 'dev',
+            oid: '8a4f21c9',
+            detached: false,
+            ahead: 2,
+            behind: 4,
+            files: [
+              { path: 'src/core/dispatcher.ts', code: '.M', unstaged: true, ins: 28, del: 9 },
+              { path: 'src/core/retry-queue.ts', code: '.M', unstaged: true, ins: 24, del: 6 },
+              { path: 'tests/elb-001.test.ts', code: 'M.', staged: true, ins: 16, del: 4 }
+            ],
+            dirtyCount: 3,
+            stagedCount: 1,
+            unstagedCount: 2,
+            untrackedCount: 0,
+            unmergedCount: 0,
+            insertions: 68,
+            deletions: 19,
+            seatIds: ['dev-owner@core-platform', 'dev-coder@core-platform', 'dev-check@core-platform', 'dev-operator@core-platform', 'dev-senior-architector@core-platform']
+          },
+          {
+            isGit: true,
+            workspaceId: 'wt-demo-coder4',
+            repoKey: 'remote:demo/core-platform',
+            repoLabel: 'core-platform',
+            dirName: 'core-platform-wt-coder4',
+            isWorktree: true,
+            branch: 'feat/tts-strict-chunked',
+            oid: 'd2b9104e',
+            detached: false,
+            ahead: 5,
+            behind: 3,
+            files: [
+              { path: 'src/core/dispatcher.ts', code: '.M', unstaged: true, ins: 41, del: 12 },
+              { path: 'src/tts/chunker.ts', code: '.M', unstaged: true, ins: 73, del: 15 }
+            ],
+            dirtyCount: 2,
+            stagedCount: 0,
+            unstagedCount: 2,
+            untrackedCount: 0,
+            unmergedCount: 0,
+            insertions: 114,
+            deletions: 27,
+            seatIds: ['dev-coder4@core-platform']
+          },
+          {
+            isGit: true,
+            workspaceId: 'wt-demo-coder3',
+            repoKey: 'remote:demo/core-platform',
+            repoLabel: 'core-platform',
+            dirName: 'core-platform-wt-coder3',
+            isWorktree: true,
+            branch: 'feat/pi-worker',
+            oid: '4c10af21',
+            detached: false,
+            ahead: 1,
+            behind: 22,
+            files: [
+              { path: 'src/workers/pi-loop.ts', code: '.M', unstaged: true, ins: 18, del: 6 }
+            ],
+            dirtyCount: 1,
+            stagedCount: 0,
+            unstagedCount: 1,
+            untrackedCount: 0,
+            unmergedCount: 0,
+            insertions: 18,
+            deletions: 6,
+            seatIds: ['dev-coder3@core-platform']
+          },
+          {
+            isGit: true,
+            workspaceId: 'wt-demo-kernel',
+            repoKey: 'remote:demo/openrig-kernel',
+            repoLabel: 'openrig-kernel',
+            dirName: 'openrig-kernel',
+            isWorktree: false,
+            branch: 'main',
+            oid: 'f01bc331',
+            detached: false,
+            ahead: 0,
+            behind: 0,
+            files: [],
+            dirtyCount: 0,
+            stagedCount: 0,
+            unstagedCount: 0,
+            untrackedCount: 0,
+            unmergedCount: 0,
+            insertions: 0,
+            deletions: 0,
+            seatIds: ['operator-agent@kernel']
+          }
+        ], seatStates);
+        for (const a of AGENTS) {
+          a.git = (demoGitRadar.bySeatId && demoGitRadar.bySeatId[a.id]) || null;
+        }
+      }
+      window.LIVE_GIT_RADAR = demoGitRadar;
+
       window.ONTOLOGY_SNAPSHOT = {
         timestamp: new Date(now).toISOString(),
         requestedRig: 'all',
         hasLiveDaemonData: false,
+        gitRadar: demoGitRadar,
         rigs: [
           { rigId: 'core-platform', name: 'core-platform', status: 'running', nodeCount: 8, runningCount: 4 },
           { rigId: 'kernel', name: 'kernel', status: 'running', nodeCount: 1, runningCount: 0 }
@@ -8330,6 +9636,141 @@
           }
         ]
       };
+
+      window.DEMO_SHIFT_EVENTS = [
+        {
+          ts: new Date(now - 6.5 * 3600000).toISOString(),
+          tsMs: now - 6.5 * 3600000,
+          kind: 'checkpoint',
+          severity: 'info',
+          rigId: 'all',
+          seatId: null,
+          title: 'Telemetry checkpoint',
+          detail: 'Shift start baseline',
+          meta: { estUsd: 1.40, totalTokens: 185000 }
+        },
+        {
+          ts: new Date(now - 3.2 * 3600000).toISOString(),
+          tsMs: now - 3.2 * 3600000,
+          kind: 'ctx_event',
+          severity: 'success',
+          rigId: 'core-platform',
+          seatId: 'dev-coder4@core-platform',
+          title: 'dev-coder4 context compacted (78% → 19%)',
+          detail: 'Reclaimed 59% context window before QA handoff.',
+          meta: { eventType: 'compacted', fromPct: 78, toPct: 19 }
+        },
+        {
+          ts: new Date(now - 1.8 * 3600000).toISOString(),
+          tsMs: now - 1.8 * 3600000,
+          kind: 'seat_state',
+          severity: 'warn',
+          rigId: 'core-platform',
+          seatId: 'dev-coder3@core-platform',
+          title: 'dev-coder3 parked',
+          detail: '2 open obligations without active wake timer.',
+          meta: { from: 'working', to: 'parked', assignedWorkCount: 2 }
+        },
+        {
+          ts: new Date(now - 34 * 60000).toISOString(),
+          tsMs: now - 34 * 60000,
+          kind: 'git_alert',
+          severity: 'critical',
+          rigId: 'core-platform',
+          seatId: 'dev-coder4@core-platform',
+          title: 'Cross-worktree overlap: src/core/dispatcher.ts',
+          detail: 'Edited concurrently in core-platform vs core-platform-wt-coder4.',
+          meta: { filePath: 'src/core/dispatcher.ts', alertType: 'overlap' }
+        },
+        {
+          ts: new Date(now - 18 * 60000).toISOString(),
+          tsMs: now - 18 * 60000,
+          kind: 'seat_state',
+          severity: 'critical',
+          rigId: 'core-platform',
+          seatId: 'dev-check@core-platform',
+          title: 'dev-check waiting for human (HITL)',
+          detail: 'Stopped on permission_prompt (Approve e2e run?).',
+          meta: { from: 'working', to: 'needs_input' }
+        },
+        {
+          ts: new Date(now - 4 * 60000).toISOString(),
+          tsMs: now - 4 * 60000,
+          kind: 'checkpoint',
+          severity: 'info',
+          rigId: 'all',
+          seatId: null,
+          title: 'Telemetry checkpoint',
+          detail: 'Current shift checkpoint',
+          meta: { estUsd: 6.22, totalTokens: 865000 }
+        }
+      ];
+      window.LIVE_SHIFT_META = {
+        rev: 'sh:demo',
+        totalStored: window.DEMO_SHIFT_EVENTS.length,
+        criticalLast1h: 2,
+        fileName: 'shift-events.jsonl'
+      };
+      window.DEMO_OPEN_QUEUE = [
+        {
+          qitemId: 'qitem-demo-qa-e2e-7f31',
+          state: 'pending',
+          sourceSession: 'dev-coder4@core-platform',
+          destinationSession: 'dev-check@core-platform',
+          tsCreated: new Date(now - 41 * 60000).toISOString(),
+          tags: ['slice:tts-strict-chunked'],
+          summary: 'QA: verify strict chunk limit + 7 boundary classes'
+        },
+        {
+          qitemId: 'qitem-demo-pi-worker-a2c9',
+          state: 'pending',
+          sourceSession: 'dev-owner@core-platform',
+          destinationSession: 'dev-coder3@core-platform',
+          tsCreated: new Date(now - 96 * 60000).toISOString(),
+          tags: ['slice:pi-worker'],
+          summary: 'Implement Pi worker retry loop'
+        },
+        {
+          qitemId: 'qitem-demo-pi-tests-b8d1',
+          state: 'pending',
+          sourceSession: 'dev-owner@core-platform',
+          destinationSession: 'dev-coder3@core-platform',
+          tsCreated: new Date(now - 63 * 60000).toISOString(),
+          tags: ['slice:pi-worker'],
+          summary: 'Add Pi worker unit tests'
+        },
+        {
+          qitemId: 'qitem-demo-elb004-c4e0',
+          state: 'in-progress',
+          sourceSession: 'dev-owner@core-platform',
+          destinationSession: 'dev-coder@core-platform',
+          tsCreated: new Date(now - 4.2 * 3600000).toISOString(),
+          tsUpdated: new Date(now - 2.6 * 3600000).toISOString(),
+          tags: ['slice:elb-004'],
+          summary: 'ELB-004: editor lazy boundary cache'
+        },
+        {
+          qitemId: 'qitem-demo-arch-review-d002',
+          state: 'pending',
+          sourceSession: 'dev-coder@core-platform',
+          destinationSession: 'dev-senior-architector@core-platform',
+          tsCreated: new Date(now - 12 * 60000).toISOString(),
+          tags: ['slice:elb-004'],
+          blockedOn: 'qitem-demo-elb004-c4e0',
+          summary: 'Architecture review for ELB-004 cache invalidation'
+        },
+        {
+          qitemId: 'qitem-demo-fresh-ok-e111',
+          state: 'pending',
+          sourceSession: 'dev-owner@core-platform',
+          destinationSession: 'dev-coder@core-platform',
+          tsCreated: new Date(now - 3 * 60000).toISOString(),
+          tags: ['slice:elb-004'],
+          summary: 'Healthy fresh handoff'
+        }
+      ];
+      if (typeof updatePaletteTriageBadge === 'function') updatePaletteTriageBadge();
+      if (typeof updateShiftDigestBadge === 'function') updateShiftDigestBadge();
     }
 
     let deckLang = 'ru';
@@ -8427,6 +9868,15 @@
       if (adv && adv.classList.contains('open')) renderFleetAdvisorModal();
       const grd = document.getElementById('guardrailsModal');
       if (grd && grd.classList.contains('open')) renderGuardrailsModal();
+      const dig = document.getElementById('shiftDigestModal');
+      if (dig && dig.classList.contains('open')) refreshShiftDigestModal();
+      const palEl = document.getElementById('commandPalette');
+      if (palEl && palEl.classList.contains('open')) {
+        paletteIndexCache = buildPaletteIndexNow();
+        const palInput = document.getElementById('paletteInput');
+        if (palInput) palInput.placeholder = td('palette.placeholder');
+        renderCommandPalette();
+      }
       const shr = document.getElementById('shareCardModal');
       if (shr && shr.classList.contains('open')) renderShareCardModal();
       const qrm = document.getElementById('mobileQrModal');
@@ -8594,6 +10044,27 @@
         showTrackToast(deckLang === 'en'
           ? '🧠 UX Track: 3-Tier AI Evaluator (Expert ➔ System 1 Laya ➔ System 2 Gemini 4 Hydrogen)'
           : '🧠 UX-трек: 3-уровневый AI Evaluator (Эксперт ➔ System 1 Laya ➔ System 2 Gemini 4 Hydrogen)');
+      } else if (track === 'git' || track === 'worktrees' || track === 'conflicts') {
+        selectAgent('dev-coder4@core-platform');
+        openFleetAdvisorModal('worktrees');
+        showTrackToast(deckLang === 'en'
+          ? '🌿 UX Track: Git Worktree & Conflict Radar (cross-worktree overlap + read-only Diff)'
+          : '🌿 UX-трек: Радар Git Worktree и конфликтов (пересечения файлов + read-only Diff)');
+      } else if (track === 'digest' || track === 'catchup' || track === 'shift') {
+        openShiftDigestModal(8);
+        showTrackToast(deckLang === 'en'
+          ? '🌅 UX Track: Shift Catch-Up / Overnight Digest & Persistent JSONL History'
+          : '🌅 UX-трек: Сводка смены (Catch-Up Digest) и персистентная JSONL-история');
+      } else if (track === 'palette' || track === 'cmdk') {
+        openCommandPalette('');
+        showTrackToast(deckLang === 'en'
+          ? '⌘K UX Track: Command Palette (> actions, @ seats, # queue, / views)'
+          : '⌘K UX-трек: Палитра команд (> действия, @ сиденья, # очередь, / виды)');
+      } else if (track === 'triage' || track === 'queue') {
+        openCommandPalette('#');
+        showTrackToast(deckLang === 'en'
+          ? '🧹 UX Track: Safe Queue Triage (stalled handoffs, one guarded nudge per seat)'
+          : '🧹 UX-трек: Безопасный триаж очереди (зависшие передачи, один защищённый nudge на сиденье)');
       } else if (track === 'update') {
         openUpdateModal();
       } else if (track === 'tour') {

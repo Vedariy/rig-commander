@@ -11,6 +11,7 @@ import { ContextEntropyDetector } from './detectors/context-entropy.mjs';
 import { ModelMismatchDetector } from './detectors/model-mismatch.mjs';
 import { CeremonyAmplifierDetector } from './detectors/ceremony.mjs';
 import { ZombieSeatDetector } from './detectors/zombie-seat.mjs';
+import { GitConflictDetector } from './detectors/git-conflict.mjs';
 
 export class FleetIntelligenceEngine {
   constructor(options = {}) {
@@ -21,7 +22,8 @@ export class FleetIntelligenceEngine {
       new BottleneckDetector(),
       new ModelMismatchDetector(),
       new CeremonyAmplifierDetector(),
-      new ZombieSeatDetector()
+      new ZombieSeatDetector(),
+      new GitConflictDetector()
     ];
     this.cachedReport = null;
     this.cachedReports = new Map();
@@ -62,6 +64,7 @@ export class FleetIntelligenceEngine {
       usageSeries: snapshot.usageSeries || [],
       healthFindings: snapshot.healthFindings || [],
       parkedSeats: snapshot.parkedSeats || {},
+      gitRadar: snapshot.gitRadar || null,
       rigId: snapshot.requestedRig || 'all'
     };
 

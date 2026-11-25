@@ -340,6 +340,19 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
     });
   }
 
+  if (actionPlan.kind === 'open_git_diff' && seatId) {
+    const file = String(actionPlan.file || '').trim();
+    return {
+      id: 'open_git_diff',
+      transport: 'git_diff',
+      seatId,
+      payload: file,
+      label: actionPlan.label || '📄 Diff',
+      title: file ? `Открыть git diff для ${file} (${seatId})` : `Открыть git diff для ${seatId}`,
+      tone: 'proceed'
+    };
+  }
+
   if (actionPlan.kind === 'open_gantt_slice') {
     const slice = (actionPlan.params && actionPlan.params.slice) || '';
     return {

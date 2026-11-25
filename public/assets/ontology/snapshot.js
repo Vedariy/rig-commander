@@ -129,6 +129,8 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
   const seatCompactions = data.seatCompactions || {};
   const seatGuidance = data.seatGuidance || {};
   const seatUsage = data.seatUsage || {};
+  const gitRadar = data.gitRadar || null;
+  const gitBySeatId = (gitRadar && gitRadar.bySeatId) || {};
   const intelligence = data.intelligence || null;
 
   const hasLiveDaemonData = rawNodes.length > 0 || rawRigs.length > 0;
@@ -194,7 +196,8 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
       lastActivityAt: liveNode.lastActivityAt || null,
       tmuxAttachCommand: liveNode.tmuxAttachCommand || null,
       cwd: liveNode.cwd ? liveNode.cwd.split('/').pop() : 'core-platform',
-      guidance: seatGuidance[seatId] || null
+      guidance: seatGuidance[seatId] || null,
+      git: gitBySeatId[seatId] || null
     };
 
     const session = {
@@ -350,6 +353,7 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
     situations,
     actionRecords: Array.isArray(data.actionAudit) ? data.actionAudit : [],
     fleetUsageSummary: data.fleetUsageSummary || null,
+    gitRadar,
     intelligence
   };
 }

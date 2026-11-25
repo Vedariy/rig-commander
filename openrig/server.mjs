@@ -24,11 +24,18 @@ import {
   buildSharedContextGraph,
   matchRelatedDecisions
 } from './assets/domain/context-lineage.js';
+import { collectFleetGitRadar, fetchSeatGitDiff } from './lib/git-radar.mjs';
+import { ShiftHistoryStore } from './lib/shift-history.mjs';
+import { buildShiftDigest, formatShiftDigestMarkdown } from './assets/domain/shift-digest.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 30, evalThrottleMs: 3000 });
-const actionAudit = new ActionAuditLog({ maxRecords: 100 });
+const shiftHistory = new ShiftHistoryStore();
+const actionAudit = new ActionAuditLog({
+  maxRecords: 100,
+  onRecordChange: (entry) => shiftHistory.recordOperatorAction(entry)
+});
 const aiEvaluator = new AiEvaluatorService();
 const sendIdempotency = new ServerIdempotencyCache();
 const latestSeatBaselines = new Map();
@@ -1647,13 +1654,72 @@ async function getHistoryStats({ allowBackgroundSWR = true } = {}) {
   return trigger();
 }
 
-const telemetryCacheByRig = new Map(); // rigKey -> { ts, payload, historyRev, guidanceRev, fullJson, fullGzip, liteHistJson, liteHistGzip, liteBothJson, liteBothGzip }
+const telemetryCacheByRig = new Map(); // rigKey -> { ts, payload, historyRev, guidanceRev, gitRadarRev, variants }
 const telemetryInFlightByRig = new Map();
 const TELEMETRY_FRESH_TTL_MS = 2200;
 const TELEMETRY_SWR_MAX_MS = 12000;
+const GIT_RADAR_FRESH_TTL_MS = 12000;
+const GIT_RADAR_SWR_MAX_MS = 60000;
+const GIT_DIFF_CACHE_TTL_MS = 5000;
+const gitRadarCacheByKey = new Map(); // rigKey -> { ts, rev, data }
+const gitRadarInFlightByKey = new Map();
+const gitDiffCache = new Map(); // `${seatId}|${file}` -> { ts, payload }
+const EMPTY_GIT_RADAR = {
+  workspaces: [],
+  bySeatId: {},
+  conflicts: [],
+  sharedWriteHazards: [],
+  staleWorkspaces: [],
+  unmergedWorkspaces: [],
+  kpis: {
+    totalWorkspaces: 0,
+    dirtyWorkspaces: 0,
+    totalDirtyFiles: 0,
+    totalInsertions: 0,
+    totalDeletions: 0,
+    conflictFileCount: 0,
+    highConflictCount: 0,
+    unmergedCount: 0,
+    sharedHazardCount: 0,
+    staleBehindCount: 0
+  },
+  rev: 'git:empty',
+  sampledAt: null
+};
 const staticAssetCache = new Map(); // filePath -> { mtimeMs, raw, gzip }
 const STATIC_GZIP_EXTS = new Set(['.html', '.css', '.js', '.json', '.webmanifest', '.svg', '.md', '.txt']);
 let lastTelemetryClientAt = 0;
+
+function getGitRadarCached(rigKey, nodes, { forceRefresh = false } = {}) {
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    return Promise.resolve({ rev: EMPTY_GIT_RADAR.rev, data: EMPTY_GIT_RADAR });
+  }
+  const key = rigKey || 'all';
+  const now = Date.now();
+  const cached = gitRadarCacheByKey.get(key);
+  if (!forceRefresh && cached && now - cached.ts < GIT_RADAR_FRESH_TTL_MS) {
+    return Promise.resolve(cached);
+  }
+  const trigger = () => {
+    if (!gitRadarInFlightByKey.has(key)) {
+      const p = collectFleetGitRadar(nodes)
+        .then(radar => {
+          const entry = { ts: Date.now(), rev: radar.rev || 'git:empty', data: radar };
+          boundedMapSet(gitRadarCacheByKey, key, entry, 12);
+          return entry;
+        })
+        .catch(() => cached || { ts: Date.now(), rev: EMPTY_GIT_RADAR.rev, data: EMPTY_GIT_RADAR })
+        .finally(() => { gitRadarInFlightByKey.delete(key); });
+      gitRadarInFlightByKey.set(key, p);
+    }
+    return gitRadarInFlightByKey.get(key);
+  };
+  if (!forceRefresh && cached && now - cached.ts < GIT_RADAR_SWR_MAX_MS) {
+    void trigger();
+    return Promise.resolve(cached);
+  }
+  return trigger();
+}
 
 function invalidateTelemetryCache() {
   telemetryCacheByRig.clear();
@@ -1666,7 +1732,7 @@ async function serializeTelemetryVariant(obj) {
   return { json, gzip };
 }
 
-async function assembleTelemetryBundle(requestedRig = 'all') {
+async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false } = {}) {
   const rigKey = requestedRig || 'all';
   const allRigs = await getRunningRigs();
 
@@ -1753,9 +1819,10 @@ async function assembleTelemetryBundle(requestedRig = 'all') {
     nodes = await enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR: true });
   }
 
-  const [decisions, usageReport] = await Promise.all([
+  const [decisions, usageReport, gitRadarBundle] = await Promise.all([
     getRecentDecisionsCached(15, nodes),
-    buildSeatUsageReport(nodes)
+    buildSeatUsageReport(nodes),
+    getGitRadarCached(rigKey, nodes, { forceRefresh: forceGit })
   ]);
 
   const guidanceMap = Object.assign({}, DEFAULT_SEAT_GUIDANCE);
@@ -1802,6 +1869,7 @@ async function assembleTelemetryBundle(requestedRig = 'all') {
     discoveryMode,
     historyRev: resolvedHistoryRev,
     guidanceRev,
+    gitRadarRev: (gitRadarBundle && gitRadarBundle.rev) || EMPTY_GIT_RADAR.rev,
     availableRigs: resolvedAvailableRigs,
     nodes,
     activeQueue: Array.isArray(activeQueue) ? activeQueue : [],
@@ -1812,6 +1880,7 @@ async function assembleTelemetryBundle(requestedRig = 'all') {
     seatGuidance: guidanceMap,
     seatUsage: usageReport.seatUsage,
     fleetUsageSummary: usageReport.fleetUsageSummary,
+    gitRadar: (gitRadarBundle && gitRadarBundle.data) || EMPTY_GIT_RADAR,
     actionAudit: actionAudit.list(30),
     guardrails: {
       breaker: circuitBreaker.getState(),
@@ -1824,16 +1893,37 @@ async function assembleTelemetryBundle(requestedRig = 'all') {
 
   fleetIntelligence.ingestSnapshot(payload);
   payload.intelligence = fleetIntelligence.getLatestReport(rigKey);
+  if (rigKey === 'all') {
+    shiftHistory.ingestTelemetry(payload);
+  }
+  payload.shiftHistoryMeta = shiftHistory.getSummaryMeta();
   latestFleetSnapshot = payload;
 
   setImmediate(async () => {
     try {
+      const prevEventsLen = (circuitBreaker.getState().events || []).length;
       await circuitBreaker.evaluate({
         nodes,
         seatUsage: usageReport.seatUsage,
         fleetUsageSummary: usageReport.fleetUsageSummary,
         sliceStats: (history && history.sliceStats) || {}
       });
+      const nextBreaker = circuitBreaker.getState();
+      const nextEvents = nextBreaker.events || [];
+      if (nextEvents.length > prevEventsLen) {
+        const latestTrip = nextEvents[0];
+        if (latestTrip) {
+          shiftHistory.recordGuardrailEvent({
+            severity: 'critical',
+            rigId: 'all',
+            seatId: latestTrip.seatId || null,
+            key: `breaker:${latestTrip.ts || Date.now()}`,
+            title: `Budget Circuit-Breaker: ${latestTrip.reason || latestTrip.rule || 'tripped'}`,
+            detail: latestTrip.detail || latestTrip.actionTaken || 'Guardrail triggered.',
+            meta: { rule: latestTrip.rule || null, armed: Boolean(nextBreaker.armed) }
+          });
+        }
+      }
     } catch {
       // non-blocking breaker error
     }
@@ -1874,6 +1964,7 @@ async function assembleTelemetryBundle(requestedRig = 'all') {
     payload,
     historyRev: resolvedHistoryRev,
     guidanceRev,
+    gitRadarRev: payload.gitRadarRev,
     variants: new Map() // variantKey -> Promise<{ json, gzip }>
   };
   boundedMapSet(telemetryCacheByRig, rigKey, bundle, 12);
@@ -1891,7 +1982,7 @@ function getTelemetryBundle(requestedRig = 'all', { forceRefresh = false } = {})
 
   const trigger = () => {
     if (!telemetryInFlightByRig.has(rigKey)) {
-      const p = assembleTelemetryBundle(rigKey)
+      const p = assembleTelemetryBundle(rigKey, { forceGit: forceRefresh })
         .finally(() => { telemetryInFlightByRig.delete(rigKey); });
       telemetryInFlightByRig.set(rigKey, p);
     }
@@ -1906,15 +1997,16 @@ function getTelemetryBundle(requestedRig = 'all', { forceRefresh = false } = {})
   return trigger();
 }
 
-async function getSerializedTelemetryVariant(bundle, { skipHistory = false, skipGuidance = false } = {}) {
-  const key = `${skipHistory ? 'nh' : 'h'}:${skipGuidance ? 'ng' : 'g'}`;
+async function getSerializedTelemetryVariant(bundle, { skipHistory = false, skipGuidance = false, skipGitRadar = false } = {}) {
+  const key = `${skipHistory ? 'nh' : 'h'}:${skipGuidance ? 'ng' : 'g'}:${skipGitRadar ? 'nr' : 'r'}`;
   if (!bundle.variants.has(key)) {
-    const obj = (!skipHistory && !skipGuidance)
+    const obj = (!skipHistory && !skipGuidance && !skipGitRadar)
       ? bundle.payload
       : {
           ...bundle.payload,
           ...(skipHistory ? { history: undefined, historyUnchanged: true } : {}),
-          ...(skipGuidance ? { seatGuidance: undefined, guidanceUnchanged: true } : {})
+          ...(skipGuidance ? { seatGuidance: undefined, guidanceUnchanged: true } : {}),
+          ...(skipGitRadar ? { gitRadar: undefined, gitRadarUnchanged: true } : {})
         };
     bundle.variants.set(key, serializeTelemetryVariant(obj));
   }
@@ -2173,18 +2265,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 1. Live telemetry endpoint — single-flight coalesced, SWR-cached & incremental historyRev/guidanceRev
+  // 1. Live telemetry endpoint — single-flight coalesced, SWR-cached & incremental historyRev/guidanceRev/gitRadarRev
   if (url.pathname === '/api/telemetry') {
     const requestedRig = url.searchParams.get('rig') || 'all';
     const clientHistoryRev = url.searchParams.get('historyRev') || '';
     const clientGuidanceRev = url.searchParams.get('guidanceRev') || '';
+    const clientGitRadarRev = url.searchParams.get('gitRadarRev') || '';
     const forceRefresh = url.searchParams.get('force') === '1';
     lastTelemetryClientAt = Date.now();
 
     const bundle = await getTelemetryBundle(requestedRig, { forceRefresh });
     const skipHistory = Boolean(clientHistoryRev && clientHistoryRev === bundle.historyRev);
     const skipGuidance = Boolean(clientGuidanceRev && clientGuidanceRev === bundle.guidanceRev);
-    const serialized = await getSerializedTelemetryVariant(bundle, { skipHistory, skipGuidance });
+    const skipGitRadar = Boolean(clientGitRadarRev && clientGitRadarRev === bundle.gitRadarRev);
+    const serialized = await getSerializedTelemetryVariant(bundle, { skipHistory, skipGuidance, skipGitRadar });
 
     const acceptEncoding = String(req.headers['accept-encoding'] || '');
     if (acceptEncoding.includes('gzip') && serialized.gzip) {
@@ -2434,6 +2528,84 @@ const server = http.createServer(async (req, res) => {
     const qitemId = url.searchParams.get('id') || '';
     const detail = await fetchQueueItemContextDetail(qitemId);
     await sendJson(req, res, detail.statusCode || (detail.ok ? 200 : 400), detail);
+    return;
+  }
+
+  // 1.26 Read-only secret-redacted git diff for a live seat workspace (never accepts arbitrary paths)
+  if (url.pathname === '/api/git/diff' && req.method === 'GET') {
+    const seatId = String(url.searchParams.get('seat') || '').trim();
+    const file = String(url.searchParams.get('file') || '').trim();
+    if (!seatId || !/^[a-zA-Z0-9._@-]{2,140}$/.test(seatId)) {
+      await sendJson(req, res, 400, { ok: false, error: 'Invalid seat identifier' });
+      return;
+    }
+    const cacheKey = `${seatId}|${file}`;
+    const cached = gitDiffCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < GIT_DIFF_CACHE_TTL_MS) {
+      await sendJson(req, res, 200, { ...cached.payload, cached: true });
+      return;
+    }
+    const snap = latestFleetSnapshot || {};
+    const nodes = Array.isArray(snap.nodes) ? snap.nodes : [];
+    const node = nodes.find(n => (n.canonicalSessionName || n.logicalId) === seatId) || null;
+    if (!node || !node.cwd) {
+      await sendJson(req, res, 404, { ok: false, error: `Workspace path unavailable for ${seatId}` });
+      return;
+    }
+    const detail = await fetchSeatGitDiff({ seatId, cwd: node.cwd, file });
+    if (detail.ok) {
+      boundedMapSet(gitDiffCache, cacheKey, { ts: Date.now(), payload: detail }, 60);
+    }
+    await sendJson(req, res, detail.statusCode || (detail.ok ? 200 : 400), detail);
+    return;
+  }
+
+  // 1.27 Shift Catch-Up / Overnight Digest endpoint (fuses persisted JSONL + live fleet state)
+  if (url.pathname === '/api/digest' && req.method === 'GET') {
+    const requestedRig = url.searchParams.get('rig') || 'all';
+    const rawHours = Number(url.searchParams.get('hours'));
+    const windowHours = Number.isFinite(rawHours) && rawHours > 0 ? Math.min(168, Math.max(0.25, rawHours)) : 8;
+    const rawSinceMs = Number(url.searchParams.get('sinceMs'));
+    const sinceMs = Number.isFinite(rawSinceMs) && rawSinceMs > 0 ? rawSinceMs : 0;
+    const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'ru';
+    const nowMs = Date.now();
+    const effectiveCutoff = sinceMs > 0 && sinceMs < nowMs ? sinceMs : (nowMs - windowHours * 3600 * 1000);
+
+    const bundle = await getTelemetryBundle(requestedRig, { forceRefresh: false });
+    const snap = (bundle && bundle.payload) || latestFleetSnapshot || {};
+    const events = shiftHistory.queryEvents({ sinceMs: effectiveCutoff, untilMs: nowMs, rigId: requestedRig, limit: 1000 });
+    const digest = buildShiftDigest({
+      windowHours,
+      sinceMs,
+      nowMs,
+      rigFilter: requestedRig,
+      events,
+      ganttItems: (snap.history && snap.history.ganttItems) || [],
+      activeQueue: snap.activeQueue || [],
+      decisions: snap.decisions || [],
+      nodes: snap.nodes || [],
+      parkedSeats: snap.parkedSeats || {},
+      seatUsage: snap.seatUsage || {},
+      fleetUsageSummary: snap.fleetUsageSummary || {},
+      gitRadar: snap.gitRadar || null,
+      actionAudit: actionAudit.list(100),
+      intelligence: snap.intelligence || null,
+      historyMeta: shiftHistory.getSummaryMeta()
+    });
+    const markdown = formatShiftDigestMarkdown(digest, lang);
+    await sendJson(req, res, 200, { ok: true, digest, markdown });
+    return;
+  }
+
+  // 1.28 Read-only persisted shift history events query
+  if (url.pathname === '/api/history/events' && req.method === 'GET') {
+    const requestedRig = url.searchParams.get('rig') || 'all';
+    const rawHours = Number(url.searchParams.get('hours'));
+    const windowHours = Number.isFinite(rawHours) && rawHours > 0 ? Math.min(168, Math.max(0.25, rawHours)) : 24;
+    const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || 100));
+    const sinceMs = Date.now() - windowHours * 3600 * 1000;
+    const events = shiftHistory.queryEvents({ sinceMs, rigId: requestedRig, limit });
+    await sendJson(req, res, 200, { ok: true, events, meta: shiftHistory.getSummaryMeta() });
     return;
   }
 
@@ -2708,6 +2880,7 @@ export {
 
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMainModule) {
+  shiftHistory.loadSync();
   if (telegramBridge.isConfigured()) {
     telegramBridge.startPolling();
   }

@@ -92,6 +92,7 @@ export class ActionAuditLog {
   constructor(options = {}) {
     this.maxRecords = options.maxRecords || 100;
     this.timeoutMs = options.timeoutMs || POSTCONDITION_TIMEOUT_MS;
+    this.onRecordChange = typeof options.onRecordChange === 'function' ? options.onRecordChange : null;
     this.records = [];
   }
 
@@ -118,6 +119,9 @@ export class ActionAuditLog {
     if (this.records.length > this.maxRecords) {
       this.records.length = this.maxRecords;
     }
+    if (this.onRecordChange && !entry.ok) {
+      try { this.onRecordChange(entry); } catch {}
+    }
     return entry;
   }
 
@@ -139,12 +143,18 @@ export class ActionAuditLog {
           rec.postconditionStatus = 'verified';
           rec.postconditionDetail = check.detail;
           rec.verifiedAt = new Date(nowMs).toISOString();
+          if (this.onRecordChange) {
+            try { this.onRecordChange(rec); } catch {}
+          }
           continue;
         }
       }
       if (nowMs - rec.executedMs >= this.timeoutMs) {
         rec.postconditionStatus = 'unchanged';
         rec.postconditionDetail = `Состояние узла не изменилось за ${Math.round(this.timeoutMs / 1000)}с`;
+        if (this.onRecordChange) {
+          try { this.onRecordChange(rec); } catch {}
+        }
       }
     }
   }
