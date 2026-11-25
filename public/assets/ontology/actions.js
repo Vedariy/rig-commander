@@ -12,6 +12,12 @@ export function getSeatTriageSignal(seat) {
   return null;
 }
 
+export function buildSeatRelaunchCommand(seatId, reason = 'shell exited') {
+  const safeSeat = String(seatId || '').trim();
+  const safeReason = String(reason || 'relaunch').replace(/["\\]/g, '').trim() || 'relaunch';
+  return `rig seat launch ${safeSeat} --fresh --stop --reason "${safeReason}"`;
+}
+
 export function isPiHarness(seat) {
   if (!seat) return false;
   const harness = String(seat.harness || seat.runtime || '').toLowerCase().trim();
@@ -167,15 +173,18 @@ export const ACTION_DEFINITIONS = [
     transport: 'clipboard',
     reversibility: 'checkpointed',
     precondition: (ctx) => ctx.isHotCtx && ctx.isPi,
-    buildDescriptor: (ctx) => ({
-      id: 'copy_restart_seat',
-      transport: 'clipboard',
-      seatId: ctx.id,
-      payload: `rig restart ${ctx.id}`,
-      label: `🔄 Ротация (${ctx.ctxPct}%)`,
-      title: `Харнес Pi не поддерживает /compact — скопировать rig restart ${ctx.id}`,
-      tone: ctx.isCritCtx ? 'critical' : 'warn'
-    })
+    buildDescriptor: (ctx) => {
+      const cmd = buildSeatRelaunchCommand(ctx.id, 'context rotation');
+      return {
+        id: 'copy_restart_seat',
+        transport: 'clipboard',
+        seatId: ctx.id,
+        payload: cmd,
+        label: `🔄 Ротация (${ctx.ctxPct}%)`,
+        title: `Харнес Pi не поддерживает /compact — скопировать ${cmd}`,
+        tone: ctx.isCritCtx ? 'critical' : 'warn'
+      };
+    }
   },
   {
     id: 'wake_parked_seat',
@@ -197,15 +206,18 @@ export const ACTION_DEFINITIONS = [
     transport: 'clipboard',
     reversibility: 'checkpointed',
     precondition: (ctx) => ctx.isShellExited,
-    buildDescriptor: (ctx) => ({
-      id: 'copy_restart_shell',
-      transport: 'clipboard',
-      seatId: ctx.id,
-      payload: `rig restart ${ctx.id}`,
-      label: '🔄 Restart (shell)',
-      title: `Агент вышел в shell — перезапустить: rig restart ${ctx.id}`,
-      tone: 'warn'
-    })
+    buildDescriptor: (ctx) => {
+      const cmd = buildSeatRelaunchCommand(ctx.id, 'shell exited');
+      return {
+        id: 'copy_restart_shell',
+        transport: 'clipboard',
+        seatId: ctx.id,
+        payload: cmd,
+        label: '🔄 Restart (shell)',
+        title: `Агент вышел в shell — перезапустить: ${cmd}`,
+        tone: 'warn'
+      };
+    }
   }
 ];
 
@@ -270,13 +282,14 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
 
   if (actionPlan.kind === 'compact_seat' && seatId) {
     if (isPiHarness(targetSeat)) {
+      const cmd = buildSeatRelaunchCommand(seatId, 'context rotation');
       return {
         id: 'copy_restart_seat',
         transport: 'clipboard',
         seatId,
-        payload: `rig restart ${seatId}`,
+        payload: cmd,
         label: actionPlan.label || '🔄 Ротация Pi',
-        title: `Харнес Pi не поддерживает /compact — скопировать rig restart ${seatId}`,
+        title: `Харнес Pi не поддерживает /compact — скопировать ${cmd}`,
         tone: 'warn'
       };
     }
@@ -316,13 +329,14 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
       };
     }
     if (targetSeat && targetSeat.shellExited) {
+      const cmd = buildSeatRelaunchCommand(seatId, 'shell exited');
       return {
         id: 'copy_restart_shell',
         transport: 'clipboard',
         seatId,
-        payload: `rig restart ${seatId}`,
+        payload: cmd,
         label: '🔄 Restart (shell)',
-        title: `Агент вышел в shell — скопировать rig restart ${seatId}`,
+        title: `Агент вышел в shell — скопировать ${cmd}`,
         tone: 'warn'
       };
     }
@@ -339,13 +353,14 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
 
   if (actionPlan.kind === 'nudge_queue' && seatId) {
     if (targetSeat && targetSeat.shellExited) {
+      const cmd = buildSeatRelaunchCommand(seatId, 'shell exited');
       return {
         id: 'copy_restart_shell',
         transport: 'clipboard',
         seatId,
-        payload: `rig restart ${seatId}`,
+        payload: cmd,
         label: '🔄 Restart (shell)',
-        title: `Агент вышел в shell — скопировать rig restart ${seatId}`,
+        title: `Агент вышел в shell — скопировать ${cmd}`,
         tone: 'warn'
       };
     }

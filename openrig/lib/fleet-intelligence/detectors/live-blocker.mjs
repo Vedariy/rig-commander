@@ -69,7 +69,7 @@ export class LiveBlockerDetector {
         let remediation;
         if (isShellExited) {
           cleanSummary = `Процесс агента ${shortName} вышел в голый shell при ${openCount} открытых задачах в очереди.`;
-          remediation = `Перезапустите сессию командой rig restart ${seat} (пустой Enter в shell не запустит агента).`;
+          remediation = `Перезапустите сессию командой rig seat launch ${seat} --fresh --stop --reason "shell exited" (пустой Enter в shell не запустит агента).`;
         } else if (isIdlePrompt) {
           cleanSummary = `${shortName} сидит на пустом промпте с ${openCount} открытыми обязательствами${heldCount > 0 ? ` и ${heldCount} незакрытыми HELD-строками` : ''} без активного wake.`;
           remediation = `Пустой Enter на чистом промпте обычно не запускает агента — нажмите «📨 Разобрать очередь», чтобы отправить явную инструкцию проверить rig queue list --owned, или закройте лишние HELD-строки.`;

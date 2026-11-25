@@ -2,7 +2,7 @@
 import { getLiveHitlOptions, classifyTerminalScreen } from '../domain/prompt-parser.js';
 import { buildSeatScopeKey, buildSeatSendKey } from '../domain/action-guard.js';
 import { computeBurn, formatTokensShort, getContextThermal } from '../domain/thermal.js';
-import { buildNudgeQueueAction, getManualHarnessActions, getSeatContextualActions, resolveActionFromFinding } from '../ontology/actions.js';
+import { buildNudgeQueueAction, buildSeatRelaunchCommand, getManualHarnessActions, getSeatContextualActions, resolveActionFromFinding } from '../ontology/actions.js';
 import { getActionRecordsForSeat, getSeatActiveObligation } from '../ontology/snapshot.js';
 
 export function renderCurrentTaskHtml(ctx, agent) {
@@ -418,8 +418,8 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
   // Remediation guidance text
   const fallbackRemediation = agent.shellExited
     ? (deckLang === 'en'
-        ? `Agent exited to bare shell — restart the seat with rig restart ${agent.id}.`
-        : `Агент вышел в shell — перезапустите сиденье командой rig restart ${agent.id}.`)
+        ? `Agent exited to bare shell — restart the seat with ${buildSeatRelaunchCommand(agent.id, 'shell exited')}.`
+        : `Агент вышел в shell — перезапустите сиденье командой ${buildSeatRelaunchCommand(agent.id, 'shell exited')}.`)
     : (primary.detectorId === 'topology.bottleneck' || primary.detectorId === 'topology.live_blocker' || primary.detectorId === 'parked_seat')
       ? (deckLang === 'en'
           ? 'Click "Process queue" to send an explicit instruction (empty Enter on an idle prompt does nothing), or inspect tasks on Gantt.'

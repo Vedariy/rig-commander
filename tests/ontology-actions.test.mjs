@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   CONTEXT_WARN_PCT,
   CONTEXT_CRIT_PCT,
+  buildSeatRelaunchCommand,
   isPiHarness,
   buildNudgeQueueAction,
   getSeatContextualActions,
@@ -97,7 +98,8 @@ test('hot context >= 65% exposes compact_context on Codex/Claude and copy_restar
   assert.equal(hotCodexCoder3[0].payload, '/compact');
   assert.deepEqual(critPi.map(a => a.id), ['copy_restart_seat']);
   assert.equal(critPi[0].transport, 'clipboard');
-  assert.equal(critPi[0].payload, 'rig restart dev-coder3@rig');
+  assert.equal(critPi[0].payload, 'rig seat launch dev-coder3@rig --fresh --stop --reason "context rotation"');
+  assert.equal(buildSeatRelaunchCommand('dev-coder3@rig', 'context rotation'), critPi[0].payload);
 });
 
 test('parked seat exposes wake_parked_seat', () => {
@@ -135,7 +137,7 @@ test('resolveActionFromFinding maps compact_seat safely and protects Pi harness'
   );
   assert.equal(piAct.id, 'copy_restart_seat');
   assert.equal(piAct.transport, 'clipboard');
-  assert.equal(piAct.payload, 'rig restart dev-coder3@rig');
+  assert.equal(piAct.payload, 'rig seat launch dev-coder3@rig --fresh --stop --reason "context rotation"');
 
   const fallbackAct = resolveActionFromFinding(
     { kind: 'reroute_task', commandPreview: 'rig queue handoff ...', label: 'Направить' },
@@ -178,7 +180,7 @@ test('resolveActionFromFinding maps open_modal, wake_seat and select_seat to liv
   assert.equal(ganttAct.payload, 'auth-flow');
 });
 
-test('parked seat whose agent exited to bare shell offers rig restart instead of wake Enter', () => {
+test('parked seat whose agent exited to bare shell offers rig seat launch --fresh --stop instead of wake Enter', () => {
   const shellSeat = {
     id: 'dev-operator@rig',
     harness: 'terminal',
@@ -189,7 +191,7 @@ test('parked seat whose agent exited to bare shell offers rig restart instead of
   const actions = getSeatContextualActions(shellSeat);
   assert.deepEqual(actions.map(a => a.id), ['copy_restart_shell']);
   assert.equal(actions[0].transport, 'clipboard');
-  assert.equal(actions[0].payload, 'rig restart dev-operator@rig');
+  assert.equal(actions[0].payload, 'rig seat launch dev-operator@rig --fresh --stop --reason "shell exited"');
 
   const resolved = resolveActionFromFinding(
     { kind: 'wake_seat', seatTarget: 'dev-operator@rig', label: '⚡ Разбудить' },
@@ -197,7 +199,7 @@ test('parked seat whose agent exited to bare shell offers rig restart instead of
   );
   assert.equal(resolved.id, 'copy_restart_shell');
   assert.equal(resolved.transport, 'clipboard');
-  assert.equal(resolved.payload, 'rig restart dev-operator@rig');
+  assert.equal(resolved.payload, 'rig seat launch dev-operator@rig --fresh --stop --reason "shell exited"');
 });
 
 test('buildNudgeQueueAction and resolveActionFromFinding(nudge_queue) enforce canonical prompt and shellExited guard', () => {
@@ -220,7 +222,7 @@ test('buildNudgeQueueAction and resolveActionFromFinding(nudge_queue) enforce ca
   );
   assert.equal(guarded.id, 'copy_restart_shell');
   assert.equal(guarded.transport, 'clipboard');
-  assert.equal(guarded.payload, 'rig restart dev-operator@rig');
+  assert.equal(guarded.payload, 'rig seat launch dev-operator@rig --fresh --stop --reason "shell exited"');
 });
 
 test('parked urgent (NEEDS INPUT) seat never exposes blind wake_parked_seat Enter', () => {

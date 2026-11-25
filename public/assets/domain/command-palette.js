@@ -365,17 +365,18 @@ export function buildPaletteIndex({
           priority: sevBoost
         });
       } else if (rem.recommended === 'copy_restart') {
+        const relaunchCmd = `rig seat launch ${rem.seatId} --fresh --stop --reason "shell exited"`;
         out.push({
           id: `triage:restart:${rem.seatId}`,
           kind: 'queue',
           group: 'triage',
           icon: '♻️',
           title: T(`Copy restart for ${sh} (${rem.count} item(s) unconsumed)`, `Скопировать рестарт ${sh} (${rem.count} задач не разбираются)`),
-          subtitle: `rig restart ${rem.seatId}`,
+          subtitle: relaunchCmd,
           keywords: ['triage', 'restart', 'shell', 'рестарт', rem.seatId],
           risk: 'read',
           severity: rem.worst,
-          action: { type: 'clipboard', seatId: rem.seatId, payload: `rig restart ${rem.seatId}` },
+          action: { type: 'clipboard', seatId: rem.seatId, payload: relaunchCmd },
           priority: sevBoost
         });
       }

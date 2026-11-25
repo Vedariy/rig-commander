@@ -6,7 +6,7 @@
  */
 
 import { classifyTerminalScreen, getLiveHitlOptions } from '../../assets/domain/prompt-parser.js';
-import { isPiHarness } from '../../assets/ontology/actions.js';
+import { buildSeatRelaunchCommand, isPiHarness } from '../../assets/ontology/actions.js';
 import { EVAL_RISK_LEVELS, EVAL_TIERS } from '../../assets/domain/evaluator-model.js';
 
 const DESTRUCTIVE_VETO_PATTERNS = [
@@ -273,13 +273,14 @@ export function evaluateTier0({
   }
 
   if (isShellExited) {
+    const shellCmd = buildSeatRelaunchCommand(seatId, 'shell exited');
     firedRules.push('E-VETO-SHELL-EXITED');
     hardVetoes.push({ ruleId: 'E-VETO-SHELL-EXITED', reason: 'Agent process exited to bare OS shell' });
     forbiddenActionIds.push('wake_parked_seat', 'nudge_queue', 'compact_context');
     forcedActionId = 'copy_restart_shell';
     forcedRationale = isEn
-      ? `Agent exited to bare shell — copy rig restart ${seatId}`
-      : `Процесс агента вышел в shell — перезапустите через rig restart ${seatId}`;
+      ? `Agent exited to bare shell — copy ${shellCmd}`
+      : `Процесс агента вышел в shell — перезапустите через ${shellCmd}`;
     riskLevel = EVAL_RISK_LEVELS.REVIEW;
     confidence = 0.98;
     stopCascade = true;
@@ -291,13 +292,14 @@ export function evaluateTier0({
   }
 
   if (isPi && typeof ctxPct === 'number' && ctxPct >= 65) {
+    const rotateCmd = buildSeatRelaunchCommand(seatId, 'context rotation');
     firedRules.push('E-VETO-PI-COMPACT');
     forbiddenActionIds.push('compact_context');
     if (!forcedActionId) {
       forcedActionId = 'copy_restart_seat';
       forcedRationale = isEn
-        ? `Pi harness does not support /compact — rotate with rig restart ${seatId}`
-        : `Харнес Pi не поддерживает /compact — ротация через rig restart ${seatId}`;
+        ? `Pi harness does not support /compact — rotate with ${rotateCmd}`
+        : `Харнес Pi не поддерживает /compact — ротация через ${rotateCmd}`;
     }
   }
 
@@ -419,12 +421,12 @@ export function evaluateTier0({
         ? `Expert: context overheated on ${shortName} (${ctxPct}%)`
         : `Эксперт: перегрев контекста на ${shortName} (${ctxPct}%)`;
       summary = isPi
-        ? (isEn ? 'Pi harness requires seat rotation (rig restart) instead of /compact.' : 'Харнес Pi требует ротации (rig restart) вместо /compact.')
+        ? (isEn ? 'Pi harness requires seat rotation (rig seat launch --fresh --stop) instead of /compact.' : 'Харнес Pi требует ротации (rig seat launch --fresh --stop) вместо /compact.')
         : (isEn ? 'Context >= 75% elevates QA rework risk. Run /compact before the next task.' : 'Контекст >= 75% повышает риск возвратов QA. Выполните /compact.');
       suggestedActions.push({
         actionId: isPi ? 'copy_restart_seat' : 'compact_context',
         seatId,
-        rationale: isPi ? `rig restart ${seatId}` : '/compact'
+        rationale: isPi ? buildSeatRelaunchCommand(seatId, 'context rotation') : '/compact'
       });
     } else if (!isUrgent && !isParked && pendingRealCount === 0 && (ctxPct === null || ctxPct < 65)) {
       firedRules.push('E-RES-HEALTHY-IDLE');

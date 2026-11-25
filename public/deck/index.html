@@ -1597,7 +1597,7 @@
           const isCrit = a.ctxPct >= CONTEXT_CRIT_PCT;
           const isPi = isPiHarness(a);
           const ctxAction = isPi
-            ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('radar.rotateBtn'), title: `rig restart ${a.id}`, tone: 'warn' }
+            ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: buildSeatRelaunchCommand(a.id, 'context rotation'), label: td('radar.rotateBtn'), title: buildSeatRelaunchCommand(a.id, 'context rotation'), tone: 'warn' }
             : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: td('radar.compactBtn'), title: `/compact → ${a.id}`, tone: isCrit ? 'critical' : 'warn' };
           items.push({
             prio: isCrit ? 0.8 : 2.1,
@@ -1621,7 +1621,7 @@
           items.push({
             prio: 1.1, category: 'blocker', seatId: a.id, actionKind: isShell ? 'restart' : 'focus',
             action: isShell
-              ? { id: 'copy_restart_shell', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: '🔄 Restart (shell)', title: `rig restart ${a.id}`, tone: 'warn' }
+              ? { id: 'copy_restart_shell', transport: 'clipboard', seatId: a.id, payload: buildSeatRelaunchCommand(a.id, 'shell exited'), label: '🔄 Restart (shell)', title: buildSeatRelaunchCommand(a.id, 'shell exited'), tone: 'warn' }
               : { id: 'wake_parked_seat', transport: 'tmux_key', seatId: a.id, payload: 'Enter', label: td('radar.wakeBtn'), title: td('radar.wakeBtn'), tone: 'warn' },
             color: '#f59e0b', from: getNodeDisplayTitle(a), to: isShell ? '⚠️ SHELL' : '⏸️ HOLD / PARK',
             slice: isShell ? 'agent process exited' : 'parked: no live wake',
@@ -3156,7 +3156,7 @@
             tag: 'P1 • SHELL',
             title: `${getNodeDisplayTitle(a)}: ${td('radar.shellExitedState')}`,
             desc: td('radar.shellExitedDesc'),
-            action: { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('triage.copyRestart'), tone: 'warn' },
+            action: { id: 'copy_restart_shell', transport: 'clipboard', seatId: a.id, payload: buildSeatRelaunchCommand(a.id, 'shell exited'), label: td('triage.copyRestart'), tone: 'warn' },
             targetAgentId: a.id
           });
           continue;
@@ -3168,7 +3168,7 @@
         const etaStr = isOver ? td('triage.ctxOver') : td('triage.ctxEta', { min: etaMin });
         const isPi = isPiHarness(a);
         const action = isPi
-          ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('radar.rotateBtn'), tone: 'warn' }
+          ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: buildSeatRelaunchCommand(a.id, 'context rotation'), label: td('radar.rotateBtn'), tone: 'warn' }
           : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: '⚡ /compact', tone: isOver ? 'critical' : 'warn' };
         candidates.push({
           prio: signal.priority,
@@ -4186,7 +4186,7 @@
             title: `🔥 ${a.shortName}: CTX ${a.ctxPct}%`,
             desc: td('triage.ctxOver'),
             actionDesc: isPi
-              ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('radar.rotateBtn'), tone: 'warn' }
+              ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: buildSeatRelaunchCommand(a.id, 'context rotation'), label: td('radar.rotateBtn'), tone: 'warn' }
               : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: td('radar.compactBtn'), tone: 'critical' }
           });
         }
@@ -5139,7 +5139,8 @@
         return;
       }
       if (actionId === 'copy_restart_seat' || actionId === 'copy_restart_shell') {
-        copyCmd(`rig restart ${seatId}`);
+        const reason = actionId === 'copy_restart_seat' ? 'context rotation' : 'shell exited';
+        copyCmd(buildSeatRelaunchCommand(seatId, reason));
         return;
       }
       if (actionId === 'wake_parked_seat') {
@@ -6996,7 +6997,7 @@
         playBeep([440, 330]);
         dispatchCriticalSaDesktopNotification(
           deckLang === 'en' ? `⚠️ Shell Exited: ${shortSeat(seatId)}` : `⚠️ Выход в shell: ${shortSeat(seatId)}`,
-          deckLang === 'en' ? 'Agent dropped to bare shell — requires rig restart.' : 'Агент вышел в голый shell — нужен rig restart.',
+          deckLang === 'en' ? 'Agent dropped to bare shell — requires rig seat launch --fresh --stop.' : 'Агент вышел в голый shell — нужен rig seat launch --fresh --stop.',
           seatId
         );
       } else if (freshGit.length > 0) {

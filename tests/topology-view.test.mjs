@@ -191,3 +191,45 @@ test('Rig cluster backdrops appear only for multiple zones and escape rig identi
   assert.equal(renderRigClustersHtml([], d), '');
   assert.equal(renderRigClustersHtml(clusters.slice(0, 1), d), '');
 });
+
+test('Node cards inside multi-rig clusters strip @rig from both title and role while keeping full id tooltip', () => {
+  const clusterAgent = {
+    id: 'dev-coder3@rig-commander',
+    icon: '🔧',
+    role: 'Кодер (dev-coder3@rig-commander)',
+    state: 'idle',
+    ctxPct: 18,
+    ctxWindowSize: 258000,
+    x: 50,
+    y: 40,
+    callsIn: 5,
+    callsOut: 3,
+    activityLabel: 'idle'
+  };
+  const html = renderNodeCardHtml(clusterAgent, {
+    getContextThermal: () => ({ tier: 'cool', color: '#38bdf8', glow: 'none', pct: 18, label: '18%', tokensShort: '47K/258K' }),
+    selectedAgentId: clusterAgent.id,
+    currentRigFilter: 'all',
+    collapsedIdleIds: new Set(),
+    hoveredAgentId: null,
+    connectedNodeIds: new Set(),
+    layoutResult: {
+      tiers: { [clusterAgent.id]: 'active' },
+      benchEdgeById: {},
+      rigClusters: [
+        { rigId: 'kernel', xPct: 1, yPct: 2, wPct: 24, hPct: 96, count: 1 },
+        { rigId: 'rig-commander', xPct: 28, yPct: 2, wPct: 70, hPct: 96, count: 2 }
+      ]
+    },
+    computeBurn: () => ({ label: '', perHour: 0 }),
+    deckLang: 'ru',
+    getNodeDisplayTitle: (a) => a.id,
+    escapeHtml,
+    td: (k) => k,
+    buildThermalCurveSvgHtml: () => ''
+  });
+  includes(html, '<div class="node-name" title="dev-coder3@rig-commander">dev-coder3</div>');
+  includes(html, '<div class="node-role">Кодер (dev-coder3)</div>');
+  assert.ok(!html.includes('>dev-coder3@rig-commander<'));
+  assert.ok(!html.includes('>Кодер (dev-coder3@rig-commander)<'));
+});

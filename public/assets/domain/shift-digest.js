@@ -482,7 +482,7 @@ export function buildShiftDigest({
         kind: 'shell_exited',
         seatId: s.seatId,
         title: `${shortSeatLabel(s.seatId)}: agent exited to OS shell`,
-        detail: 'Requires restart (rig restart).',
+        detail: 'Requires relaunch (rig seat launch --fresh --stop).',
         actionTransport: 'select_seat',
         actionPayload: ''
       });

@@ -383,7 +383,7 @@ export function evaluatePlaybookCandidates(snapshot = {}, rawConfig = DEFAULT_PL
       if (disp === 'offline' || disp === 'stopped' || disp === 'awaiting-decision') continue;
 
       if (isShellExited(node)) {
-        pushVeto('auto_wake_parked', seatId, PLAYBOOK_VETO_CODES.SHELL_EXITED, `PARKED (${openCount} open) but shell exited — requires rig restart`);
+        pushVeto('auto_wake_parked', seatId, PLAYBOOK_VETO_CODES.SHELL_EXITED, `PARKED (${openCount} open) but shell exited — requires rig seat launch --fresh --stop`);
         continue;
       }
       if (getNeedsInputCount(node) > 0 || disp === 'needs-input') {
@@ -512,7 +512,7 @@ export function evaluatePlaybookCandidates(snapshot = {}, rawConfig = DEFAULT_PL
           seatId,
           cooldownKey: `auto_notify_critical_sa:shell:${seatId}`,
           severity: 'critical',
-          reason: `Bare shell exit detected on ${seatId} (requires rig restart)`,
+          reason: `Bare shell exit detected on ${seatId} (requires rig seat launch --fresh --stop)`,
           notifyTelegram: notifyRule.notifyTelegram,
           cooldownMin: notifyRule.cooldownMin
         });

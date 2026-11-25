@@ -49,7 +49,7 @@ export class ContextEntropyDetector {
             kind: isPi ? 'rotate_seat' : 'compact_seat',
             label: isPi ? '🔄 Ротация сессии Pi' : '⚡ Превентивный /compact',
             seatTarget: seat,
-            commandPreview: isPi ? `rig restart ${seat}` : `tmux send-keys -t ${seat} C-u "/compact" Enter`,
+            commandPreview: isPi ? `rig seat launch ${seat} --fresh --stop --reason "context rotation"` : `tmux send-keys -t ${seat} C-u "/compact" Enter`,
             params: { targetSeat: seat, isPi, currentCtx: ctxPct },
             reversibility: 'checkpointed',
             safetyLevel: 'safe_auto'

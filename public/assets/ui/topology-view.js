@@ -118,6 +118,15 @@ export function intersectNodeBorder(cx, cy, hw, hh, vx, vy, pad) {
   return { x: cx + vx * t, y: cy + vy * t };
 }
 
+function stripRigSuffixFromText(text, agent) {
+  const raw = String(text || '');
+  const id = String((agent && agent.id) || '');
+  const at = id.lastIndexOf('@');
+  if (at <= 0) return raw;
+  const rigSuffix = id.slice(at);
+  return raw.includes(rigSuffix) ? raw.split(rigSuffix).join('') : raw;
+}
+
 export function renderNodeCardHtml(agent, deps) {
   const { getContextThermal, selectedAgentId, currentRigFilter, collapsedIdleIds,
     hoveredAgentId, connectedNodeIds, layoutResult, computeBurn, deckLang,
@@ -130,6 +139,11 @@ export function renderNodeCardHtml(agent, deps) {
   const calmClass = agent.isAnomaly ? 'calm-anomaly' : 'calm-normal';
   const tier = layoutResult.tiers[agent.id] || 'active';
   const benchEdge = layoutResult.benchEdgeById[agent.id] || '';
+  const stripRig = Boolean((currentRigFilter && currentRigFilter !== 'all') || (layoutResult.rigClusters && layoutResult.rigClusters.length >= 2));
+  const rawDisplayTitle = getNodeDisplayTitle(agent);
+  const displayTitle = stripRig ? stripRigSuffixFromText(rawDisplayTitle, agent) : rawDisplayTitle;
+  const displayRole = stripRig ? stripRigSuffixFromText(agent.role, agent) : String(agent.role || '');
+  const titleTip = agent.id || rawDisplayTitle;
   const ledClass =
     agent.state === 'urgent' ? 'led-urgent' :
     agent.state === 'working' ? 'led-working' :
@@ -152,8 +166,8 @@ export function renderNodeCardHtml(agent, deps) {
         <div class="node-identity">
           <div class="node-icon">${escapeHtml(agent.icon)}</div>
           <div class="node-title-wrap">
-            <div class="node-name" title="${escapeHtml(getNodeDisplayTitle(agent))}">${escapeHtml(getNodeDisplayTitle(agent))}</div>
-            <div class="node-role">${escapeHtml(agent.role)}</div>
+            <div class="node-name" title="${escapeHtml(titleTip)}">${escapeHtml(displayTitle)}</div>
+            <div class="node-role">${escapeHtml(displayRole)}</div>
           </div>
         </div>
         <span class="node-dormant-flag" title="${escapeHtml(agent.activityLabel || '')}">${escapeHtml(renderDormantFlagHtml(agent))}</span>
@@ -544,12 +558,21 @@ export function renderTopology(deps) {
         }
       }
 
+      const stripRigInCard = Boolean((currentRigFilter && currentRigFilter !== 'all') || clustered);
       const nameEl = el.querySelector('.node-name');
       if (nameEl) {
-        const nextTitle = resolveCardTitle(agent);
+        const baseTitle = getNodeDisplayTitle(agent);
+        const nextTitle = stripRigInCard ? stripRigSuffixFromText(baseTitle, agent) : baseTitle;
         if (nameEl.textContent !== nextTitle) {
           nameEl.textContent = nextTitle;
-          nameEl.title = agent.id || nextTitle;
+        }
+        nameEl.title = agent.id || baseTitle;
+      }
+      const roleEl = el.querySelector('.node-role');
+      if (roleEl) {
+        const nextRole = stripRigInCard ? stripRigSuffixFromText(agent.role, agent) : String(agent.role || '');
+        if (roleEl.textContent !== nextRole) {
+          roleEl.textContent = nextRole;
         }
       }
 
