@@ -4160,13 +4160,13 @@
       if (DEMO_SCREEN_OVERRIDES[seatId]) return DEMO_SCREEN_OVERRIDES[seatId];
       const a = AGENTS.find(x => x.id === seatId);
       if (seatId.includes('dev-check')) {
-        return `[${seatId}] ~/openrig-lab/core-platform (check-pw 4178)\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\nRunning 14 tests using 2 workers...\n  ✓  12 passed (9.4s)\n  ✘   2 failed: boundary-chunked-timeout\n----------------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nAllow running negative control fault injection & git checkout -- tools/tts/server.py?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this worktree\n  3. No, cancel and tell agent (esc)`;
+        return `[${seatId}] ~/workspace/core-platform (qa-runner)\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\nRunning 14 tests using 2 workers...\n  ✓  12 passed (9.4s)\n  ✘   2 failed: boundary-chunked-timeout\n----------------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nAllow running negative control fault injection & git checkout -- tools/tts/server.py?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this worktree\n  3. No, cancel and tell agent (esc)`;
       }
       if (seatId.includes('dev-coder3')) {
-        return `[${seatId}] ~/openrig-lab/core-platform-coder3 (pi • deepseek-flash)\n$ rig queue list --owned\n  qitem-20261119-01  pending  slice:pre-push-e2e-gate (QA round 2 fix)\n  qitem-20261119-02  pending  slice:editor-load-boundaries (boundary check)\n----------------------------------------\n🟠 PARKED: 2 open obligations without active wake timer.\nНажми «🔔 Разбудить PARKED» или отправь команду ниже.`;
+        return `[${seatId}] ~/workspace/core-platform-coder3 (pi • deepseek-flash)\n$ rig queue list --owned\n  qitem-20261119-01  pending  slice:pre-push-e2e-gate (QA round 2 fix)\n  qitem-20261119-02  pending  slice:editor-load-boundaries (boundary check)\n----------------------------------------\n🟠 PARKED: 2 open obligations without active wake timer.\nНажми «🔔 Разбудить PARKED» или отправь команду ниже.`;
       }
       if (seatId.includes('dev-coder4')) {
-        return `[${seatId}] ~/openrig-lab/core-platform-coder4 (codex • gpt-6.2-sol)\n$ npx vitest run tests/tts-strict-chunked.test.ts\n ✓ tests/tts-strict-chunked.test.ts (104 tests) 612ms\n  Test Files  1 passed (1)\n       Tests  104 passed (104)\nCTX: ${a && typeof a.ctxPct === 'number' ? a.ctxPct + '%' : '68%'} (323K / 475K) • Рекомендуется /compact перед новым слайсом.`;
+        return `[${seatId}] ~/workspace/core-platform-coder4 (codex • gpt-6.2-sol)\n$ npx vitest run tests/tts-strict-chunked.test.ts\n ✓ tests/tts-strict-chunked.test.ts (104 tests) 612ms\n  Test Files  1 passed (1)\n       Tests  104 passed (104)\nCTX: ${a && typeof a.ctxPct === 'number' ? a.ctxPct + '%' : '68%'} (323K / 475K) • Рекомендуется /compact перед новым слайсом.`;
       }
       return `[${seatId}] ${a ? a.cwd : 'core-platform'}\nStatus: ${a ? a.activityLabel : 'IDLE'} • Model: ${a ? a.model : 'codex'}\n$ git status --short\n${a && a.state === 'working' ? 'M  src/core/dispatcher.ts\nM  src/core/dispatcher.test.ts\n▶ Running vitest watch...' : 'nothing to commit, working tree clean\n› Waiting on prompt...'}`;
     }
@@ -5393,8 +5393,8 @@
           a.reworkClass = 'chip-rework-good';
           detail = cancelled ? 'меню закрыто (Esc)' : 'выход из needs-input';
           DEMO_SCREEN_OVERRIDES[seat] = cancelled
-            ? `[${seat}] ~/openrig-lab/core-platform\nSent key: ${text}\n✕ Промпт отменён оператором. Рабочее дерево сохранено.\n› _`
-            : `[${seat}] ~/openrig-lab/core-platform (check-pw 4178)\nSent key: ${text}\n✓ HITL Authorization принят.\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\n  ✓  14 passed (100% GREEN)\nStatus: READY FOR LOCAL ACCEPTANCE 🟢`;
+            ? `[${seat}] ~/workspace/core-platform\nSent key: ${text}\n✕ Промпт отменён оператором. Рабочее дерево сохранено.\n› _`
+            : `[${seat}] ~/workspace/core-platform (qa-runner)\nSent key: ${text}\n✓ HITL Authorization принят.\n$ npx playwright test e2e/tts-strict-chunked.spec.ts\n  ✓  14 passed (100% GREEN)\nStatus: READY FOR LOCAL ACCEPTANCE 🟢`;
           if (!cancelled && typeof markDemoQuestStep === 'function') markDemoQuestStep('hitl');
         } else if (act === 'wake_parked_seat') {
           a.state = 'working';
@@ -5403,7 +5403,7 @@
           a.isAnomaly = true;
           a.activityLabel = '🟢 WORKING (2)';
           detail = 'снят статус PARKED';
-          DEMO_SCREEN_OVERRIDES[seat] = `[${seat}] ~/openrig-lab/core-platform-coder3\n$ rig wake ${seat}\n✓ Сиденье пробуждено. Взята задача qitem-20261119-01 (slice:pre-push-e2e-gate).\n▶ Running targeted tests...`;
+          DEMO_SCREEN_OVERRIDES[seat] = `[${seat}] ~/workspace/core-platform-coder3\n$ rig wake ${seat}\n✓ Сиденье пробуждено. Взята задача qitem-20261119-01 (slice:pre-push-e2e-gate).\n▶ Running targeted tests...`;
         } else if (act === 'interrupt_execution' || text === 'C-c') {
           a.state = 'idle';
           a.needsInputCount = 0;

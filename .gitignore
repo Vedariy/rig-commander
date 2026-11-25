@@ -21,3 +21,7 @@ node_modules/
 .env.local
 .env.*.local
 .vercel
+
+# Private companion documentation & internal notes (never committed to public repo)
+.private-docs/
+.private-docs/**

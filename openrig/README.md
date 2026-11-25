@@ -78,7 +78,7 @@ flowchart LR
 2. **Активная очередь (`rig queue list -A --json`):**
    - Возвращает открытые прямо сейчас конверты (`pending` / `in-progress`), маршрут передачи (`sourceSession → destinationSession`), тег слайса (`slice:...`) и краткое описание (`summary`).
 3. **Журнал архитектурных решений ([`readRecentDecisions`](./openrig/server.mjs#L46-L77)):**
-   - Читает последние записи напрямую из TSV-файлов в `~/openrig-lab/core-platform/decisions/*.tsv`.
+   - Читает последние записи напрямую из TSV-файлов в `<rig-dir>/decisions/*.tsv`.
 4. **Историческая статистика очереди ([`getHistoryStats`](./openrig/server.mjs#L139-L148), с кэшем на 20 сек):**
    - Вызывает `rig queue list -a -A --limit 300 --json` и агрегирует матрицу частоты вызовов между парами агентов (`pairCounts`) и число кругов возврата на доработку у кодеров (`coderStats`).
 
