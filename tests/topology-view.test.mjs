@@ -1,0 +1,169 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import { tDeck } from '../openrig/assets/domain/i18n.js';
+import { getContextThermal, computeBurn, buildThermalCurveSvgHtml } from '../openrig/assets/domain/thermal.js';
+import { extractItemContextMeta } from '../openrig/assets/domain/context-lineage.js';
+import {
+  intersectNodeBorder, computeEdgeFallbackAnchor, positionEdgeXrayDrawer,
+  getNodeThermalFillGrad, getNodeCtxValText, getNodeCtxValClass, renderDormantFlagHtml,
+  renderStateIndicatorHtml, renderNodeMetaRowHtml, renderNodeSpecMetaHtml, renderNodeCardHtml,
+  renderTopologyEdgesHtml, renderSwimlanes, renderEdgeXray
+} from '../openrig/assets/ui/topology-view.js';
+
+const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const agents = [
+  { id: 'owner@rig', shortName: 'Owner', role: 'Owner', state: 'working', x: 20, y: 25, icon: '🏛️', ctxPct: 68, ctxWindowSize: 200000, callsIn: 3, callsOut: 2, harness: 'codex', model: 'test-model', assignedWorkCount: 2 },
+  { id: 'qa@rig', shortName: 'QA', role: 'Verifier', state: 'urgent', x: 80, y: 75, icon: '🛡️', ctxPct: 80, ctxWindowSize: 200000, callsIn: 1, callsOut: 4 }
+];
+const edge = { from: 'owner@rig', to: 'qa@rig', slice: 'test-slice', calls: 4, queueStatus: 'live', color: '#38bdf8', marker: 'arr-cyan', speed: '2s' };
+const deps = (deckLang = 'en', extra = {}) => ({
+  deckLang, td: (key, vars) => tDeck(deckLang, key, vars), escapeHtml, shortSeat: s => String(s || '?').split('@')[0],
+  getContextThermal, computeBurn, buildThermalCurveSvgHtml, getNodeDisplayTitle: a => a.shortName,
+  selectedAgentId: 'qa@rig', currentRigFilter: 'all', hoveredAgentId: null,
+  collapsedIdleIds: new Set(), connectedNodeIds: new Set(), layoutResult: { tiers: {}, benchEdgeById: {} },
+  pairEnvelopes: {}, openQueue: [], expandedXrayEnvelopes: new Set(), extractItemContextMeta,
+  formatEnvelopeClock: () => '12:30', ageLabel: () => '2m', CMD_COPY_LABEL_HTML: '<span>copy</span>',
+  renderContextBadgesHtml: m => `<div class="context-fixture">${escapeHtml(m.project || '')}</div>`, ...extra
+});
+const includes = (html, text) => assert.ok(html.includes(text), `Missing ${text}`);
+const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
+
+// Rays in every quadrant must touch the padded box and keep center-to-center direction.
+test('intersectNodeBorder respects padded borders, ray direction, symmetry and scale', () => {
+  for (const [hw, hh, pad] of [[100, 30, 0], [60, 60, 2], [12, 90, 4]]) {
+    for (let angle = 0; angle < 360; angle += 15) {
+      const vx = Math.cos(angle * Math.PI / 180), vy = Math.sin(angle * Math.PI / 180);
+      const p = intersectNodeBorder(17, 29, hw, hh, vx, vy, pad);
+      const dx = p.x - 17, dy = p.y - 29;
+      assert.ok(Math.abs(dx) <= hw + pad + 1e-7);
+      assert.ok(Math.abs(dy) <= hh + pad + 1e-7);
+      near(Math.max(Math.abs(dx) / (hw + pad), Math.abs(dy) / (hh + pad)), 1);
+      near(dx * vy - dy * vx, 0);
+      assert.ok(dx * vx + dy * vy > 0);
+      const scaled = intersectNodeBorder(17, 29, hw, hh, vx * 9, vy * 9, pad);
+      near(scaled.x, p.x); near(scaled.y, p.y);
+      const reverse = intersectNodeBorder(17, 29, hw, hh, -vx, -vy, pad);
+      near(reverse.x + p.x, 34); near(reverse.y + p.y, 58);
+    }
+  }
+  assert.deepEqual(intersectNodeBorder(5, 8, 100, 30, 0, 0, 2), { x: 5, y: 8 });
+  assert.deepEqual(intersectNodeBorder(0, 0, 100, 30, 1, 0, 4), { x: 104, y: 0 });
+});
+
+test('Fallback anchors use midpoint/center, clamp out-of-canvas positions and reject absent geometry', () => {
+  const wrap = { clientWidth: 800, clientHeight: 400 };
+  assert.deepEqual(computeEdgeFallbackAnchor(edge, wrap, agents), { x: 400, y: 200 });
+  assert.deepEqual(computeEdgeFallbackAnchor({ from: 'missing', to: 'qa@rig' }, wrap, agents), { x: 400, y: 200 });
+  assert.deepEqual(computeEdgeFallbackAnchor(edge, wrap, agents.map(a => ({ ...a, x: -300, y: 400 }))), { x: 0, y: 400 });
+  assert.deepEqual(computeEdgeFallbackAnchor(edge, wrap, agents.map(a => ({ ...a, x: NaN }))), { x: 400, y: 200 });
+  assert.equal(computeEdgeFallbackAnchor(edge, { clientWidth: 0, clientHeight: 400 }, agents), null);
+  assert.equal(computeEdgeFallbackAnchor(null, wrap, agents), null);
+  assert.equal(computeEdgeFallbackAnchor(edge, null, agents), null);
+});
+
+test('Injected X-Ray placement stays within desktop/mobile canvas bounds at every edge', () => {
+  for (const [cw, ch, pw, ph] of [[900, 550, 340, 220], [366, 470, 342, 300]]) {
+    for (const anchor of [{ x: 0, y: 0 }, { x: cw, y: ch }, { x: cw / 2, y: ch / 2 }, { x: -1000, y: 1000 }]) {
+      const drawer = { style: { display: 'block' }, parentElement: { clientWidth: cw, clientHeight: ch }, offsetWidth: pw, offsetHeight: ph,
+        setAttribute(k, v) { this[k] = v; } };
+      positionEdgeXrayDrawer(drawer, { edge, anchor, agents });
+      const x = Number.parseInt(drawer.style.left), y = Number.parseInt(drawer.style.top);
+      assert.ok(x >= 12 && x + pw <= cw - 12);
+      assert.ok(y >= 12 && y + ph <= ch - 12);
+      assert.ok(['above', 'below', 'clamped'].includes(drawer['data-placement']));
+      assert.equal(drawer.style.right, 'auto');
+    }
+  }
+  positionEdgeXrayDrawer(null, { edge, agents });
+});
+
+for (const lang of ['en', 'ru']) {
+  test(`Node thermal/meta/status/card renderers preserve heat, queue/git metrics, measured ETA and LED hooks (${lang})`, () => {
+    const d = deps(lang), agent = agents[0], hot = getContextThermal(80, 200000), warm = getContextThermal(68, 200000);
+    includes(getNodeThermalFillGrad(80), '255, 0, 85');
+    assert.equal(getNodeThermalFillGrad(NaN), 'transparent');
+    assert.equal(getNodeCtxValText({ ctxPct: 121 }, hot), '100%!');
+    assert.equal(getNodeCtxValText({ ctxPct: null }, hot), '');
+    assert.equal(getNodeCtxValClass(hot), 'node-ctx-val pill-crit');
+    assert.equal(getNodeCtxValClass(warm), 'node-ctx-val pill-warn');
+    const meta = renderNodeMetaRowHtml({ ...agent, git: { conflictFilesCount: 2, conflictPeers: ['qa@rig'] } }, warm, d);
+    includes(meta, '↓3 ↑2'); includes(meta, 'node-meta-git-conflict'); includes(meta, escapeHtml(warm.tokensShort));
+    assert.equal(renderNodeMetaRowHtml({}, {}, d), '');
+    const spec = renderNodeSpecMetaHtml({ ...agent, reworkBadge: '🪃 QA: 2', reworkClass: 'warn' }, { perHour: 7, label: 'measured' }, d);
+    for (const value of ['codex', 'test-model', 'QA: 2', lang === 'en' ? '~60m to 75%' : '~60м до 75%']) includes(spec, value);
+    assert.ok(!renderNodeSpecMetaHtml(agent, { perHour: 0 }, d).includes('spec-eta'));
+    includes(renderStateIndicatorHtml(agent, d), 'heart-anim');
+    includes(renderStateIndicatorHtml({ state: 'idle' }, d), 'zzz-anim');
+    includes(renderStateIndicatorHtml({ state: 'waiting', shellExited: true }, d), 'SHELL');
+    includes(renderStateIndicatorHtml(agents[1], d), 'NEEDS INPUT');
+    assert.equal(renderDormantFlagHtml({ state: 'waiting', assignedWorkCount: 3 }), '🟠 3');
+    const card = renderNodeCardHtml(agents[1], d);
+    for (const value of ['pill-crit', 'data-agent-id="qa@rig"', 'data-thermal-tier="crit"', 'selected', 'role="button"', 'handleNodeLedMouseDown(event, this)',
+      'handleNodeLedClick(event, this)', 'setHoverAgent(', 'selectAgent(', 'node-thermal-svg']) includes(card, value);
+    includes(card, escapeHtml(d.td('node.urgentBadgeTip')));
+  });
+
+  test(`Topology SVG preserves border endpoints, statuses, badges, hit paths and filters (${lang})`, () => {
+    const d = { ...deps(lang), edges: [edge], nodeMap: Object.fromEntries(agents.map(a => [a.id, a])), cw: 1000, ch: 500,
+      boxSizes: { 'owner@rig': { hw: 100, hh: 30 }, 'qa@rig': { hw: 100, hh: 30 } }, hasSliceMatch: false, isEdgeInSlice: () => true };
+    const html = renderTopologyEdgesHtml(d);
+    for (const value of ['is-live', 'edge-stream live-active', 'stroke="transparent" stroke-width="18"', 'onclick="selectEdge(0, event)"', 'test-slice']) includes(html, value);
+    const path = html.match(/d="M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+)"/);
+    assert.ok(path);
+    assert.ok(Number(path[1]) > 200 && Number(path[3]) < 800);
+    for (const status of ['blocked', 'parked', 'held', 'pending', 'ghost']) {
+      const h = renderTopologyEdgesHtml({ ...d, edges: [{ ...edge, queueStatus: status }] });
+      includes(h, `is-${status}`); assert.ok(!h.includes('edge-stream live-active'));
+    }
+    assert.equal(renderTopologyEdgesHtml({ ...d, collapsedIdleIds: new Set(['qa@rig']) }), '');
+    assert.equal(renderTopologyEdgesHtml({ ...d, currentRigFilter: 'other' }), '');
+    includes(renderTopologyEdgesHtml({ ...d, hasSliceMatch: true, isEdgeInSlice: () => false }), 'dimmed');
+  });
+
+  test(`Swimlanes preserve progress stages, selection and toggle handler (${lang})`, () => {
+    const html = renderSwimlanes({ visibleLanes: [{ id: 's1', name: 'Lane', coder: 'Coder', turns: 3, qaRounds: 2, currentStage: 1,
+      color: '#38bdf8', padPx: '5px', barPx: '2px' }], stageNames: lang === 'en' ? ['Spec', 'Code', 'QA'] : ['Спека', 'Код', 'QA'],
+      currentSliceFilter: 's1', escapeHtml });
+    includes(html, 'stage-cell done'); includes(html, 'stage-cell current'); includes(html, 'data-slice="all"');
+    includes(html, "onclick=\"setSliceFilter(this.getAttribute('data-slice'))\"");
+    includes(html, 'QA: 2');
+    assert.equal(renderSwimlanes({ visibleLanes: [], stageNames: [], currentSliceFilter: 'all', escapeHtml }), '');
+  });
+
+  test(`Route X-Ray merges/deduplicates live/history and expands envelope timelines (${lang})`, () => {
+    const old = { id: 'q-same', from: edge.from, to: edge.to, slice: edge.slice, state: 'done', summary: 'Stale summary', updatedAt: '2026-11-25T10:00:00Z' };
+    const d = deps(lang, { pairEnvelopes: { 'owner@rig <-> qa@rig': [old, { ...old, id: 'q-previous', summary: 'Prior event' }] },
+      openQueue: [{ qitemId: 'q-same', sourceSession: edge.from, destinationSession: edge.to, state: 'in-progress', summary: 'Live summary',
+        tsUpdated: '2026-11-25T12:00:00Z', tags: ['slice:test-slice', 'project:fixture'] }],
+      expandedXrayEnvelopes: new Set(['slice:test-slice']) });
+    const html = renderEdgeXray(edge, d);
+    includes(html, d.td('xray.title')); includes(html, 'Live summary'); includes(html, 'Prior event');
+    includes(html, 'env-history-timeline'); includes(html, 'env-history-toggle open'); includes(html, 'fixture');
+    includes(html, 'rig queue show q-same --full'); includes(html, 'data-qid="q-same"');
+    assert.ok(!html.includes('Stale summary'));
+    assert.equal((html.match(/class="env-history-row"/g) || []).length, 2);
+    includes(renderEdgeXray(edge, deps(lang)), d.td('xray.noHistory'));
+    assert.equal(renderEdgeXray(null, d), '');
+  });
+
+  test(`Untrusted node labels and X-Ray IDs/summaries stay escaped and out of inline JS (${lang})`, () => {
+    const bad = `evil'\"><img src=x onerror=alert(1)>&`, d = deps(lang);
+    const agent = { ...agents[0], id: bad, shortName: bad, role: bad, icon: bad, activityLabel: bad, model: bad, harness: bad, state: 'unknown' };
+    const key = [edge.from, edge.to].sort().join(' <-> ');
+    const xray = renderEdgeXray(edge, { ...d, pairEnvelopes: { [key]: [
+      { id: bad, from: edge.from, to: edge.to, slice: bad, summary: bad, state: 'done' },
+      { id: 'second', from: edge.from, to: edge.to, slice: bad, summary: bad, state: 'done' }
+    ] }, expandedXrayEnvelopes: new Set(['slice:' + bad]) });
+    const swim = renderSwimlanes({ visibleLanes: [{ id: bad, name: bad, coder: bad, currentStage: 0 }], stageNames: [bad], currentSliceFilter: 'all', escapeHtml });
+    for (const html of [renderStateIndicatorHtml(agent, d), renderNodeCardHtml(agent, d), renderNodeSpecMetaHtml(agent, {}, d),
+      renderNodeMetaRowHtml(agent, { tokensShort: bad }, d), xray, swim]) {
+      includes(html, escapeHtml(bad)); assert.ok(!html.includes('<img')); assert.ok(!html.includes(bad));
+      for (const [, handler] of html.matchAll(/on(?:click|mousedown|mouseenter|mouseleave)="([^"]*)"/g)) assert.ok(!handler.includes('alert(1)'));
+    }
+    const handler = xray.match(/data-qid="[^"]*" onclick="([^"]*)"/)[1];
+    let received;
+    vm.runInNewContext(`(function(){${handler}}).call(button)`, { button: { getAttribute: () => bad }, event: { stopPropagation() {} }, openQueueItemContext: id => { received = id; } });
+    assert.equal(received, bad);
+  });
+}
