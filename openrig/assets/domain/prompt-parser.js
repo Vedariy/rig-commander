@@ -9,8 +9,8 @@ const HITL_WEAK_CANCEL_RE = /(?:esc\s+to\s+cancel|press\s+esc\s+to\s+cancel)/i;
 const HITL_HEADER_RE = /(?:requesting\s+permission\s+for:|run\s+this\s+command\?|allow\s+this\s+(?:command|tool|action)\?|allow\s+running\b|do\s+you\s+want\s+to\s+(?:proceed|run|allow|continue|make\s+this\s+edit|create|delete)\??|would\s+you\s+like\s+to\s+(?:run|allow|proceed)|permission\s+prompt|waiting\s+for\s+(?:human|approval)|persist\s+to\s+settings\.json|approve\?\s*\(y\/n\)|\[y\/n\]|\(y\/n\)\s*$)/i;
 const HITL_BOTTOM_YN_RE = /(?:\[Y\/n\]|\[y\/N\]|\(y\/n\)|run\s+this\s+command\?|allow\s+this\s+command\?|do\s+you\s+want\s+to\s+proceed\?)\s*$/i;
 
-// Covers ALL Unicode Braille spinner glyphs (U+2801..U+28FF, incl. ⠋..⠏ and ⣟⣯⣷⣾⣽⣻⢿⡿) + active streaming markers
-const ACTIVE_TERMINAL_WORK_RE = /(?:[\u2801-\u28FF]\s+\S|esc\s+to\s+interrupt|ctrl\+c\s+to\s+(?:interrupt|stop|cancel)|(?:thinking|reasoning|generating|streaming|searching|evaluating)\.{2,3}|running\s+\d+\s+test|working\s*\(\d+|⏳\s*running|●\s+running\b)/i;
+// Covers ALL Unicode Braille spinner glyphs (U+2801..U+28FF, incl. ⠋..⠏ and ⣟⣯⣷⣾⣽⣻⢿⡿) + active streaming & Antigravity CLI task markers
+const ACTIVE_TERMINAL_WORK_RE = /(?:[\u2801-\u28FF]\s+\S|esc\s+to\s+interrupt|ctrl\+c\s+to\s+(?:interrupt|stop|cancel)|(?:thinking|reasoning|generating|streaming|searching|evaluating)\.{2,3}|running\s+\d+\s+test|working\s*\(\d+|⏳\s*running|[○●]\s+running\b|●\s*\[\d{2}:\d{2}:\d{2}\][^\n]*\brunning\b)/i;
 const IDLE_FOOTER_MARKER_RE = /(?:^\?\s*for\s+shortcuts\b|^>\s*accept-edits\s+mode\b|shift\+tab\s+to\s+cycle|bypass\s+permissions\s+on\b|auto-accept\s+edits\s+on\b|enter\s+to\s+send\b.*shortcuts|type\s+your\s+message|ask\s+codex\s+to\s+do\s+anything|ask\s+anything|send\s+a\s+message)/i;
 const IDLE_BARE_PROMPT_RE = /^\s*[›❯>]\s*(?:$|try\s+"|\/help\b|accept-edits\b|ask\s+codex\b)/i;
 // Bare OS shell prompts (zsh/bash/sh) indicating the AI agent process exited back to shell
@@ -199,6 +199,49 @@ export function detectLiveHitlPrompt(screenText) {
 }
 
 /**
+ * Returns parsed interactive quick-answer options ONLY when a genuine blocking
+ * HITL prompt is currently active at the bottom of the screen.
+ * Rejects normal assistant Markdown numbered lists ("1. ... 2. ... 3. ...") and
+ * stale scrolled-up menus so idle agents never show bogus prompt buttons.
+ */
+export function getLiveHitlOptions(screenText) {
+  const hitl = detectLiveHitlPrompt(screenText);
+  return hitl.blocked && Array.isArray(hitl.options) ? hitl.options : [];
+}
+
+/**
+ * Best-effort model extraction from live terminal banners/footers for terminal-hosted
+ * agents (e.g. Antigravity CLI "accept-edits · Gemini 4 Neon · xhigh", Codex, Claude).
+ */
+export function extractDetectedTerminalModel(screenText) {
+  if (!screenText || typeof screenText !== 'string') return '';
+  const nonEmpty = screenText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const sample = nonEmpty.slice(-36).join('\n');
+
+  // Antigravity CLI footer: "accept-edits · Gemini 4 Neon · xhigh"
+  const agyFooter = sample.match(/(?:accept-edits|auto-edit|plan|default)\s*[·•]\s*([A-Za-z0-9][A-Za-z0-9 ._-]{2,36}?)(?:\s*[·•]\s*(xhigh|high|medium|low))?(?:\s*[·•]|\s*$)/im);
+  if (agyFooter && agyFooter[1]) {
+    const base = agyFooter[1].trim();
+    const eff = agyFooter[2] ? ` (${agyFooter[2].trim()})` : '';
+    return `${base}${eff}`;
+  }
+
+  // Antigravity CLI header banner: "Gemini 4 Neon (XHigh)"
+  const agyBanner = sample.match(/\b(Gemini\s+\d+(?:\.\d+)?(?:\s+[A-Za-z0-9-]+){0,3}(?:\s*\((?:XHigh|High|Medium|Low|Pro|Flash)\))?)/i);
+  if (agyBanner && agyBanner[1]) return agyBanner[1].trim();
+
+  // Codex footer: "GPT-6.1-Sol high · ..."
+  const codexFooter = sample.match(/\b(GPT-[0-9][A-Za-z0-9.-]*(?:\s+(?:xhigh|high|medium|low))?)\b/i);
+  if (codexFooter && codexFooter[1]) return codexFooter[1].trim();
+
+  // Claude Code footer/banner: "Claude Opus 4.6" / "Sonnet 4.5"
+  const claudeBanner = sample.match(/\b(Claude\s+(?:Opus|Sonnet|Haiku)\s+\d+(?:\.\d+)?)\b/i);
+  if (claudeBanner && claudeBanner[1]) return claudeBanner[1].trim();
+
+  return '';
+}
+
+/**
  * High-precision detector for a terminal AI agent (Antigravity/agy, Claude Code, Codex, Gemini)
  * sitting idle at its empty input prompt — prevents OpenRig terminal-motion false 'working' states.
  * Never returns idle when a live HITL prompt or active spinner/working marker is visible.
@@ -251,11 +294,14 @@ export function classifyTerminalScreen(screenText, hint = '') {
     harness = 'pi';
   }
 
+  const detectedModel = extractDetectedTerminalModel(raw);
+
   const hitl = detectLiveHitlPrompt(raw);
   if (hitl.blocked) {
     return {
       state: 'needs-input',
       harness,
+      detectedModel,
       blocked: true,
       working: false,
       idleAtPrompt: false,
@@ -273,6 +319,7 @@ export function classifyTerminalScreen(screenText, hint = '') {
     return {
       state: 'working',
       harness,
+      detectedModel,
       blocked: false,
       working: true,
       idleAtPrompt: false,
@@ -287,6 +334,7 @@ export function classifyTerminalScreen(screenText, hint = '') {
     return {
       state: 'idle',
       harness,
+      detectedModel,
       blocked: false,
       working: false,
       idleAtPrompt: true,
@@ -308,6 +356,7 @@ export function classifyTerminalScreen(screenText, hint = '') {
     return {
       state: 'shell-exited',
       harness,
+      detectedModel,
       blocked: false,
       working: false,
       idleAtPrompt: false,
@@ -320,6 +369,7 @@ export function classifyTerminalScreen(screenText, hint = '') {
   return {
     state: 'unknown',
     harness,
+    detectedModel,
     blocked: false,
     working: false,
     idleAtPrompt: false,

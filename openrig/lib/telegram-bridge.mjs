@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { parseInteractivePromptOptions } from '../assets/domain/prompt-parser.js';
+import { getLiveHitlOptions } from '../assets/domain/prompt-parser.js';
 
 /**
  * Telegram HITL & Guardrail Bridge (Zero-dependency, native Node fetch).
@@ -19,7 +19,7 @@ export function maskBotToken(token) {
 }
 
 export function buildHitlTelegramPayload(seatId, screenText, registerNonce) {
-  const options = parseInteractivePromptOptions(screenText);
+  const options = getLiveHitlOptions(screenText);
   const tailLines = String(screenText || '')
     .split(/\r?\n/)
     .map(l => l.trimEnd())

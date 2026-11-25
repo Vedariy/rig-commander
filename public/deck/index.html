@@ -12,7 +12,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
-  <title>RigCommander // Neural Command Deck v3.1</title>
+  <title>RigCommander // Neural Command Deck v3.3</title>
   <meta name="description" content="Interactive Neural Command Deck for autonomous AI coding fleets (Claude Code, Codex CLI, tmux & OpenRig). Live Graph ⇄ Task Gantt, 1-click HITL, SUB vs PAYG FinOps & Share Card PNG export." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="RigCommander" />
@@ -97,7 +97,7 @@
       <div class="brand-orb">💠</div>
       <div>
         <div class="brand-title">
-          <span>RIGCOMMANDER // NEURAL COMMAND DECK v3.1</span>
+          <span id="deckBrandTitle">RIGCOMMANDER // NEURAL COMMAND DECK v3.3</span>
           <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
           <select id="rigFilterSelect" class="rig-select" onchange="onRigFilterChange(this.value)">
             <option value="all" selected data-i18n="hud.allRigs">🌐 ВСЕ РИГИ (2)</option>
@@ -188,7 +188,7 @@
     <!-- COLUMN A: WHO WAITS FOR WHOM & WHY + DECISIONS LOG -->
     <section class="panel" id="panelLeft">
       <div class="panel-header">
-        <span data-i18n="radar.title">⏳ КТО → КОГО → ЗАЧЕМ ЖДЁТ</span>
+        <span data-i18n="radar.title" title="⏳ WHO → WHOM → WAITING">⏳ КТО → КОГО</span>
         <span style="display:flex; align-items:center; gap:6px;">
           <span id="waitCountBadge" style="color:#fbbf24">LIVE</span>
           <button type="button" class="widget-hint" data-hint-key="hint.radar" aria-label="Info">?</button>
@@ -1153,6 +1153,7 @@
       renderReservoirs();
       renderWaitRadarAndDecisions();
       renderTopology();
+      renderSwimlanes();
       renderInspectorAndScorecards(true);
       renderEdgeXray();
       refreshTelemetryNow();
@@ -1216,6 +1217,22 @@
       }
     }
 
+    function isLaneInCurrentRig(lane) {
+      if (!lane || currentRigFilter === 'all') return true;
+      const suffix = '@' + currentRigFilter;
+      if (Array.isArray(lane.rigs) && lane.rigs.length > 0) {
+        return lane.rigs.includes(currentRigFilter);
+      }
+      if (Array.isArray(lane.coderIds) && lane.coderIds.length > 0) {
+        return lane.coderIds.some(cid => String(cid || '').endsWith(suffix));
+      }
+      return false;
+    }
+
+    function getVisibleSliceLanes() {
+      return SLICES_LANES.filter(isLaneInCurrentRig);
+    }
+
     function renderFilterButtons() {
       const btnAll = document.getElementById('btnFilterAll');
       if (btnAll) btnAll.classList.toggle('active', currentSliceFilter === 'all');
@@ -1223,9 +1240,10 @@
       const container = document.getElementById('dynamicSliceButtons');
       if (!container) return;
 
-      const topSlices = SLICES_LANES.slice(0, 3);
+      const scopedLanes = getVisibleSliceLanes();
+      const topSlices = scopedLanes.slice(0, 3);
       if (currentSliceFilter !== 'all' && !topSlices.some(l => l.id === currentSliceFilter)) {
-        const extra = SLICES_LANES.find(l => l.id === currentSliceFilter) || {
+        const extra = scopedLanes.find(l => l.id === currentSliceFilter) || {
           id: currentSliceFilter,
           name: currentSliceFilter
         };
@@ -3129,11 +3147,12 @@
       renderFilterButtons();
       const container = document.getElementById('swimlanesContainer');
       const section = container ? container.closest('.swimlanes-section') : null;
+      const visibleLanes = getVisibleSliceLanes();
       if (section) {
-        section.style.display = SLICES_LANES.length > 0 ? '' : 'none';
+        section.style.display = visibleLanes.length > 0 ? '' : 'none';
       }
       if (!container) return;
-      const nextSwimHtml = SLICES_LANES.map(lane => {
+      const nextSwimHtml = visibleLanes.map(lane => {
         const isSelectedSlice = currentSliceFilter === lane.id;
         const stagesHtml = STAGE_NAMES.map((stName, idx) => {
           let cls = '';
@@ -3360,7 +3379,11 @@
     }
 
     function renderInteractivePromptOptionsHtml(seatId, screenText, statusElId = 'cmdSendStatus') {
-      const options = parseInteractivePromptOptions(screenText);
+      const options = typeof getLiveHitlOptions === 'function'
+        ? getLiveHitlOptions(screenText)
+        : (typeof detectLiveHitlPrompt === 'function'
+          ? (detectLiveHitlPrompt(screenText).options || [])
+          : parseInteractivePromptOptions(screenText));
       if (!options.length) return '';
       const scopeKey = typeof buildSeatScopeKey === 'function' ? buildSeatScopeKey(seatId) : `seat:${seatId}`;
       const btns = options.map(opt => {
@@ -3760,6 +3783,27 @@
       return ` • 💰 ~$${u.estUsd.toFixed(2)} (${formatTokensShort(u.totalTokens)} tok, ${u.cachedPct}% кэш)`;
     }
 
+    function formatAgentHarnessLabel(agent) {
+      if (!agent) return '';
+      let harness = String(agent.detectedHarness || agent.harness || 'agent').trim();
+      let model = String(agent.model || '').trim();
+      if ((!model || model === 'terminal' || harness === 'terminal') && typeof classifyTerminalScreen === 'function') {
+        const scr = (lastScreenBySeat && lastScreenBySeat[agent.id]) || (agent.id === selectedAgentId ? liveScreenCapture : '');
+        if (scr) {
+          const cls = classifyTerminalScreen(scr, harness);
+          if (cls && cls.harness && cls.harness !== 'generic' && (harness === 'terminal' || harness === 'generic')) {
+            harness = cls.harness === 'antigravity' ? 'agy' : cls.harness;
+          }
+          if (cls && cls.detectedModel && (!model || model === 'terminal' || model === harness)) {
+            model = cls.detectedModel;
+          }
+        }
+      }
+      if (harness === 'antigravity') harness = 'agy';
+      if (!model || model === harness) return harness;
+      return `${harness} • ${model}`;
+    }
+
     function renderInspectorAndScorecards(flashHighlight = false) {
       const agent = AGENTS.find(a => a.id === selectedAgentId) || AGENTS[0];
       const thermal = getContextThermal(agent.ctxPct, agent.ctxWindowSize);
@@ -3796,8 +3840,9 @@
 
         const elHarness = document.getElementById('inspValHarness');
         if (elHarness) {
-          elHarness.textContent = `${agent.harness} • ${agent.model}`;
-          elHarness.title = `${agent.harness} • ${agent.model}`;
+          const harnessLbl = formatAgentHarnessLabel(agent);
+          elHarness.textContent = harnessLbl;
+          elHarness.title = harnessLbl;
         }
 
         const elCtx = document.getElementById('inspValContext');
@@ -3927,7 +3972,7 @@
                 <div id="inspValActivity" style="display:flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:${agent.state === 'working' ? '#00ff9d' : agent.state === 'urgent' ? '#ff0055' : '#7dd3fc'};">
                   ${renderStateIndicatorHtml(agent)} <span style="font-size:10.5px; color:#94a3b8; font-weight:500;">(${lastActStr})</span>
                 </div>
-                <span id="inspValHarness" style="font-family:var(--font-mono); font-size:10.5px; color:#e9d5ff; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px; max-width:170px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(`${agent.harness} • ${agent.model}`)}">${escapeHtml(`${agent.harness} • ${agent.model}`)}</span>
+                <span id="inspValHarness" style="font-family:var(--font-mono); font-size:10.5px; color:#e9d5ff; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(formatAgentHarnessLabel(agent))}">${escapeHtml(formatAgentHarnessLabel(agent))}</span>
               </div>
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <div style="flex:1 1 56px; min-width:44px; height:5px; background:rgba(148,163,184,0.16); border-radius:999px; overflow:hidden;">
@@ -4639,6 +4684,7 @@
             target.usage = sess.usage;
             target.model = sess.model;
             if (sess.effort) target.effort = sess.effort;
+            if (liveNode.detectedHarness) target.detectedHarness = liveNode.detectedHarness;
 
             // Project Seat
             target.harness = seat.harness;
@@ -4836,9 +4882,12 @@
               const aActive = activeSliceSet.has(a.slice) ? 1 : 0;
               const bActive = activeSliceSet.has(b.slice) ? 1 : 0;
               if (aActive !== bActive) return bActive - aActive;
+              const aTs = String(a.lastTs || '');
+              const bTs = String(b.lastTs || '');
+              if (aTs !== bTs) return bTs.localeCompare(aTs);
               return (b.turns || 0) - (a.turns || 0);
             });
-            const sliceEntries = allSlices.slice(0, 7);
+            const sliceEntries = allSlices.slice(0, 18);
             if (sliceEntries.length > 0) {
               const deployedSet = new Set(['tts-strict-chunked', 'editor-load-boundaries', 'elb-001', 'elb-003', 'alert-voice-mark']);
               const coderNameMap = {
@@ -4852,7 +4901,7 @@
                 const openRow = openQueue.find(q => (q.tags || []).includes('slice:' + s.slice));
                 const qaRounds = Math.max(1, s.checkRounds || 1);
                 let currentStage = 4;
-                let statusNote = 'Принят локально';
+                let statusNote = deckLang === 'en' ? 'Accepted locally' : 'Принят локально';
                 let color = '#38bdf8';
 
                 if (openRow) {
@@ -4863,11 +4912,11 @@
 
                   if (isAcceptedHandoff) {
                     currentStage = 4;
-                    statusNote = 'Принят QA (1-й круг)';
+                    statusNote = deckLang === 'en' ? 'Accepted by QA' : 'Принят QA (1-й круг)';
                     color = '#10b981';
                   } else if ((openRow.destinationSession || '').startsWith('dev-check')) {
                     currentStage = 2;
-                    statusNote = 'На проверке QA';
+                    statusNote = deckLang === 'en' ? 'In QA check' : 'На проверке QA';
                     color = '#f59e0b';
                   } else if (
                     (s.checkRounds >= 1) ||
@@ -4875,11 +4924,11 @@
                     /P[123]|вернуть|доработ|исправить/i.test(summaryText)
                   ) {
                     currentStage = 3;
-                    statusNote = 'Доработка после QA';
+                    statusNote = deckLang === 'en' ? 'QA rework' : 'Доработка после QA';
                     color = '#fbbf24';
                   } else {
                     currentStage = 1;
-                    statusNote = 'В разработке';
+                    statusNote = deckLang === 'en' ? 'In development' : 'В разработке';
                     color = '#00f0ff';
                   }
                 } else if (deployedSet.has(s.slice)) {
@@ -4888,11 +4937,27 @@
                   color = '#00ff9d';
                 } else if (/zапаркован|parked|hold/i.test(s.lastSummary || '')) {
                   currentStage = 3;
-                  statusNote = 'Parked / Сверка';
+                  statusNote = deckLang === 'en' ? 'Parked / Review' : 'Parked / Сверка';
                   color = '#94a3b8';
                 }
 
-                const primaryCoder = (s.coders && s.coders[0] && coderNameMap[s.coders[0]]) || '🧭 dev-pod';
+                const inferredRigs = new Set(Array.isArray(s.rigs) ? s.rigs : []);
+                for (const cid of Array.isArray(s.coders) ? s.coders : []) {
+                  const at = String(cid || '').lastIndexOf('@');
+                  if (at > 0) inferredRigs.add(String(cid).slice(at + 1));
+                }
+                if (openRow) {
+                  for (const sessId of [openRow.sourceSession, openRow.destinationSession]) {
+                    const at = String(sessId || '').lastIndexOf('@');
+                    if (at > 0) {
+                      const rk = String(sessId).slice(at + 1);
+                      if (rk && rk !== 'human' && rk !== 'external') inferredRigs.add(rk);
+                    }
+                  }
+                }
+
+                const firstCoder = Array.isArray(s.coders) && s.coders[0] ? s.coders[0] : '';
+                const primaryCoder = (firstCoder && (coderNameMap[firstCoder] || `💻 ${shortSeat(firstCoder)}`)) || '🧭 dev-pod';
                 const padPx = `${Math.min(12, Math.max(6, 5 + Math.round((s.turns || 1) * 0.45)))}px`;
                 const barPx = `${Math.min(10, Math.max(4, 3 + qaRounds * 2))}px`;
 
@@ -4900,7 +4965,8 @@
                   id: s.slice,
                   name: `🏷️ ${s.slice}`,
                   coder: `${primaryCoder} • ${statusNote}`,
-                  coderIds: Array.isArray(s.coders) && s.coders.length > 0 ? s.coders : ['dev-operator@core-platform'],
+                  coderIds: Array.isArray(s.coders) && s.coders.length > 0 ? s.coders : [],
+                  rigs: Array.from(inferredRigs),
                   turns: s.turns || 1,
                   qaRounds,
                   color,
@@ -4973,9 +5039,13 @@
       if (!container || !strip || !badge) return;
 
       const candidates = [];
+      const rigSuffix = currentRigFilter && currentRigFilter !== 'all' ? ('@' + currentRigFilter) : '';
+      const inCurrentRig = (seatId) => !rigSuffix || (seatId && String(seatId).endsWith(rigSuffix));
+      const scopedAgents = AGENTS.filter(a => inCurrentRig(a.id));
+      const scopedLanes = getVisibleSliceLanes();
 
       // P0: Agents waiting for human intervention (state === 'urgent' / needsInput)
-      for (const a of AGENTS) {
+      for (const a of scopedAgents) {
         if (a.state === 'urgent') {
           candidates.push({
             prio: 0,
@@ -4990,7 +5060,7 @@
       }
 
       // P1: Hot Context with ETA threshold (ctxPct >= CONTEXT_WARN_PCT)
-      const hotAgents = AGENTS.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT)
+      const hotAgents = scopedAgents.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT)
         .sort((a, b) => b.ctxPct - a.ctxPct);
       for (const a of hotAgents) {
         const burn = computeBurn(a, deckLang);
@@ -5014,7 +5084,7 @@
       }
 
       // P2: Slices ready to push to origin/dev or accepted locally
-      for (const lane of SLICES_LANES) {
+      for (const lane of scopedLanes) {
         if (lane.currentStage === 4) {
           candidates.push({
             prio: 2,
@@ -5029,7 +5099,7 @@
       }
 
       // P3: OpenRig native parked seats
-      for (const a of AGENTS) {
+      for (const a of scopedAgents) {
         if (a.parkedData && a.parkedData.parked) {
           candidates.push({
             prio: 3,
@@ -5049,6 +5119,11 @@
         for (const rec of window.LIVE_INTELLIGENCE.topRecommendations) {
           const prio = rec.severity === 'p0_urgent' ? 0.5 : rec.severity === 'p1_high' ? 1.2 : rec.severity === 'p2_medium' ? 2.2 : 3.2;
           const seatId = rec.actionPlan?.seatTarget || rec.metrics?.affectedSeats?.[0] || '';
+          if (rigSuffix && seatId && !inCurrentRig(seatId)) continue;
+          const affected = Array.isArray(rec.metrics?.affectedSeats) ? rec.metrics.affectedSeats : [];
+          if (rigSuffix && !seatId && affected.length > 0 && !affected.some(inCurrentRig)) continue;
+          const recSlice = rec.metrics?.affectedSlices?.[0] || rec.actionPlan?.params?.slice || rec.actionPlan?.sliceTarget || rec.metrics?.slice || '';
+          if (rigSuffix && recSlice && !scopedLanes.some(l => l.id === recSlice)) continue;
           const seatObj = AGENTS.find(x => x.id === seatId) || null;
           const baseAction = resolveActionFromFinding(rec.actionPlan, seatObj) ||
             { id: 'focus_seat', transport: 'select_seat', seatId, payload: '', label: td('diag.inspectBtn'), tone: 'default' };
@@ -5093,6 +5168,7 @@
       if (dedupedCandidates.length < 3) {
         for (const q of LIVE_OPEN_QUEUE) {
           if (q.state === 'in-progress') {
+            if (rigSuffix && q.destinationSession && !inCurrentRig(q.destinationSession)) continue;
             if (q.destinationSession && seenCandidateSeats.has(q.destinationSession)) continue;
             const sliceTag = ((q.tags || []).find(t => t.startsWith('slice:')) || '').replace('slice:', '') || 'task';
             if (q.destinationSession) seenCandidateSeats.add(q.destinationSession);
@@ -5680,7 +5756,9 @@
       const submitBtn = (ev && ev.submitter) || (input.form && input.form.querySelector('button[type="submit"]')) || null;
       const targetAgent = AGENTS.find(a => a.id === seat);
       const hasInteractiveMenu = (targetAgent && targetAgent.state === 'urgent') ||
-        parseInteractivePromptOptions(lastScreenBySeat[seat] || '').length >= 2;
+        (typeof detectLiveHitlPrompt === 'function'
+          ? detectLiveHitlPrompt(lastScreenBySeat[seat] || '').blocked
+          : parseInteractivePromptOptions(lastScreenBySeat[seat] || '').length >= 2);
 
       let resolvedType = 'msg';
       let resolvedPayload = val;
@@ -7042,7 +7120,9 @@
     }
 
     function renderModalEvalRiskBarHtml(seatId, screenText) {
-      const opts = parseInteractivePromptOptions(screenText || '');
+      const opts = typeof getLiveHitlOptions === 'function'
+        ? getLiveHitlOptions(screenText || '')
+        : parseInteractivePromptOptions(screenText || '');
       const v = getLatestEvalVerdict('seat', seatId);
       if (opts.length < 2 && !v) return '';
       const busy = isEvalRunning('seat', seatId, 'system1');
@@ -11502,6 +11582,12 @@
         return;
       }
       appUpdateState = { ...appUpdateState, ...next };
+      if (appUpdateState.currentVersion) {
+        const parts = String(appUpdateState.currentVersion).split('.');
+        const minorTag = parts.length >= 2 ? `v${parts[0]}.${parts[1]}` : `v${appUpdateState.currentVersion}`;
+        const brandEl = document.getElementById('deckBrandTitle');
+        if (brandEl) brandEl.textContent = `RIGCOMMANDER // NEURAL COMMAND DECK ${minorTag}`;
+      }
       syncUpdateButtonUi();
       const modal = document.getElementById('updateModal');
       if (modal && modal.classList.contains('open')) renderUpdateModal();

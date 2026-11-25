@@ -313,6 +313,46 @@ test('computeHistoryStats extracts tsUpdated/tsCreated/qitemId timestamps and pr
   assert.equal(stats.pairEnvelopes[key].length, 12);
   assert.equal(stats.pairEnvelopes[key][0].createdAt, '2026-11-22T23:00:00Z');
   assert.equal(stats.pairEnvelopes[key][1].updatedAt, '2026-11-22T23:01:00Z');
+  assert.deepEqual(stats.sliceStats['0147-a1'].rigs, ['demo']);
+
+  // Slice scoping ignores @human / @external pseudo-rigs and isolates per real rig
+  const multiRigStats = computeHistoryStats([
+    {
+      qitemId: 'qitem-20261125154743-aaaa1111',
+      sourceSession: 'viktor@human',
+      destinationSession: 'dev-owner@rig-commander',
+      state: 'pending',
+      tags: ['slice:iter6-1'],
+      summary: 'Extract guardrails-view.js'
+    },
+    {
+      qitemId: 'qitem-20261125154000-bbbb2222',
+      sourceSession: 'dev-owner@streamdonation-pwa',
+      destinationSession: 'dev-coder@streamdonation-pwa',
+      state: 'in-progress',
+      tags: ['slice:viewer-chat'],
+      summary: 'Viewer chat slice'
+    }
+  ]);
+  assert.deepEqual(multiRigStats.sliceStats['iter6-1'].rigs, ['rig-commander']);
+  assert.deepEqual(multiRigStats.sliceStats['viewer-chat'].rigs, ['streamdonation-pwa']);
+});
+
+test('applyTerminalPromptProbes enriches terminal seats with detectedHarness and detectedModel without mutating non-terminal seats', () => {
+  const nodes = [
+    { canonicalSessionName: 'dev-check@rig-commander', runtime: 'terminal', model: null, activityState: { display: 'idle' } },
+    { canonicalSessionName: 'dev-coder@rig-commander', runtime: 'codex', model: 'gpt-6.1-sol', activityState: { display: 'idle' } }
+  ];
+  const probes = new Map([
+    ['dev-check@rig-commander', { blocked: false, working: true, idleAtPrompt: false, harness: 'antigravity', detectedModel: 'Gemini 4 Neon (xhigh)' }],
+    ['dev-coder@rig-commander', { blocked: false, working: false, idleAtPrompt: true, harness: 'codex', detectedModel: 'GPT-6.1-Sol' }]
+  ]);
+  const out = applyTerminalPromptProbes(nodes, probes);
+  assert.equal(out[0].activityState.display, 'working');
+  assert.equal(out[0].detectedHarness, 'antigravity');
+  assert.equal(out[0].model, 'Gemini 4 Neon (xhigh)');
+  assert.equal(out[1].model, 'gpt-6.1-sol');
+  assert.equal(out[1].detectedHarness, undefined);
 });
 
 test('dispatchRawCommand uses native rig send --raw for OpenRig seats and paced TUI sequence for standalone tmux panes', async () => {

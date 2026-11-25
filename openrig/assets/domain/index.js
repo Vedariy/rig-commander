@@ -1,6 +1,8 @@
 export {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
+  getLiveHitlOptions,
+  extractDetectedTerminalModel,
   detectTerminalIdleAtPrompt,
   classifyTerminalScreen
 } from './prompt-parser.js';

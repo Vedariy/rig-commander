@@ -969,12 +969,18 @@
       white-space: nowrap;
     }
     .panel-header > span:first-child {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      display: block;
+      flex: 1 1 auto;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .panel-header > span:last-child {
+      flex-shrink: 0;
+    }
+    #panelLeft .panel-header {
+      letter-spacing: 0.25px;
     }
 
     .panel-body {

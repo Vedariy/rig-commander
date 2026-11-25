@@ -5,7 +5,7 @@
  * and enforces non-overridable Hard Safety Vetoes (Expert > AI).
  */
 
-import { classifyTerminalScreen, parseInteractivePromptOptions } from '../../assets/domain/prompt-parser.js';
+import { classifyTerminalScreen, getLiveHitlOptions } from '../../assets/domain/prompt-parser.js';
 import { isPiHarness } from '../../assets/ontology/actions.js';
 import { EVAL_RISK_LEVELS, EVAL_TIERS } from '../../assets/domain/evaluator-model.js';
 
@@ -51,7 +51,7 @@ function extractCandidateCommandLine(promptRegion) {
  */
 export function evaluateHitlRiskRules(screenText = '', parsedOptions = null) {
   const region = extractPromptCommandRegion(screenText);
-  const opts = Array.isArray(parsedOptions) ? parsedOptions : parseInteractivePromptOptions(screenText);
+  const opts = Array.isArray(parsedOptions) ? parsedOptions : getLiveHitlOptions(screenText);
   const hardVetoes = [];
 
   for (const pat of DESTRUCTIVE_VETO_PATTERNS) {
@@ -178,7 +178,7 @@ export function evaluateTier0({
   const shortName = seatId ? seatId.split('@')[0] : (targetId || 'fleet');
 
   const screenClass = screenText ? classifyTerminalScreen(screenText, seat?.harness || seat?.runtime || '') : null;
-  const parsedOptions = screenText ? parseInteractivePromptOptions(screenText) : [];
+  const parsedOptions = screenText ? getLiveHitlOptions(screenText) : [];
 
   const isUrgent = Boolean(
     seat?.state === 'urgent' ||

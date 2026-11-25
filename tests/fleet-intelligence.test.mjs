@@ -9,6 +9,8 @@ import { computeQueueKinetics, isQueueSystemNoise } from '../openrig/lib/fleet-i
 import {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
+  getLiveHitlOptions,
+  extractDetectedTerminalModel,
   detectTerminalIdleAtPrompt,
   classifyTerminalScreen,
   classifyEdgeQueueStatus,
@@ -124,6 +126,66 @@ test('detectLiveHitlPrompt catches terminal/agy & Codex prompts while rejecting 
     'All 40 tests passed.'
   ].join('\n');
   assert.equal(detectLiveHitlPrompt(staleScrolledMenu).blocked, false);
+});
+
+test('getLiveHitlOptions rejects idle agy markdown numbered lists, detects agy running tasks & extracts model', () => {
+  const idleAgyMarkdownReply = [
+    'Готовность к приёму кандидатов Итерации 6',
+    '',
+    'На каждом candidate commit SHA буду выполнять:',
+    '1. Обязательный verification gate (npm run sync:public, npm test, npm run audit:exposure).',
+    '2. Независимые исполняемые проверки поведения, negative control, live/demo Chromium smoke.',
+    '3. Возврат вердикта PASS / FAIL с доказательствами в dev-owner@rig-commander.',
+    '',
+    'Жду первый SHA кандидата и задание на проверку.',
+    '────────────────────────────────────────────────────────────────────────────────',
+    '>',
+    '────────────────────────────────────────────────────────────────────────────────',
+    '? for shortcuts                             accept-edits · Gemini 4 Neon · xhigh'
+  ].join('\n');
+
+  // Raw parser sees 3 numbered items, but getLiveHitlOptions MUST return [] so UI never shows bogus PROMPT OPTIONS
+  assert.equal(parseInteractivePromptOptions(idleAgyMarkdownReply).length, 3);
+  assert.deepEqual(getLiveHitlOptions(idleAgyMarkdownReply), []);
+  const idleCls = classifyTerminalScreen(idleAgyMarkdownReply, 'terminal');
+  assert.equal(idleCls.state, 'idle');
+  assert.equal(idleCls.harness, 'antigravity');
+  assert.equal(idleCls.detectedModel, 'Gemini 4 Neon (xhigh)');
+  assert.equal(extractDetectedTerminalModel(idleAgyMarkdownReply), 'Gemini 4 Neon (xhigh)');
+
+  // Antigravity CLI actively executing a command / background task MUST classify as working (not idle!)
+  const runningAgyScreen = [
+    '○ Running (node /tmp/qa-verify-iter6-1.mjs) (ctrl+o to expand)',
+    '  Учёл 700ms cooldown ActionFlightGuard; повторно запущен полный прогон.',
+    '────────────────────────────────────────────────────────────────────────────────',
+    '>',
+    '────────────────────────────────────────────────────────────────────────────────',
+    '  ● [20:25:47] node /tmp/qa-verify-iter6-1.mjs running',
+    '────────────────────────────────────────────────────────────────────────────────',
+    '? for shortcuts        accept-edits · Gemini 4 Neon · xhigh · 1 task(s) · /tasks'
+  ].join('\n');
+  const runCls = classifyTerminalScreen(runningAgyScreen, 'terminal');
+  assert.equal(runCls.state, 'working');
+  assert.equal(runCls.working, true);
+  assert.equal(runCls.idleAtPrompt, false);
+  assert.equal(runCls.detectedModel, 'Gemini 4 Neon (xhigh)');
+
+  // Genuine blocking agy permission prompt still returns all 4 actionable options
+  const realAgyPrompt = [
+    'Requesting permission for:',
+    '  git ls-files .private-docs',
+    'Run this command?',
+    '> 1. Yes, run command',
+    '  2. Yes, and always allow in this conversation',
+    '  3. Yes, and always allow (Persist to settings.json)',
+    '  4. No, cancel',
+    '  ↑/↓ Navigate · tab Amend · ctrl+g edit/expand command',
+    'esc to cancel                               accept-edits · Gemini 4 Neon · xhigh'
+  ].join('\n');
+  const liveOpts = getLiveHitlOptions(realAgyPrompt);
+  assert.equal(liveOpts.length, 4);
+  assert.equal(liveOpts[0].keyStroke, '1 Enter');
+  assert.equal(liveOpts[3].isCancel, true);
 });
 
 test('classifyEdgeQueueStatus differentiates live, blocked, parked, held, pending and ghost highways', () => {

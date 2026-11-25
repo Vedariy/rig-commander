@@ -103,9 +103,26 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
     const curNeeds = (node.activityState && node.activityState.needsInput && node.activityState.needsInput.count) || 0;
     const curDisp = (node.activityState && node.activityState.display) || '';
 
-    if (probe.blocked) {
-      if (curNeeds > 0 || curDisp === 'needs-input') return node;
+    // Enrich terminal-hosted seats (e.g. Antigravity CLI) with detected harness & model when missing
+    const enrichIdentity = (base) => {
+      if (base.runtime !== 'terminal') return base;
+      const nextHarness = (!base.detectedHarness && probe.harness && probe.harness !== 'generic')
+        ? probe.harness
+        : base.detectedHarness;
+      const nextModel = (!base.model && probe.detectedModel)
+        ? probe.detectedModel
+        : base.model;
+      if (nextHarness === base.detectedHarness && nextModel === base.model) return base;
       return {
+        ...base,
+        ...(nextHarness ? { detectedHarness: nextHarness } : {}),
+        ...(nextModel ? { model: nextModel } : {})
+      };
+    };
+
+    if (probe.blocked) {
+      if (curNeeds > 0 || curDisp === 'needs-input') return enrichIdentity(node);
+      return enrichIdentity({
         ...node,
         activityState: {
           ...(node.activityState || {}),
@@ -118,13 +135,13 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
             harness: probe.harness || node.runtime || 'generic'
           }
         }
-      };
+      });
     }
 
     if (probe.working && curNeeds === 0 && curDisp === 'idle') {
       const hasWork = (Number(node.inProgressWorkCount) || 0) > 0 || (Number(node.assignedWorkCount) || 0) > 0;
       if (hasWork || node.runtime === 'terminal') {
-        return {
+        return enrichIdentity({
           ...node,
           activityState: {
             ...(node.activityState || {}),
@@ -133,7 +150,7 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
             source: 'tmux-work-probe'
           },
           agentActivity: node.agentActivity ? { ...node.agentActivity, state: 'running' } : node.agentActivity
-        };
+        });
       }
     }
 
@@ -141,7 +158,7 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
       const hasWork = (Number(node.inProgressWorkCount) || 0) > 0 || (Number(node.assignedWorkCount) || 0) > 0;
       const looksWorking = curDisp === 'working' || curDisp === 'running' || (node.agentActivity && node.agentActivity.state === 'running');
       if (!hasWork && looksWorking && curNeeds === 0) {
-        return {
+        return enrichIdentity({
           ...node,
           activityState: {
             ...(node.activityState || {}),
@@ -149,18 +166,18 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
             source: 'tmux-idle-probe'
           },
           agentActivity: node.agentActivity ? { ...node.agentActivity, state: 'idle' } : node.agentActivity
-        };
+        });
       }
     }
 
     if (probe.shellExited) {
-      return {
+      return enrichIdentity({
         ...node,
         shellExited: true
-      };
+      });
     }
 
-    return node;
+    return enrichIdentity(node);
   });
 }
 
@@ -195,7 +212,8 @@ function refreshTerminalProbesBackground(staleCandidates) {
         idleAtPrompt: verdict.idleAtPrompt,
         shellExited: Boolean(verdict.shellExited),
         reason: verdict.reason,
-        harness: verdict.harness
+        harness: verdict.harness,
+        detectedModel: verdict.detectedModel || ''
       };
       boundedMapSet(terminalPromptProbeCache, seatId, entry, MAX_GUIDANCE_CACHE);
     } catch {
@@ -252,7 +270,7 @@ async function enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR = true }
     const cached = terminalPromptProbeCache.get(seatId);
     if (cached && now - cached.ts < TERMINAL_PROMPT_PROBE_STALE_MAX_MS) {
       cachedCount++;
-      if (cached.blocked || cached.working || cached.idleAtPrompt || cached.shellExited) {
+      if (cached.blocked || cached.working || cached.idleAtPrompt || cached.shellExited || (n.runtime === 'terminal' && (cached.detectedModel || (cached.harness && cached.harness !== 'generic')))) {
         probeMap.set(seatId, cached);
       }
       if (now - cached.ts >= seatTtlMs) {
@@ -270,7 +288,7 @@ async function enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR = true }
       await bg;
       for (const n of staleCandidates) {
         const entry = terminalPromptProbeCache.get(n.canonicalSessionName);
-        if (entry && (entry.blocked || entry.working || entry.idleAtPrompt || entry.shellExited)) {
+        if (entry && (entry.blocked || entry.working || entry.idleAtPrompt || entry.shellExited || (n.runtime === 'terminal' && (entry.detectedModel || (entry.harness && entry.harness !== 'generic'))))) {
           probeMap.set(n.canonicalSessionName, entry);
         }
       }
@@ -1554,12 +1572,26 @@ function computeHistoryStats(allQueue) {
     }
     if (sliceTag) {
       if (!sliceMap[sName]) {
-        sliceMap[sName] = { slice: sName, turns: 0, checkRounds: 0, coders: new Set(), lastSummary: q.summary || '' };
+        sliceMap[sName] = { slice: sName, turns: 0, checkRounds: 0, coders: new Set(), rigs: new Set(), lastTs: '', lastSummary: q.summary || '' };
       }
       sliceMap[sName].turns += 1;
       if (dst.startsWith('dev-check@')) sliceMap[sName].checkRounds += 1;
       if (src.startsWith('dev-coder')) sliceMap[sName].coders.add(src);
       if (dst.startsWith('dev-coder')) sliceMap[sName].coders.add(dst);
+      for (const sessId of [src, dst]) {
+        const atIdx = sessId.lastIndexOf('@');
+        if (atIdx > 0) {
+          const rigKey = sessId.slice(atIdx + 1);
+          if (rigKey && rigKey !== 'external' && rigKey !== 'human') {
+            sliceMap[sName].rigs.add(rigKey);
+          }
+        }
+      }
+      const rowTs = q.tsUpdated || q.tsCreated || extractTsFromQitemId(q.qitemId) || '';
+      if (rowTs && (!sliceMap[sName].lastTs || rowTs > sliceMap[sName].lastTs)) {
+        sliceMap[sName].lastTs = rowTs;
+        if (q.summary) sliceMap[sName].lastSummary = q.summary;
+      }
     }
   }
 
@@ -1598,7 +1630,7 @@ function computeHistoryStats(allQueue) {
     nodeTraffic,
     ganttItems: buildGanttItems(allQueue),
     sliceStats: Object.fromEntries(
-      Object.entries(sliceMap).map(([k, v]) => [k, { ...v, coders: Array.from(v.coders) }])
+      Object.entries(sliceMap).map(([k, v]) => [k, { ...v, coders: Array.from(v.coders), rigs: Array.from(v.rigs || []) }])
     )
   };
 }

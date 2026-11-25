@@ -1,4 +1,4 @@
-import { parseInteractivePromptOptions } from '../domain/prompt-parser.js';
+import { getLiveHitlOptions } from '../domain/prompt-parser.js';
 
 export const CONTEXT_WARN_PCT = 65;
 export const CONTEXT_CRIT_PCT = 75;
@@ -16,7 +16,7 @@ function buildSeatContext(seat, screenText = '') {
   const isPi = isPiHarness(seat);
   const isClaude = harness.includes('claude');
   const isAgy = harness.includes('terminal') || harness.includes('agy') || id.includes('coder5');
-  const parsedOptions = parseInteractivePromptOptions(screenText);
+  const parsedOptions = getLiveHitlOptions(screenText);
   const hasParsedOptions = parsedOptions.length >= 2;
   const isUrgent = Boolean(seat && seat.state === 'urgent');
   const isWorking = Boolean(seat && seat.state === 'working');
