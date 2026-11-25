@@ -507,3 +507,28 @@ test('BottleneckDetector filters stuck-sweep noise, deduplicates queue rows, exp
   const topSeats = rep.topRecommendations.map(r => r.actionPlan.seatTarget);
   assert.equal(new Set(topSeats).size, 3, `Expected 3 distinct seats in topRecommendations, got ${topSeats}`);
 });
+
+test('TelemetryRingBuffer stores bounded slim snapshots without retaining giant history/guidance blobs', () => {
+  const engine = new FleetIntelligenceEngine({ evalThrottleMs: 999999 });
+  const giantHistory = { ganttItems: Array.from({ length: 500 }, (_, i) => ({ id: `q-${i}`, summary: 'x'.repeat(200) })) };
+  for (let i = 0; i < 60; i++) {
+    engine.ingestSnapshot({
+      timestamp: new Date(Date.now() + i * 1000).toISOString(),
+      requestedRig: 'all',
+      nodes: [{ canonicalSessionName: 'dev-owner@rig', activityState: { display: 'idle' } }],
+      activeQueue: [{ qitemId: `q-${i}`, state: 'pending', body: 'huge'.repeat(1000) }],
+      history: giantHistory,
+      seatGuidance: { 'dev-owner@rig': { duties: ['heavy'] } },
+      seatCompactions: { 'dev-owner@rig': { recapText: 'R'.repeat(2400) } },
+      intelligence: { allFindings: [{ id: 'f1' }] }
+    });
+  }
+  assert.equal(engine.buffer.size(), 30);
+  const latest = engine.buffer.getLatest();
+  assert.equal(latest.history, undefined);
+  assert.equal(latest.seatGuidance, undefined);
+  assert.equal(latest.seatCompactions, undefined);
+  assert.equal(latest.intelligence, undefined);
+  assert.equal(latest.activeQueue[0].body, undefined);
+  assert.equal(latest.nodes[0].canonicalSessionName, 'dev-owner@rig');
+});

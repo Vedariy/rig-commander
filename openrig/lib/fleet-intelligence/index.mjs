@@ -14,7 +14,7 @@ import { ZombieSeatDetector } from './detectors/zombie-seat.mjs';
 
 export class FleetIntelligenceEngine {
   constructor(options = {}) {
-    this.buffer = new TelemetryRingBuffer(options.maxSnapshots || 300);
+    this.buffer = new TelemetryRingBuffer(options.maxSnapshots || 30);
     this.detectors = [
       new LiveBlockerDetector(),
       new ContextEntropyDetector(),

@@ -27,14 +27,18 @@ import {
 
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
-const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 300, evalThrottleMs: 3000 });
+const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 30, evalThrottleMs: 3000 });
 const actionAudit = new ActionAuditLog({ maxRecords: 100 });
 const aiEvaluator = new AiEvaluatorService();
 const sendIdempotency = new ServerIdempotencyCache();
 const latestSeatBaselines = new Map();
 const universalTmuxTargets = new Map();
 const terminalPromptProbeCache = new Map(); // seatId -> { ts, blocked, working, idleAtPrompt, reason, harness }
-const TERMINAL_PROMPT_PROBE_TTL_MS = 2500;
+const TERMINAL_PROMPT_PROBE_ACTIVE_TTL_MS = 4000;
+const TERMINAL_PROMPT_PROBE_TTL_MS = 10000;
+const TERMINAL_PROMPT_PROBE_STALE_MAX_MS = 35000;
+const TERMINAL_PROMPT_PROBE_CONCURRENCY = 3;
+let terminalPromptProbeInFlight = null;
 let latestFleetSnapshot = null;
 
 async function captureSeatScreen(seat, lines = 38) {
@@ -59,6 +63,7 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
   const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
   const output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
   terminalPromptProbeCache.delete(seatId);
+  invalidateTelemetryCache();
   const rec = actionAudit.record({ actionId, seatId, type: 'key', payload: keyStroke, httpStatus: 200, ok: true, baseline });
   return { ok: true, execId: rec.execId, output: (output || '').trim() };
 }
@@ -139,7 +144,50 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
   });
 }
 
-async function enrichOpenRigTerminalPrompts(nodes) {
+async function runWithConcurrency(items, limit, worker) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const cap = Math.max(1, Math.min(limit || 3, items.length));
+  const results = new Array(items.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: cap }, async () => {
+      while (cursor < items.length) {
+        const idx = cursor++;
+        results[idx] = await worker(items[idx], idx);
+      }
+    })
+  );
+  return results;
+}
+
+function refreshTerminalProbesBackground(staleCandidates) {
+  if (!staleCandidates.length || terminalPromptProbeInFlight) return terminalPromptProbeInFlight;
+  const runTs = Date.now();
+  terminalPromptProbeInFlight = runWithConcurrency(staleCandidates, TERMINAL_PROMPT_PROBE_CONCURRENCY, async (n) => {
+    const seatId = n.canonicalSessionName;
+    try {
+      const screen = await captureSeatScreen(seatId, 72);
+      const verdict = classifyTerminalScreen(screen || '', n.runtime || n.harness || '');
+      const entry = {
+        ts: Date.now() || runTs,
+        blocked: verdict.blocked,
+        working: verdict.working,
+        idleAtPrompt: verdict.idleAtPrompt,
+        shellExited: Boolean(verdict.shellExited),
+        reason: verdict.reason,
+        harness: verdict.harness
+      };
+      boundedMapSet(terminalPromptProbeCache, seatId, entry, MAX_GUIDANCE_CACHE);
+    } catch {
+      // non-blocking probe failure
+    }
+  }).finally(() => {
+    terminalPromptProbeInFlight = null;
+  });
+  return terminalPromptProbeInFlight;
+}
+
+async function enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR = true } = {}) {
   if (!Array.isArray(nodes) || nodes.length === 0) return nodes;
   const now = Date.now();
   const candidates = nodes
@@ -165,39 +213,49 @@ async function enrichOpenRigTerminalPrompts(nodes) {
       };
       return score(b) - score(a);
     })
-    .slice(0, 20);
+    .slice(0, 16);
 
   if (candidates.length === 0) return nodes;
 
   const probeMap = new Map();
-  await Promise.all(
-    candidates.map(async n => {
-      const seatId = n.canonicalSessionName;
-      const cached = terminalPromptProbeCache.get(seatId);
-      if (cached && now - cached.ts < TERMINAL_PROMPT_PROBE_TTL_MS) {
-        if (cached.blocked || cached.working || cached.idleAtPrompt || cached.shellExited) probeMap.set(seatId, cached);
-        return;
+  const staleCandidates = [];
+  let cachedCount = 0;
+  for (const n of candidates) {
+    const seatId = n.canonicalSessionName;
+    const curDisp = (n.activityState && n.activityState.display) || '';
+    const isHotSeat =
+      n.runtime === 'terminal' ||
+      curDisp === 'working' ||
+      curDisp === 'running' ||
+      (n.agentActivity && n.agentActivity.state === 'running');
+    const seatTtlMs = isHotSeat ? TERMINAL_PROMPT_PROBE_ACTIVE_TTL_MS : TERMINAL_PROMPT_PROBE_TTL_MS;
+    const cached = terminalPromptProbeCache.get(seatId);
+    if (cached && now - cached.ts < TERMINAL_PROMPT_PROBE_STALE_MAX_MS) {
+      cachedCount++;
+      if (cached.blocked || cached.working || cached.idleAtPrompt || cached.shellExited) {
+        probeMap.set(seatId, cached);
       }
-      try {
-        // Capture 72 lines so narrow tmux split panes with wrapped long command options stay fully in view
-        const screen = await captureSeatScreen(seatId, 72);
-        const verdict = classifyTerminalScreen(screen || '', n.runtime || n.harness || '');
-        const entry = {
-          ts: now,
-          blocked: verdict.blocked,
-          working: verdict.working,
-          idleAtPrompt: verdict.idleAtPrompt,
-          shellExited: Boolean(verdict.shellExited),
-          reason: verdict.reason,
-          harness: verdict.harness
-        };
-        boundedMapSet(terminalPromptProbeCache, seatId, entry, MAX_GUIDANCE_CACHE);
-        if (entry.blocked || entry.working || entry.idleAtPrompt || entry.shellExited) probeMap.set(seatId, entry);
-      } catch {
-        // non-blocking probe failure
+      if (now - cached.ts >= seatTtlMs) {
+        staleCandidates.push(n);
       }
-    })
-  );
+    } else {
+      staleCandidates.push(n);
+    }
+  }
+
+  if (staleCandidates.length > 0) {
+    const bg = refreshTerminalProbesBackground(staleCandidates);
+    // On cold start (no cached probes at all) and when caller opts out of SWR, wait; otherwise never block HTTP!
+    if (!allowBackgroundSWR && cachedCount === 0 && bg) {
+      await bg;
+      for (const n of staleCandidates) {
+        const entry = terminalPromptProbeCache.get(n.canonicalSessionName);
+        if (entry && (entry.blocked || entry.working || entry.idleAtPrompt || entry.shellExited)) {
+          probeMap.set(n.canonicalSessionName, entry);
+        }
+      }
+    }
+  }
 
   return probeMap.size > 0 ? applyTerminalPromptProbes(nodes, probeMap) : nodes;
 }
@@ -666,20 +724,36 @@ async function readTranscriptTokenUsage(transcriptPath, nowMs = Date.now()) {
 
     let tailLine = '';
     if (bytesToRead > 0) {
+      const CHUNK_BYTES = 2 * 1024 * 1024; // 2 MB bounded chunk avoids 100 MB single-buffer spikes
       fh = await fs.open(transcriptPath, 'r');
-      const buf = Buffer.allocUnsafe(bytesToRead);
-      const { bytesRead } = await fh.read(buf, 0, bytesToRead, readOffset);
-      const slice = buf.subarray(0, bytesRead);
-      const lastNl = slice.lastIndexOf(0x0a);
-      if (lastNl !== -1) {
-        const completeText = slice.subarray(0, lastNl + 1).toString('utf-8');
-        for (const line of completeText.split('\n')) {
-          ingestTranscriptLine(line, state);
+      const chunkBuf = Buffer.allocUnsafe(Math.min(bytesToRead, CHUNK_BYTES));
+      let pos = readOffset;
+      let remaining = bytesToRead;
+      let remainder = Buffer.alloc(0);
+
+      while (remaining > 0) {
+        const toRead = Math.min(remaining, chunkBuf.length);
+        const { bytesRead } = await fh.read(chunkBuf, 0, toRead, pos);
+        if (bytesRead <= 0) break;
+        pos += bytesRead;
+        remaining -= bytesRead;
+
+        const slice = chunkBuf.subarray(0, bytesRead);
+        const combined = remainder.length > 0 ? Buffer.concat([remainder, slice]) : slice;
+        const lastNl = combined.lastIndexOf(0x0a);
+        if (lastNl !== -1) {
+          const completeText = combined.subarray(0, lastNl + 1).toString('utf-8');
+          for (const line of completeText.split('\n')) {
+            ingestTranscriptLine(line, state);
+          }
+          readOffset += lastNl + 1;
+          remainder = Buffer.from(combined.subarray(lastNl + 1));
+        } else {
+          remainder = Buffer.from(combined);
         }
-        readOffset += lastNl + 1;
-        tailLine = slice.subarray(lastNl + 1).toString('utf-8').trim();
-      } else {
-        tailLine = slice.toString('utf-8').trim();
+      }
+      if (remainder.length > 0) {
+        tailLine = remainder.toString('utf-8').trim();
       }
     }
 
@@ -1028,16 +1102,113 @@ async function readSeatCompactions() {
 }
 
 let cachedRigs = { ts: 0, data: [] };
+let rigsRefreshInFlight = null;
 async function getRunningRigs() {
-  if (Date.now() - cachedRigs.ts < 8000 && Array.isArray(cachedRigs.data) && cachedRigs.data.length > 0) {
+  const now = Date.now();
+  const hasData = Array.isArray(cachedRigs.data) && cachedRigs.data.length > 0;
+  if (hasData && now - cachedRigs.ts < 15000) {
     return cachedRigs.data;
   }
-  const rigs = await safeJsonExec(RIG_BIN, ['ps', '--json']);
-  if (Array.isArray(rigs) && rigs.length > 0) {
-    cachedRigs = { ts: Date.now(), data: rigs };
-    return rigs;
+  const trigger = () => {
+    if (!rigsRefreshInFlight) {
+      rigsRefreshInFlight = safeJsonExec(RIG_BIN, ['ps', '--json'])
+        .then(rigs => {
+          if (Array.isArray(rigs) && rigs.length > 0) {
+            cachedRigs = { ts: Date.now(), data: rigs };
+          }
+          return cachedRigs.data || [];
+        })
+        .finally(() => { rigsRefreshInFlight = null; });
+    }
+    return rigsRefreshInFlight;
+  };
+  if (hasData) {
+    void trigger(); // stale-while-revalidate
+    return cachedRigs.data;
   }
-  return cachedRigs.data || [];
+  return trigger();
+}
+
+const cachedParkedByKey = new Map(); // rigNamesKey -> { ts, data }
+const parkedRefreshInFlight = new Map();
+async function getParkedForRigs(rigs) {
+  if (!Array.isArray(rigs) || rigs.length === 0) return [];
+  const rigNames = rigs.map(r => r.name || r.rigName).filter(Boolean);
+  const key = rigNames.slice().sort().join(',');
+  const cached = cachedParkedByKey.get(key);
+  const now = Date.now();
+  if (cached && now - cached.ts < 10000) {
+    return cached.data;
+  }
+  const trigger = () => {
+    if (!parkedRefreshInFlight.has(key)) {
+      const p = runWithConcurrency(rigNames, 2, (name) =>
+        safeJsonExec(RIG_BIN, ['parked', '--rig', name, '--json'])
+      )
+        .then(data => {
+          boundedMapSet(cachedParkedByKey, key, { ts: Date.now(), data }, 20);
+          return data;
+        })
+        .finally(() => { parkedRefreshInFlight.delete(key); });
+      parkedRefreshInFlight.set(key, p);
+    }
+    return parkedRefreshInFlight.get(key);
+  };
+  if (cached) {
+    void trigger(); // stale-while-revalidate: never stall HTTP 1s for rig parked
+    return cached.data;
+  }
+  return trigger();
+}
+
+let cachedCompactions = { ts: 0, data: null };
+let compactionsRefreshInFlight = null;
+async function getSeatCompactionsCached() {
+  const now = Date.now();
+  if (cachedCompactions.data && now - cachedCompactions.ts < 15000) {
+    return cachedCompactions.data;
+  }
+  const trigger = () => {
+    if (!compactionsRefreshInFlight) {
+      compactionsRefreshInFlight = readSeatCompactions()
+        .then(data => {
+          cachedCompactions = { ts: Date.now(), data };
+          return data;
+        })
+        .finally(() => { compactionsRefreshInFlight = null; });
+    }
+    return compactionsRefreshInFlight;
+  };
+  if (cachedCompactions.data) {
+    void trigger();
+    return cachedCompactions.data;
+  }
+  return trigger();
+}
+
+let cachedDecisions = { ts: 0, data: null };
+let decisionsRefreshInFlight = null;
+async function getRecentDecisionsCached(limit = 15, nodes = []) {
+  const now = Date.now();
+  if (cachedDecisions.data && now - cachedDecisions.ts < 15000) {
+    return cachedDecisions.data;
+  }
+  const trigger = () => {
+    if (!decisionsRefreshInFlight) {
+      decisionsRefreshInFlight = readRecentDecisions(limit, nodes)
+        .then(data => {
+          cachedDecisions = { ts: Date.now(), data };
+          return data;
+        })
+        .finally(() => { decisionsRefreshInFlight = null; });
+    }
+    return decisionsRefreshInFlight;
+  };
+  if (cachedDecisions.data) {
+    void trigger();
+    return cachedDecisions.data;
+  }
+  return trigger();
 }
 
 async function fetchDaemonJson(endpoint) {
@@ -1423,18 +1594,331 @@ function buildGanttItems(allQueue) {
   });
 }
 
-let cachedHistory = { ts: 0, data: null, rawQueue: [] };
+let cachedHistory = { ts: 0, rev: '', data: null, rawQueue: [] };
+let historyRefreshInFlight = null;
 const queueItemDetailCache = new Map(); // qitemId -> { ts, payload }
 const QUEUE_ITEM_DETAIL_TTL_MS = 8000;
+const EMPTY_HISTORY = { pairCounts: {}, pairEnvelopes: {}, coderStats: {}, nodeTraffic: {}, sliceStats: {}, ganttItems: [] };
 
-async function getHistoryStats() {
-  if (Date.now() - cachedHistory.ts < 20000 && cachedHistory.data) {
-    return cachedHistory.data;
+function computeHistoryFingerprint(allQueue) {
+  if (!Array.isArray(allQueue) || allQueue.length === 0) return 'empty';
+  const h = crypto.createHash('sha1');
+  h.update(String(allQueue.length));
+  for (let i = 0; i < allQueue.length; i++) {
+    const q = allQueue[i];
+    if (!q) continue;
+    h.update('|');
+    h.update(String(q.qitemId || q.id || ''));
+    h.update(':');
+    h.update(String(q.state || ''));
+    h.update(':');
+    h.update(String(q.closedAt || q.tsUpdated || q.updatedAt || q.claimedAt || q.tsCreated || ''));
   }
-  const allQueue = await safeJsonExec(RIG_BIN, ['queue', 'list', '-a', '-A', '--limit', '2500', '--json']);
-  const data = computeHistoryStats(allQueue);
-  cachedHistory = { ts: Date.now(), data, rawQueue: Array.isArray(allQueue) ? allQueue : [] };
-  return data;
+  return `h:${allQueue.length}:${h.digest('hex').slice(0, 12)}`;
+}
+
+async function getHistoryStats({ allowBackgroundSWR = true } = {}) {
+  const now = Date.now();
+  if (cachedHistory.data && now - cachedHistory.ts < 25000) {
+    return { data: cachedHistory.data, rev: cachedHistory.rev };
+  }
+  const trigger = () => {
+    if (!historyRefreshInFlight) {
+      historyRefreshInFlight = safeJsonExec(RIG_BIN, ['queue', 'list', '-a', '-A', '--limit', '2500', '--json'])
+        .then(allQueue => {
+          const list = Array.isArray(allQueue) ? allQueue : [];
+          const fp = computeHistoryFingerprint(list);
+          if (cachedHistory.data && cachedHistory.rev === fp) {
+            cachedHistory.ts = Date.now();
+            return { data: cachedHistory.data, rev: cachedHistory.rev };
+          }
+          const data = computeHistoryStats(list);
+          cachedHistory = { ts: Date.now(), rev: fp, data, rawQueue: list };
+          return { data, rev: fp };
+        })
+        .finally(() => { historyRefreshInFlight = null; });
+    }
+    return historyRefreshInFlight;
+  };
+  if (cachedHistory.data && allowBackgroundSWR) {
+    void trigger(); // stale-while-revalidate: never stall HTTP 4.4s on 2500-row history!
+    return { data: cachedHistory.data, rev: cachedHistory.rev };
+  }
+  return trigger();
+}
+
+const telemetryCacheByRig = new Map(); // rigKey -> { ts, payload, historyRev, guidanceRev, fullJson, fullGzip, liteHistJson, liteHistGzip, liteBothJson, liteBothGzip }
+const telemetryInFlightByRig = new Map();
+const TELEMETRY_FRESH_TTL_MS = 2200;
+const TELEMETRY_SWR_MAX_MS = 12000;
+const staticAssetCache = new Map(); // filePath -> { mtimeMs, raw, gzip }
+const STATIC_GZIP_EXTS = new Set(['.html', '.css', '.js', '.json', '.webmanifest', '.svg', '.md', '.txt']);
+let lastTelemetryClientAt = 0;
+
+function invalidateTelemetryCache() {
+  telemetryCacheByRig.clear();
+  cachedParkedByKey.clear();
+}
+
+async function serializeTelemetryVariant(obj) {
+  const json = JSON.stringify(obj);
+  const gzip = await gzipAsync(Buffer.from(json, 'utf8')).catch(() => null);
+  return { json, gzip };
+}
+
+async function assembleTelemetryBundle(requestedRig = 'all') {
+  const rigKey = requestedRig || 'all';
+  const allRigs = await getRunningRigs();
+
+  const targetRigs = (rigKey === 'all')
+    ? allRigs
+    : allRigs.filter(r => r.rigId === rigKey || r.name === rigKey || r.rigName === rigKey);
+
+  let effectiveRigs = targetRigs;
+  if (effectiveRigs.length === 0) {
+    const daemonRigs = await fetchDaemonJson('/api/rigs');
+    if (Array.isArray(daemonRigs)) {
+      const mapped = daemonRigs
+        .filter(r => r && (r.id || r.rigId))
+        .map(r => ({
+          rigId: r.id || r.rigId,
+          name: r.name || r.rigName || r.id,
+          rigName: r.name || r.rigName || r.id
+        }));
+      effectiveRigs = (rigKey === 'all')
+        ? mapped
+        : mapped.filter(r => r.rigId === rigKey || r.name === rigKey);
+    }
+  }
+
+  const forceUniversal = process.env.RIGCOMMANDER_FORCE_UNIVERSAL === '1';
+  const nodesPromises = forceUniversal ? [] : effectiveRigs.map(r => fetchDaemonJson(`/api/rigs/${r.rigId}/nodes`));
+
+  const [
+    nodesArrays,
+    parkedArrays,
+    activeQueue,
+    historyBundle,
+    seatCompactions
+  ] = await Promise.all([
+    Promise.all(nodesPromises),
+    forceUniversal ? Promise.resolve([]) : getParkedForRigs(effectiveRigs),
+    forceUniversal ? Promise.resolve([]) : safeJsonExec(RIG_BIN, ['queue', 'list', '-A', '--json']),
+    forceUniversal ? Promise.resolve({ data: EMPTY_HISTORY, rev: 'empty' }) : getHistoryStats({ allowBackgroundSWR: true }),
+    forceUniversal ? Promise.resolve({}) : getSeatCompactionsCached()
+  ]);
+
+  const history = (historyBundle && historyBundle.data) || EMPTY_HISTORY;
+  const historyRev = (historyBundle && historyBundle.rev) || 'empty';
+
+  let nodes = nodesArrays.flatMap(arr => Array.isArray(arr) ? arr : []);
+  let discoveryMode = nodes.length > 0 ? 'openrig' : 'none';
+  let resolvedAvailableRigs = forceUniversal ? [] : allRigs.map(r => ({
+    id: r.rigId,
+    name: r.name || r.rigName,
+    status: r.status,
+    nodeCount: r.nodeCount,
+    runningCount: r.runningCount,
+    activeCount: r.activeCount,
+    hasWorkCount: r.hasWorkCount
+  }));
+
+  let resolvedHistory = history || EMPTY_HISTORY;
+  let resolvedHistoryRev = historyRev;
+  if (nodes.length === 0) {
+    const universal = await discoverUniversalFleet({ tmuxBin: TMUX_BIN });
+    if (universal.nodes.length > 0) {
+      discoveryMode = 'universal';
+      universalTmuxTargets.clear();
+      for (const [seatId, target] of universal.tmuxTargets.entries()) {
+        if (isValidTmuxTarget(target)) {
+          boundedMapSet(universalTmuxTargets, seatId, target, MAX_GUIDANCE_CACHE);
+        }
+      }
+      resolvedAvailableRigs = universal.availableRigs;
+      nodes = (rigKey === 'all')
+        ? universal.nodes
+        : universal.nodes.filter(n => n.rigId === rigKey);
+      if (!Array.isArray(resolvedHistory.ganttItems) || resolvedHistory.ganttItems.length === 0) {
+        resolvedHistory = {
+          ...resolvedHistory,
+          ganttItems: buildUniversalGanttItems(nodes)
+        };
+        resolvedHistoryRev = `univ:${resolvedHistory.ganttItems.length}`;
+      }
+    }
+  }
+
+  if (discoveryMode === 'openrig' && nodes.length > 0) {
+    nodes = await enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR: true });
+  }
+
+  const [decisions, usageReport] = await Promise.all([
+    getRecentDecisionsCached(15, nodes),
+    buildSeatUsageReport(nodes)
+  ]);
+
+  const guidanceMap = Object.assign({}, DEFAULT_SEAT_GUIDANCE);
+  for (const node of nodes) {
+    const seatName = node.canonicalSessionName || node.logicalId;
+    if (seatName && !guidanceMap[seatName]) {
+      guidanceMap[seatName] = await resolveSeatGuidance(seatName, node);
+    }
+  }
+  const guidanceRev = 'g:' + crypto
+    .createHash('sha1')
+    .update(Object.keys(guidanceMap).sort().join('|'))
+    .digest('hex')
+    .slice(0, 12);
+
+  const parkedSeats = {};
+  for (const p of parkedArrays) {
+    if (p && p.rig && Array.isArray(p.rig.seats)) {
+      for (const s of p.rig.seats) {
+        if (s.sessionName) {
+          parkedSeats[s.sessionName] = {
+            parked: s.parked === true,
+            reason: s.reason || '',
+            heldCount: (s.obligations && s.obligations.heldCount) || 0,
+            openCount: (s.obligations && s.obligations.openCount) || 0,
+            unhealthyHeldCount: (s.obligations && s.obligations.unhealthyHeldCount) || 0
+          };
+        }
+      }
+    }
+  }
+
+  for (const node of nodes) {
+    const seatId = node && node.canonicalSessionName;
+    if (seatId) {
+      boundedMapSet(latestSeatBaselines, seatId, extractSeatBaseline(node, parkedSeats[seatId] || null), MAX_GUIDANCE_CACHE);
+    }
+  }
+  actionAudit.reconcileWithTelemetry(nodes, parkedSeats);
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    requestedRig: rigKey,
+    discoveryMode,
+    historyRev: resolvedHistoryRev,
+    guidanceRev,
+    availableRigs: resolvedAvailableRigs,
+    nodes,
+    activeQueue: Array.isArray(activeQueue) ? activeQueue : [],
+    decisions,
+    history: resolvedHistory,
+    parkedSeats,
+    seatCompactions: seatCompactions || {},
+    seatGuidance: guidanceMap,
+    seatUsage: usageReport.seatUsage,
+    fleetUsageSummary: usageReport.fleetUsageSummary,
+    actionAudit: actionAudit.list(30),
+    guardrails: {
+      breaker: circuitBreaker.getState(),
+      telegram: telegramBridge.getStatus()
+    },
+    update: selfUpdater.getStatus(),
+    evaluator: aiEvaluator.getTelemetrySummary(),
+    intelligence: null
+  };
+
+  fleetIntelligence.ingestSnapshot(payload);
+  payload.intelligence = fleetIntelligence.getLatestReport(rigKey);
+  latestFleetSnapshot = payload;
+
+  setImmediate(async () => {
+    try {
+      await circuitBreaker.evaluate({
+        nodes,
+        seatUsage: usageReport.seatUsage,
+        fleetUsageSummary: usageReport.fleetUsageSummary,
+        sliceStats: (history && history.sliceStats) || {}
+      });
+    } catch {
+      // non-blocking breaker error
+    }
+    if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1()) {
+      for (const n of nodes) {
+        const disp = (n && n.activityState && n.activityState.display) || '';
+        const needsCount = (n && n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
+        if ((disp === 'needs-input' || needsCount > 0) && n.canonicalSessionName) {
+          try {
+            const scr = await captureSeatScreen(n.canonicalSessionName, 45);
+            if (telegramBridge.isConfigured()) {
+              await telegramBridge.notifyHitlPrompt(n.canonicalSessionName, scr);
+            }
+            if (aiEvaluator.canAutoRunLocalS1()) {
+              await aiEvaluator.runEvaluation({
+                scope: 'seat',
+                targetId: n.canonicalSessionName,
+                requestedTier: 'auto',
+                seat: n,
+                nodes,
+                openQueue: activeQueue,
+                findings: (payload.intelligence && payload.intelligence.allFindings) || [],
+                screenText: scr,
+                auditRecords: actionAudit.list(15, n.canonicalSessionName),
+                lang: 'ru'
+              });
+            }
+          } catch {
+            // ignore capture/telegram/evaluator transient failure
+          }
+        }
+      }
+    }
+  });
+
+  const bundle = {
+    ts: Date.now(),
+    payload,
+    historyRev: resolvedHistoryRev,
+    guidanceRev,
+    variants: new Map() // variantKey -> Promise<{ json, gzip }>
+  };
+  boundedMapSet(telemetryCacheByRig, rigKey, bundle, 12);
+  return bundle;
+}
+
+function getTelemetryBundle(requestedRig = 'all', { forceRefresh = false } = {}) {
+  const rigKey = requestedRig || 'all';
+  const cached = telemetryCacheByRig.get(rigKey);
+  const now = Date.now();
+
+  if (!forceRefresh && cached && now - cached.ts < TELEMETRY_FRESH_TTL_MS) {
+    return Promise.resolve(cached);
+  }
+
+  const trigger = () => {
+    if (!telemetryInFlightByRig.has(rigKey)) {
+      const p = assembleTelemetryBundle(rigKey)
+        .finally(() => { telemetryInFlightByRig.delete(rigKey); });
+      telemetryInFlightByRig.set(rigKey, p);
+    }
+    return telemetryInFlightByRig.get(rigKey);
+  };
+
+  if (!forceRefresh && cached && now - cached.ts < TELEMETRY_SWR_MAX_MS) {
+    void trigger(); // Stale-while-revalidate: serve instant warm snapshot while refreshing once in background
+    return Promise.resolve(cached);
+  }
+
+  return trigger();
+}
+
+async function getSerializedTelemetryVariant(bundle, { skipHistory = false, skipGuidance = false } = {}) {
+  const key = `${skipHistory ? 'nh' : 'h'}:${skipGuidance ? 'ng' : 'g'}`;
+  if (!bundle.variants.has(key)) {
+    const obj = (!skipHistory && !skipGuidance)
+      ? bundle.payload
+      : {
+          ...bundle.payload,
+          ...(skipHistory ? { history: undefined, historyUnchanged: true } : {}),
+          ...(skipGuidance ? { seatGuidance: undefined, guidanceUnchanged: true } : {})
+        };
+    bundle.variants.set(key, serializeTelemetryVariant(obj));
+  }
+  return bundle.variants.get(key);
 }
 
 async function fetchQueueItemContextDetail(qitemId, { execFn = execWithStatus, rigBin = RIG_BIN } = {}) {
@@ -1689,209 +2173,34 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 1. Live telemetry endpoint — directly queries OpenRig Daemon /api/rigs/:id/nodes (exact same source as TUI!)
+  // 1. Live telemetry endpoint — single-flight coalesced, SWR-cached & incremental historyRev/guidanceRev
   if (url.pathname === '/api/telemetry') {
     const requestedRig = url.searchParams.get('rig') || 'all';
-    const allRigs = await getRunningRigs();
+    const clientHistoryRev = url.searchParams.get('historyRev') || '';
+    const clientGuidanceRev = url.searchParams.get('guidanceRev') || '';
+    const forceRefresh = url.searchParams.get('force') === '1';
+    lastTelemetryClientAt = Date.now();
 
-    // Determine target rigs to fetch from daemon
-    const targetRigs = (requestedRig === 'all' || !requestedRig)
-      ? allRigs
-      : allRigs.filter(r => r.rigId === requestedRig || r.name === requestedRig || r.rigName === requestedRig);
+    const bundle = await getTelemetryBundle(requestedRig, { forceRefresh });
+    const skipHistory = Boolean(clientHistoryRev && clientHistoryRev === bundle.historyRev);
+    const skipGuidance = Boolean(clientGuidanceRev && clientGuidanceRev === bundle.guidanceRev);
+    const serialized = await getSerializedTelemetryVariant(bundle, { skipHistory, skipGuidance });
 
-    // Fallback if no rigs found via `rig ps --json`: query daemon /api/rigs directly
-    let effectiveRigs = targetRigs;
-    if (effectiveRigs.length === 0) {
-      const daemonRigs = await fetchDaemonJson('/api/rigs');
-      if (Array.isArray(daemonRigs)) {
-        const mapped = daemonRigs
-          .filter(r => r && (r.id || r.rigId))
-          .map(r => ({
-            rigId: r.id || r.rigId,
-            name: r.name || r.rigName || r.id,
-            rigName: r.name || r.rigName || r.id
-          }));
-        effectiveRigs = (requestedRig === 'all' || !requestedRig)
-          ? mapped
-          : mapped.filter(r => r.rigId === requestedRig || r.name === requestedRig);
-      }
+    const acceptEncoding = String(req.headers['accept-encoding'] || '');
+    if (acceptEncoding.includes('gzip') && serialized.gzip) {
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Encoding': 'gzip',
+        'Cache-Control': 'no-store'
+      });
+      res.end(serialized.gzip);
+      return;
     }
-
-    const forceUniversal = process.env.RIGCOMMANDER_FORCE_UNIVERSAL === '1';
-    const nodesPromises = forceUniversal ? [] : effectiveRigs.map(r => fetchDaemonJson(`/api/rigs/${r.rigId}/nodes`));
-    const parkedPromises = forceUniversal ? [] : effectiveRigs.map(r => safeJsonExec(RIG_BIN, ['parked', '--rig', r.name || r.rigName, '--json']));
-
-    const [
-      nodesArrays,
-      parkedArrays,
-      activeQueue,
-      history,
-      seatCompactions
-    ] = await Promise.all([
-      Promise.all(nodesPromises),
-      Promise.all(parkedPromises),
-      forceUniversal ? Promise.resolve([]) : safeJsonExec(RIG_BIN, ['queue', 'list', '-A', '--json']),
-      forceUniversal ? Promise.resolve({ pairCounts: {}, pairEnvelopes: {}, sliceStats: {}, ganttItems: [] }) : getHistoryStats(),
-      forceUniversal ? Promise.resolve({}) : readSeatCompactions()
-    ]);
-
-    let nodes = nodesArrays.flatMap(arr => Array.isArray(arr) ? arr : []);
-    let discoveryMode = nodes.length > 0 ? 'openrig' : 'none';
-    let resolvedAvailableRigs = forceUniversal ? [] : allRigs.map(r => ({
-      id: r.rigId,
-      name: r.name || r.rigName,
-      status: r.status,
-      nodeCount: r.nodeCount,
-      runningCount: r.runningCount,
-      activeCount: r.activeCount,
-      hasWorkCount: r.hasWorkCount
-    }));
-
-    // Universal Auto-Discovery fallback when OpenRig daemon has 0 nodes (or --universal is enabled):
-    // discovers plain tmux panes (Claude Code / Codex / Gemini) + recent ~/.claude & ~/.codex JSONL transcripts.
-    let resolvedHistory = history || { pairCounts: {}, pairEnvelopes: {}, sliceStats: {}, ganttItems: [] };
-    if (nodes.length === 0) {
-      const universal = await discoverUniversalFleet({ tmuxBin: TMUX_BIN });
-      if (universal.nodes.length > 0) {
-        discoveryMode = 'universal';
-        universalTmuxTargets.clear();
-        for (const [seatId, target] of universal.tmuxTargets.entries()) {
-          if (isValidTmuxTarget(target)) {
-            boundedMapSet(universalTmuxTargets, seatId, target, MAX_GUIDANCE_CACHE);
-          }
-        }
-        resolvedAvailableRigs = universal.availableRigs;
-        nodes = (requestedRig === 'all' || !requestedRig)
-          ? universal.nodes
-          : universal.nodes.filter(n => n.rigId === requestedRig);
-        if (!Array.isArray(resolvedHistory.ganttItems) || resolvedHistory.ganttItems.length === 0) {
-          resolvedHistory = {
-            ...resolvedHistory,
-            ganttItems: buildUniversalGanttItems(nodes)
-          };
-        }
-      }
-    }
-
-    // For OpenRig seats (especially runtime: 'terminal' / agy / Gemini where daemon only sees window motion),
-    // probe active tmux panes for live confirmation prompts so blocked seats never masquerade as 'working'.
-    if (discoveryMode === 'openrig' && nodes.length > 0) {
-      nodes = await enrichOpenRigTerminalPrompts(nodes);
-    }
-
-    const [decisions, usageReport] = await Promise.all([
-      readRecentDecisions(15, nodes),
-      buildSeatUsageReport(nodes)
-    ]);
-
-    const guidanceMap = Object.assign({}, DEFAULT_SEAT_GUIDANCE);
-    for (const node of nodes) {
-      const seatName = node.canonicalSessionName || node.logicalId;
-      if (seatName && !guidanceMap[seatName]) {
-        guidanceMap[seatName] = await resolveSeatGuidance(seatName, node);
-      }
-    }
-
-    const parkedSeats = {};
-    for (const p of parkedArrays) {
-      if (p && p.rig && Array.isArray(p.rig.seats)) {
-        for (const s of p.rig.seats) {
-          if (s.sessionName) {
-            parkedSeats[s.sessionName] = {
-              parked: s.parked === true,
-              reason: s.reason || '',
-              heldCount: (s.obligations && s.obligations.heldCount) || 0,
-              openCount: (s.obligations && s.obligations.openCount) || 0,
-              unhealthyHeldCount: (s.obligations && s.obligations.unhealthyHeldCount) || 0
-            };
-          }
-        }
-      }
-    }
-
-    // Update latest per-seat baselines & reconcile pending action postconditions
-    for (const node of nodes) {
-      const seatId = node && node.canonicalSessionName;
-      if (seatId) {
-        boundedMapSet(latestSeatBaselines, seatId, extractSeatBaseline(node, parkedSeats[seatId] || null), MAX_GUIDANCE_CACHE);
-      }
-    }
-    actionAudit.reconcileWithTelemetry(nodes, parkedSeats);
-
-    const payload = {
-      timestamp: new Date().toISOString(),
-      requestedRig,
-      discoveryMode,
-      availableRigs: resolvedAvailableRigs,
-      nodes,
-      activeQueue: Array.isArray(activeQueue) ? activeQueue : [],
-      decisions,
-      history: resolvedHistory,
-      parkedSeats,
-      seatCompactions: seatCompactions || {},
-      seatGuidance: guidanceMap,
-      seatUsage: usageReport.seatUsage,
-      fleetUsageSummary: usageReport.fleetUsageSummary,
-      actionAudit: actionAudit.list(30),
-      guardrails: {
-        breaker: circuitBreaker.getState(),
-        telegram: telegramBridge.getStatus()
-      },
-      update: selfUpdater.getStatus(),
-      evaluator: aiEvaluator.getTelemetrySummary(),
-      intelligence: null
-    };
-
-    // Synchronously compute fresh Fleet Intelligence report (in-memory, fault-isolated, <1ms)
-    fleetIntelligence.ingestSnapshot(payload);
-    payload.intelligence = fleetIntelligence.getLatestReport(requestedRig);
-    latestFleetSnapshot = payload;
-
-    // Asynchronously evaluate Budget Circuit-Breaker & Telegram HITL notifications (zero blocking!)
-    setImmediate(async () => {
-      try {
-        await circuitBreaker.evaluate({
-          nodes,
-          seatUsage: usageReport.seatUsage,
-          fleetUsageSummary: usageReport.fleetUsageSummary,
-          sliceStats: (history && history.sliceStats) || {}
-        });
-      } catch {
-        // non-blocking breaker error
-      }
-      if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1()) {
-        for (const n of nodes) {
-          const disp = (n && n.activityState && n.activityState.display) || '';
-          const needsCount = (n && n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
-          if ((disp === 'needs-input' || needsCount > 0) && n.canonicalSessionName) {
-            try {
-              const scr = await captureSeatScreen(n.canonicalSessionName, 45);
-              if (telegramBridge.isConfigured()) {
-                await telegramBridge.notifyHitlPrompt(n.canonicalSessionName, scr);
-              }
-              if (aiEvaluator.canAutoRunLocalS1()) {
-                await aiEvaluator.runEvaluation({
-                  scope: 'seat',
-                  targetId: n.canonicalSessionName,
-                  requestedTier: 'auto',
-                  seat: n,
-                  nodes,
-                  openQueue: activeQueue,
-                  findings: (payload.intelligence && payload.intelligence.allFindings) || [],
-                  screenText: scr,
-                  auditRecords: actionAudit.list(15, n.canonicalSessionName),
-                  lang: 'ru'
-                });
-              }
-            } catch {
-              // ignore capture/telegram/evaluator transient failure
-            }
-          }
-        }
-      }
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store'
     });
-
-    await sendJson(req, res, 200, payload);
+    res.end(serialized.json);
     return;
   }
 
@@ -2271,6 +2580,8 @@ const server = http.createServer(async (req, res) => {
 
             const auditRec = actionAudit.record({ actionId, evalId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
             aiEvaluator.invalidateSeat(seat);
+            terminalPromptProbeCache.delete(seat);
+            invalidateTelemetryCache();
             const okBody = { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() };
             idem.complete(200, okBody);
             await sendJson(req, res, 200, okBody);
@@ -2295,12 +2606,22 @@ const server = http.createServer(async (req, res) => {
   }
   const { resolved: filePath, rel: safeRel, ext } = staticTarget;
   try {
-    let data = await fs.readFile(filePath);
-    if (safeRel === 'index.html') {
-      let html = data.toString('utf-8');
-      html = html.replace(/<meta\s+name="app-version"\s+content="[^"]*"\s*\/?>/i, `<meta name="app-version" content="${APP_VERSION}" />`);
-      html = html.replace('<head>', `<head>\n  <meta name="deck-token" content="${DECK_TOKEN}">`);
-      data = Buffer.from(html);
+    const stat = await fs.stat(filePath);
+    const cacheKey = safeRel === 'index.html' ? `${filePath}:${DECK_TOKEN}` : filePath;
+    let entry = staticAssetCache.get(cacheKey);
+    if (!entry || entry.mtimeMs !== stat.mtimeMs) {
+      let raw = await fs.readFile(filePath);
+      if (safeRel === 'index.html') {
+        let html = raw.toString('utf-8');
+        html = html.replace(/<meta\s+name="app-version"\s+content="[^"]*"\s*\/?>/i, `<meta name="app-version" content="${APP_VERSION}" />`);
+        html = html.replace('<head>', `<head>\n  <meta name="deck-token" content="${DECK_TOKEN}">`);
+        raw = Buffer.from(html);
+      }
+      const gzip = STATIC_GZIP_EXTS.has(ext) && raw.length >= 1024
+        ? await gzipAsync(raw).catch(() => null)
+        : null;
+      entry = { mtimeMs: stat.mtimeMs, raw, gzip };
+      boundedMapSet(staticAssetCache, cacheKey, entry, 60);
     }
     const mime =
       ext === '.html' ? 'text/html; charset=utf-8' :
@@ -2312,8 +2633,14 @@ const server = http.createServer(async (req, res) => {
       ext === '.svg' ? 'image/svg+xml' :
       ext === '.png' ? 'image/png' :
       'text/plain; charset=utf-8';
+    const acceptEncoding = String(req.headers['accept-encoding'] || '');
+    if (entry.gzip && acceptEncoding.includes('gzip')) {
+      res.writeHead(200, { 'Content-Type': mime, 'Content-Encoding': 'gzip', 'Cache-Control': 'no-store' });
+      res.end(entry.gzip);
+      return;
+    }
     res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
-    res.end(data);
+    res.end(entry.raw);
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not found');
@@ -2372,6 +2699,8 @@ export {
   applyTerminalPromptProbes,
   dispatchRawCommand,
   fetchQueueItemContextDetail,
+  runWithConcurrency,
+  computeHistoryFingerprint,
   buildLiveManifest,
   transcriptUsageCache,
   seatGuidanceCache
@@ -2384,6 +2713,18 @@ if (isMainModule) {
   }
   server.listen(PORT, BIND_HOST, () => {
     console.log(`💠 RigCommander // Neural Command Deck v${APP_VERSION} at http://${BIND_HOST}:${PORT}`);
+    // Warm the initial telemetry snapshot in background so first browser load is instant
+    setTimeout(() => {
+      void getTelemetryBundle('all', { forceRefresh: true }).catch(() => {});
+    }, 150).unref();
+    // Keep telemetry warm strictly while at least one client polled within the last 25s (zero idle CPU!)
+    setInterval(() => {
+      if (Date.now() - lastTelemetryClientAt < 25000) {
+        for (const rigKey of telemetryCacheByRig.keys()) {
+          void getTelemetryBundle(rigKey, { forceRefresh: false }).catch(() => {});
+        }
+      }
+    }, 3500).unref();
     setTimeout(() => {
       selfUpdater.check().then(st => {
         if (st && st.updateAvailable) {

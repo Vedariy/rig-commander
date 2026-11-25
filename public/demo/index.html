@@ -64,7 +64,7 @@
       </div>
     </div>
     <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
-      <button class="triage-refresh-btn triage-icon-btn" onclick="refreshTelemetryNow()" title="Обновить телеметрию">
+      <button class="triage-refresh-btn triage-icon-btn" onclick="refreshTelemetryNow(true)" title="Обновить телеметрию">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       </button>
       <button class="triage-refresh-btn" onclick="copyCmd('rig status')" title="rig status">
@@ -1659,7 +1659,7 @@
           : `${activeItems.length} ${td('radar.inLoop')}`;
       }
 
-      waitContainer.innerHTML = activeItems.length === 0
+      const nextWaitHtml = activeItems.length === 0
         ? `<div class="wait-card" style="--wait-color:#00ff9d"><div style="font-size:12.5px; color:#6ee7b7;">${td('radar.empty')}</div></div>`
         : groups.map(g => {
           const isExpanded = expandedRadarGroups.has(g.key);
@@ -1712,6 +1712,10 @@
       `;
           }).join('');
         }).join('');
+      if (waitContainer.__lastHtml !== nextWaitHtml) {
+        waitContainer.innerHTML = nextWaitHtml;
+        waitContainer.__lastHtml = nextWaitHtml;
+      }
 
       const decContainer = document.getElementById('decisionsListContainer');
       const titleSpan = document.getElementById('decisionsJournalTitle');
@@ -1720,7 +1724,7 @@
         const fileName = firstWithDate ? `decisions/${firstWithDate.dateFile}.tsv` : 'decisions/*.tsv';
         titleSpan.textContent = `${td('radar.decisionsTitle')} (${fileName})`;
       }
-      decContainer.innerHTML = RECENT_DECISIONS.length === 0
+      const nextDecHtml = RECENT_DECISIONS.length === 0
         ? `<div style="font-size:12px; color:#94a3b8; font-family:var(--font-mono); padding:8px 6px;">${td('radar.decisionsEmpty')}</div>`
         : RECENT_DECISIONS.slice(0, 6).map(d => `
         <div class="decision-item">
@@ -1732,6 +1736,10 @@
           <div style="color:#94a3b8; font-size:11.5px;">${td('radar.reason')} ${d.reason}</div>
         </div>
       `).join('');
+      if (decContainer && decContainer.__lastHtml !== nextDecHtml) {
+        decContainer.innerHTML = nextDecHtml;
+        decContainer.__lastHtml = nextDecHtml;
+      }
     }
 
     function applyHoverClasses() {
@@ -2910,17 +2918,21 @@
         return { x: cx + vx * t, y: cy + vy * t };
       }
 
-      const drawTopologyEdgesNow = () => {
-        const boxSizes = {};
-        AGENTS.forEach(a => {
-          const domEl = nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`);
-          boxSizes[a.id] = {
-            hw: domEl && domEl.offsetWidth ? domEl.offsetWidth / 2 : 80,
-            hh: domEl && domEl.offsetHeight ? domEl.offsetHeight / 2 : 18
-          };
-        });
+      // Measure DOM node boxes ONCE before drawing / animating to prevent Forced Synchronous Layout inside rAF!
+      const cachedDomById = new Map();
+      const cachedBoxSizes = {};
+      nodesLayer.querySelectorAll('.agent-node').forEach(domEl => {
+        const aid = domEl.getAttribute('data-agent-id');
+        if (!aid) return;
+        cachedDomById.set(aid, domEl);
+        cachedBoxSizes[aid] = {
+          hw: domEl.offsetWidth ? domEl.offsetWidth / 2 : 80,
+          hh: domEl.offsetHeight ? domEl.offsetHeight / 2 : 18
+        };
+      });
 
-        svgGroup.innerHTML = EDGES.map((edge, edgeIdx) => {
+      const drawTopologyEdgesNow = (boxSizes = cachedBoxSizes) => {
+        const nextEdgesHtml = EDGES.map((edge, edgeIdx) => {
           const n1 = nodeMap[edge.from];
           const n2 = nodeMap[edge.to];
           if (!n1 || !n2) return '';
@@ -2996,6 +3008,10 @@
             </g>
           `;
         }).join('');
+        if (svgGroup.__lastHtml !== nextEdgesHtml) {
+          svgGroup.innerHTML = nextEdgesHtml;
+          svgGroup.__lastHtml = nextEdgesHtml;
+        }
       };
 
       if (topologyTweenRaf) {
@@ -3015,13 +3031,13 @@
             if (!st || !tg) continue;
             a.x = st.x + (tg.x - st.x) * ease;
             a.y = st.y + (tg.y - st.y) * ease;
-            const domEl = nodesLayer.querySelector(`.agent-node[data-agent-id="${a.id}"]`);
+            const domEl = cachedDomById.get(a.id);
             if (domEl) {
               domEl.style.left = `${a.x}%`;
               domEl.style.top = `${a.y}%`;
             }
           }
-          drawTopologyEdgesNow();
+          drawTopologyEdgesNow(cachedBoxSizes);
           if (p < 1) {
             topologyTweenRaf = requestAnimationFrame(stepTween);
           } else {
@@ -3030,7 +3046,7 @@
         };
         topologyTweenRaf = requestAnimationFrame(stepTween);
       } else {
-        drawTopologyEdgesNow();
+        drawTopologyEdgesNow(cachedBoxSizes);
       }
     }
 
@@ -3042,7 +3058,7 @@
         section.style.display = SLICES_LANES.length > 0 ? '' : 'none';
       }
       if (!container) return;
-      container.innerHTML = SLICES_LANES.map(lane => {
+      const nextSwimHtml = SLICES_LANES.map(lane => {
         const isSelectedSlice = currentSliceFilter === lane.id;
         const stagesHtml = STAGE_NAMES.map((stName, idx) => {
           let cls = '';
@@ -3071,6 +3087,10 @@
           </div>
         `;
       }).join('');
+      if (container.__lastHtml !== nextSwimHtml) {
+        container.innerHTML = nextSwimHtml;
+        container.__lastHtml = nextSwimHtml;
+      }
     }
 
     let inspectorRefOpen = false;
@@ -3914,27 +3934,50 @@
             return String(q.fromId || q.from || '').endsWith(sfx) || String(q.toId || q.to || '').endsWith(sfx);
           });
       document.getElementById('queueCountBadge').textContent = `${visibleQItems.length} ${td('insp.itemsUnit')}`;
+
+      // Pre-index gantt history by slice ONCE (O(M) instead of O(N*M) filter+sort inside every card!)
       const ganttRows = Array.isArray(window.LIVE_GANTT) ? window.LIVE_GANTT : [];
-      document.getElementById('queuePacketsList').innerHTML = visibleQItems.map(q => {
+      const ganttBySlice = new Map();
+      for (const g of ganttRows) {
+        if (!g) continue;
+        const sl = g.slice || (typeof g.chain === 'string' && g.chain.startsWith('slice:') ? g.chain.slice(6) : '');
+        if (!sl) continue;
+        if (!ganttBySlice.has(sl)) ganttBySlice.set(sl, []);
+        ganttBySlice.get(sl).push(g);
+      }
+
+      const seatShort = getNodeDisplayTitle(agent);
+      const isInvolvedItem = (q) => {
         const fromDisp = shortSeat(q.fromId || q.from);
         const toDisp = shortSeat(q.toId || q.to);
-        const seatShort = getNodeDisplayTitle(agent);
-        const isNodeInvolved =
-          fromDisp === seatShort || toDisp === seatShort ||
+        return fromDisp === seatShort || toDisp === seatShort ||
           (q.fromId && q.fromId === agent.id) || (q.toId && q.toId === agent.id);
+      };
+      const sortedQItems = visibleQItems.slice().sort((a, b) => (isInvolvedItem(b) ? 1 : 0) - (isInvolvedItem(a) ? 1 : 0));
+      const QUEUE_PACKETS_LIMIT = 24;
+      const showAllQ = Boolean(window.__showAllQueuePackets);
+      const renderedQItems = showAllQ ? sortedQItems : sortedQItems.slice(0, QUEUE_PACKETS_LIMIT);
+      const hiddenQCount = Math.max(0, sortedQItems.length - renderedQItems.length);
+
+      const qListEl = document.getElementById('queuePacketsList');
+      const nextQueueHtml = renderedQItems.map(q => {
+        const fromDisp = shortSeat(q.fromId || q.from);
+        const toDisp = shortSeat(q.toId || q.to);
+        const isNodeInvolved = isInvolvedItem(q);
         const borderStyle = isNodeInvolved
           ? `border: 1px solid ${q.color}; border-left: 4px solid ${q.color}; background: rgba(0, 240, 255, 0.08);`
           : `border-left: 3px solid ${q.color};`;
         const cleanSlice = String(q.slice || '').replace(/^slice:/, '');
         const envKey = q.id || `${fromDisp}-${toDisp}-${cleanSlice}`;
-        const related = cleanSlice
-          ? ganttRows
-              .filter(g => g && (g.slice === cleanSlice || g.chain === 'slice:' + cleanSlice))
+        const rawRelated = cleanSlice ? (ganttBySlice.get(cleanSlice) || []) : [];
+        const hasHistory = rawRelated.length > 1;
+        const isExpanded = hasHistory && expandedQueueEnvelopes.has(envKey);
+        const related = isExpanded
+          ? rawRelated
+              .slice()
               .sort((a, b) => (Date.parse(b.endAt || b.claimedAt || b.createdAt || 0) || 0) - (Date.parse(a.endAt || a.claimedAt || a.createdAt || 0) || 0))
               .slice(0, 8)
-          : [];
-        const hasHistory = related.length > 1;
-        const isExpanded = hasHistory && expandedQueueEnvelopes.has(envKey);
+          : rawRelated;
         const tsStr = formatEnvelopeClock(q.ts);
         const historyHtml = isExpanded ? `
           <div class="env-history-timeline">
@@ -3966,7 +4009,7 @@
               <span style="display:flex; align-items:center; gap:5px;">
                 <span style="color:${q.color};">${escapeHtml(q.state)}</span>
                 ${tsStr ? `<span style="color:#94a3b8; font-weight:500;">${escapeHtml(tsStr)}</span>` : ''}
-                ${hasHistory ? `<span class="env-history-toggle ${isExpanded ? 'open' : ''}">📜 ${td('xray.eventsCount', { n: related.length })} ${isExpanded ? '▴' : '▾'}</span>` : ''}
+                ${hasHistory ? `<span class="env-history-toggle ${isExpanded ? 'open' : ''}">📜 ${td('xray.eventsCount', { n: rawRelated.length })} ${isExpanded ? '▴' : '▾'}</span>` : ''}
                 ${q.id ? `<button type="button" class="env-copy-btn" style="border-color:rgba(56,189,248,0.45); color:#7dd3fc;" title="${escapeHtml(td('ctx.openTip'))}" onclick="event.stopPropagation(); openQueueItemContext('${escapeHtml(q.id)}')">${escapeHtml(td('ctx.openBtn'))}</button>` : ''}
                 <button type="button" class="env-copy-btn" title="rig queue show ${escapeHtml(q.id)} --full" onclick="event.stopPropagation(); copyCmd('rig queue show ${escapeHtml(q.id)} --full')">${CMD_COPY_LABEL_HTML}</button>
               </span>
@@ -3979,10 +4022,19 @@
             ${historyHtml}
           </div>
         `;
-      }).join('');
+      }).join('') + (hiddenQCount > 0
+        ? `<button type="button" class="action-pill" style="width:100%; justify-content:center; margin-top:4px;" onclick="window.__showAllQueuePackets = true; renderInspectorAndScorecards(false);">${deckLang === 'en' ? `Show all ${sortedQItems.length} queue items (+${hiddenQCount})` : `Показать все ${sortedQItems.length} задач (+${hiddenQCount})`}</button>`
+        : (showAllQ && sortedQItems.length > QUEUE_PACKETS_LIMIT
+          ? `<button type="button" class="action-pill" style="width:100%; justify-content:center; margin-top:4px;" onclick="window.__showAllQueuePackets = false; renderInspectorAndScorecards(false);">${deckLang === 'en' ? `Collapse to top ${QUEUE_PACKETS_LIMIT}` : `Свернуть до ${QUEUE_PACKETS_LIMIT}`}</button>`
+          : ''));
+      if (qListEl && qListEl.__lastHtml !== nextQueueHtml) {
+        qListEl.innerHTML = nextQueueHtml;
+        qListEl.__lastHtml = nextQueueHtml;
+      }
 
       const coders = AGENTS.filter(a => a.reworkHistory && (currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter)));
-      document.getElementById('coderScorecards').innerHTML = coders.map(c => {
+      const scoreEl = document.getElementById('coderScorecards');
+      const nextScoreHtml = coders.map(c => {
         const isCurrent = c.id === selectedAgentId;
         const dots = c.reworkHistory.map(r =>
           `<span class="round-dot round-${Math.min(4, r)}" title="Принят с ${r}-го круга QA">${r} кр</span>`
@@ -4001,6 +4053,10 @@
           </div>
         `;
       }).join('');
+      if (scoreEl && scoreEl.__lastHtml !== nextScoreHtml) {
+        scoreEl.innerHTML = nextScoreHtml;
+        scoreEl.__lastHtml = nextScoreHtml;
+      }
     }
 
     function escapeHtml(str) {
@@ -4077,16 +4133,50 @@
       }
     }
 
-    async function refreshTelemetryNow() {
+    let telemetryFetchInFlight = false;
+    let lastTelemetryRig = null;
+    let lastHistoryRev = '';
+    let lastCachedHistory = null;
+    let lastGuidanceRev = '';
+    let lastCachedGuidance = null;
+    let hasDoneInitialCapture = false;
+
+    async function refreshTelemetryNow(force = false) {
+      if (telemetryFetchInFlight && !force) return;
+      telemetryFetchInFlight = true;
       try {
-        const rigParam = currentRigFilter === 'all' ? '' : `?rig=${encodeURIComponent(currentRigFilter)}`;
-        const res = await fetch(`/api/telemetry${rigParam}`);
+        if (lastTelemetryRig !== currentRigFilter) {
+          lastTelemetryRig = currentRigFilter;
+          lastHistoryRev = '';
+          lastCachedHistory = null;
+          lastGuidanceRev = '';
+          lastCachedGuidance = null;
+        }
+        const qs = new URLSearchParams();
+        if (currentRigFilter !== 'all') qs.set('rig', currentRigFilter);
+        if (lastHistoryRev && lastCachedHistory) qs.set('historyRev', lastHistoryRev);
+        if (lastGuidanceRev && lastCachedGuidance) qs.set('guidanceRev', lastGuidanceRev);
+        if (force) qs.set('force', '1');
+        const qStr = qs.toString();
+        const res = await fetch(`/api/telemetry${qStr ? `?${qStr}` : ''}`);
         if (res.status === 401) {
           window.location.reload();
           return;
         }
         if (!res.ok) throw new Error('Offline');
         const data = await res.json();
+        if (data.historyUnchanged && lastCachedHistory) {
+          data.history = lastCachedHistory;
+        } else if (data.history) {
+          lastCachedHistory = data.history;
+          if (data.historyRev) lastHistoryRev = String(data.historyRev);
+        }
+        if (data.guidanceUnchanged && lastCachedGuidance) {
+          data.seatGuidance = lastCachedGuidance;
+        } else if (data.seatGuidance) {
+          lastCachedGuidance = data.seatGuidance;
+          if (data.guidanceRev) lastGuidanceRev = String(data.guidanceRev);
+        }
         const snapshot = buildOntologySnapshot(data, window.ONTOLOGY_SNAPSHOT);
         window.ONTOLOGY_SNAPSHOT = snapshot;
         window.LIVE_INTELLIGENCE = snapshot.intelligence;
@@ -4177,6 +4267,7 @@
               selectedAgentId = (liveMatch && liveMatch.seatId) ||
                 (snapshot.seats[0] && snapshot.seats[0].seatId) ||
                 selectedAgentId;
+              hasDoneInitialCapture = true;
               fetchTerminalCapture(selectedAgentId, true);
             }
             const nl = document.getElementById('nodesLayer');
@@ -4496,7 +4587,10 @@
         renderEdgeXray();
         updateAlertsAndTitle();
         const selAgent = AGENTS.find(a => a.id === selectedAgentId);
-        if (autoFollow && selAgent && (selAgent.state === 'working' || selAgent.state === 'urgent')) {
+        if (!hasDoneInitialCapture) {
+          hasDoneInitialCapture = true;
+          fetchTerminalCapture(selectedAgentId, true);
+        } else if (autoFollow && selAgent && (selAgent.state === 'working' || selAgent.state === 'urgent')) {
           fetchTerminalCapture(selectedAgentId, true);
         }
         if (modalSeatId) fetchModalCapture();
@@ -4510,6 +4604,12 @@
         if (sub) {
           sub.textContent = td('hud.snapshotSub');
         }
+        if (!hasDoneInitialCapture) {
+          hasDoneInitialCapture = true;
+          fetchTerminalCapture(selectedAgentId, true);
+        }
+      } finally {
+        telemetryFetchInFlight = false;
       }
     }
 
@@ -5152,12 +5252,12 @@
           setTimeout(() => {
             fetchTerminalCapture(selectedAgentId, true);
             if (modalSeatId) fetchModalCapture();
-            refreshTelemetryNow();
+            refreshTelemetryNow(true);
           }, 450);
           setTimeout(() => {
             fetchTerminalCapture(selectedAgentId, true);
             if (modalSeatId) fetchModalCapture();
-            refreshTelemetryNow();
+            refreshTelemetryNow(true);
           }, 1400);
           return { ok: true };
         } catch (err) {
@@ -8589,8 +8689,29 @@
       renderSwimlanes();
       renderInspectorAndScorecards();
       refreshTelemetryNow();
-      fetchTerminalCapture(selectedAgentId);
-      setInterval(refreshTelemetryNow, 4000);
+      let telemetryPollTimer = null;
+      let lastVisibleRefreshAt = Date.now();
+      const scheduleNextTelemetryPoll = () => {
+        if (telemetryPollTimer) clearTimeout(telemetryPollTimer);
+        const delayMs = document.visibilityState === 'hidden' ? 16000 : 4000;
+        telemetryPollTimer = setTimeout(async () => {
+          await refreshTelemetryNow();
+          scheduleNextTelemetryPoll();
+        }, delayMs);
+      };
+      scheduleNextTelemetryPoll();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          const now = Date.now();
+          if (now - lastVisibleRefreshAt >= 1500) {
+            lastVisibleRefreshAt = now;
+            refreshTelemetryNow();
+          }
+          scheduleNextTelemetryPoll();
+        } else {
+          scheduleNextTelemetryPoll();
+        }
+      });
       setCenterView(centerViewMode, true);
       const activeTrack = applyDemoTrackFromUrl();
       initDemoQuest(activeTrack);

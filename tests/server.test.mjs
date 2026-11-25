@@ -15,6 +15,8 @@ import {
   applyTerminalPromptProbes,
   dispatchRawCommand,
   fetchQueueItemContextDetail,
+  runWithConcurrency,
+  computeHistoryFingerprint,
   transcriptUsageCache
 } from '../openrig/server.mjs';
 
@@ -459,4 +461,62 @@ test('fetchQueueItemContextDetail validates qitemId, loads full body, extracts a
   assert.ok(detail.artifacts.docs.includes('docs/tasks/0147-live.md'));
   assert.deepEqual(detail.artifacts.adrs, ['ADR-0012']);
   assert.deepEqual(detail.artifacts.commits, ['6512c14']);
+});
+
+test('runWithConcurrency bounds parallelism, computeHistoryFingerprint tracks queue deltas, and chunked JSONL reader spans >2MB', async () => {
+  let active = 0;
+  let peak = 0;
+  const out = await runWithConcurrency([1, 2, 3, 4, 5, 6, 7], 2, async (x) => {
+    active++;
+    if (active > peak) peak = active;
+    await new Promise(r => setTimeout(r, 5));
+    active--;
+    return x * 10;
+  });
+  assert.equal(peak, 2);
+  assert.deepEqual(out, [10, 20, 30, 40, 50, 60, 70]);
+
+  const fpA = computeHistoryFingerprint([
+    { qitemId: 'q-1', state: 'pending', tsUpdated: 't1' },
+    { qitemId: 'q-2', state: 'pending', tsUpdated: 't2' },
+    { qitemId: 'q-3', state: 'done', tsUpdated: 't3' }
+  ]);
+  const fpB = computeHistoryFingerprint([
+    { qitemId: 'q-1', state: 'pending', tsUpdated: 't1' },
+    { qitemId: 'q-2', state: 'pending', tsUpdated: 't2' },
+    { qitemId: 'q-3', state: 'done', tsUpdated: 't3' }
+  ]);
+  const fpMidChanged = computeHistoryFingerprint([
+    { qitemId: 'q-1', state: 'pending', tsUpdated: 't1' },
+    { qitemId: 'q-2', state: 'done', tsUpdated: 't2' },
+    { qitemId: 'q-3', state: 'done', tsUpdated: 't3' }
+  ]);
+  assert.equal(fpA, fpB);
+  assert.notEqual(fpA, fpMidChanged, 'Mid-list state change must invalidate historyRev even at fixed length');
+
+  // Multi-chunk JSONL (>2.2 MB) with token_count event straddling across the 2 MB chunk boundary
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'rigcmd-chunk-'));
+  const filePath = path.join(tmpDir, 'large.jsonl');
+  try {
+    const fillerLine = JSON.stringify({ type: 'other', pad: 'A'.repeat(4000) }) + '\n';
+    const fillerChunk = fillerLine.repeat(560); // ~2.26 MB
+    const tokenLine = JSON.stringify({
+      type: 'event_msg',
+      timestamp: '2026-11-24T12:00:00Z',
+      payload: {
+        type: 'token_count',
+        info: { total_token_usage: { input_tokens: 123456, cached_input_tokens: 100000, output_tokens: 5000 } }
+      }
+    }); // no trailing newline on purpose to verify remainder handling
+    await fs.writeFile(filePath, fillerChunk + tokenLine, 'utf-8');
+    transcriptUsageCache.delete(filePath);
+    const parsed = await readTranscriptTokenUsage(filePath);
+    assert.ok(parsed);
+    assert.equal(parsed.inputTokens, 123456);
+    assert.equal(parsed.cachedInputTokens, 100000);
+    assert.equal(parsed.outputTokens, 5000);
+  } finally {
+    transcriptUsageCache.delete(filePath);
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  }
 });

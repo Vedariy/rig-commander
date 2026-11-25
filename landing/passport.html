@@ -15,14 +15,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Architecture & Operational Passport (C4 + Ontology v2.2)">
-  <meta property="og:description" content="C4 Level 1 & Level 3 diagrams, 8-object Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, paired Mobile PWA & 106-test 0-dependency matrix.">
+  <meta property="og:description" content="C4 Level 1 & Level 3 diagrams, 8-object Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, paired Mobile PWA & 108-test 0-dependency matrix.">
   <meta property="og:url" content="https://rig-commander.vercel.app/passport">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Architecture & Operational Passport">
-  <meta name="twitter:description" content="C4 diagrams, Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, Remote PWA & 106-test 0-dep suite.">
+  <meta name="twitter:description" content="C4 diagrams, Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, Remote PWA & 108-test 0-dep suite.">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -453,7 +453,7 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">106 / 106 PASS</div>
+        <div class="kpi-val" style="color:var(--emerald);">108 / 108 PASS</div>
         <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 20 наборов (~1s)</div>
       </div>
       <div class="kpi-card">
@@ -569,7 +569,7 @@
             <li><code>bin/cli.mjs</code> — точка запуска <code>npx rig-commander</code> + супервизор автообновления (<code>exit 75</code>) + <code>--public-url</code> / <code>--universal</code></li>
             <li><code>scripts/sync-public.mjs</code> — <code>npm run sync:public</code> (единый источник правды для Vercel <code>public/</code>)</li>
             <li><code>landing/index.html</code>, <code>landing/guide.html</code>, <code>landing/passport.html</code> — публичные страницы EN/RU</li>
-            <li><code>tests/*.test.mjs</code> — <strong>20 тестовых наборов</strong> (106 проверок) на встроенном <code>node --test</code></li>
+            <li><code>tests/*.test.mjs</code> — <strong>20 тестовых наборов</strong> (108 проверок) на встроенном <code>node --test</code></li>
             <li><code>openrig/docs/*</code> — <strong>ADR-0001..0012</strong>, C4, операционная онтология <strong>v2.2</strong>, <code>docs/USER_GUIDE.md</code></li>
           </ul>
         </div>
@@ -706,7 +706,7 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 106/106</span>
+        <span class="sec-tag">NODE --TEST • 108/108</span>
       </div>
       <table>
         <thead>
@@ -715,11 +715,11 @@
         <tbody>
           <tr><td><code>tests/ai-evaluator.test.mjs</code></td><td>3-уровневый AI Evaluator (<code>L0 Heuristic+Expert ➔ S1 /v1/systemone Jev/Laya/Von, GLiClass-v3, EmbeddingGemma ➔ S2 Gemini 4 Hydrogen/GLM-5.3/Qwen3.8</code>), <code>Expert Veto</code>, <code>SecretRedactor</code>, <code>H_norm</code> энтропия, grounding и <code>0600</code> конфиг</td><td><span class="badge-ok">10 PASS</span></td></tr>
           <tr><td><code>tests/context-lineage.test.mjs</code></td><td><code>openrig/assets/domain/context-lineage.js</code>: разбор тегов <code>blockedOn / project / mission / parent / gate / body-context</code>, извлечение артефактов (спеки, ADR, коммиты), граф предков/блокеров, детектор дрейфа контекст-паков и матчинг <code>decisions</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, JSONL, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>dispatchRawCommand</code> (<code>rig send --raw</code> + wrapper-проверка), <code>fetchQueueItemContextDetail</code>, PWA-статика, <code>computeHistoryStats</code></td><td><span class="badge-ok">13 PASS</span></td></tr>
+          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, чанковый JSONL (&gt;2 МБ), <code>runWithConcurrency</code>, <code>computeHistoryFingerprint</code>, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>dispatchRawCommand</code>, <code>fetchQueueItemContextDetail</code>, PWA-статика, <code>computeHistoryStats</code></td><td><span class="badge-ok">14 PASS</span></td></tr>
           <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi и <code>shellExited</code>, канонический <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
           <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, <code>inferActionId</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>nudge_queue</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">5 PASS</span></td></tr>
           <tr><td><code>tests/ontology-snapshot.test.mjs</code></td><td><code>shouldIncludeLiveNode</code>, сброс <code>ctxHistory</code> при свапе, <code>buildOntologySnapshot</code>, чистые селекторы и эксклюзивные пулы <code>computeModelPools</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, per-rig кэш, 6 детекторов), шумоочистка <code>BottleneckDetector</code> &amp; <code>remediation</code>, <code>classifyTerminalScreen</code>, экспоненциальная термокривая <code>thermal.js</code>, <code>LiveBlocker</code>, <code>Ceremony</code>, <code>DECK_I18N</code> EN/RU паритет</td><td><span class="badge-ok">15 PASS</span></td></tr>
+          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, slim <code>TelemetryRingBuffer</code>, per-rig кэш, 6 детекторов), шумоочистка <code>BottleneckDetector</code> &amp; <code>remediation</code>, <code>classifyTerminalScreen</code>, экспоненциальная термокривая <code>thermal.js</code>, <code>LiveBlocker</code>, <code>Ceremony</code>, <code>DECK_I18N</code> EN/RU паритет</td><td><span class="badge-ok">16 PASS</span></td></tr>
           <tr><td><code>tests/topology-layout.test.mjs</code></td><td><code>openrig/assets/domain/topology-layout.js</code>: классификация <code>activityTier</code> с 12с гистерезисом, режим <code>Dynamic</code> (clearance &ge;130px), режим <code>Fixed</code>, крайние размеры 0..17 узлов и <code>computeAnchoredPopoverRect</code> (X-Ray у курсора)</td><td><span class="badge-ok">5 PASS</span></td></tr>
           <tr><td><code>tests/gantt-model.test.mjs</code></td><td><code>openrig/assets/domain/gantt-model.js</code>: фильтр шума <code>isGanttItemNoise</code>, поддорожечная упаковка <code>packLaneIntervals</code> без перекрытий, <code>Wait vs Work</code> KPI, <code>By Agent</code> / <code>By Slice</code> и <code>Handoff Flow</code></td><td><span class="badge-ok">3 PASS</span></td></tr>
           <tr><td><code>tests/universal-discovery.test.mjs</code></td><td>Универсальное автообнаружение Claude Code / Codex JSONL + <code>tmux</code> панелей (без OpenRig), HITL-детектор и валидация target</td><td><span class="badge-ok">3 PASS</span></td></tr>
@@ -738,7 +738,7 @@
 
       <div class="cmd-strip">
         <div class="cmd-box"><span>Запуск локальной деки (:7440)</span>npm start</div>
-        <div class="cmd-box"><span>Прогон всех 106 юнит-тестов</span>npm test</div>
+        <div class="cmd-box"><span>Прогон всех 108 юнит-тестов</span>npm test</div>
         <div class="cmd-box"><span>Синхронизация артефактов для Vercel</span>npm run sync:public</div>
       </div>
     </section>
