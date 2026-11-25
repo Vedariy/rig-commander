@@ -455,3 +455,43 @@ test('single active rig and empty fleet return no decorative clusters', () => {
     assert.deepEqual(computeTopologyLayout({ agents: [], mode }).rigClusters, []);
   }
 });
+
+test('proportional multi-rig clusters give 4-seat pod side-by-side coders (no edge-through-card) and honor bottomReservePx', () => {
+  const agents = [
+    makeAgent('operator-agent@kernel', { state: 'working', ctxPct: 64, displayTitle: 'operator-agent' }),
+    makeAgent('dev-coder2@rig-commander', { state: 'idle', ctxPct: 42, displayTitle: 'dev-coder2' }),
+    makeAgent('dev-coder3@rig-commander', { state: 'idle', ctxPct: 80, displayTitle: 'dev-coder3' }),
+    makeAgent('dev-check@rig-commander', { state: 'working', displayTitle: 'dev-check' }),
+    makeAgent('dev-check2@rig-commander', { state: 'urgent', displayTitle: 'dev-check2' })
+  ];
+  const edges = [
+    { from: 'dev-coder3@rig-commander', to: 'dev-check@rig-commander', queueStatus: 'live', liveActive: true, slice: 'iter7-2' },
+    { from: 'dev-coder2@rig-commander', to: 'dev-check2@rig-commander', queueStatus: 'live', liveActive: true, slice: 'iter7-4' }
+  ];
+  const res = computeTopologyLayout({
+    agents,
+    edges,
+    mode: 'dynamic',
+    canvasWidth: 960,
+    canvasHeight: 500,
+    bottomReservePx: 48
+  });
+  assert.equal(res.rigClusters.length, 2);
+  const kZone = res.rigClusters.find(c => c.rigId === 'kernel');
+  const rcZone = res.rigClusters.find(c => c.rigId === 'rig-commander');
+  assert.ok(rcZone.wPct > kZone.wPct * 1.4, `4-seat pod (${rcZone.wPct.toFixed(1)}%) must be substantially wider than 1-seat kernel (${kZone.wPct.toFixed(1)}%)`);
+
+  // Both coders sit side-by-side (not stacked vertically) and neither live edge hits the other coder
+  const w = res.canvasWidth, h = res.canvasHeight;
+  const pC2 = res.positions['dev-coder2@rig-commander'];
+  const pC3 = res.positions['dev-coder3@rig-commander'];
+  const pQ2 = res.positions['dev-check2@rig-commander'];
+  assert.ok(Math.abs(pC2.y - pC3.y) < 12, `coders should sit side-by-side, got y=${pC2.y} vs ${pC3.y}`);
+  const c3Box = getBoxRect(agents[2], pC3, 'active', w, h);
+  assert.equal(segmentIntersectsRect(pC2.x * w / 100, pC2.y * h / 100, pQ2.x * w / 100, pQ2.y * h / 100, c3Box), false);
+
+  // Bottom cluster edge stays strictly above the 48px idleCollapsedPill reserve
+  const rcBottomPx = (rcZone.yPct + rcZone.hPct) * h / 100;
+  assert.ok(rcBottomPx <= h - 48 + 1, `Cluster bottom (${rcBottomPx.toFixed(1)}px) must clear bottomReservePx=48 inside h=${h}`);
+  assertNoRectOverlaps(agents, res, w, h);
+});

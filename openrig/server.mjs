@@ -16,6 +16,7 @@ import { RemoteAccessGuard, buildLiveManifest, detectTailscaleServeUrl } from '.
 import { SelfUpdater, RESTART_FOR_UPDATE_EXIT_CODE, readInstalledVersion } from './lib/self-update.mjs';
 import { AiEvaluatorService } from './lib/ai-evaluator/index.mjs';
 import { ServerIdempotencyCache, buildSeatSendKey } from './assets/domain/action-guard.js';
+import { isPiHarness } from './assets/ontology/actions.js';
 import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
 import {
   extractItemContextMeta,
@@ -2265,8 +2266,12 @@ async function sendToSeat({ req, json, body: payload }) {
       let cleanText = text.trim();
       cleanText = cleanText.replace(/(\/[a-zA-Z0-9_-]+)\1+/g, '$1');
 
-      // 2. Pi harness guard: Pi (DeepSeek) does not support slash commands
-      if ((seat.includes('coder3') || seat.includes('pi')) && cleanText.startsWith('/compact')) {
+      // 2. Pi harness guard: Pi (DeepSeek) does not support slash commands (check actual runtime/model, not seat name)
+      const targetNode = (latestFleetSnapshot?.nodes || []).find(n => n && n.canonicalSessionName === seat) || null;
+      const isPiSeat = targetNode
+        ? isPiHarness({ id: seat, harness: targetNode.runtime || targetNode.harness || '', model: targetNode.model || '' })
+        : /(?:^|[-_@])pi(?:[-_@]|$)/i.test(seat);
+      if (isPiSeat && cleanText.startsWith('/compact')) {
         actionAudit.record({ actionId, seatId: seat, type, payload: cleanText, httpStatus: 400, ok: false, baseline });
         const errBody = { ok: false, error: 'Харнес Pi (DeepSeek) не поддерживает команду /compact. Используйте ротацию сиденья.' };
         idem.complete(400, errBody);

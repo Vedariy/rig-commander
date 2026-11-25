@@ -14,17 +14,23 @@ export function getSeatTriageSignal(seat) {
 
 export function isPiHarness(seat) {
   if (!seat) return false;
-  const harness = String(seat.harness || '').toLowerCase();
-  const id = String(seat.id || '');
-  return harness.includes('pi') || id.includes('coder3');
+  const harness = String(seat.harness || seat.runtime || '').toLowerCase().trim();
+  const model = String(seat.model || '').toLowerCase().trim();
+  if (harness) {
+    return harness === 'pi' || /(?:^|[^a-z])pi(?:[^a-z]|$)/.test(harness) || harness.includes('deepseek');
+  }
+  if (model) {
+    return model.includes('deepseek');
+  }
+  return false;
 }
 
 function buildSeatContext(seat, screenText = '') {
   const id = String((seat && seat.id) || '');
-  const harness = String((seat && seat.harness) || '').toLowerCase();
+  const harness = String((seat && (seat.harness || seat.runtime)) || '').toLowerCase();
   const isPi = isPiHarness(seat);
   const isClaude = harness.includes('claude');
-  const isAgy = harness.includes('terminal') || harness.includes('agy') || id.includes('coder5');
+  const isAgy = harness.includes('terminal') || harness.includes('agy') || harness.includes('antigravity');
   const parsedOptions = getLiveHitlOptions(screenText);
   const hasParsedOptions = parsedOptions.length >= 2;
   const isUrgent = Boolean(seat && seat.state === 'urgent');

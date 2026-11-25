@@ -2590,6 +2590,7 @@
     });
 
     let telemetryFetchInFlight = false;
+    let telemetryConsecutiveFailures = 0;
     let lastTelemetryRig = null;
     let lastHistoryRev = '';
     let lastCachedHistory = null;
@@ -3078,6 +3079,7 @@
         updateAlertsAndTitle();
         const selAgent = AGENTS.find(a => a.id === selectedAgentId);
         if (hasLiveDaemonData) {
+          telemetryConsecutiveFailures = 0;
           connectTelemetryStream();
           syncTmuxStream();
         }
@@ -3090,14 +3092,24 @@
         }
         if (modalSeatId && !(tmuxStreamConnected && tmuxStreamSeat === modalSeatId)) fetchModalCapture();
       } catch {
+        telemetryConsecutiveFailures += 1;
+        const keepLive = Boolean(IS_LIVE && (telemetrySseConnected || telemetryConsecutiveFailures < 3));
         const badge = document.getElementById('liveConnectionBadge');
-        if (badge) {
-          badge.textContent = '⚡ SNAPSHOT MODE';
-          badge.classList.add('offline');
-        }
-        const sub = document.getElementById('lastSyncSubtitle');
-        if (sub) {
-          sub.textContent = td('hud.snapshotSub');
+        if (keepLive) {
+          if (badge && telemetryConsecutiveFailures >= 2 && !telemetrySseConnected) {
+            const connSuffix = location.port ? `:${location.port}` : ':7440';
+            badge.textContent = `↻ RECONNECTING ${connSuffix}`;
+            badge.classList.remove('offline');
+          }
+        } else {
+          if (badge) {
+            badge.textContent = '⚡ SNAPSHOT MODE';
+            badge.classList.add('offline');
+          }
+          const sub = document.getElementById('lastSyncSubtitle');
+          if (sub) {
+            sub.textContent = td('hud.snapshotSub');
+          }
         }
         if (!hasDoneInitialCapture) {
           hasDoneInitialCapture = true;

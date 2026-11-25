@@ -85,6 +85,16 @@ test('hot context >= 65% exposes compact_context on Codex/Claude and copy_restar
     ctxPct: 80
   });
   assert.equal(isPiHarness({ id: 'dev-coder3@rig', harness: 'pi' }), true);
+  assert.equal(isPiHarness({ id: 'dev-coder3@rig-commander', harness: 'codex', model: 'gpt-6.2-astra' }), false);
+  const hotCodexCoder3 = getSeatContextualActions({
+    id: 'dev-coder3@rig-commander',
+    harness: 'codex',
+    model: 'gpt-6.2-astra',
+    state: 'idle',
+    ctxPct: 80
+  });
+  assert.deepEqual(hotCodexCoder3.map(a => a.id), ['compact_context']);
+  assert.equal(hotCodexCoder3[0].payload, '/compact');
   assert.deepEqual(critPi.map(a => a.id), ['copy_restart_seat']);
   assert.equal(critPi[0].transport, 'clipboard');
   assert.equal(critPi[0].payload, 'rig restart dev-coder3@rig');

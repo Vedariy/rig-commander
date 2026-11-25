@@ -354,6 +354,24 @@ export function renderTopology(deps) {
     }
   }
 
+  const activeRigIds = new Set();
+  for (const a of visibleAgents) {
+    const isAct = a.state === 'working' || a.state === 'urgent' || activeEndpointIds.has(a.id) || (graphLayoutMode === 'dynamic' && recentActiveIds.has(a.id));
+    if (isAct) {
+      const idStr = String(a.id || '');
+      activeRigIds.add(idStr.includes('@') ? idStr.slice(idStr.lastIndexOf('@') + 1) : 'local');
+    }
+  }
+  const useCompactClusterTitle = currentRigFilter === 'all' && activeRigIds.size >= 2;
+  const resolveCardTitle = (agent) => {
+    const base = getNodeDisplayTitle(agent);
+    if (!useCompactClusterTitle || !agent || !agent.id) return base;
+    const raw = String(agent.id);
+    const at = raw.lastIndexOf('@');
+    return at > 0 ? raw.slice(0, at) : base;
+  };
+  const renderDeps = useCompactClusterTitle ? { ...deps, getNodeDisplayTitle: resolveCardTitle } : deps;
+
   const measuredBoxes = {};
   const visibleById = new Map(visibleAgents.map(a => [a.id, a]));
   nodesLayer.querySelectorAll('.agent-node').forEach(domEl => {
@@ -362,7 +380,7 @@ export function renderTopology(deps) {
     const ag = visibleById.get(aid);
     if (!ag) return;
     const nameEl = domEl.querySelector('.node-name');
-    const expectedTitle = getNodeDisplayTitle(ag);
+    const expectedTitle = resolveCardTitle(ag);
     // Ignore stale DOM measurements when rig filter or title just changed!
     if (nameEl && nameEl.textContent !== expectedTitle) return;
     if (domEl.offsetWidth > 30 && domEl.offsetHeight > 16) {
@@ -375,16 +393,18 @@ export function renderTopology(deps) {
     }
   });
 
+  const bottomReservePx = collapsedIdleIds.size > 0 ? 48 : 0;
   const layoutResult = (typeof computeTopologyLayout === 'function')
     ? computeTopologyLayout({
-        agents: visibleAgents.map(a => ({ ...a, displayTitle: getNodeDisplayTitle(a) })),
+        agents: visibleAgents.map(a => ({ ...a, displayTitle: resolveCardTitle(a) })),
         edges: EDGES,
         mode: graphLayoutMode,
         canvasWidth: cw,
         canvasHeight: ch,
         detailed: isDetailed,
         measuredBoxes,
-        recentActiveIds
+        recentActiveIds,
+        bottomReservePx
       })
     : { positions: {}, tiers: {}, benchEdgeById: {}, benchSeparatorY: null, activeCount: visibleAgents.length, dormantCount: 0 };
 
@@ -526,10 +546,10 @@ export function renderTopology(deps) {
 
       const nameEl = el.querySelector('.node-name');
       if (nameEl) {
-        const nextTitle = getNodeDisplayTitle(agent);
+        const nextTitle = resolveCardTitle(agent);
         if (nameEl.textContent !== nextTitle) {
           nameEl.textContent = nextTitle;
-          nameEl.title = nextTitle;
+          nameEl.title = agent.id || nextTitle;
         }
       }
 
@@ -569,7 +589,7 @@ export function renderTopology(deps) {
       }
     });
   } else {
-    nodesLayer.innerHTML = AGENTS.map(agent => renderNodeCardHtml(agent, { ...deps, collapsedIdleIds, connectedNodeIds, layoutResult })).join('');
+    nodesLayer.innerHTML = AGENTS.map(agent => renderNodeCardHtml(agent, { ...renderDeps, collapsedIdleIds, connectedNodeIds, layoutResult })).join('');
   }
 
   // Sync SVG viewBox with actual pixel canvas dimensions so 1 SVG unit = 1px

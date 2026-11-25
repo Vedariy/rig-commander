@@ -695,8 +695,9 @@ function rigIdOf(agent) {
   return id.includes('@') ? id.slice(id.lastIndexOf('@') + 1) : 'local';
 }
 
-// Each rig uses the existing single-rig engine inside a disjoint, padded region.
-// Grow scrollable content rather than squeeze cards into overlapping rectangles.
+// Each rig uses the existing single-rig engine inside a disjoint, padded region
+// sized proportionally to its seat count so single-node rigs (e.g. @kernel) never
+// starve multi-seat project pods into vertical collisions.
 function layoutRigClusters(list, edges, options, activity, cw, ch) {
   const groups = new Map();
   for (const agent of list) {
@@ -706,32 +707,81 @@ function layoutRigClusters(list, edges, options, activity, cw, ch) {
   }
   const rigs = [...groups.keys()].sort(naturalCompare);
   const { detailed, measuredBoxes, mode } = options;
-  const boxes = list.map(a => resolveBox(a, 'active', { detailed, measuredBoxes }));
+  const bottomReservePx = Math.max(0, Number(options.bottomReservePx) || 0);
   const pad = 12, gap = 20, insetX = 16, insetTop = 32, insetBottom = 16;
-  const minZoneW = Math.max(360, ...boxes.map(b => b.width + insetX * 2 + 28));
-  const width = Math.max(cw, minZoneW + pad * 2);
-  const cols = Math.max(1, Math.min(3, rigs.length, Math.floor((width - pad * 2 + gap) / (minZoneW + gap))));
-  const rows = Math.ceil(rigs.length / cols);
-  const zoneW = (width - pad * 2 - gap * (cols - 1)) / cols;
-  const innerW = zoneW - insetX * 2;
-  let minZoneH = 0;
-  for (const agents of groups.values()) {
+
+  // Per-rig minimum width & proportional weight based on seat count and widest card
+  const rigMeta = new Map();
+  for (const rigId of rigs) {
+    const agents = groups.get(rigId);
     const items = agents.map(agent => ({ agent, box: resolveBox(agent, 'active', { detailed, measuredBoxes }) }));
+    const maxCardW = Math.max(...items.map(it => it.box.width));
+    const singleMinW = Math.max(240, maxCardW + insetX * 2 + 28);
+    const multiMinW = Math.max(360, maxCardW * 2 + insetX * 2 + 64);
+    const minW = agents.length <= 1 ? singleMinW : Math.min(Math.max(360, maxCardW + insetX * 2 + 32), multiMinW);
+    const weight = agents.length <= 1 ? 1.0 : Math.min(3.4, Math.sqrt(agents.length) * 1.35);
+    rigMeta.set(rigId, { agents, items, minW, weight });
+  }
+
+  const maxMinW = Math.max(...[...rigMeta.values()].map(m => m.minW));
+  const cols = Math.max(1, Math.min(3, rigs.length, Math.floor((Math.max(cw, maxMinW + pad * 2) - pad * 2 + gap) / (260 + gap))));
+  const rowSlices = [];
+  for (let i = 0; i < rigs.length; i += cols) {
+    rowSlices.push(rigs.slice(i, i + cols));
+  }
+
+  // Ensure overall canvas width satisfies every row's sum of minimum widths
+  let width = cw;
+  for (const rowRigs of rowSlices) {
+    const rowMinTotal = pad * 2 + gap * Math.max(0, rowRigs.length - 1) +
+      rowRigs.reduce((sum, r) => sum + rigMeta.get(r).minW, 0);
+    if (rowMinTotal > width) width = rowMinTotal;
+  }
+
+  // Allocate proportional widths per row while honoring each rig's minW
+  const zoneRects = new Map();
+  for (let rIdx = 0; rIdx < rowSlices.length; rIdx++) {
+    const rowRigs = rowSlices[rIdx];
+    const availW = width - pad * 2 - gap * Math.max(0, rowRigs.length - 1);
+    const sumMin = rowRigs.reduce((s, r) => s + rigMeta.get(r).minW, 0);
+    const extraW = Math.max(0, availW - sumMin);
+    const sumWeight = rowRigs.reduce((s, r) => s + rigMeta.get(r).weight, 0) || 1;
+    let cursorX = pad;
+    for (const rigId of rowRigs) {
+      const m = rigMeta.get(rigId);
+      const zW = m.minW + (extraW * m.weight) / sumWeight;
+      zoneRects.set(rigId, { x: cursorX, w: zW, rowIdx: rIdx });
+      cursorX += zW + gap;
+    }
+  }
+
+  let minZoneH = 0;
+  for (const rigId of rigs) {
+    const { items } = rigMeta.get(rigId);
+    const innerW = Math.max(200, zoneRects.get(rigId).w - insetX * 2);
     let rowCount = 0;
     for (const bucket of [0, 1, 2]) {
-      rowCount += splitIntoBalancedRows(items.filter(it => getRolePlacementInfo(it.agent).bucket === bucket), Math.max(240, innerW - 40), 24, 4).length;
+      rowCount += splitIntoBalancedRows(items.filter(it => getRolePlacementInfo(it.agent).bucket === bucket), Math.max(180, innerW - 28), 20, 4).length;
     }
     const cardH = Math.max(...items.map(it => it.box.height));
-    minZoneH = Math.max(minZoneH, Math.max(360, 80 + rowCount * (cardH + 48)) + insetTop + insetBottom);
+    minZoneH = Math.max(minZoneH, Math.max(340, 76 + rowCount * (cardH + 46)) + insetTop + insetBottom);
   }
-  const zoneH = Math.max(minZoneH, (ch - pad * 2 - gap * (rows - 1)) / rows);
-  const height = Math.max(ch, pad * 2 + rows * zoneH + gap * (rows - 1));
+
+  const rows = rowSlices.length;
+  const usableCh = Math.max(240, ch - bottomReservePx);
+  const zoneH = Math.max(minZoneH, (usableCh - pad * 2 - gap * Math.max(0, rows - 1)) / rows);
+  const height = Math.max(ch, pad * 2 + rows * zoneH + gap * Math.max(0, rows - 1) + bottomReservePx);
   const positions = {}, benchEdgeById = {}, rigClusters = [];
-  rigs.forEach((rigId, i) => {
-    const x = pad + (i % cols) * (zoneW + gap), y = pad + Math.floor(i / cols) * (zoneH + gap);
+
+  for (const rigId of rigs) {
+    const rect = zoneRects.get(rigId);
+    const x = rect.x;
+    const zoneW = rect.w;
+    const y = pad + rect.rowIdx * (zoneH + gap);
     const agents = groups.get(rigId);
+    const innerW = zoneW - insetX * 2;
     const innerH = zoneH - insetTop - insetBottom;
-    const local = computeTopologyLayout({ ...options, agents, edges, canvasWidth: innerW, canvasHeight: innerH });
+    const local = computeTopologyLayout({ ...options, bottomReservePx: 0, agents, edges, canvasWidth: innerW, canvasHeight: innerH });
     for (const agent of agents) {
       const p = local.positions[agent.id];
       positions[agent.id] = { x: +((x + insetX + p.x * innerW / 100) * 100 / width).toFixed(4),
@@ -740,7 +790,7 @@ function layoutRigClusters(list, edges, options, activity, cw, ch) {
     }
     rigClusters.push({ rigId, xPct: x * 100 / width, yPct: y * 100 / height,
       wPct: zoneW * 100 / width, hPct: zoneH * 100 / height, count: agents.length });
-  });
+  }
   return { mode, positions, tiers: activity.tiers, benchEdgeById, benchSeparatorY: null,
     activeCount: activity.activeNodes.length, dormantCount: activity.dormantNodes.length,
     rigClusters, canvasWidth: width, canvasHeight: height };
@@ -757,11 +807,13 @@ export function computeTopologyLayout({
   canvasHeight = DEFAULT_CANVAS_H,
   detailed = false,
   measuredBoxes = null,
-  recentActiveIds = null
+  recentActiveIds = null,
+  bottomReservePx = 0
 } = {}) {
   const safeMode = GRAPH_LAYOUT_MODES.includes(mode) ? mode : 'dynamic';
   const cw = Math.max(320, Number(canvasWidth) || DEFAULT_CANVAS_W);
   const ch = Math.max(240, Number(canvasHeight) || DEFAULT_CANVAS_H);
+  const safeBottomReserve = Math.max(0, Math.min(ch * 0.25, Number(bottomReservePx) || 0));
   const list = Array.isArray(agents) ? agents.filter(Boolean) : [];
 
   const { tiers, activeNodes, dormantNodes, activeEdges } = classifyNodeActivityTier(list, edges, {
@@ -770,7 +822,7 @@ export function computeTopologyLayout({
   });
 
   if (new Set(activeNodes.map(rigIdOf)).size >= 2) {
-    return layoutRigClusters(list, edges, { mode: safeMode, detailed, measuredBoxes, recentActiveIds },
+    return layoutRigClusters(list, edges, { mode: safeMode, detailed, measuredBoxes, recentActiveIds, bottomReservePx: safeBottomReserve },
       { tiers, activeNodes, dormantNodes }, cw, ch);
   }
 
@@ -792,25 +844,26 @@ export function computeTopologyLayout({
   }
 
   let placedItems = [];
+  const effectiveCh = Math.max(220, ch - safeBottomReserve);
 
   if (safeMode === 'fixed') {
     // Fixed mode: invariant role-tiered layout sized for active cards so waking up never shifts positions
-    placedItems = layoutFixedRoleGrid(list, tiers, cw, ch, {
+    placedItems = layoutFixedRoleGrid(list, tiers, cw, effectiveCh, {
       detailed,
       measuredBoxes,
       useActiveSizing: true
     });
   } else if (activeNodes.length === 0) {
     // Dynamic mode fallback when 100% of fleet is asleep: spacious full-canvas role layout
-    placedItems = layoutFixedRoleGrid(list, tiers, cw, ch, {
+    placedItems = layoutFixedRoleGrid(list, tiers, cw, effectiveCh, {
       detailed,
       measuredBoxes,
       useActiveSizing: false
     });
   } else if (dormantNodes.length === 0) {
-    // Dynamic mode when 0 dormant nodes (or hideIdleNodes ON): active stage owns 100% height
+    // Dynamic mode when 0 dormant nodes (or hideIdleNodes ON): active stage owns 100% height above any bottom pill
     const stageTopY = detailed ? 74 : 46;
-    const stageBottomY = ch - (detailed ? 64 : 26);
+    const stageBottomY = Math.max(stageTopY + 80, effectiveCh - (detailed ? 64 : 26));
     placedItems = layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottomY, {
       detailed,
       measuredBoxes
