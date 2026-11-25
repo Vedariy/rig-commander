@@ -8,13 +8,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+---
+
+## [3.3.0] - 2026-11-25
+
 ### Added
 - **SSE Push Stream & Deduplicated Live TMUX Streaming (`openrig/lib/sse-hub.mjs`, `openrig/server.mjs`, `openrig/index.html`, ADR-0016):**
   - Added zero-dependency `SsePushHub` serving `GET /api/events` (SHA-1 telemetry delta push, `18s` heartbeat, `MAX_SSE_CLIENTS = 32`, `0%` idle CPU) and `GET /api/capture/stream` (shared per-seat 80-line TMUX watcher across tabs with adaptive `650ms -> 1500ms` backoff and immediate post-`/api/send` re-capture at `120ms` / `520ms`).
   - Added `● LIVE SSE` connection badge, `⚡ STREAM` / `⚡ ПОТОК` pill in Inspector & Live TMUX modal, instant cached-screen hydration on modal open, slowed fallback polling when SSE is live, and zero `EventSource` requests on offline `/demo`.
-- **OpenRig L3 Playbook & Three-Tier Documentation Hygiene (`openrig/docs/openrig-playbook.md`, `landing/guide.html`, `landing/passport.html`, `openrig/docs/engineering-passport-internal.md`, `AGENTS.md`, `scripts/audit-exposure.mjs`):**
+- **OpenRig L3 Playbook & Three-Tier Documentation Hygiene (`openrig/docs/openrig-playbook.md`, `landing/guide.html`, `landing/passport.html`, `AGENTS.md`, `scripts/audit-exposure.mjs`):**
   - Added sanitized OpenRig Playbook (`@openrig/cli` L0–L3 model, honest recovery statuses, `rig send` vs `rig queue`, 10 advanced flows, Top 7 anti-patterns) as Markdown and bilingual RU/EN Section 9 `#openrig-playbook` in User Guide.
-  - Moved deep C4 Level 3 file trees, exact action predicates, AI Evaluator wire formulas, and 24-suite test inventory into internal engineering docs (`openrig/docs/engineering-passport-internal.md`, excluded from `public/` and npm tarball), upgraded `/passport` to a 100% bilingual executive Architecture & Security Passport (`125 / 125 PASS`), generalized `openrig/docs/architecture.md`, protected `.private-docs/` in `.gitignore`, and added `npm run audit:exposure`.
+  - Upgraded `/passport` to a 100% bilingual executive Architecture & Security Passport (`125 / 125 PASS`), generalized `openrig/docs/architecture.md`, isolated internal R&D blueprints in gitignored `.private-docs/`, excluded `openrig/docs/**` from the npm tarball, and added `npm run audit:exposure`.
 - **`⌘K` Command Palette, Safe Queue Triage & Anti-Collinear Graph Layout (`openrig/assets/domain/command-palette.js`, `openrig/assets/domain/topology-layout.js`, ADR-0015):**
   - Added fuzzy-scored `⌘K` Command Palette with scoped queries (`seat:`, `slice:`, `queue:`, `act:`), MRU ranking, and deduplicated Safe Queue Triage (noise filtering, hidden infra seat resolution, stale `PARKED` handling).
   - Hardened Dynamic & Fixed graph layout with anti-collinear arch staggering for `3+` node rows and full-segment edge-through-node repulsion.
