@@ -139,8 +139,31 @@ function checkLeaks() {
   }
 }
 
+const FORBIDDEN_PUBLIC_RD_DOCS = [
+  'openrig/docs/adr/0009-fleet-intelligence-and-advisory-engine.md',
+  'openrig/docs/adr/0012-tiered-ai-evaluator-heuristic-system1-system2.md',
+  'openrig/docs/fleet-intelligence-architecture.md',
+  'openrig/docs/fleet-intelligence-ontology.md',
+  'openrig/docs/product/fleet-intelligence.md',
+  'openrig/docs/operational-ontology.md',
+  'openrig/docs/engineering-passport-internal.md',
+  'openrig/docs/architecture-diligence-review.md',
+  'openrig/docs/ux-cognitive-load-analysis.md',
+  'openrig/docs/information-architecture.md',
+  'openrig/docs/ui-component-tree-specification.md'
+];
+
+function checkNoPrivateRdDocsInPublicRepo() {
+  for (const rel of FORBIDDEN_PUBLIC_RD_DOCS) {
+    if (fs.existsSync(path.join(ROOT, rel))) {
+      violations.push(`Internal R&D blueprint must live in .private-docs/, not public repo: ${rel}`);
+    }
+  }
+}
+
 checkGitignore();
 checkPackageFiles();
+checkNoPrivateRdDocsInPublicRepo();
 checkPublicShowcase();
 checkLeaks();
 

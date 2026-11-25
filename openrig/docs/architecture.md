@@ -3,8 +3,7 @@
 Документ описывает эталонную архитектуру **RigCommander (`v3.2`)** поверх **OpenRig Daemon (`127.0.0.1:7437`)** и режима **Universal Discovery** (`tmux` + JSONL транскрипты без OpenRig).
 
 > **Связанные инженерные документы:**
-> - Полная C4 Level 3 карта файлов, предикаты онтологии и матрица из 24 тестовых наборов (125 тестов): [engineering-passport-internal.md](./engineering-passport-internal.md)
-> - Архитектурные решения (ADR-0001..0016): [adr/README.md](./adr/README.md)
+> - Архитектурные решения (ADR): [adr/README.md](./adr/README.md)
 > - Практический мануал по OpenRig CLI (`@openrig/cli`): [openrig-playbook.md](./openrig-playbook.md)
 
 ---

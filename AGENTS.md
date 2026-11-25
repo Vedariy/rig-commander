@@ -17,12 +17,12 @@ This repository is **public (MIT Open Source)** and powers both the static showc
    - Allowed: product capabilities, C4 Level 1–2 trust boundaries, security & privacy guarantees, OpenRig CLI Playbook, user guides, summary verification status.
    - **Forbidden on `landing/` & `public/`:** internal file trees (`assets/domain/*`, `lib/ai-evaluator/*`, `tests/*.test.mjs`), internal symbol names, exact brute-force attempt thresholds, raw HTTP deduplication codes, internal wire protocols, or code-level predicate dumps.
 2. **Tier 2 — Open-Source Engineering Docs (`openrig/docs/`, GitHub only, excluded from `public/` and npm tarball):**
-   - Audience: contributors, security auditors, and agents developing RigCommander itself.
-   - Contains: `openrig/docs/architecture.md`, `openrig/docs/engineering-passport-internal.md` (C4 Level 3 & full test matrix), `openrig/docs/adr/0001..NNNN`, `openrig/docs/openrig-playbook.md`.
-   - **Strictly forbidden:** personal OS home directory paths, private commercial project names, internal CI/provider/VPN details, API keys, tokens, or real production slice names.
+   - Audience: contributors, security auditors, and agents working on the core bridge & UI.
+   - Contains: `openrig/docs/architecture.md`, `openrig/docs/openrig-playbook.md`, core ADRs (`0001–0008`, `0010`, `0011`, `0013–0016`), and contributor guides.
+   - **Strictly forbidden:** personal OS home directory paths, private commercial project names, internal CI/provider/VPN details, API keys, tokens, real production slice names, or deep R&D heuristic/evaluator/detector blueprints.
 3. **Tier 3 — Private Companion Documentation (`.private-docs/`, gitignored):**
    - Audience: repository owner and private team only.
-   - Contains: commercial roadmap, pricing/GTM, private rig configs, provider quotas/keys, closed R&D notes, and future Team/Enterprise specs.
+   - Contains: deep R&D specs & heuristics (`AI Evaluator` cascade/prompts/centroids, `Fleet Intelligence` detector formulas, `Safe Playbook Automation` / Iteration 5 specs, C4 Level 3 internal passport, cognitive load analyses, diligence reviews), commercial roadmap, pricing/GTM, private rig configs, provider quotas/keys, and future Team/Enterprise specs.
    - `.private-docs/` **must remain in `.gitignore`** and must never be tracked by Git or packaged into npm.
 
 ## 3. Mandatory Pre-Commit Verification Gate

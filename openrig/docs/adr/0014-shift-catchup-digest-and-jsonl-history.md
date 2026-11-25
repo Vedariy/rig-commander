@@ -2,7 +2,7 @@
 
 - **Статус:** `[ACCEPTED]`
 - **Дата:** 2026-11-25
-- **Связанные документы:** [ADR-0002](0002-three-tier-telemetry-bridge.md), [ADR-0009](0009-fleet-intelligence-and-advisory-engine.md), [ADR-0013](0013-git-worktree-and-conflict-radar.md)
+- **Связанные документы:** [ADR-0002](0002-three-tier-telemetry-bridge.md), [ADR-0013](0013-git-worktree-and-conflict-radar.md)
 
 ---
 

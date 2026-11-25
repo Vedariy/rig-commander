@@ -7,8 +7,6 @@
 - [ADR-0001: Pure Vanilla JS + SVG Canvas](0001-pure-vanilla-svg-architecture.md)
 - [ADR-0003: In-place DOM Patching](0003-in-place-dom-mutations.md)
 - [ADR-0005: Динамический подхват топологии](0005-dynamic-rig-topology-discovery.md)
-- [Анализ когнитивной нагрузки UX](../ux-cognitive-load-analysis.md)
-- [Информационная архитектура](../information-architecture.md)
 
 ---
 
