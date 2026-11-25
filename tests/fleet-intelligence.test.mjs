@@ -12,6 +12,7 @@ import {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
   getLiveHitlOptions,
+  extractHitlCommandPreview,
   extractDetectedTerminalModel,
   detectTerminalIdleAtPrompt,
   classifyTerminalScreen,
@@ -654,4 +655,42 @@ test('ContextEntropyDetector emits compact_seat for codex dev-coder3 and rotate_
   assert.equal(codexFinding?.actionPlan.params.isPi, false);
   assert.equal(piFinding?.actionPlan.kind, 'rotate_seat');
   assert.equal(piFinding?.actionPlan.params.isPi, true);
+});
+
+const approvalMenu = '\n› 1. Yes, run command\n  2. Yes, always allow in this\n     conversation\n  3. No, cancel\n↑/↓ Navigate';
+
+test('command preview identifies the current Antigravity, Codex, Claude and yes/no requests', () => {
+  for (const [screen, expected] of [
+    ['Requesting permission for:\n  git status --short\nRun this command?' + approvalMenu, 'git status --short'],
+    ['Would you like to run the following command?\nReason: inspect changes\n  $ git diff\n    --stat' + approvalMenu, 'git diff --stat'],
+    ['⏺ Bash(git log -1)\nDo you want to proceed?' + approvalMenu, 'git log -1'],
+    ['Bash(echo ok)\nAllow this action?' + approvalMenu, 'echo ok'],
+    ['Allow running ls -l?' + approvalMenu, 'Allow running ls -l?'],
+    ['Proceed with offline indexing? [Y/n]', 'Proceed with offline indexing? [Y/n]'],
+    ['Requesting permission for:\nwrong' + approvalMenu + '\nRequesting permission for:\nright\nRun this command?' + approvalMenu, 'right']
+  ]) assert.equal(extractHitlCommandPreview(screen), expected);
+});
+
+test('preview strips terminal formatting, truncates to 180 Unicode characters, and rejects idle lists', () => {
+  const command = 'echo ' + '😀'.repeat(180);
+  const screen = '\x1b[32mRequesting permission for:\x1b[0m\n  ' + command + approvalMenu;
+  assert.equal(extractHitlCommandPreview(screen), 'echo ' + '😀'.repeat(174) + '…');
+  assert.equal(extractHitlCommandPreview('Completed steps:\n1. Read notes\n2. Updated notes\n>\n? for shortcuts'), '');
+  const idle = 'Requesting permission for:\n  previous command' + approvalMenu + '\n>\n? for shortcuts';
+  assert.equal(detectLiveHitlPrompt(idle).blocked, false);
+  assert.equal(extractHitlCommandPreview(idle), '');
+  assert.equal(extractHitlCommandPreview('Running tests\nesc to cancel'), '');
+});
+
+test('preview masks synthetic credentials before shortening, including quoted and wrapped values', () => {
+  for (const command of [
+    'tool API_TOKEN="fixture phrase\ncontinued"',
+    'tool --password fixture-only',
+    "curl -H 'Authorization: Bearer fixture-only'",
+    'git fetch https://user:fixture-only@example.invalid/'
+  ]) {
+    const preview = extractHitlCommandPreview('Requesting permission for:\n  ' + command + approvalMenu);
+    assert.match(preview, /\[REDACTED\]/);
+    assert.doesNotMatch(preview, /fixture|continued/);
+  }
 });

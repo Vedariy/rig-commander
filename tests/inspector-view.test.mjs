@@ -138,3 +138,29 @@ test('worktree keeps conflicted files first and carries the full escaped path to
   assert.ok(html.indexOf('data-file="' + escaped + '"') < html.indexOf('data-file="ordinary"'));
   assert.match(html, /openGitDiffModal\(this.getAttribute\('data-seat'\), this.getAttribute\('data-file'\)\)/);
 });
+
+test('preview immediately precedes approval controls, with full escaped tooltip and bounded text', () => {
+  for (const lang of ['en', 'ru']) {
+    const ctx = context(lang);
+    const command = 'echo ' + special + ' ' + 'long '.repeat(45) + 'tail';
+    const html = renderInteractivePromptOptionsHtml(ctx, seat, 'Requesting permission for:\n  ' + command +
+      '\nRun this command?\n> 1. Yes, run\n  2. No, cancel', 'modalCmdStatus');
+    assert.ok(html.indexOf('hitl-command-preview') < html.indexOf('triggerPromptOption(this)'));
+    assert.ok(html.includes('title="' + ctx.escapeHtml(command) + '"'));
+    assert.ok(html.includes(ctx.td('insp.hitlCmdLabel')));
+    assert.match(html, /…<\/code>/);
+    assert.ok(!html.includes(special));
+  }
+});
+
+test('preview-only yes/no prompts and repeated credentials in option labels have no raw credential sinks', () => {
+  const ctx = context();
+  const question = 'Continue with --api-key fixture-only? [Y/n]';
+  const yesNo = renderInteractivePromptOptionsHtml(ctx, seat, question);
+  assert.match(yesNo, /hitl-command-preview/);
+  assert.doesNotMatch(yesNo, /fixture-only|triggerPromptOption/);
+  const numbered = renderInteractivePromptOptionsHtml(ctx, seat,
+    'Requesting permission for:\n  tool --password fixture-only\nRun this command?\n1. Yes, run with --password fixture-only\n2. No, cancel');
+  assert.match(numbered, /triggerPromptOption/);
+  assert.doesNotMatch(numbered, /fixture-only/);
+});

@@ -2,6 +2,7 @@ export {
   parseInteractivePromptOptions,
   detectLiveHitlPrompt,
   getLiveHitlOptions,
+  extractHitlCommandPreview,
   extractDetectedTerminalModel,
   detectTerminalIdleAtPrompt,
   classifyTerminalScreen

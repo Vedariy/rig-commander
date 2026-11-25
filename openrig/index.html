@@ -2298,7 +2298,7 @@
 
     async function fetchTerminalCapture(seatId, silent = false) {
       const box = document.getElementById('tmuxScreenBox');
-      if (box && !silent) box.textContent = `Захват экрана tmux для ${seatId}...`;
+      if (box && !silent && !lastScreenBySeat[seatId]) box.textContent = `Захват экрана tmux для ${seatId}...`;
       try {
         const res = await fetch(`/api/capture?seat=${encodeURIComponent(seatId)}&lines=72`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2312,13 +2312,10 @@
         lastScreenBySeat[seatId] = liveScreenCapture;
       }
       const updatedBox = document.getElementById('tmuxScreenBox');
-      if (updatedBox) {
-        updatedBox.textContent = liveScreenCapture;
-        updatedBox.scrollTop = updatedBox.scrollHeight;
-      }
+      InspectorView.updateTerminalScreen(updatedBox, liveScreenCapture);
       const promptOptsBar = document.getElementById('inspectorPromptOptionsBar');
       if (promptOptsBar) {
-        promptOptsBar.innerHTML = renderInteractivePromptOptionsHtml(seatId, liveScreenCapture, 'cmdSendStatus');
+        InspectorView.updateInspectorPromptOptions(promptOptsBar, renderInteractivePromptOptionsHtml(seatId, liveScreenCapture));
       }
       const quickKeysBar = document.getElementById('ctrlQuickKeysBar');
       const curAgent = AGENTS.find(x => x.id === seatId);
@@ -2397,18 +2394,11 @@
       if (selectedAgentId === seatId) {
         liveScreenCapture = text;
         const box = document.getElementById('tmuxScreenBox');
-        if (box && box.textContent !== text) {
-          const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 45;
-          box.textContent = text;
-          if (atBottom) box.scrollTop = box.scrollHeight;
-        }
+        InspectorView.updateTerminalScreen(box, text);
         const promptOptsBar = document.getElementById('inspectorPromptOptionsBar');
         if (promptOptsBar) {
           const nextOpts = renderInteractivePromptOptionsHtml(seatId, text, 'cmdSendStatus');
-          if (promptOptsBar.getAttribute('data-cache-key') !== nextOpts) {
-            promptOptsBar.innerHTML = nextOpts;
-            promptOptsBar.setAttribute('data-cache-key', nextOpts);
-          }
+          InspectorView.updateInspectorPromptOptions(promptOptsBar, nextOpts);
         }
         const curAgent = AGENTS.find(x => x.id === seatId);
         if (IS_LIVE && curAgent && typeof detectLiveHitlPrompt === 'function') {
@@ -2435,19 +2425,7 @@
       }
 
       if (modalSeatId === seatId) {
-        const mBody = document.getElementById('terminalModalBody');
-        if (mBody && mBody.textContent !== text) {
-          const atBottom = mBody.scrollHeight - mBody.scrollTop - mBody.clientHeight < 45;
-          mBody.textContent = text;
-          if (atBottom) mBody.scrollTop = mBody.scrollHeight;
-        }
-        const modalRiskBar = document.getElementById('modalEvalRiskBar');
-        if (modalRiskBar) modalRiskBar.innerHTML = renderModalEvalRiskBarHtml(seatId, text);
-        const modalOpts = document.getElementById('modalPromptOptionsBar');
-        if (modalOpts) modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seatId, text, 'modalCmdStatus');
-        const modalQuick = document.getElementById('modalQuickKeysBar');
-        const modalAgent = AGENTS.find(a => a.id === seatId);
-        if (modalQuick && modalAgent) modalQuick.innerHTML = renderHarnessQuickKeys(modalAgent, 'modalCmdStatus');
+        updateModalScreen(seatId, text);
       }
     }
 
@@ -3481,6 +3459,7 @@
     function selectAgent(id, ev) {
       if (ev && ev.stopPropagation) ev.stopPropagation();
       const changed = selectedAgentId !== id;
+      if (changed) liveScreenCapture = lastScreenBySeat[id] || '';
       selectedAgentId = id;
       persistDeckPref({ selectedAgentId: id });
       applyHoverClasses();
@@ -3949,54 +3928,37 @@
       syncTmuxStream();
     }
 
+    function updateModalScreen(seatId, text, followThreshold = 45) {
+      const body = document.getElementById('terminalModalBody');
+      InspectorView.updateTerminalScreen(body, text, followThreshold, () => {
+        const modalRiskBar = document.getElementById('modalEvalRiskBar');
+        if (modalRiskBar) modalRiskBar.innerHTML = renderModalEvalRiskBarHtml(seatId, text);
+        const modalOpts = document.getElementById('modalPromptOptionsBar');
+        if (modalOpts) modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seatId, text, 'modalCmdStatus');
+        const modalQuick = document.getElementById('modalQuickKeysBar');
+        const modalAgent = AGENTS.find(a => a.id === seatId);
+        if (modalQuick && modalAgent) modalQuick.innerHTML = renderHarnessQuickKeys(modalAgent, 'modalCmdStatus');
+      });
+    }
+
     async function fetchModalCapture() {
       if (!modalSeatId) return;
       const seat = modalSeatId;
-      const body = document.getElementById('terminalModalBody');
-      const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 40;
+      let screenText;
       try {
         const res = await fetch(`/api/capture?seat=${encodeURIComponent(seat)}&lines=80`);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (modalSeatId !== seat) return;
-        const screenText = data.screen || '(Пустой экран терминала)';
-        lastScreenBySeat[seat] = screenText;
-        body.textContent = screenText;
-        const modalRiskBar = document.getElementById('modalEvalRiskBar');
-        if (modalRiskBar) {
-          modalRiskBar.innerHTML = renderModalEvalRiskBarHtml(seat, screenText);
-        }
-        const modalOpts = document.getElementById('modalPromptOptionsBar');
-        if (modalOpts) {
-          modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seat, screenText, 'modalCmdStatus');
-        }
-        const modalQuick = document.getElementById('modalQuickKeysBar');
-        const modalAgent = AGENTS.find(a => a.id === seat);
-        if (modalQuick && modalAgent) {
-          modalQuick.innerHTML = renderHarnessQuickKeys(modalAgent, 'modalCmdStatus');
-        }
+        screenText = data.screen || '(Пустой экран терминала)';
       } catch (e) {
         if (modalSeatId !== seat) return;
-        const screenText = !IS_LIVE
+        screenText = !IS_LIVE
           ? getDemoTerminalCapture(seat)
           : `Не удалось получить экран: ${e.message}\n$ rig capture ${seat} --lines 80`;
-        lastScreenBySeat[seat] = screenText;
-        body.textContent = screenText;
-        const modalRiskBar = document.getElementById('modalEvalRiskBar');
-        if (modalRiskBar) {
-          modalRiskBar.innerHTML = renderModalEvalRiskBarHtml(seat, screenText);
-        }
-        const modalOpts = document.getElementById('modalPromptOptionsBar');
-        if (modalOpts) {
-          modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seat, screenText, 'modalCmdStatus');
-        }
-        const modalQuick = document.getElementById('modalQuickKeysBar');
-        const modalAgent = AGENTS.find(a => a.id === seat);
-        if (modalQuick && modalAgent) {
-          modalQuick.innerHTML = renderHarnessQuickKeys(modalAgent, 'modalCmdStatus');
-        }
       }
-      if (atBottom) body.scrollTop = body.scrollHeight;
+      if (modalSeatId !== seat) return;
+      lastScreenBySeat[seat] = screenText;
+      updateModalScreen(seat, screenText, 40);
     }
 
     // ===== Stage 5: Fleet Intelligence & Advisory Radar (ADR-0009) =====

@@ -2440,6 +2440,19 @@
       text-overflow: ellipsis;
     }
 
+    .hitl-command-preview {
+      flex: 1 1 100%;
+      min-width: 0;
+      padding: 6px 8px;
+      border-left: 3px solid #fbbf24;
+      border-radius: 3px;
+      background: #272013;
+      color: #fef3c7;
+      font: 11px/1.45 var(--font-mono);
+      overflow-wrap: anywhere;
+    }
+    .hitl-command-preview code { font: inherit; }
+
     .terminal-screen {
       background: #01040a;
       border: 1px solid rgba(0, 240, 255, 0.3);

@@ -1,5 +1,5 @@
 /** Inspector, queue scorecards and context lineage. The deck supplies current state on each render. */
-import { getLiveHitlOptions, classifyTerminalScreen } from '../domain/prompt-parser.js';
+import { getHitlPromptPresentation, detectLiveHitlPrompt, classifyTerminalScreen } from '../domain/prompt-parser.js';
 import { buildSeatScopeKey, buildSeatSendKey } from '../domain/action-guard.js';
 import { computeBurn, formatTokensShort, getContextThermal } from '../domain/thermal.js';
 import { buildNudgeQueueAction, buildSeatRelaunchCommand, getManualHarnessActions, getSeatContextualActions, resolveActionFromFinding } from '../ontology/actions.js';
@@ -186,8 +186,12 @@ export function renderGuidanceHtml(ctx, agent) {
 
 export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, statusElId = 'cmdSendStatus') {
   const { td, escapeHtml, getControlLockAttrs } = ctx;
-  const options = getLiveHitlOptions(screenText);
-  if (!options.length) return '';
+  const { preview, fullCommand, options } = getHitlPromptPresentation(screenText);
+  if (!preview && !options.length) return '';
+  const banner = preview
+    ? `<div class="hitl-command-preview" title="${escapeHtml(fullCommand)}"><strong>🔍 ${escapeHtml(td('insp.hitlCmdLabel'))}</strong> <code>${escapeHtml(preview)}</code></div>`
+    : '';
+  if (!options.length) return banner;
   const scopeKey = buildSeatScopeKey(seatId);
   const btns = options.map(opt => {
     const cls = opt.isCancel ? 'action-pill key-pill key-cancel' : (opt.isPrimary ? 'action-pill key-pill key-proceed' : 'action-pill key-pill');
@@ -198,10 +202,18 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
   }).join('');
   return `
     <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
+      ${banner}
       <span style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
       ${btns}
     </div>
   `;
+}
+
+export function updateInspectorPromptOptions(bar, html) {
+  if (bar && bar.getAttribute('data-cache-key') !== html) {
+    bar.innerHTML = html;
+    bar.setAttribute('data-cache-key', html);
+  }
 }
 
 export function renderOntologyActionBtn(ctx, desc, opts = {}) {
@@ -536,6 +548,20 @@ function formatAgentHarnessLabel(ctx, agent) {
   return `${harness} • ${model}`;
 }
 
+// Follow output only while the reader is at the bottom. A blocking prompt must be visible
+// even when the capture is unchanged (for example, after opening a collapsed panel).
+export function updateTerminalScreen(box, text, followThreshold = 45, updateControls) {
+  if (!box) return;
+  const changed = box.textContent !== text;
+  const oldHeight = box.clientHeight;
+  const wasFollowing = box.scrollHeight - box.scrollTop - oldHeight < followThreshold;
+  if (changed) box.textContent = text;
+  // The modal controls share the available height with this scroll box.
+  updateControls?.();
+  const follow = wasFollowing && (changed || (updateControls && oldHeight !== box.clientHeight));
+  if (follow || detectLiveHitlPrompt(text).blocked) box.scrollTop = box.scrollHeight;
+}
+
 export function renderInspectorAndScorecards(document, ctx, flashHighlight = false) {
   const {
     agents, queueItems, ganttRows, showAllQueuePackets, deckLang, td, escapeHtml, shortSeat,
@@ -563,6 +589,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
   const attachCmd = agent.tmuxAttachCommand || `rig capture ${agent.id} --lines 40`;
   const showBurnInline = (typeof agent.ctxPct === 'number' && agent.ctxPct >= 60) || computeBurn(agent, deckLang).perHour > 0;
   const quickKeysHtml = renderHarnessQuickKeys(ctx, agent, 'cmdSendStatus');
+  const optionsHtml = renderInteractivePromptOptionsHtml(ctx, agent.id, lastScreenBySeat[agent.id] || '');
 
   const existingCard = document.getElementById('inspectorBoxCard');
   const canPatchInPlace = existingCard && existingCard.dataset.seat === agent.id && !flashHighlight;
@@ -668,13 +695,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
       btn.classList.toggle('active', btn.getAttribute('data-tab') === activeInspectorTab);
     });
 
-    const tmuxBox = document.getElementById('tmuxScreenBox');
-    if (tmuxBox && tmuxBox.textContent !== liveScreenCapture) {
-      const atBottom = tmuxBox.scrollHeight - tmuxBox.scrollTop - tmuxBox.clientHeight < 35;
-      tmuxBox.textContent = liveScreenCapture;
-      if (atBottom) tmuxBox.scrollTop = tmuxBox.scrollHeight;
-    }
-
+    updateInspectorPromptOptions(document.getElementById('inspectorPromptOptionsBar'), optionsHtml);
     const btnFollow = document.getElementById('btnAutoFollow');
     if (btnFollow) {
       btnFollow.textContent = autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff');
@@ -744,7 +765,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
         <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(liveScreenCapture)}</div>
 
         <div class="terminal-ctrl-bar" id="terminalCtrlBar">
-          <div id="inspectorPromptOptionsBar">${renderInteractivePromptOptionsHtml(ctx, agent.id, lastScreenBySeat[agent.id] || liveScreenCapture, 'cmdSendStatus')}</div>
+          <div id="inspectorPromptOptionsBar" data-cache-key="${escapeHtml(optionsHtml)}">${optionsHtml}</div>
           <div class="ctrl-quick-keys" id="ctrlQuickKeysBar" data-cache-key="${escapeHtml(quickKeysHtml)}">
             ${quickKeysHtml}
           </div>
@@ -798,6 +819,8 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
       }
     }
   }
+
+  updateTerminalScreen(document.getElementById('tmuxScreenBox'), liveScreenCapture, 35);
 
   const visibleQItems = currentRigFilter === 'all'
     ? queueItems

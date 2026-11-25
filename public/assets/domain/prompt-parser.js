@@ -134,12 +134,22 @@ export function detectLiveHitlPrompt(screenText) {
   if (!screenText || typeof screenText !== 'string') {
     return { blocked: false, reason: '', options: [] };
   }
+  return detectPlainHitlPrompt(stripTerminalFormatting(screenText));
+}
+
+function detectPlainHitlPrompt(screenText) {
   const nonEmpty = screenText.split(/\r?\n/).map(l => l.trimEnd()).filter(l => l.trim().length > 0);
   if (nonEmpty.length === 0) {
     return { blocked: false, reason: '', options: [] };
   }
 
   const tail = nonEmpty.slice(-48);
+  // A completed menu can still be in the last few lines above the next empty input.
+  const lastInput = tail.findLastIndex(line => IDLE_BARE_PROMPT_RE.test(line.trim()));
+  if (lastInput >= 0 && tail.slice(lastInput + 1).every(line =>
+    IDLE_FOOTER_MARKER_RE.test(line.trim()) || /^\s*[-─━═]+\s*$/.test(line))) {
+    return { blocked: false, reason: '', options: [] };
+  }
   const tailText = tail.join('\n');
   const bottom5 = tail.slice(-5).join('\n');
   const bottom3 = tail.slice(-3).join('\n');
@@ -207,6 +217,89 @@ export function detectLiveHitlPrompt(screenText) {
 export function getLiveHitlOptions(screenText) {
   const hitl = detectLiveHitlPrompt(screenText);
   return hitl.blocked && Array.isArray(hitl.options) ? hitl.options : [];
+}
+
+// The evaluator redactor is Node-only. For this browser view, suppress a whole sensitive
+// field before shortening it: a wrapped or quoted credential must not leave a visible suffix.
+const SENSITIVE_PROMPT_PATTERNS = [
+  /\b(?:bearer|basic|authorization|proxy-authorization|cookie|set-cookie)\s*[:=\s]/i,
+  /(?:api[-_]?key|access[-_]?key|private[-_]?key|auth[-_]?key|token|secret|passwd|password|credential|signature)[\w-]*["']?\s*[:=]/i,
+  /--[\w-]*(?:key|token|secret|pass(?:word|wd)?|credential|auth|cookie|user)(?:[=\s]|$)/i,
+  /\b(?:curl|wget)\b.*\s-(?:u|b)\s*\S|:\/\/[^/\s@]+:[^/\s@]*@/i,
+  /-----BEGIN [^-]*PRIVATE KEY|\b(?:sk[-_](?:proj[-_]|live[-_]|test[-_])?[\w-]{12,}|gh[pousr]_[\w-]{12,}|github_pat_[\w-]+|AIza[\w-]{20,}|(?:AKIA|ASIA)[A-Z0-9]{16}|xox[baprs]-[\w-]+|ts_[\w-]{16,}|eyJ[\w-]+\.[\w-]+\.[\w-]+)/
+];
+
+function stripTerminalFormatting(text) {
+  return text
+    .replace(/(?:\x1b\]|\x9d)[^\x07\x1b]*(?:\x07|\x1b\\|$)/g, '')
+    .replace(/(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~]/g, '')
+    .replace(/[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/g, '');
+}
+
+function safePromptText(text) {
+  if (!SENSITIVE_PROMPT_PATTERNS.some(pattern => pattern.test(text))) return text;
+  // Keep the executable identifiable when credentials in its arguments must be hidden.
+  const command = text.match(/^([a-z][a-z0-9.-]{0,31})\s/i);
+  return command && !SENSITIVE_PROMPT_PATTERNS.some(pattern => pattern.test(command[0]))
+    ? command[1] + ' [REDACTED]' : '[REDACTED]';
+}
+
+function currentPromptCommand(screen) {
+  const lines = screen.split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(-48);
+  const last = lines.at(-1);
+  if (!last) return '';
+  if (/(?:\[y\/n\]|\(y\/n\))\s*$/i.test(last)) return last;
+
+  // Work backwards from the current menu; never pick a command from an older exchange.
+  let end = lines.findLastIndex(line => NUMBERED_OPT_RE.exec(line)?.[1] === '1');
+  if (end < 0) {
+    end = lines.findIndex(line => NUMBERED_OPT_RE.test(line) || /^\[[1-9a-z]\]/i.test(line));
+    if (end < 0) end = lines.length;
+  }
+  let question = '';
+  for (let i = end - 1; i >= Math.max(0, end - 12); i--) {
+    const line = lines[i];
+    if (NUMBERED_OPT_RE.test(line) || HITL_STRONG_NAV_RE.test(line) || IDLE_BARE_PROMPT_RE.test(line)) break;
+    const bash = line.match(/^(?:[●⏺]\s*)?Bash\((.+)\)$/i);
+    if (bash) return bash[1];
+    if (/^(?:requesting permission for:|would you like to run\b)/i.test(line)) {
+      const inline = line.match(/^requesting permission for:\s*(.+)/i);
+      const promptBody = lines.slice(i + 1, end);
+      const shellLine = promptBody.findIndex(part => /^\$\s/.test(part));
+      const commandLines = [];
+      for (const part of promptBody.slice(Math.max(0, shellLine))) {
+        if (/^(?:run this command\?|justification:|reason:)/i.test(part)) break;
+        if (!/^[-─━]+$/.test(part)) commandLines.push(part);
+      }
+      const command = inline?.[1] || commandLines.join(' ');
+      return command.replace(/^\$\s+/, '') || line;
+    }
+    if (/^(?:allow\b.*\?|do you want to\b.*\?|run this command\?)$/i.test(line)) {
+      if (question) break;
+      question = line;
+      if (!/^(?:allow this (?:command|tool|action)|do you want to proceed|run this command)\?$/i.test(line)) return line;
+    }
+  }
+  return question;
+}
+
+/** Presentation data for both approval surfaces. Only sanitized text reaches their tooltips. */
+export function getHitlPromptPresentation(screenText) {
+  const screen = typeof screenText === 'string' ? stripTerminalFormatting(screenText) : '';
+  const hitl = detectPlainHitlPrompt(screen);
+  if (!hitl.blocked) return { preview: '', fullCommand: '', options: [] };
+  const fullCommand = safePromptText(currentPromptCommand(screen));
+  const characters = Array.from(fullCommand);
+  const preview = characters.length > 180 ? characters.slice(0, 179).join('') + '…' : fullCommand;
+  const options = hitl.options.map(opt => {
+    const fullText = safePromptText(opt.fullText);
+    return fullText === opt.fullText ? opt : { ...opt, fullText, shortLabel: fullText };
+  });
+  return { preview, fullCommand, options };
+}
+
+export function extractHitlCommandPreview(screenText) {
+  return getHitlPromptPresentation(screenText).preview;
 }
 
 /**
