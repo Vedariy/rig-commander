@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.4.0] - 2026-11-25
+
+### Added
+- **Opt-In Safe Playbook Automation & Critical SA Desktop Notifications (`openrig/assets/domain/playbooks-model.js`, `openrig/lib/playbook-engine.mjs`, `openrig/server.mjs`, `openrig/index.html`):**
+  - Added strictly allowlisted Safe Playbook Automation (`auto_compact_idle_hot`, `auto_wake_parked`, `auto_nudge_stalled_queue`, read-only `auto_notify_critical_sa`) defaulting to `enabled: false` + `mode: 'dry_run'` with 8 non-overridable Hard Safety Vetoes, `0600` local persistence, sliding hourly rate caps, Dry-Run preview, Guardrails `🤖 Playbooks` tab, and `/demo?track=playbooks`.
+  - Added opt-in browser Desktop Notifications for P0/P1 critical SA events (click-to-focus) and live dynamic SVG Favicon badges reflecting active alert severity & counts.
+- **Zero-Build UI Modularization — Phase 1 (`openrig/assets/ui/guardrails-view.js`, `openrig/assets/ui/gantt-view.js`):**
+  - Extracted Guardrails / Playbooks / AI Evaluator modal renderers and Task Gantt / Handoff Sequence / Span Detail views from `openrig/index.html` into native ES modules (−873 lines from `openrig/index.html`) with dedicated unit test suites (`158 / 158 PASS` across 27 suites).
+
+### Fixed
+- **Anti-Vertical-Collinearity Topology Layout (`openrig/assets/domain/topology-layout.js`):**
+  - Prevented 3-tier `[1, 1, 1]` and mixed `[1, 3, 1]` topologies from collapsing onto a single vertical center line where `owner → check` routes sliced through middle cards; unified wide Command-apex triangle geometry across Dynamic and Fixed modes.
+- **Live-UX, Antigravity CLI (`agy`) & Rig-Filter Scoping (`openrig/assets/domain/prompt-parser.js`, `openrig/server.mjs`, `openrig/index.html`, `openrig/assets/styles/deck.css`):**
+  - Added `getLiveHitlOptions()` backed by `detectLiveHitlPrompt()` so normal Markdown numbered lists on idle agents never render bogus `⚡ PROMPT OPTIONS` buttons, hijack operator chat input into raw keystrokes, or falsely escalate Tier 0 AI Evaluator / Telegram HITL payloads.
+  - Added active background-task detection (`○ Running`, `● [HH:MM:SS] ... running`) and terminal model extraction (`agy • Gemini 4 Neon (xhigh)`) for terminal-hosted Antigravity CLI seats.
+  - Scoped Top-3 Triage Strip, Slice Filter Chips, and Slice Swimlanes strictly to the selected rig (`sliceStats.rigs`), eliminated left Wait Radar header mid-character clipping in EN/RU, and synced the Command Deck version badge dynamically.
+
+---
+
 ## [3.3.0] - 2026-11-25
 
 ### Added
