@@ -1182,6 +1182,20 @@
       z-index: 2;
     }
 
+    .canvas-wrap.has-rig-clusters { overflow: auto; }
+    .rig-cluster-zone { pointer-events: none; }
+    .rig-cluster-zone > rect {
+      fill: rgba(14, 165, 233, 0.025);
+      stroke: rgba(56, 189, 248, 0.22);
+      stroke-width: 1;
+    }
+    .rig-cluster-zone > text {
+      fill: #7c9eb4;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
     .edge-group { transition: opacity 0.28s ease; }
     .edge-group.dimmed { opacity: 0.14 !important; }
 

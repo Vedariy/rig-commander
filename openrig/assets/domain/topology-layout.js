@@ -499,6 +499,7 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
 
   const k = items.length;
   const spanY = Math.max(60, stageBottomY - stageTopY);
+  const middleArches = [];
 
   // Degree count across active edges for smart hub ordering
   const degree = new Map(items.map(it => [it.agent.id, 0]));
@@ -631,6 +632,7 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
       const waveDelta = (row.length >= 4 && freeY > 14)
         ? Math.min(34, Math.max(14, freeY * 0.24))
         : 0;
+      if (archDelta > 0 && rIdx > 0 && rIdx < rCount - 1) middleArches.push(row);
 
       row.forEach((it, idx) => {
         it.px = xs[idx];
@@ -653,6 +655,8 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     for (let rIdx = 1; rIdx < rows.length; rIdx++) {
       const row = rows[rIdx];
       if (row.length < 2) continue;
+      // The arch belongs to horizontal slots, not to the agents being reordered.
+      const slotY = middleArches.includes(row) ? row.map(it => it.py) : null;
       row.sort((a, b) => {
         const bary = (it) => {
           const nbs = [...(neighbors.get(it.agent.id) || [])].map(id => byId.get(id)).filter(Boolean);
@@ -663,7 +667,7 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
         return Math.abs(diff) > 1 ? diff : naturalCompare(a.agent.id, b.agent.id);
       });
       const xs = distributeRowX(row, cw, 20);
-      row.forEach((it, idx) => { it.px = xs[idx]; });
+      row.forEach((it, idx) => { it.px = xs[idx]; if (slotY) it.py = slotY[idx]; });
     }
     breakVerticalCenterCollinearity(rows, cw, stageTopY, stageBottomY);
   }
@@ -675,7 +679,71 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     iterations: 38
   });
 
+  // Edge-clearance forces may lift a lateral card; retain the middle-row apex
+  // after relaxation as well as after barycenter ordering.
+  for (const row of middleArches) {
+    const [left, center, right] = [...row].sort((a, b) => a.px - b.px);
+    center.py = Math.min(center.py, Math.min(left.py, right.py) - 18);
+    clampItem(center, cw, stageTopY, stageBottomY, 14);
+  }
+
   return items;
+}
+
+function rigIdOf(agent) {
+  const id = String(agent.id || '');
+  return id.includes('@') ? id.slice(id.lastIndexOf('@') + 1) : 'local';
+}
+
+// Each rig uses the existing single-rig engine inside a disjoint, padded region.
+// Grow scrollable content rather than squeeze cards into overlapping rectangles.
+function layoutRigClusters(list, edges, options, activity, cw, ch) {
+  const groups = new Map();
+  for (const agent of list) {
+    const rigId = rigIdOf(agent);
+    if (!groups.has(rigId)) groups.set(rigId, []);
+    groups.get(rigId).push(agent);
+  }
+  const rigs = [...groups.keys()].sort(naturalCompare);
+  const { detailed, measuredBoxes, mode } = options;
+  const boxes = list.map(a => resolveBox(a, 'active', { detailed, measuredBoxes }));
+  const pad = 12, gap = 20, insetX = 16, insetTop = 32, insetBottom = 16;
+  const minZoneW = Math.max(360, ...boxes.map(b => b.width + insetX * 2 + 28));
+  const width = Math.max(cw, minZoneW + pad * 2);
+  const cols = Math.max(1, Math.min(3, rigs.length, Math.floor((width - pad * 2 + gap) / (minZoneW + gap))));
+  const rows = Math.ceil(rigs.length / cols);
+  const zoneW = (width - pad * 2 - gap * (cols - 1)) / cols;
+  const innerW = zoneW - insetX * 2;
+  let minZoneH = 0;
+  for (const agents of groups.values()) {
+    const items = agents.map(agent => ({ agent, box: resolveBox(agent, 'active', { detailed, measuredBoxes }) }));
+    let rowCount = 0;
+    for (const bucket of [0, 1, 2]) {
+      rowCount += splitIntoBalancedRows(items.filter(it => getRolePlacementInfo(it.agent).bucket === bucket), Math.max(240, innerW - 40), 24, 4).length;
+    }
+    const cardH = Math.max(...items.map(it => it.box.height));
+    minZoneH = Math.max(minZoneH, Math.max(360, 80 + rowCount * (cardH + 48)) + insetTop + insetBottom);
+  }
+  const zoneH = Math.max(minZoneH, (ch - pad * 2 - gap * (rows - 1)) / rows);
+  const height = Math.max(ch, pad * 2 + rows * zoneH + gap * (rows - 1));
+  const positions = {}, benchEdgeById = {}, rigClusters = [];
+  rigs.forEach((rigId, i) => {
+    const x = pad + (i % cols) * (zoneW + gap), y = pad + Math.floor(i / cols) * (zoneH + gap);
+    const agents = groups.get(rigId);
+    const innerH = zoneH - insetTop - insetBottom;
+    const local = computeTopologyLayout({ ...options, agents, edges, canvasWidth: innerW, canvasHeight: innerH });
+    for (const agent of agents) {
+      const p = local.positions[agent.id];
+      positions[agent.id] = { x: +((x + insetX + p.x * innerW / 100) * 100 / width).toFixed(4),
+        y: +((y + insetTop + p.y * innerH / 100) * 100 / height).toFixed(4) };
+      if (local.benchEdgeById[agent.id]) benchEdgeById[agent.id] = local.benchEdgeById[agent.id];
+    }
+    rigClusters.push({ rigId, xPct: x * 100 / width, yPct: y * 100 / height,
+      wPct: zoneW * 100 / width, hPct: zoneH * 100 / height, count: agents.length });
+  });
+  return { mode, positions, tiers: activity.tiers, benchEdgeById, benchSeparatorY: null,
+    activeCount: activity.activeNodes.length, dormantCount: activity.dormantNodes.length,
+    rigClusters, canvasWidth: width, canvasHeight: height };
 }
 
 /**
@@ -701,6 +769,11 @@ export function computeTopologyLayout({
     useHysteresis: safeMode === 'dynamic'
   });
 
+  if (new Set(activeNodes.map(rigIdOf)).size >= 2) {
+    return layoutRigClusters(list, edges, { mode: safeMode, detailed, measuredBoxes, recentActiveIds },
+      { tiers, activeNodes, dormantNodes }, cw, ch);
+  }
+
   const positions = {};
   const benchEdgeById = {};
   let benchSeparatorY = null;
@@ -713,7 +786,8 @@ export function computeTopologyLayout({
       benchEdgeById,
       benchSeparatorY,
       activeCount: 0,
-      dormantCount: 0
+      dormantCount: 0,
+      rigClusters: [], canvasWidth: cw, canvasHeight: ch
     };
   }
 
@@ -817,7 +891,8 @@ export function computeTopologyLayout({
     benchEdgeById,
     benchSeparatorY,
     activeCount: activeNodes.length,
-    dormantCount: dormantNodes.length
+    dormantCount: dormantNodes.length,
+    rigClusters: [], canvasWidth: cw, canvasHeight: ch
   };
 }
 

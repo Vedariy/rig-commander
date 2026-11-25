@@ -8,7 +8,7 @@ import {
   intersectNodeBorder, computeEdgeFallbackAnchor, positionEdgeXrayDrawer,
   getNodeThermalFillGrad, getNodeCtxValText, getNodeCtxValClass, renderDormantFlagHtml,
   renderStateIndicatorHtml, renderNodeMetaRowHtml, renderNodeSpecMetaHtml, renderNodeCardHtml,
-  renderTopologyEdgesHtml, renderSwimlanes, renderEdgeXray
+  renderTopologyEdgesHtml, renderSwimlanes, renderEdgeXray, renderRigClustersHtml
 } from '../openrig/assets/ui/topology-view.js';
 
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -167,3 +167,27 @@ for (const lang of ['en', 'ru']) {
     assert.equal(received, bad);
   });
 }
+
+test('X-Ray positions in content coordinates but clamps to scrolled visible viewport', () => {
+  const parent = { clientWidth: 390, clientHeight: 440, scrollWidth: 1200, scrollHeight: 1000, scrollLeft: 460, scrollTop: 180 };
+  const drawer = { style: { display: 'block' }, parentElement: parent, offsetWidth: 340, offsetHeight: 220, setAttribute() {} };
+  positionEdgeXrayDrawer(drawer, { edge, anchor: { x: 650, y: 300 }, agents });
+  assert.equal(drawer.style.left, '480px');
+  assert.equal(drawer.style.top, '316px');
+  const fallback = computeEdgeFallbackAnchor(edge, parent, agents);
+  assert.deepEqual(fallback, { x: 600, y: 500 });
+});
+
+
+test('Rig cluster backdrops appear only for multiple zones and escape rig identifiers', () => {
+  const bad = 'rig-<img src=x onerror=alert(1)>';
+  const clusters = [{ rigId: bad, xPct: 1, yPct: 2, wPct: 45, hPct: 96, count: 5 },
+    { rigId: 'rig-b', xPct: 52, yPct: 2, wPct: 47, hPct: 96, count: 3 }];
+  const d = { cw: 1000, ch: 600, escapeHtml };
+  const html = renderRigClustersHtml(clusters, d);
+  assert.equal((html.match(/class="rig-cluster-zone"/g) || []).length, 2);
+  includes(html, escapeHtml('@' + bad + ' · 5'));
+  assert.ok(!html.includes('<img'));
+  assert.equal(renderRigClustersHtml([], d), '');
+  assert.equal(renderRigClustersHtml(clusters.slice(0, 1), d), '');
+});

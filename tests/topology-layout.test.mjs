@@ -241,7 +241,7 @@ test('computeAnchoredPopoverRect places popover near cursor with vertical flip a
 
 test('anti-collinear arch breaks flat 3-in-a-row top tier (4 active nodes: 3 command + 1 QA) in dynamic & fixed modes', () => {
   const agents = [
-    makeAgent('operator-agent@kernel', { state: 'working', ctxPct: 59, callsIn: 503, callsOut: 93 }),
+    makeAgent('operator-agent@demo-rig', { state: 'working', ctxPct: 59, callsIn: 503, callsOut: 93 }),
     makeAgent('dev-owner@demo-rig', { state: 'working', ctxPct: 59, callsIn: 531, callsOut: 484 }),
     makeAgent('dev-senior-architector@demo-rig', { shortName: 'dev-senior-architect', displayTitle: 'dev-senior-architect', state: 'idle', ctxPct: 19, callsIn: 80, callsOut: 69 }),
     makeAgent('dev-check-argon@demo-rig', { state: 'working', callsIn: 33, callsOut: 15 }),
@@ -251,7 +251,7 @@ test('anti-collinear arch breaks flat 3-in-a-row top tier (4 active nodes: 3 com
     makeAgent('dev-coder4@demo-rig', { state: 'idle' })
   ];
   const edges = [
-    { from: 'operator-agent@kernel', to: 'dev-owner@demo-rig', queueStatus: 'pending', liveActive: false, slice: 'ops' },
+    { from: 'operator-agent@demo-rig', to: 'dev-owner@demo-rig', queueStatus: 'pending', liveActive: false, slice: 'ops' },
     { from: 'dev-senior-architector@demo-rig', to: 'dev-owner@demo-rig', queueStatus: 'live', liveActive: true, slice: '0147-live' },
     { from: 'dev-owner@demo-rig', to: 'dev-check-argon@demo-rig', queueStatus: 'live', liveActive: true, slice: '0152-v15-rebase' }
   ];
@@ -262,21 +262,21 @@ test('anti-collinear arch breaks flat 3-in-a-row top tier (4 active nodes: 3 com
   assertNoRectOverlaps(agents, dyn, cw, ch);
 
   const top3Y = [
-    (dyn.positions['operator-agent@kernel'].y / 100) * ch,
+    (dyn.positions['operator-agent@demo-rig'].y / 100) * ch,
     (dyn.positions['dev-owner@demo-rig'].y / 100) * ch,
     (dyn.positions['dev-senior-architector@demo-rig'].y / 100) * ch
   ];
   const spreadPx = Math.max(...top3Y) - Math.min(...top3Y);
   assert.ok(spreadPx >= 45, `Top 3 command nodes must form a non-collinear arch (>=45px vertical spread), got ${Math.round(spreadPx)}px`);
   // Central hub dev-owner sits cleanly above its two lateral peers
-  assert.ok(dyn.positions['dev-owner@demo-rig'].y < dyn.positions['operator-agent@kernel'].y);
+  assert.ok(dyn.positions['dev-owner@demo-rig'].y < dyn.positions['operator-agent@demo-rig'].y);
   assert.ok(dyn.positions['dev-owner@demo-rig'].y < dyn.positions['dev-senior-architector@demo-rig'].y);
 
   // Fixed mode also avoids a flat 3-in-a-row line while staying invariant to state changes
   const fix1 = computeTopologyLayout({ agents, edges, mode: 'fixed', canvasWidth: cw, canvasHeight: ch });
   assertNoRectOverlaps(agents, fix1, cw, ch);
   const fixTop3Y = [
-    (fix1.positions['operator-agent@kernel'].y / 100) * ch,
+    (fix1.positions['operator-agent@demo-rig'].y / 100) * ch,
     (fix1.positions['dev-owner@demo-rig'].y / 100) * ch,
     (fix1.positions['dev-senior-architector@demo-rig'].y / 100) * ch
   ];
@@ -390,4 +390,68 @@ test('anti-vertical-collinearity breaks 3-tier vertical pole (owner/coder/check)
     false,
     '[1,3,1] owner->check edge must not slice through middle coder2'
   );
+});
+
+function fiveSeatRig(rigId) {
+  const agents = ['dev-owner', 'dev-coder', 'dev-coder2', 'dev-coder3', 'dev-check'].map((seat, i) =>
+    makeAgent(`${seat}@${rigId}`, { state: 'working', ctxPct: 45 + i * 5, ctxWindowSize: 200000, callsIn: 2, callsOut: 2 }));
+  const edges = [[0, 1], [0, 2], [0, 3], [1, 4], [2, 4], [3, 4]].map(([a, b]) => ({
+    from: agents[a].id, to: agents[b].id, queueStatus: 'live', slice: 'fixture-flow'
+  }));
+  return { agents, edges };
+}
+
+test('dynamic [1,3,1] keeps coder2 at upward middle apex after barycenter reorder and clears lower diagonal midpoint', () => {
+  const { agents, edges } = fiveSeatRig('rig-a');
+  for (const cw of [700, 1000, 1360]) {
+    const ch = 520;
+    const r = computeTopologyLayout({ agents, edges, mode: 'dynamic', canvasWidth: cw, canvasHeight: ch });
+    const p = r.positions, c1 = p['dev-coder@rig-a'], c2 = p['dev-coder2@rig-a'], c3 = p['dev-coder3@rig-a'], qa = p['dev-check@rig-a'];
+    assert.ok(c1.x < c2.x && c2.x < c3.x, 'Stable natural order of equally connected coders');
+    assert.ok(c2.y < c1.y && c2.y < c3.y, `middle card must arch UP at ${cw}: ${JSON.stringify(p)}`);
+    const rect = getBoxRect(agents[2], c2, 'active', cw, ch);
+    const mx = (c1.x + qa.x) * cw / 200, my = (c1.y + qa.y) * ch / 200;
+    assert.ok(mx < rect.left || mx > rect.right || my - 9 > rect.bottom || my + 9 < rect.top, 'Lower diagonal badge midpoint clears middle card');
+    assertNoRectOverlaps(agents, r, cw, ch);
+  }
+});
+
+test('multi-rig zones partition active cards including kernel without box/route collisions at narrow and wide widths', () => {
+  const a = fiveSeatRig('rig-a'), b = fiveSeatRig('rig-b');
+  for (const mode of ['dynamic', 'fixed']) for (const detailed of [false, true]) for (const cw of [680, 1000, 1440]) {
+    for (const includeKernel of [false, true]) {
+      const agents = [...a.agents, ...b.agents, ...(includeKernel ? [makeAgent('operator-agent@kernel', { state: 'working' })] : [])];
+      const edges = [...a.edges, ...b.edges];
+      const r = computeTopologyLayout({ agents, edges, mode, canvasWidth: cw, canvasHeight: 520, detailed });
+      assert.equal(r.rigClusters.length, includeKernel ? 3 : 2);
+      const w = r.canvasWidth, h = r.canvasHeight;
+      assert.ok(w >= cw && h >= 520);
+      const clusters = r.rigClusters.map(c => ({ ...c, left: c.xPct * w / 100, right: (c.xPct + c.wPct) * w / 100,
+        top: c.yPct * h / 100, bottom: (c.yPct + c.hPct) * h / 100 }));
+      for (let i = 0; i < clusters.length; i++) for (let j = i + 1; j < clusters.length; j++) {
+        const x = clusters[i], y = clusters[j];
+        assert.ok(x.right <= y.left || y.right <= x.left || x.bottom <= y.top || y.bottom <= x.top);
+      }
+      for (const agent of agents) {
+        const box = getBoxRect(agent, r.positions[agent.id], 'active', w, h, detailed);
+        const zone = clusters.find(c => c.rigId === agent.id.split('@').at(-1));
+        assert.ok(box.left > zone.left && box.right < zone.right && box.top > zone.top && box.bottom < zone.bottom,
+          `${mode}/${detailed}/${cw}: ${agent.id} escaped zone: ${JSON.stringify({box, zone})}`);
+        for (const e of edges.filter(e => !e.from.endsWith('@' + zone.rigId))) {
+          const from = r.positions[e.from], to = r.positions[e.to];
+          assert.equal(segmentIntersectsRect(from.x * w / 100, from.y * h / 100, to.x * w / 100, to.y * h / 100, box), false);
+        }
+      }
+      assertNoRectOverlaps(agents, r, w, h, detailed);
+      assert.deepEqual(computeTopologyLayout({ agents: [...agents].reverse(), edges, mode, canvasWidth: cw, canvasHeight: 520, detailed }), r, 'Deterministic independent of fleet order');
+    }
+  }
+});
+
+test('single active rig and empty fleet return no decorative clusters', () => {
+  const { agents, edges } = fiveSeatRig('rig-a');
+  for (const mode of GRAPH_LAYOUT_MODES) {
+    assert.deepEqual(computeTopologyLayout({ agents, edges, mode }).rigClusters, []);
+    assert.deepEqual(computeTopologyLayout({ agents: [], mode }).rigClusters, []);
+  }
 });

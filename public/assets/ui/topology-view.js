@@ -265,6 +265,16 @@ export function renderTopologyEdgesHtml({
   }).join('');
 }
 
+export function renderRigClustersHtml(clusters, { cw, ch, escapeHtml }) {
+  if (!clusters || clusters.length < 2) return '';
+  return clusters.map(c => {
+    const x = c.xPct * cw / 100, y = c.yPct * ch / 100;
+    const w = c.wPct * cw / 100, h = c.hPct * ch / 100;
+    const label = `@${c.rigId} · ${c.count}`;
+    return `<g class="rig-cluster-zone" data-rig-id="${escapeHtml(c.rigId)}"><title>${escapeHtml(label)}</title><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/><text x="${x + 12}" y="${y + 21}">${escapeHtml(label)}</text></g>`;
+  }).join('');
+}
+
 export function renderTopology(deps) {
   const { doc, browser, viewState, agents: AGENTS, edges: EDGES, isEdgeInSlice,
     hoveredAgentId, currentSliceFilter, currentRigFilter, hideIdleNodes, selectedAgentId,
@@ -321,8 +331,10 @@ export function renderTopology(deps) {
   }
 
   // Compute Adaptive (Dynamic Stage + Dormant Bench) or Fixed Role-Tiered layout in real canvas pixels
-  const cw = nodesLayer.clientWidth || 1000;
-  const ch = nodesLayer.clientHeight || 510;
+  const wrapEl = nodesLayer.parentElement;
+  const minWidth = browser.getComputedStyle ? Number.parseFloat(browser.getComputedStyle(nodesLayer).minWidth) || 0 : 0;
+  let cw = Math.max(wrapEl?.clientWidth || nodesLayer.clientWidth || 1000, minWidth);
+  let ch = wrapEl?.clientHeight || nodesLayer.clientHeight || 510;
   const isDetailed = doc.body.classList.contains('density-detailed');
   const visibleAgents = AGENTS.filter(a => {
     const isRigMatch = currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter);
@@ -376,6 +388,29 @@ export function renderTopology(deps) {
       })
     : { positions: {}, tiers: {}, benchEdgeById: {}, benchSeparatorY: null, activeCount: visibleAgents.length, dormantCount: 0 };
 
+  const clustered = layoutResult.rigClusters?.length >= 2;
+  const svgEl = doc.getElementById('topologySvg');
+  cw = layoutResult.canvasWidth || cw;
+  ch = layoutResult.canvasHeight || ch;
+  if (wrapEl) wrapEl.classList.toggle('has-rig-clusters', clustered);
+  nodesLayer.style.width = clustered ? `${cw}px` : '';
+  nodesLayer.style.height = clustered ? `${ch}px` : '';
+  if (svgEl) {
+    svgEl.style.width = clustered ? `${cw}px` : '';
+    svgEl.style.height = clustered ? `${ch}px` : '';
+    let zones = doc.getElementById('rigClusterZones');
+    if (!zones && clustered) {
+      zones = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
+      zones.id = 'rigClusterZones';
+      zones.setAttribute('aria-hidden', 'true');
+      svgEl.insertBefore(zones, svgGroup);
+    }
+    if (zones) {
+      const html = renderRigClustersHtml(layoutResult.rigClusters, { cw, ch, escapeHtml });
+      if (zones.__lastHtml !== html) { zones.innerHTML = html; zones.__lastHtml = html; }
+    }
+  }
+
   const benchDiv = doc.getElementById('dormantBenchDivider');
   const benchLbl = doc.getElementById('dormantBenchLabel');
   if (benchDiv) {
@@ -406,6 +441,7 @@ export function renderTopology(deps) {
   );
   const shouldAnimateLayout = Boolean(
     viewState.hasInitialLayout &&
+    !clustered && !viewState.clustered &&
     !prefersReducedMotion &&
     maxPosDelta >= 0.8 &&
     nodesLayer.querySelectorAll('.agent-node').length === AGENTS.length
@@ -422,6 +458,7 @@ export function renderTopology(deps) {
   if (visibleAgents.length > 0) {
     viewState.hasInitialLayout = true;
   }
+  viewState.clustered = clustered;
 
   const hasSliceMatch = currentSliceFilter !== 'all' && activeEdges.length > 0;
   const shouldDimByContext = Boolean(hoveredAgentId || hasSliceMatch);
@@ -537,7 +574,6 @@ export function renderTopology(deps) {
 
   // Sync SVG viewBox with actual pixel canvas dimensions so 1 SVG unit = 1px
   // and clip every route segment to the exact outer border of each block along the center-to-center ray.
-  const svgEl = doc.getElementById('topologySvg');
   if (svgEl) svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
 
   // Measure DOM node boxes ONCE before drawing / animating to prevent Forced Synchronous Layout inside rAF!
@@ -632,8 +668,8 @@ export function renderSwimlanes({ visibleLanes, stageNames: STAGE_NAMES, current
 
 export function computeEdgeFallbackAnchor(edge, wrapEl, agents) {
   if (!edge || !wrapEl) return null;
-  const cw = wrapEl.clientWidth || 0;
-  const ch = wrapEl.clientHeight || 0;
+  const cw = wrapEl.scrollWidth || wrapEl.clientWidth || 0;
+  const ch = wrapEl.scrollHeight || wrapEl.clientHeight || 0;
   if (!cw || !ch) return null;
   const fromNode = agents.find(a => a.id === edge.from);
   const toNode = agents.find(a => a.id === edge.to);
@@ -656,10 +692,12 @@ export function positionEdgeXrayDrawer(drawer, { edge, anchor: cursorAnchor, age
   const ch = wrapEl.clientHeight || 0;
   const pw = drawer.offsetWidth || 340;
   const ph = drawer.offsetHeight || 220;
+  const scrollLeft = wrapEl.scrollLeft || 0;
+  const scrollTop = wrapEl.scrollTop || 0;
   const pos = typeof computeAnchoredPopoverRect === 'function'
     ? computeAnchoredPopoverRect({
-        anchorX: anchor.x,
-        anchorY: anchor.y,
+        anchorX: anchor.x - scrollLeft,
+        anchorY: anchor.y - scrollTop,
         containerW: cw,
         containerH: ch,
         popoverW: pw,
@@ -668,8 +706,8 @@ export function positionEdgeXrayDrawer(drawer, { edge, anchor: cursorAnchor, age
         offset: 16
       })
     : { left: 12, top: 12, placement: 'clamped' };
-  drawer.style.left = `${pos.left}px`;
-  drawer.style.top = `${pos.top}px`;
+  drawer.style.left = `${pos.left + scrollLeft}px`;
+  drawer.style.top = `${pos.top + scrollTop}px`;
   drawer.style.right = 'auto';
   drawer.setAttribute('data-placement', pos.placement);
 }
@@ -806,7 +844,7 @@ export function renderEdgeXray(edge, {
     ` : '';
 
     return `
-      <div class="insp-stat" style="padding:8px 10px; margin-top:7px; border-left:3px solid ${stateColor(lead.state, env.hasLive)};${hasHistory ? ' cursor:pointer;' : ''}"${hasHistory ? ` data-env-key="${escapeHtml(env.key)}" onclick="toggleXrayEnvelope(this.getAttribute('data-env-key'))" title="${escapeHtml(td('xray.historyHint'))}"` : ''}>
+      <div class="insp-stat" style="padding:8px 10px; margin-top:7px; border-left:3px solid ${stateColor(lead.state, env.hasLive)};${hasHistory ? ' cursor:pointer;' : ''}"${hasHistory ? ` data-env-key="${escapeHtml(env.key)}" onclick="event.stopPropagation(); toggleXrayEnvelope(this.getAttribute('data-env-key'))" title="${escapeHtml(td('xray.historyHint'))}"` : ''}>
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; flex-wrap:wrap;">
           <span style="color:var(--cyan);">${escapeHtml(shortSeat(lead.from))} ▶ ${escapeHtml(shortSeat(lead.to))}</span>
           <span style="display:flex; align-items:center; gap:5px;">
