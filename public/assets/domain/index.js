@@ -152,3 +152,13 @@ export {
   triageQueueItems,
   buildPaletteIndex
 } from './command-palette.js';
+export {
+  PLAYBOOK_RULE_IDS,
+  PLAYBOOK_VETO_CODES,
+  PLAYBOOK_RULES_META,
+  DEFAULT_PLAYBOOK_CONFIG,
+  sanitizePlaybookConfig,
+  evaluatePlaybookCandidates,
+  buildPlaybookFaviconDataUri
+} from './playbooks-model.js';
+

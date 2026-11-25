@@ -24,6 +24,7 @@ export const DEFAULT_DECK_PREFS = Object.freeze({
   sidebarRightCollapsed: false,
   autoFollow: true,
   audioRadarOn: false,
+  desktopNotifications: false,
   selectedAgentId: '',
   inspectorTab: 'rules', // 'rules' | 'fallback' | 'memory'
   inspectorRefOpen: false,
@@ -68,6 +69,7 @@ export function sanitizeDeckPrefs(raw = {}) {
     sidebarRightCollapsed: typeof src.sidebarRightCollapsed === 'boolean' ? src.sidebarRightCollapsed : DEFAULT_DECK_PREFS.sidebarRightCollapsed,
     autoFollow: typeof src.autoFollow === 'boolean' ? src.autoFollow : DEFAULT_DECK_PREFS.autoFollow,
     audioRadarOn: typeof src.audioRadarOn === 'boolean' ? src.audioRadarOn : DEFAULT_DECK_PREFS.audioRadarOn,
+    desktopNotifications: typeof src.desktopNotifications === 'boolean' ? src.desktopNotifications : DEFAULT_DECK_PREFS.desktopNotifications,
     selectedAgentId,
     inspectorTab: VALID_INSP_TAB.has(src.inspectorTab) ? src.inspectorTab : DEFAULT_DECK_PREFS.inspectorTab,
     inspectorRefOpen: typeof src.inspectorRefOpen === 'boolean' ? src.inspectorRefOpen : DEFAULT_DECK_PREFS.inspectorRefOpen,

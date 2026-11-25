@@ -417,6 +417,7 @@
           <span class="triage-badge" id="modalGuardStatusBadge" style="margin:0; font-size:10.5px;"></span>
           <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:7px; padding:2px; gap:2px;" role="tablist">
             <button type="button" id="btnGuardTabMain" class="hud-segment-btn active" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('guardrails')">🛡️ Авто-тормоз / TG</button>
+            <button type="button" id="btnGuardTabPlaybooks" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('playbooks')">🤖 Плейбуки</button>
             <button type="button" id="btnGuardTabEval" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('evaluator')">🧠 AI Оценщик</button>
           </div>
         </div>
@@ -1100,6 +1101,8 @@
     let IS_LIVE = false;
     let autoFollow = true;
     let audioRadarOn = false;
+    let desktopNotificationsOn = false;
+    let lastFaviconKey = '';
     let audioCtx = null;
     let prevAlertKeys = new Set();
     let selectedEdgeIdx = null;
@@ -4530,10 +4533,14 @@
         window.LIVE_SHIFT_META = data.shiftHistoryMeta || null;
         if (typeof updateShiftDigestBadge === 'function') updateShiftDigestBadge();
         if (data.guardrails) {
+          const prevPb = window.GUARDRAILS_STATE && window.GUARDRAILS_STATE.playbooks;
           window.GUARDRAILS_STATE = data.guardrails;
+          if (window.GUARDRAILS_STATE.playbooks && !window.GUARDRAILS_STATE.playbooks.lastDryRun && prevPb && prevPb.lastDryRun) {
+            window.GUARDRAILS_STATE.playbooks.lastDryRun = prevPb.lastDryRun;
+          }
           updateGuardrailsBadge();
           const gm = document.getElementById('guardrailsModal');
-          if (gm && gm.classList.contains('open') && activeGuardrailsTab !== 'evaluator') renderGuardrailsModal();
+          if (gm && gm.classList.contains('open') && activeGuardrailsTab === 'guardrails') renderGuardrailsModal();
         }
         if (data.evaluator && typeof syncEvaluatorTelemetry === 'function') {
           syncEvaluatorTelemetry(data.evaluator);
@@ -6617,9 +6624,28 @@
         chatId: '',
         pendingPromptButtons: 0,
         stats: { sentNotifications: 0, handledCallbacks: 0, handledCommands: 0, blockedUnauthorized: 0, lastError: null }
+      },
+      playbooks: {
+        status: 'disabled',
+        config: {
+          enabled: false,
+          mode: 'dry_run',
+          maxActionsPerHour: 6,
+          rules: {
+            auto_compact_idle_hot: { enabled: false, thresholdPct: 78, cooldownMin: 15 },
+            auto_wake_parked: { enabled: false, minIdleMin: 10, cooldownMin: 20 },
+            auto_nudge_stalled_queue: { enabled: false, minWaitMin: 12, cooldownMin: 25 },
+            auto_notify_critical_sa: { enabled: true, minHitlMin: 3, cooldownMin: 10, notifyTelegram: true }
+          }
+        },
+        actionsLastHour: 0,
+        remainingHourlyQuota: 6,
+        recentRuns: [],
+        lastDryRun: null
       }
     };
     let tgPreviewReplyMsg = '';
+    let playbooksStatusMessage = '';
 
     function updateGuardrailsBadge() {
       const btn = document.getElementById('btnGuardrails');
@@ -7032,12 +7058,17 @@
     }
 
     function setGuardrailsTab(tab) {
-      activeGuardrailsTab = tab === 'evaluator' ? 'evaluator' : 'guardrails';
+      activeGuardrailsTab = tab === 'evaluator' ? 'evaluator' : (tab === 'playbooks' ? 'playbooks' : 'guardrails');
       const bMain = document.getElementById('btnGuardTabMain');
+      const bPb = document.getElementById('btnGuardTabPlaybooks');
       const bEval = document.getElementById('btnGuardTabEval');
       if (bMain) {
         bMain.classList.toggle('active', activeGuardrailsTab === 'guardrails');
         bMain.textContent = td('eval.guardTabMain');
+      }
+      if (bPb) {
+        bPb.classList.toggle('active', activeGuardrailsTab === 'playbooks');
+        bPb.textContent = td('pb.tabTitle');
       }
       if (bEval) {
         bEval.classList.toggle('active', activeGuardrailsTab === 'evaluator');
@@ -7045,7 +7076,11 @@
       }
       const titleEl = document.getElementById('guardrailsModalTitle');
       if (titleEl) {
-        titleEl.textContent = activeGuardrailsTab === 'evaluator' ? td('eval.settingsTitle') : td('guard.title');
+        titleEl.textContent = activeGuardrailsTab === 'evaluator'
+          ? td('eval.settingsTitle')
+          : activeGuardrailsTab === 'playbooks'
+            ? td('pb.modalTitle')
+            : td('guard.title');
       }
       if (activeGuardrailsTab === 'evaluator' && IS_LIVE && !window.EVALUATOR_STATE.config) {
         fetch('/api/evaluator/status').then(r => r.json()).then(d => {
@@ -7057,13 +7092,463 @@
           }
         }).catch(() => {});
       }
+      if (activeGuardrailsTab === 'playbooks' && IS_LIVE) {
+        fetch('/api/playbooks').then(r => r.json()).then(d => {
+          if (d && d.playbooks) {
+            const prevDry = window.GUARDRAILS_STATE.playbooks && window.GUARDRAILS_STATE.playbooks.lastDryRun;
+            window.GUARDRAILS_STATE.playbooks = d.playbooks;
+            if (!window.GUARDRAILS_STATE.playbooks.lastDryRun && prevDry) {
+              window.GUARDRAILS_STATE.playbooks.lastDryRun = prevDry;
+            }
+            renderGuardrailsModal();
+          }
+        }).catch(() => {});
+      }
       renderGuardrailsModal();
     }
 
     function openGuardrailsModal(tab = 'guardrails') {
       const modal = document.getElementById('guardrailsModal');
       if (modal) modal.classList.add('open');
-      setGuardrailsTab(tab === 'evaluator' ? 'evaluator' : 'guardrails');
+      const normalized = tab === 'evaluator' ? 'evaluator' : (tab === 'playbooks' ? 'playbooks' : 'guardrails');
+      setGuardrailsTab(normalized);
+    }
+
+    function getPlaybooksStateSafe() {
+      const cur = (window.GUARDRAILS_STATE && window.GUARDRAILS_STATE.playbooks) || {};
+      const cfg = typeof sanitizePlaybookConfig === 'function'
+        ? sanitizePlaybookConfig(cur.config || {}, DEFAULT_PLAYBOOK_CONFIG)
+        : (cur.config || { enabled: false, mode: 'dry_run', maxActionsPerHour: 6, rules: {} });
+      return {
+        status: cur.status || (cfg.enabled ? cfg.mode : 'disabled'),
+        config: cfg,
+        actionsLastHour: Number(cur.actionsLastHour || 0),
+        remainingHourlyQuota: cur.remainingHourlyQuota !== undefined
+          ? Number(cur.remainingHourlyQuota)
+          : Math.max(0, cfg.maxActionsPerHour - Number(cur.actionsLastHour || 0)),
+        recentRuns: Array.isArray(cur.recentRuns) ? cur.recentRuns : [],
+        lastDryRun: cur.lastDryRun || null
+      };
+    }
+
+    function buildCurrentPlaybookSnapshot() {
+      const nowIsoOld = new Date(Date.now() - 20 * 60_000).toISOString();
+      const rawNodes = Array.isArray(window.LIVE_RAW_NODES) && window.LIVE_RAW_NODES.length > 0
+        ? window.LIVE_RAW_NODES
+        : AGENTS.map(a => ({
+            canonicalSessionName: a.id,
+            runtime: a.harness || a.model || '',
+            contextUsage: typeof a.ctxPct === 'number' ? { usedPercentage: a.ctxPct } : null,
+            activityState: {
+              display: a.state === 'urgent' ? 'needs-input' : a.state,
+              needsInput: { count: a.needsInputCount || (a.state === 'urgent' ? 1 : 0) },
+              shellExited: Boolean(a.shellExited)
+            },
+            parkedData: a.parkedData || null,
+            lastActivityAt: a.lastActivityAt || nowIsoOld
+          }));
+      const parkedMap = {};
+      for (const a of AGENTS) {
+        if (a && a.parkedData && a.parkedData.parked) parkedMap[a.id] = a.parkedData;
+      }
+      const qList = (window.ONTOLOGY_SNAPSHOT && Array.isArray(window.ONTOLOGY_SNAPSHOT.activeQueue))
+        ? window.ONTOLOGY_SNAPSHOT.activeQueue
+        : [];
+      return {
+        nodes: rawNodes,
+        parkedSeats: parkedMap,
+        activeQueue: qList,
+        gitRadar: window.LIVE_GIT_RADAR || null,
+        actionAudit: (window.ONTOLOGY_SNAPSHOT && Array.isArray(window.ONTOLOGY_SNAPSHOT.actionRecords))
+          ? window.ONTOLOGY_SNAPSHOT.actionRecords
+          : [],
+        breakerState: (window.GUARDRAILS_STATE && window.GUARDRAILS_STATE.breaker) || null
+      };
+    }
+
+    function readPlaybooksFormPayload() {
+      const chk = (id) => Boolean(document.getElementById(id)?.checked);
+      const num = (id, fb) => {
+        const v = Number(document.getElementById(id)?.value);
+        return Number.isFinite(v) ? v : fb;
+      };
+      return {
+        enabled: chk('pbMasterEnable'),
+        mode: (document.getElementById('pbModeSelect')?.value || 'dry_run') === 'armed' ? 'armed' : 'dry_run',
+        maxActionsPerHour: num('pbMaxActionsPerHour', 6),
+        rules: {
+          auto_compact_idle_hot: {
+            enabled: chk('pbRule_auto_compact_idle_hot'),
+            thresholdPct: num('pbParam_auto_compact_idle_hot', 78),
+            cooldownMin: num('pbCooldown_auto_compact_idle_hot', 15)
+          },
+          auto_wake_parked: {
+            enabled: chk('pbRule_auto_wake_parked'),
+            minIdleMin: num('pbParam_auto_wake_parked', 10),
+            cooldownMin: num('pbCooldown_auto_wake_parked', 20)
+          },
+          auto_nudge_stalled_queue: {
+            enabled: chk('pbRule_auto_nudge_stalled_queue'),
+            minWaitMin: num('pbParam_auto_nudge_stalled_queue', 12),
+            cooldownMin: num('pbCooldown_auto_nudge_stalled_queue', 25)
+          },
+          auto_notify_critical_sa: {
+            enabled: chk('pbRule_auto_notify_critical_sa'),
+            minHitlMin: num('pbParam_auto_notify_critical_sa', 3),
+            cooldownMin: num('pbCooldown_auto_notify_critical_sa', 10),
+            notifyTelegram: chk('pbNotifyTgCheck')
+          }
+        }
+      };
+    }
+
+    async function savePlaybooksConfig() {
+      const payload = readPlaybooksFormPayload();
+      const en = deckLang === 'en';
+      try {
+        if (!IS_LIVE) {
+          const sanitized = sanitizePlaybookConfig(payload, DEFAULT_PLAYBOOK_CONFIG);
+          const cur = getPlaybooksStateSafe();
+          window.GUARDRAILS_STATE.playbooks = {
+            ...cur,
+            status: sanitized.enabled ? sanitized.mode : 'disabled',
+            config: sanitized,
+            remainingHourlyQuota: Math.max(0, sanitized.maxActionsPerHour - cur.actionsLastHour)
+          };
+          playbooksStatusMessage = en ? '✓ [DEMO] Playbook rules saved.' : '✓ [ДЕМО] Правила плейбуков сохранены.';
+        } else {
+          const data = await guardrailsPost('/api/playbooks/config', payload);
+          if (data && data.playbooks) {
+            const prevDry = window.GUARDRAILS_STATE.playbooks && window.GUARDRAILS_STATE.playbooks.lastDryRun;
+            window.GUARDRAILS_STATE.playbooks = data.playbooks;
+            if (!window.GUARDRAILS_STATE.playbooks.lastDryRun && prevDry) {
+              window.GUARDRAILS_STATE.playbooks.lastDryRun = prevDry;
+            }
+          }
+          playbooksStatusMessage = en ? '✓ Playbooks saved (0600 local config).' : '✓ Плейбуки сохранены (локальный конфиг 0600).';
+        }
+        renderGuardrailsModal();
+      } catch (err) {
+        playbooksStatusMessage = `❌ ${err.message}`;
+        renderGuardrailsModal();
+      }
+    }
+
+    async function runPlaybooksDryRun() {
+      const en = deckLang === 'en';
+      try {
+        // Persist latest form values into preview config first in demo mode, or pass live server dry-run
+        if (!IS_LIVE) {
+          const formEl = document.getElementById('pbMasterEnable');
+          const cur = getPlaybooksStateSafe();
+          const cfg = formEl ? sanitizePlaybookConfig(readPlaybooksFormPayload(), cur.config) : cur.config;
+          const res = evaluatePlaybookCandidates(buildCurrentPlaybookSnapshot(), cfg, { ignoreEnabledFlag: true });
+          const dryRun = {
+            at: new Date().toISOString(),
+            mode: cfg.mode,
+            enabled: cfg.enabled,
+            eligible: res.eligible,
+            vetoed: res.vetoed,
+            summary: res.summary
+          };
+          window.GUARDRAILS_STATE.playbooks = { ...cur, config: cfg, lastDryRun: dryRun };
+          playbooksStatusMessage = en
+            ? `🧪 [DEMO] Dry-Run: ${res.summary.eligibleCount} eligible, ${res.summary.vetoedCount} safely vetoed (0 writes).`
+            : `🧪 [ДЕМО] Dry-Run: ${res.summary.eligibleCount} к запуску, ${res.summary.vetoedCount} защищено Hard Veto (0 записей).`;
+        } else {
+          if (document.getElementById('pbMasterEnable')) {
+            await guardrailsPost('/api/playbooks/config', readPlaybooksFormPayload());
+          }
+          const data = await guardrailsPost('/api/playbooks/dry-run', {});
+          if (data && data.playbooks) window.GUARDRAILS_STATE.playbooks = data.playbooks;
+          if (data && data.dryRun) window.GUARDRAILS_STATE.playbooks.lastDryRun = data.dryRun;
+          const s = (data && data.dryRun && data.dryRun.summary) || { eligibleCount: 0, vetoedCount: 0 };
+          playbooksStatusMessage = en
+            ? `🧪 Dry-Run complete: ${s.eligibleCount} eligible, ${s.vetoedCount} safely vetoed (0 writes).`
+            : `🧪 Dry-Run завершён: ${s.eligibleCount} к запуску, ${s.vetoedCount} защищено Hard Veto (0 записей).`;
+        }
+        renderGuardrailsModal();
+      } catch (err) {
+        playbooksStatusMessage = `❌ ${err.message}`;
+        renderGuardrailsModal();
+      }
+    }
+
+    async function resetPlaybooksState(action = 'pause') {
+      const en = deckLang === 'en';
+      try {
+        if (!IS_LIVE) {
+          const cur = getPlaybooksStateSafe();
+          if (action === 'pause') {
+            cur.config = sanitizePlaybookConfig({ enabled: false, mode: 'dry_run' }, cur.config);
+            cur.status = 'disabled';
+          } else {
+            cur.actionsLastHour = 0;
+            cur.remainingHourlyQuota = cur.config.maxActionsPerHour;
+          }
+          window.GUARDRAILS_STATE.playbooks = cur;
+        } else {
+          const data = await guardrailsPost('/api/playbooks/reset', { action });
+          if (data && data.playbooks) window.GUARDRAILS_STATE.playbooks = data.playbooks;
+        }
+        playbooksStatusMessage = action === 'pause'
+          ? (en ? '⏸️ All playbooks paused and switched back to DRY-RUN.' : '⏸️ Все плейбуки поставлены на паузу и переведены в DRY-RUN.')
+          : (en ? '♻️ Cooldowns and hourly quota reset.' : '♻️ Кулдауны и часовая квота сброшены.');
+        renderGuardrailsModal();
+      } catch (err) {
+        playbooksStatusMessage = `❌ ${err.message}`;
+        renderGuardrailsModal();
+      }
+    }
+
+    async function toggleDesktopNotifications() {
+      const en = deckLang === 'en';
+      if (desktopNotificationsOn) {
+        desktopNotificationsOn = false;
+        persistDeckPref({ desktopNotifications: false });
+        playbooksStatusMessage = en ? '🔕 Desktop Critical SA alerts disabled.' : '🔕 Системные уведомления Critical SA выключены.';
+        renderGuardrailsModal();
+        return;
+      }
+      if (typeof Notification === 'undefined') {
+        playbooksStatusMessage = en ? '⚠️ Browser Notification API is unavailable in this environment.' : '⚠️ API системных уведомлений недоступен в этом браузере.';
+        renderGuardrailsModal();
+        return;
+      }
+      let perm = Notification.permission;
+      if (perm === 'default' && typeof Notification.requestPermission === 'function') {
+        try { perm = await Notification.requestPermission(); } catch {}
+      }
+      if (perm === 'granted') {
+        desktopNotificationsOn = true;
+        persistDeckPref({ desktopNotifications: true });
+        playbooksStatusMessage = en ? '🔔 Desktop Critical SA alerts enabled!' : '🔔 Системные уведомления Critical SA включены!';
+      } else {
+        desktopNotificationsOn = false;
+        persistDeckPref({ desktopNotifications: false });
+        playbooksStatusMessage = en ? '⚠️ Notification permission denied by browser.' : '⚠️ Браузер отклонил разрешение на уведомления.';
+      }
+      renderGuardrailsModal();
+    }
+
+    function dispatchCriticalSaDesktopNotification(title, bodyText, seatId = '', force = false) {
+      if (!desktopNotificationsOn && !force) return;
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      if (!force && !document.hidden) return;
+      try {
+        const n = new Notification(title, {
+          body: bodyText,
+          tag: seatId ? `rigcmd-sa-${seatId}` : 'rigcmd-sa-alert',
+          renotify: true
+        });
+        n.onclick = () => {
+          try { window.focus(); } catch {}
+          if (seatId && typeof selectAgent === 'function') {
+            selectAgent(seatId);
+          }
+          n.close();
+        };
+      } catch {}
+    }
+
+    function sendTestDesktopNotification() {
+      const en = deckLang === 'en';
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+        playbooksStatusMessage = en
+          ? '⚠️ Enable Desktop Alerts first to grant browser permission.'
+          : '⚠️ Сначала включите «Уведомления ОС», чтобы выдать разрешение браузеру.';
+        renderGuardrailsModal();
+        return;
+      }
+      dispatchCriticalSaDesktopNotification(
+        en ? '🚨 RigCommander Critical SA Test' : '🚨 RigCommander: тест Critical SA',
+        en ? 'Alerts will pop here when HITL prompts, shell exits, or Git conflicts occur in background tabs.' : 'Здесь будут появляться алерты о HITL-промптах, выходе в shell и Git-конфликтах, пока вы в другой вкладке.',
+        selectedAgentId || '',
+        true
+      );
+      playbooksStatusMessage = en ? '✓ Test OS notification dispatched.' : '✓ Тестовое системное уведомление отправлено.';
+      renderGuardrailsModal();
+    }
+
+    function updateDynamicFaviconBadge(severity, count) {
+      if (typeof buildPlaybookFaviconDataUri !== 'function') return;
+      const key = `${severity}:${count}`;
+      if (key === lastFaviconKey) return;
+      lastFaviconKey = key;
+      let link = document.querySelector('link[rel="icon"]');
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        link.type = 'image/svg+xml';
+        document.head.appendChild(link);
+      }
+      link.href = buildPlaybookFaviconDataUri(severity, count);
+    }
+
+    function renderPlaybooksSettingsHtml() {
+      const en = deckLang === 'en';
+      const pb = getPlaybooksStateSafe();
+      const cfg = pb.config;
+      const notifPerm = typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+      const rulesList = typeof PLAYBOOK_RULE_IDS !== 'undefined' ? PLAYBOOK_RULE_IDS : Object.keys(cfg.rules || {});
+      const metaMap = typeof PLAYBOOK_RULES_META !== 'undefined' ? PLAYBOOK_RULES_META : {};
+
+      const ruleCardsHtml = rulesList.map((ruleId) => {
+        const meta = metaMap[ruleId] || { icon: '⚙️', kind: 'write', titleRu: ruleId, titleEn: ruleId, descRu: '', descEn: '', paramKey: 'thresholdPct', paramLabelRu: 'Порог', paramLabelEn: 'Threshold', min: 1, max: 100 };
+        const r = (cfg.rules && cfg.rules[ruleId]) || { enabled: false, cooldownMin: 15 };
+        const paramVal = r[meta.paramKey] !== undefined ? r[meta.paramKey] : meta.min;
+        const kindBadge = meta.kind === 'notify'
+          ? `<span class="pb-veto-chip" style="color:#7dd3fc; border-color:rgba(56,189,248,0.4); background:rgba(56,189,248,0.12);">READ-ONLY NOTIFY</span>`
+          : `<span class="pb-veto-chip" style="color:#6ee7b7; border-color:rgba(0,255,157,0.4); background:rgba(0,255,157,0.1);">SAFE WRITE-BACK</span>`;
+        return `
+          <div class="pb-rule-card${r.enabled ? ' active' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-family:var(--font-mono); font-size:11.5px; font-weight:800; color:#f8fafc;">
+                <input type="checkbox" id="pbRule_${escapeHtml(ruleId)}"${r.enabled ? ' checked' : ''} />
+                <span>${meta.icon} ${escapeHtml(en ? meta.titleEn : meta.titleRu)}</span>
+              </label>
+              ${kindBadge}
+            </div>
+            <div style="font-size:11.5px; color:#94a3b8; line-height:1.45;">${escapeHtml(en ? meta.descEn : meta.descRu)}</div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-family:var(--font-mono); font-size:10.5px; color:#cbd5e1;">
+              <label style="display:inline-flex; align-items:center; gap:6px;">
+                <span>${escapeHtml(en ? meta.paramLabelEn : meta.paramLabelRu)}:</span>
+                <input id="pbParam_${escapeHtml(ruleId)}" type="number" min="${meta.min}" max="${meta.max}" value="${paramVal}" class="ctrl-input" style="width:66px; background:#020617; border:1px solid rgba(56,189,248,0.3); padding:3px 6px; border-radius:4px;" />
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:6px;">
+                <span>${escapeHtml(td('pb.cooldownLabel'))}:</span>
+                <input id="pbCooldown_${escapeHtml(ruleId)}" type="number" min="1" max="180" value="${r.cooldownMin || 15}" class="ctrl-input" style="width:62px; background:#020617; border:1px solid rgba(56,189,248,0.3); padding:3px 6px; border-radius:4px;" />
+              </label>
+              ${ruleId === 'auto_notify_critical_sa' ? `
+                <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer;">
+                  <input type="checkbox" id="pbNotifyTgCheck"${r.notifyTelegram !== false ? ' checked' : ''} />
+                  <span>✈️ Telegram</span>
+                </label>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const dry = pb.lastDryRun;
+      const dryRunHtml = dry ? `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px;">
+          <div style="background:rgba(0,255,157,0.06); border:1px solid rgba(0,255,157,0.28); border-radius:8px; padding:10px;">
+            <div style="font-family:var(--font-mono); font-size:11px; font-weight:800; color:#6ee7b7; margin-bottom:6px;">
+              ⚡ ${escapeHtml(td('pb.eligibleTitle'))} (${(dry.eligible || []).length})
+            </div>
+            ${(dry.eligible || []).length === 0
+              ? `<div style="font-size:11px; color:#94a3b8;">${en ? 'No eligible actions right now — fleet is quiet.' : 'Нет кандидатов на запуск прямо сейчас — флот спокоен.'}</div>`
+              : (dry.eligible || []).map(c => `
+                  <div class="pb-run-row" style="margin-bottom:5px; border-color:rgba(0,255,157,0.3);">
+                    <div>
+                      <div style="color:#6ee7b7; font-weight:800;">${escapeHtml(c.ruleId)} → ${escapeHtml(shortSeat(c.seatId))}</div>
+                      <div style="color:#cbd5e1; font-size:10px; margin-top:2px;">${escapeHtml(c.reason)}</div>
+                    </div>
+                    <span class="pb-veto-chip" style="color:#6ee7b7; border-color:rgba(0,255,157,0.4);">${escapeHtml(c.kind.toUpperCase())}</span>
+                  </div>
+                `).join('')}
+          </div>
+          <div style="background:rgba(251,191,36,0.06); border:1px solid rgba(251,191,36,0.28); border-radius:8px; padding:10px;">
+            <div style="font-family:var(--font-mono); font-size:11px; font-weight:800; color:#fde68a; margin-bottom:6px;">
+              🛡️ ${escapeHtml(td('pb.vetoedTitle'))} (${(dry.vetoed || []).length})
+            </div>
+            ${(dry.vetoed || []).length === 0
+              ? `<div style="font-size:11px; color:#94a3b8;">${en ? 'No vetoed seats in this dry-run.' : 'В этом прогоне вето не срабатывало.'}</div>`
+              : (dry.vetoed || []).map(v => `
+                  <div class="pb-run-row" style="margin-bottom:5px; border-color:rgba(251,191,36,0.32);">
+                    <div>
+                      <div style="color:#fde68a; font-weight:800;">${escapeHtml(v.ruleId)} • ${escapeHtml(shortSeat(v.seatId))}</div>
+                      <div style="color:#cbd5e1; font-size:10px; margin-top:2px;">${escapeHtml(v.detail)}</div>
+                    </div>
+                    <span class="pb-veto-chip">${escapeHtml(v.vetoCode)}</span>
+                  </div>
+                `).join('')}
+          </div>
+        </div>
+      ` : '';
+
+      const runsHtml = pb.recentRuns.length === 0
+        ? `<div style="font-size:11px; color:#94a3b8; font-family:var(--font-mono); padding:8px; background:rgba(2,6,23,0.55); border:1px solid rgba(148,163,184,0.18); border-radius:6px;">${escapeHtml(td('pb.noRuns'))}</div>`
+        : pb.recentRuns.slice(0, 8).map(r => {
+            const stColor = r.status === 'executed' ? '#6ee7b7' : r.status === 'dry_run' ? '#7dd3fc' : r.status === 'vetoed' ? '#fde68a' : '#fda4af';
+            const clockLabel = r.at ? new Date(r.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+            return `
+              <div class="pb-run-row">
+                <div>
+                  <div style="color:${stColor}; font-weight:800;">[${escapeHtml(r.status.toUpperCase())}] ${escapeHtml(r.ruleId)} → ${escapeHtml(shortSeat(r.seatId))}</div>
+                  <div style="color:#cbd5e1; font-size:10px; margin-top:2px;">${escapeHtml(r.reason)} • ${escapeHtml(r.detail || '')}</div>
+                </div>
+                <span style="color:#64748b; white-space:nowrap;">${escapeHtml(clockLabel)}</span>
+              </div>
+            `;
+          }).join('');
+
+      return `
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="font-size:12px; color:#cbd5e1; line-height:1.5; background:rgba(15,23,42,0.7); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px 12px;">
+            ${escapeHtml(td('pb.subtitle'))}
+          </div>
+
+          <!-- MASTER BAR + DESKTOP NOTIFICATIONS -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:12px;">
+            <div style="background:rgba(15,23,42,0.72); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-family:var(--font-mono); font-size:12px; font-weight:800; color:#f8fafc;">
+                  <input type="checkbox" id="pbMasterEnable"${cfg.enabled ? ' checked' : ''} />
+                  <span>${escapeHtml(td('pb.masterEnable'))}</span>
+                </label>
+                <span style="font-family:var(--font-mono); font-size:11px; color:#7dd3fc;">
+                  ${en ? 'Quota' : 'Квота'}: <b>${pb.actionsLastHour} / ${cfg.maxActionsPerHour}/h</b>
+                </span>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <select id="pbModeSelect" class="rig-select" style="flex:1; min-width:190px; padding:6px 8px;">
+                  <option value="dry_run"${cfg.mode === 'dry_run' ? ' selected' : ''}>${escapeHtml(td('pb.modeDryRun'))}</option>
+                  <option value="armed"${cfg.mode === 'armed' ? ' selected' : ''}>${escapeHtml(td('pb.modeArmed'))}</option>
+                </select>
+                <label style="display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; color:#94a3b8;">
+                  <span>${escapeHtml(td('pb.hourlyCap'))}:</span>
+                  <input id="pbMaxActionsPerHour" type="number" min="1" max="30" value="${cfg.maxActionsPerHour}" class="ctrl-input" style="width:56px; background:#020617; border:1px solid rgba(56,189,248,0.3); padding:5px 6px; border-radius:5px;" />
+                </label>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="action-pill key-proceed" onclick="savePlaybooksConfig()">${escapeHtml(td('pb.saveBtn'))}</button>
+                <button type="button" class="action-pill" style="border-color:#38bdf8; color:#7dd3fc;" onclick="runPlaybooksDryRun()">${escapeHtml(td('pb.dryRunBtn'))}</button>
+                <button type="button" class="action-pill" style="border-color:#ff0055; color:#fda4af;" onclick="resetPlaybooksState('pause')">${escapeHtml(td('pb.pauseBtn'))}</button>
+                <button type="button" class="action-pill" onclick="resetPlaybooksState('reset_cooldowns')">${escapeHtml(td('pb.resetCdBtn'))}</button>
+              </div>
+            </div>
+
+            <div style="background:rgba(15,23,42,0.72); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-family:var(--font-mono); font-size:12px; font-weight:800; color:#e9d5ff;">${escapeHtml(td('pb.desktopNotifTitle'))}</div>
+              <div style="font-size:11.5px; color:#94a3b8; line-height:1.45;">${escapeHtml(td('pb.desktopNotifDesc'))}</div>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:auto;">
+                <button type="button" id="btnToggleDesktopNotif" class="action-pill${desktopNotificationsOn ? ' key-proceed' : ''}" onclick="toggleDesktopNotifications()">
+                  ${escapeHtml(desktopNotificationsOn ? td('pb.desktopNotifOn') : td('pb.desktopNotifOff'))}
+                </button>
+                <button type="button" class="action-pill" onclick="sendTestDesktopNotification()">${escapeHtml(td('pb.desktopNotifTest'))}</button>
+                <span style="font-family:var(--font-mono); font-size:10px; color:#94a3b8;">permission: <b>${escapeHtml(notifPerm)}</b></span>
+              </div>
+            </div>
+          </div>
+
+          ${playbooksStatusMessage ? `<div id="pbActionStatus" style="font-family:var(--font-mono); font-size:11.5px; color:#6ee7b7; padding:6px 10px; border-radius:6px; background:rgba(0,255,157,0.08); border:1px solid rgba(0,255,157,0.28);">${escapeHtml(playbooksStatusMessage)}</div>` : ''}
+
+          <!-- 4 WHITELISTED RULES -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(380px, 1fr)); gap:10px;">
+            ${ruleCardsHtml}
+          </div>
+
+          ${dryRunHtml}
+
+          <!-- RECENT RUNS -->
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="font-family:var(--font-mono); font-size:11px; font-weight:800; color:#7dd3fc;">📜 ${escapeHtml(td('pb.recentRunsTitle'))}</div>
+            ${runsHtml}
+          </div>
+        </div>
+      `;
     }
 
     function applyEvalHardwareProfile(profileId) {
@@ -7450,6 +7935,22 @@
           badge.style.color = '#e9d5ff';
         }
         body.innerHTML = renderAiEvaluatorSettingsHtml();
+        return;
+      }
+      if (activeGuardrailsTab === 'playbooks') {
+        const pb = getPlaybooksStateSafe();
+        if (badge) {
+          badge.textContent = pb.status === 'armed'
+            ? `ARMED • ${pb.actionsLastHour}/${pb.config.maxActionsPerHour}/h`
+            : pb.status === 'capped'
+              ? `RATE-CAPPED • ${pb.actionsLastHour}/${pb.config.maxActionsPerHour}/h`
+              : pb.status === 'dry_run'
+                ? 'DRY-RUN PREVIEW'
+                : 'DISABLED (SAFE)';
+          badge.style.borderColor = pb.status === 'armed' ? '#00ff9d' : pb.status === 'capped' ? '#ff0055' : '#38bdf8';
+          badge.style.color = pb.status === 'armed' ? '#6ee7b7' : pb.status === 'capped' ? '#fda4af' : '#7dd3fc';
+        }
+        body.innerHTML = renderPlaybooksSettingsHtml();
         return;
       }
       const br = window.GUARDRAILS_STATE.breaker;
@@ -9211,24 +9712,67 @@
 
     function updateAlertsAndTitle() {
       const attn = AGENTS.filter(a => a.state === 'urgent');
+      const shells = AGENTS.filter(a => Boolean(a.shellExited));
+      const gitConflicts = (window.LIVE_GIT_RADAR && Array.isArray(window.LIVE_GIT_RADAR.conflicts)) ? window.LIVE_GIT_RADAR.conflicts : [];
       const hot = AGENTS.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= 75);
       const warm = AGENTS.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= 70);
       const working = AGENTS.filter(a => a.state === 'working');
 
-      // New alerts only → individual sound per waiting agent (staggered if multiple arrive together)
-      const keys = new Set([...attn.map(a => 'attn:' + a.id), ...hot.map(a => 'hot:' + a.id)]);
+      // New alerts only → individual sound per waiting agent + opt-in Critical SA Desktop Notification
+      const keys = new Set([
+        ...attn.map(a => 'attn:' + a.id),
+        ...shells.map(a => 'shell:' + a.id),
+        ...gitConflicts.map(c => 'git:' + (c.file || 'conflict')),
+        ...hot.map(a => 'hot:' + a.id)
+      ]);
       const fresh = [...keys].filter(k => !prevAlertKeys.has(k));
       const freshAttn = fresh.filter(k => k.startsWith('attn:'));
+      const freshShell = fresh.filter(k => k.startsWith('shell:'));
+      const freshGit = fresh.filter(k => k.startsWith('git:'));
       if (freshAttn.length > 0) {
         freshAttn.slice(0, 3).forEach((k, idx) => {
-          playAgentInputAlert(k.slice('attn:'.length), idx * 0.6);
+          const seatId = k.slice('attn:'.length);
+          playAgentInputAlert(seatId, idx * 0.6);
+          if (idx === 0) {
+            dispatchCriticalSaDesktopNotification(
+              deckLang === 'en' ? `🚨 HITL Needed: ${shortSeat(seatId)}` : `🚨 Ждёт человека: ${shortSeat(seatId)}`,
+              deckLang === 'en' ? 'Click to focus seat and approve in 1 click.' : 'Нажмите, чтобы перейти к узлу и ответить в 1 клик.',
+              seatId
+            );
+          }
         });
+      } else if (freshShell.length > 0) {
+        const seatId = freshShell[0].slice('shell:'.length);
+        playBeep([440, 330]);
+        dispatchCriticalSaDesktopNotification(
+          deckLang === 'en' ? `⚠️ Shell Exited: ${shortSeat(seatId)}` : `⚠️ Выход в shell: ${shortSeat(seatId)}`,
+          deckLang === 'en' ? 'Agent dropped to bare shell — requires rig restart.' : 'Агент вышел в голый shell — нужен rig restart.',
+          seatId
+        );
+      } else if (freshGit.length > 0) {
+        playBeep([580, 440]);
+        dispatchCriticalSaDesktopNotification(
+          deckLang === 'en' ? `🌿 Git Worktree Conflict (${gitConflicts.length})` : `🌿 Конфликт Git Worktree (${gitConflicts.length})`,
+          freshGit[0].slice('git:'.length),
+          ''
+        );
       } else if (fresh.length > 0) {
         playBeep([520, 780]);
       }
       prevAlertKeys = keys;
 
+      const criticalCount = attn.length + shells.length + gitConflicts.length;
+      if (criticalCount > 0) {
+        updateDynamicFaviconBadge('critical', criticalCount);
+      } else if (hot.length > 0) {
+        updateDynamicFaviconBadge('warn', hot.length);
+      } else {
+        updateDynamicFaviconBadge('ok', 0);
+      }
+
       if (attn.length) document.title = `🚨 [${attn.length} ATTN] RigCommander Deck`;
+      else if (shells.length) document.title = `⚠️ [${shells.length} SHELL] RigCommander Deck`;
+      else if (gitConflicts.length) document.title = `🌿 [${gitConflicts.length} GIT CONFLICT] RigCommander Deck`;
       else if (hot.length) document.title = `🔥 [COMPACT ${shortSeat(hot[0].id)} ${hot[0].ctxPct}%] RigCommander Deck`;
       else if (warm.length) document.title = `⚠️ [ROTATE ${shortSeat(warm[0].id)} ${warm[0].ctxPct}%] RigCommander Deck`;
       else if (working.length) document.title = `⚡ [${working.length} WORK] RigCommander Deck`;
@@ -10287,6 +10831,12 @@
         showTrackToast(deckLang === 'en'
           ? '🛡️ UX Track: Budget Circuit-Breaker & Telegram HITL Phone Preview'
           : '🛡️ UX-трек: Предохранитель бюджета и Telegram HITL-мост');
+      } else if (track === 'playbooks' || track === 'automation') {
+        openGuardrailsModal('playbooks');
+        setTimeout(() => runPlaybooksDryRun(), 150);
+        showTrackToast(deckLang === 'en'
+          ? '🤖 UX Track: Safe Playbook Automation (Dry-Run Preview + Hard Safety Vetoes)'
+          : '🤖 UX-трек: Safe Playbook Automation (Dry-Run превью + Hard Safety Vetoes)');
       } else if (track === 'share' || track === 'receipt' || track === 'card') {
         openShareCardModal();
         showTrackToast(deckLang === 'en'
@@ -10351,6 +10901,7 @@
       ganttHideNoise = typeof prefs.ganttHideNoise === 'boolean' ? prefs.ganttHideNoise : true;
       autoFollow = prefs.autoFollow;
       audioRadarOn = prefs.audioRadarOn;
+      desktopNotificationsOn = Boolean(prefs.desktopNotifications) && (typeof Notification !== 'undefined' && Notification.permission === 'granted');
       activeInspectorTab = prefs.inspectorTab;
       inspectorRefOpen = prefs.inspectorRefOpen;
       budgetWindow = prefs.budgetWindow || 'h24';
@@ -10418,6 +10969,7 @@
       renderTopology();
       renderSwimlanes();
       renderInspectorAndScorecards();
+      updateAlertsAndTitle();
       refreshTelemetryNow();
       let telemetryPollTimer = null;
       let lastVisibleRefreshAt = Date.now();

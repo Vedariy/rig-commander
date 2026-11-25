@@ -27,6 +27,7 @@ import {
 import { collectFleetGitRadar, fetchSeatGitDiff } from './lib/git-radar.mjs';
 import { ShiftHistoryStore } from './lib/shift-history.mjs';
 import { SsePushHub } from './lib/sse-hub.mjs';
+import { SafePlaybookEngine } from './lib/playbook-engine.mjs';
 import { buildShiftDigest, formatShiftDigestMarkdown } from './assets/domain/shift-digest.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
@@ -67,14 +68,14 @@ function schedulePostActionSseRefresh(seatId, reason = 'send') {
   }
 }
 
-async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
+async function executeSeatKeyAction(seatId, keyStroke, actionId = '', evalId = null) {
   if (!/^[a-zA-Z0-9._@-]+$/.test(String(seatId || ''))) {
     return { ok: false, error: 'Invalid seat identifier' };
   }
   const keyArgs = parseAllowedTmuxKeys(keyStroke);
   const baseline = latestSeatBaselines.get(seatId) || null;
   if (!keyArgs) {
-    actionAudit.record({ actionId, seatId, type: 'key', payload: keyStroke, httpStatus: 400, ok: false, baseline });
+    actionAudit.record({ actionId, evalId, seatId, type: 'key', payload: keyStroke, httpStatus: 400, ok: false, baseline });
     return { ok: false, error: 'Disallowed tmux keystroke' };
   }
   const universalTarget = universalTmuxTargets.get(seatId);
@@ -82,7 +83,7 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
   const output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
   terminalPromptProbeCache.delete(seatId);
   invalidateTelemetryCache();
-  const rec = actionAudit.record({ actionId, seatId, type: 'key', payload: keyStroke, httpStatus: 200, ok: true, baseline });
+  const rec = actionAudit.record({ actionId, evalId, seatId, type: 'key', payload: keyStroke, httpStatus: 200, ok: true, baseline });
   schedulePostActionSseRefresh(seatId, 'key');
   return { ok: true, execId: rec.execId, output: (output || '').trim() };
 }
@@ -335,6 +336,99 @@ const circuitBreaker = new BudgetCircuitBreaker(
     }
   }
 );
+
+async function executePlaybookRawAction(cand) {
+  const seat = String((cand && cand.seatId) || '').trim();
+  const cleanText = String((cand && cand.payload) || '').replace(/[\r\n]+/g, ' ').trim();
+  if (!/^[a-zA-Z0-9._@-]+$/.test(seat) || !cleanText) {
+    return { ok: false, detail: 'Invalid seat or payload' };
+  }
+  const baseline = latestSeatBaselines.get(seat) || null;
+  const universalTarget = universalTmuxTargets.get(seat) || null;
+  const rawRes = await dispatchRawCommand({ seat, cleanText, universalTarget });
+  const evalId = `playbook:${cand.ruleId}`;
+  if (!rawRes.ok) {
+    actionAudit.record({
+      actionId: cand.actionId,
+      evalId,
+      seatId: seat,
+      type: 'raw',
+      payload: cleanText,
+      httpStatus: rawRes.statusCode || 409,
+      ok: false,
+      baseline
+    });
+    return { ok: false, detail: rawRes.error || `Rejected (${rawRes.statusCode || 409})` };
+  }
+  terminalPromptProbeCache.delete(seat);
+  invalidateTelemetryCache();
+  actionAudit.record({
+    actionId: cand.actionId,
+    evalId,
+    seatId: seat,
+    type: 'raw',
+    payload: cleanText,
+    httpStatus: 200,
+    ok: true,
+    baseline
+  });
+  schedulePostActionSseRefresh(seat, 'playbook');
+  shiftHistory.recordGuardrailEvent({
+    severity: 'info',
+    rigId: 'all',
+    seatId: seat,
+    key: `playbook:${cand.ruleId}:${seat}:${Date.now()}`,
+    title: `Playbook ${cand.ruleId} -> ${seat}`,
+    detail: cand.reason || cleanText,
+    meta: { ruleId: cand.ruleId, actionId: cand.actionId, via: rawRes.via || 'raw' }
+  });
+  return { ok: true, detail: `${cleanText.slice(0, 48)} (${rawRes.via || 'raw'})` };
+}
+
+const playbookEngine = new SafePlaybookEngine({
+  onCompact: (cand) => executePlaybookRawAction(cand),
+  onWake: async (cand) => {
+    const res = await executeSeatKeyAction(cand.seatId, 'Enter', 'wake_parked_seat', `playbook:${cand.ruleId}`);
+    if (res && res.ok) {
+      shiftHistory.recordGuardrailEvent({
+        severity: 'info',
+        rigId: 'all',
+        seatId: cand.seatId,
+        key: `playbook:${cand.ruleId}:${cand.seatId}:${Date.now()}`,
+        title: `Playbook wake -> ${cand.seatId}`,
+        detail: cand.reason || 'Woke stale PARKED seat',
+        meta: { ruleId: cand.ruleId, actionId: cand.actionId }
+      });
+    }
+    return { ok: Boolean(res && res.ok), detail: (res && res.ok) ? 'Sent Enter (wake)' : ((res && res.error) || 'Wake failed') };
+  },
+  onNudge: (cand) => executePlaybookRawAction(cand),
+  onNotify: async (cand) => {
+    const ev = {
+      severity: 'critical',
+      rigId: 'all',
+      seatId: cand.seatId || null,
+      key: `playbook_sa:${cand.cooldownKey || cand.seatId}:${Date.now()}`,
+      title: `🚨 Critical SA (${cand.seatId || 'fleet'})`,
+      detail: cand.reason || 'Critical situational awareness alert',
+      meta: { ruleId: cand.ruleId, source: 'playbook' }
+    };
+    shiftHistory.recordGuardrailEvent(ev);
+    sseHub.publishShiftEvent(ev);
+    if (cand.notifyTelegram && telegramBridge.isConfigured()) {
+      await telegramBridge.notifyCircuitBreakerTrip({
+        rule: cand.ruleId,
+        seatId: cand.seatId || 'fleet',
+        severity: 'P0',
+        title: `🚨 Critical SA: ${cand.seatId || 'fleet'}`,
+        detail: cand.reason || 'Critical SA alert escalated',
+        mode: 'alert_only',
+        actionTaken: 'escalated'
+      }).catch(() => {});
+    }
+    return { ok: true, detail: 'Escalated to Shift History + SSE' + (cand.notifyTelegram && telegramBridge.isConfigured() ? ' + Telegram' : '') };
+  }
+});
 
 function tokenMatches(got) {
   const a = Buffer.from(String(got || ''));
@@ -1896,7 +1990,8 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
     actionAudit: actionAudit.list(30),
     guardrails: {
       breaker: circuitBreaker.getState(),
-      telegram: telegramBridge.getStatus()
+      telegram: telegramBridge.getStatus(),
+      playbooks: playbookEngine.getState()
     },
     update: selfUpdater.getStatus(),
     evaluator: aiEvaluator.getTelemetrySummary(),
@@ -1944,6 +2039,18 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
       }
     } catch {
       // non-blocking breaker error
+    }
+    try {
+      await playbookEngine.evaluateAndRun({
+        nodes,
+        parkedSeats,
+        activeQueue,
+        gitRadar: payload.gitRadar,
+        actionAudit: actionAudit.list(40),
+        breakerState: circuitBreaker.getState()
+      });
+    } catch {
+      // non-blocking playbook error
     }
     if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1()) {
       for (const n of nodes) {
@@ -2335,12 +2442,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 1.3 Guardrails (Budget Circuit-Breaker + Telegram HITL Bridge) endpoints
-  if (url.pathname === '/api/guardrails' && req.method === 'GET') {
+  // 1.3 Guardrails (Budget Circuit-Breaker, Telegram HITL Bridge & Safe Playbooks) endpoints
+  if ((url.pathname === '/api/guardrails' || url.pathname === '/api/playbooks') && req.method === 'GET') {
     await sendJson(req, res, 200, {
       timestamp: new Date().toISOString(),
       breaker: circuitBreaker.getState(),
-      telegram: telegramBridge.getStatus()
+      telegram: telegramBridge.getStatus(),
+      playbooks: playbookEngine.getState()
     });
     return;
   }
@@ -2348,7 +2456,10 @@ const server = http.createServer(async (req, res) => {
   if (
     url.pathname === '/api/guardrails/config' ||
     url.pathname === '/api/guardrails/reset' ||
-    url.pathname === '/api/guardrails/telegram'
+    url.pathname === '/api/guardrails/telegram' ||
+    url.pathname === '/api/playbooks/config' ||
+    url.pathname === '/api/playbooks/dry-run' ||
+    url.pathname === '/api/playbooks/reset'
   ) {
     const origin = req.headers.origin || '';
     const deny = async (code, error) => sendJson(req, res, code, { ok: false, error });
@@ -2401,6 +2512,34 @@ const server = http.createServer(async (req, res) => {
           }
           const status = telegramBridge.configure({ botToken, chatId });
           await sendJson(req, res, 200, { ok: true, telegram: status });
+          return;
+        }
+        if (url.pathname === '/api/playbooks/config') {
+          const state = playbookEngine.updateConfig(body);
+          sseHub.notifyInvalidated('playbooks_config', '');
+          await sendJson(req, res, 200, { ok: true, playbooks: state });
+          return;
+        }
+        if (url.pathname === '/api/playbooks/dry-run') {
+          const snap = latestFleetSnapshot || {};
+          const preview = playbookEngine.dryRun({
+            nodes: snap.nodes || [],
+            parkedSeats: snap.parkedSeats || {},
+            activeQueue: snap.activeQueue || [],
+            gitRadar: snap.gitRadar || null,
+            actionAudit: actionAudit.list(40),
+            breakerState: circuitBreaker.getState()
+          });
+          await sendJson(req, res, 200, { ok: true, dryRun: preview, playbooks: playbookEngine.getState() });
+          return;
+        }
+        if (url.pathname === '/api/playbooks/reset') {
+          const act = String(body.action || 'pause');
+          const state = act === 'reset_cooldowns'
+            ? playbookEngine.resetCooldowns()
+            : playbookEngine.pauseAll();
+          sseHub.notifyInvalidated('playbooks_reset', '');
+          await sendJson(req, res, 200, { ok: true, playbooks: state });
           return;
         }
       } catch (err) {
