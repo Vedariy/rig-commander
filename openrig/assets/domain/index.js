@@ -87,6 +87,7 @@ export {
   getRolePlacementInfo,
   estimateNodeBox,
   evaluateClusterReadability,
+  computeAdaptiveEdgePath,
   computeTopologyLayout,
   computeAnchoredPopoverRect
 } from './topology-layout.js';

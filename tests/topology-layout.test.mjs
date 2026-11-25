@@ -5,6 +5,7 @@ import {
   classifyNodeActivityTier,
   estimateNodeBox,
   evaluateClusterReadability,
+  computeAdaptiveEdgePath,
   computeTopologyLayout,
   computeAnchoredPopoverRect
 } from '../openrig/assets/domain/topology-layout.js';
@@ -588,4 +589,47 @@ test('evaluateClusterReadability detects border overflow, card overlap, and cram
     340
   );
   assert.equal(spacious.score, 0, `expected zero penalties on spacious row, got ${JSON.stringify(spacious)}`);
+});
+
+test('computeAdaptiveEdgePath stays straight on clean axes, uses orthogonal S-curves on diagonals, detours around obstacles & splits A<->B lanes', () => {
+  const sz = { hw: 90, hh: 26 };
+
+  // 1. Clean horizontal and vertical unobstructed edges stay strictly straight (no unnecessary wiggle)
+  const horiz = computeAdaptiveEdgePath({ cx1: 150, cy1: 200, sz1: sz, cx2: 550, cy2: 204, sz2: sz });
+  assert.equal(horiz.curved, false);
+  assert.equal(horiz.kind, 'straight');
+  assert.match(horiz.pathD, /^M [\d.-]+ [\d.-]+ L [\d.-]+ [\d.-]+$/);
+
+  const vert = computeAdaptiveEdgePath({ cx1: 300, cy1: 100, sz1: sz, cx2: 306, cy2: 400, sz2: sz });
+  assert.equal(vert.curved, false);
+  assert.equal(vert.kind, 'straight');
+
+  // 2. Unobstructed active diagonal -> vertical-tangent cubic S-curve with exact B(0.5) anchor
+  const diag = computeAdaptiveEdgePath({ cx1: 200, cy1: 120, sz1: sz, cx2: 520, cy2: 380, sz2: sz, isGhost: false });
+  assert.equal(diag.curved, true);
+  assert.equal(diag.kind, 's-vertical');
+  assert.match(diag.pathD, /^M [\d.-]+ [\d.-]+ C [\d.-]+ [\d.-]+, [\d.-]+ [\d.-]+, [\d.-]+ [\d.-]+$/);
+  assert.equal(diag.c1.x, diag.p1.x, 'vertical S-curve exits source orthogonally (90 deg)');
+  assert.equal(diag.c2.x, diag.p2.x, 'vertical S-curve enters target orthogonally (90 deg)');
+  const b05x = 0.125 * diag.p1.x + 0.375 * diag.c1.x + 0.375 * diag.c2.x + 0.125 * diag.p2.x;
+  const b05y = 0.125 * diag.p1.y + 0.375 * diag.c1.y + 0.375 * diag.c2.y + 0.125 * diag.p2.y;
+  assert.ok(Math.abs(diag.mx - b05x) < 1e-6 && Math.abs(diag.my - b05y) < 1e-6, 'label anchor lies strictly on B(0.5)');
+
+  // 3. Unobstructed ghost diagonal stays quiet/straight (zero spaghetti)
+  const ghostDiag = computeAdaptiveEdgePath({ cx1: 200, cy1: 120, sz1: sz, cx2: 520, cy2: 380, sz2: sz, isGhost: true });
+  assert.equal(ghostDiag.curved, false);
+
+  // 4. Third-party obstacle card right in the middle -> curve bows cleanly around it
+  const midObstacle = { cx: 350, cy: 200, hw: 85, hh: 28 };
+  const detour = computeAdaptiveEdgePath({ cx1: 100, cy1: 200, sz1: sz, cx2: 600, cy2: 200, sz2: sz, obstacles: [midObstacle] });
+  assert.equal(detour.curved, true);
+  assert.equal(detour.kind, 'avoid');
+  assert.ok(Math.abs(detour.my - midObstacle.cy) > midObstacle.hh + 12, `curve midpoint y=${detour.my} must clear obstacle center=${midObstacle.cy}`);
+
+  // 5. Bidirectional parallel pair A -> B and B -> A split symmetrically onto separate lanes
+  const fwd = computeAdaptiveEdgePath({ cx1: 150, cy1: 200, sz1: sz, cx2: 550, cy2: 200, sz2: sz, parallelIndex: 1 });
+  const rev = computeAdaptiveEdgePath({ cx1: 550, cy1: 200, sz1: sz, cx2: 150, cy2: 200, sz2: sz, parallelIndex: 1 });
+  assert.equal(fwd.kind, 'parallel');
+  assert.equal(rev.kind, 'parallel');
+  assert.ok(Math.abs(fwd.my - rev.my) >= 40, `bidirectional badges must separate vertically, got ${fwd.my} vs ${rev.my}`);
 });

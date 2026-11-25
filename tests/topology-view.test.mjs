@@ -109,12 +109,15 @@ for (const lang of ['en', 'ru']) {
       boxSizes: { 'owner@rig': { hw: 100, hh: 30 }, 'qa@rig': { hw: 100, hh: 30 } }, hasSliceMatch: false, isEdgeInSlice: () => true };
     const html = renderTopologyEdgesHtml(d);
     for (const value of ['is-live', 'edge-stream live-active', 'stroke="transparent" stroke-width="18"', 'onclick="selectEdge(0, event)"', 'test-slice']) includes(html, value);
-    const path = html.match(/d="M ([\d.-]+) ([\d.-]+) L ([\d.-]+) ([\d.-]+)"/);
-    assert.ok(path);
-    assert.ok(Number(path[1]) > 200 && Number(path[3]) < 800);
+    const path = html.match(/d="M ([\d.-]+) ([\d.-]+) (?:C [\d.-]+ [\d.-]+, [\d.-]+ [\d.-]+, |L )([\d.-]+) ([\d.-]+)"/);
+    assert.ok(path, `Expected valid SVG edge path in ${html}`);
+    assert.ok(Number(path[1]) >= 200 && Number(path[3]) <= 800);
+    // Live diagonal edge renders as smooth cubic Bezier, while ghost diagonal stays straight/quiet
+    assert.match(html, /d="M [\d.-]+ [\d.-]+ C /);
     for (const status of ['blocked', 'parked', 'held', 'pending', 'ghost']) {
       const h = renderTopologyEdgesHtml({ ...d, edges: [{ ...edge, queueStatus: status }] });
       includes(h, `is-${status}`); assert.ok(!h.includes('edge-stream live-active'));
+      if (status === 'ghost') assert.match(h, /d="M [\d.-]+ [\d.-]+ L /);
     }
     assert.equal(renderTopologyEdgesHtml({ ...d, collapsedIdleIds: new Set(['qa@rig']) }), '');
     assert.equal(renderTopologyEdgesHtml({ ...d, currentRigFilter: 'other' }), '');

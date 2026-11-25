@@ -745,6 +745,179 @@ function segmentIntersectsPaddedBox(x1, y1, x2, y2, cx, cy, halfW, halfH) {
   return t1 >= t0;
 }
 
+function intersectRectBorder(cx, cy, hw, hh, vx, vy, pad) {
+  const w = hw + pad;
+  const h = hh + pad;
+  const tx = Math.abs(vx) > 1e-5 ? w / Math.abs(vx) : 1e9;
+  const ty = Math.abs(vy) > 1e-5 ? h / Math.abs(vy) : 1e9;
+  const t = Math.min(tx, ty);
+  return { x: cx + vx * t, y: cy + vy * t };
+}
+
+/**
+ * Computes an adaptive SVG edge path (strict straight line on clean horizontal/vertical axes,
+ * orthogonal-tangent cubic Bezier S-curve on active diagonals, normal-vector detour around
+ * third-party obstacle cards, and symmetric dual-lane offset for bidirectional A <-> B edges),
+ * plus the exact on-curve label anchor B(0.5).
+ */
+export function computeAdaptiveEdgePath({
+  cx1, cy1, sz1 = { hw: 100, hh: 32 },
+  cx2, cy2, sz2 = { hw: 100, hh: 32 },
+  obstacles = [],
+  parallelIndex = 0,
+  isGhost = false,
+  padStart = 2,
+  padEnd = 4
+} = {}) {
+  const dx = cx2 - cx1;
+  const dy = cy2 - cy1;
+  const dist = Math.hypot(dx, dy);
+  if (!Number.isFinite(dist) || dist < 1e-3) {
+    return {
+      pathD: `M ${Number(cx1 || 0).toFixed(1)} ${Number(cy1 || 0).toFixed(1)} L ${Number(cx2 || 0).toFixed(1)} ${Number(cy2 || 0).toFixed(1)}`,
+      p1: { x: cx1 || 0, y: cy1 || 0 },
+      p2: { x: cx2 || 0, y: cy2 || 0 },
+      mx: cx1 || 0,
+      my: cy1 || 0,
+      curved: false,
+      kind: 'straight'
+    };
+  }
+
+  const p1Straight = intersectRectBorder(cx1, cy1, sz1.hw, sz1.hh, dx, dy, padStart);
+  const p2Straight = intersectRectBorder(cx2, cy2, sz2.hw, sz2.hh, -dx, -dy, padEnd);
+  const straightResult = () => ({
+    pathD: `M ${p1Straight.x.toFixed(1)} ${p1Straight.y.toFixed(1)} L ${p2Straight.x.toFixed(1)} ${p2Straight.y.toFixed(1)}`,
+    p1: p1Straight,
+    p2: p2Straight,
+    mx: (p1Straight.x + p2Straight.x) / 2,
+    my: (p1Straight.y + p2Straight.y) / 2,
+    curved: false,
+    kind: 'straight'
+  });
+
+  const blocking = [];
+  if (Array.isArray(obstacles) && obstacles.length > 0) {
+    for (const o of obstacles) {
+      if (!o || !Number.isFinite(o.cx) || !Number.isFinite(o.cy)) continue;
+      if (segmentIntersectsPaddedBox(p1Straight.x, p1Straight.y, p2Straight.x, p2Straight.y, o.cx, o.cy, (o.hw || 80) + 8, (o.hh || 24) + 8)) {
+        blocking.push(o);
+      }
+    }
+  }
+
+  // Rule 1 & Rule 3: Clean axis-aligned highways and unobstructed single-lane ghosts stay razor-straight
+  const isAxisAligned = Math.abs(dx) < 18 || Math.abs(dy) < 18;
+  if (parallelIndex === 0 && blocking.length === 0 && (isAxisAligned || isGhost)) {
+    return straightResult();
+  }
+
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const nx = -uy;
+  const ny = ux;
+
+  // Rule 2: Obstacle avoidance or bidirectional/parallel dual-lane curve
+  if (blocking.length > 0 || parallelIndex !== 0) {
+    let bowPx;
+    if (blocking.length > 0) {
+      let clearPos = 0;
+      let clearNeg = 0;
+      for (const o of blocking) {
+        const s = (o.cx - cx1) * nx + (o.cy - cy1) * ny;
+        const rObs = Math.abs((o.hw || 80) * nx) + Math.abs((o.hh || 24) * ny);
+        clearPos = Math.max(clearPos, rObs + s + 24);
+        clearNeg = Math.max(clearNeg, rObs - s + 24);
+      }
+      // Pick the shorter detour side (break ties deterministically toward +normal)
+      const sign = clearNeg < clearPos ? -1 : 1;
+      const needed = Math.min(clearPos, clearNeg);
+      const maxBow = isGhost ? 72 : 185;
+      bowPx = sign * Math.min(maxBow, Math.max(46, needed / 0.72));
+      if (parallelIndex !== 0) {
+        bowPx += parallelIndex * 18;
+      }
+    } else {
+      const baseLane = isGhost ? 18 : 34;
+      bowPx = parallelIndex * Math.min(72, Math.max(baseLane, dist * 0.12));
+    }
+
+    const c1 = { x: cx1 + dx * 0.32 + nx * bowPx, y: cy1 + dy * 0.32 + ny * bowPx };
+    const c2 = { x: cx1 + dx * 0.68 + nx * bowPx, y: cy1 + dy * 0.68 + ny * bowPx };
+    const p1 = intersectRectBorder(cx1, cy1, sz1.hw, sz1.hh, c1.x - cx1, c1.y - cy1, padStart);
+    const p2 = intersectRectBorder(cx2, cy2, sz2.hw, sz2.hh, c2.x - cx2, c2.y - cy2, padEnd);
+    const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x;
+    const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y;
+    return {
+      pathD: `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+      p1,
+      p2,
+      c1,
+      c2,
+      mx,
+      my,
+      curved: true,
+      kind: blocking.length > 0 ? 'avoid' : 'parallel'
+    };
+  }
+
+  // Rule 4: Unobstructed active/queued diagonal -> orthogonal-tangent S-curve (clean 90-deg port entry)
+  const preferVertical = Math.abs(dy) >= Math.abs(dx) * 0.45;
+  if (preferVertical) {
+    const sy = Math.sign(dy) || 1;
+    const shift1 = Math.max(-sz1.hw * 0.32, Math.min(sz1.hw * 0.32, dx * 0.12));
+    const shift2 = Math.max(-sz2.hw * 0.32, Math.min(sz2.hw * 0.32, dx * 0.12));
+    const p1 = { x: cx1 + shift1, y: cy1 + sy * (sz1.hh + padStart) };
+    const p2 = { x: cx2 - shift2, y: cy2 - sy * (sz2.hh + padEnd) };
+    const spanY = (p2.y - p1.y) * sy;
+    if (spanY >= 24) {
+      const k = Math.min(132, Math.max(36, spanY * 0.48));
+      const c1 = { x: p1.x, y: p1.y + sy * k };
+      const c2 = { x: p2.x, y: p2.y - sy * k };
+      const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x;
+      const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y;
+      return {
+        pathD: `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+        p1,
+        p2,
+        c1,
+        c2,
+        mx,
+        my,
+        curved: true,
+        kind: 's-vertical'
+      };
+    }
+  }
+
+  const sx = Math.sign(dx) || 1;
+  const shift1 = Math.max(-sz1.hh * 0.28, Math.min(sz1.hh * 0.28, dy * 0.12));
+  const shift2 = Math.max(-sz2.hh * 0.28, Math.min(sz2.hh * 0.28, dy * 0.12));
+  const p1 = { x: cx1 + sx * (sz1.hw + padStart), y: cy1 + shift1 };
+  const p2 = { x: cx2 - sx * (sz2.hw + padEnd), y: cy2 - shift2 };
+  const spanX = (p2.x - p1.x) * sx;
+  if (spanX >= 24) {
+    const k = Math.min(132, Math.max(36, spanX * 0.48));
+    const c1 = { x: p1.x + sx * k, y: p1.y };
+    const c2 = { x: p2.x - sx * k, y: p2.y };
+    const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x;
+    const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y;
+    return {
+      pathD: `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+      p1,
+      p2,
+      c1,
+      c2,
+      mx,
+      my,
+      curved: true,
+      kind: 's-horizontal'
+    };
+  }
+
+  return straightResult();
+}
+
 /**
  * Deterministic sub-millisecond readability scorer for a single rig cluster layout.
  * Detects border overflows, padded card overlaps, cramped active edge corridors,

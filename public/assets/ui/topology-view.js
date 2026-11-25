@@ -1,5 +1,5 @@
 /** Topology views: explicit state/browser adapters plus pure geometry and markup builders. */
-import { computeTopologyLayout, computeAnchoredPopoverRect } from '../domain/topology-layout.js';
+import { computeTopologyLayout, computeAnchoredPopoverRect, computeAdaptiveEdgePath } from '../domain/topology-layout.js';
 
 export function renderStateIndicatorHtml(agent, { escapeHtml }) {
   if (agent.state === 'working') {
@@ -201,39 +201,71 @@ export function renderTopologyEdgesHtml({
   edges: EDGES, nodeMap, collapsedIdleIds, currentRigFilter, cw, ch, boxSizes,
   layoutResult, hasSliceMatch, isEdgeInSlice, hoveredAgentId, deckLang, shortSeat, escapeHtml
 }) {
-  return EDGES.map((edge, edgeIdx) => {
+  // Pre-compute visible node obstacle boxes and bidirectional/parallel edge lanes once per render
+  const visibleNodeBoxes = [];
+  for (const [id, node] of Object.entries(nodeMap || {})) {
+    if (!node || collapsedIdleIds.has(id)) continue;
+    if (currentRigFilter !== 'all' && !id.endsWith('@' + currentRigFilter)) continue;
+    const sz = boxSizes[id] || { hw: 100, hh: 32 };
+    visibleNodeBoxes.push({ id, cx: (node.x / 100) * cw, cy: (node.y / 100) * ch, hw: sz.hw, hh: sz.hh });
+  }
+
+  const pairTotal = new Map();
+  const visibleMask = EDGES.map(edge => {
     const n1 = nodeMap[edge.from];
     const n2 = nodeMap[edge.to];
-    if (!n1 || !n2) return '';
-    if (collapsedIdleIds.has(edge.from) || collapsedIdleIds.has(edge.to)) return '';
-    if (currentRigFilter !== 'all' && (!edge.from.endsWith('@' + currentRigFilter) || !edge.to.endsWith('@' + currentRigFilter))) return '';
+    if (!n1 || !n2) return false;
+    if (collapsedIdleIds.has(edge.from) || collapsedIdleIds.has(edge.to)) return false;
+    if (currentRigFilter !== 'all' && (!edge.from.endsWith('@' + currentRigFilter) || !edge.to.endsWith('@' + currentRigFilter))) return false;
+    const pairKey = edge.from < edge.to ? `${edge.from}|${edge.to}` : `${edge.to}|${edge.from}`;
+    pairTotal.set(pairKey, (pairTotal.get(pairKey) || 0) + 1);
+    return true;
+  });
+  const pairSeen = new Map();
+
+  return EDGES.map((edge, edgeIdx) => {
+    if (!visibleMask[edgeIdx]) return '';
+    const n1 = nodeMap[edge.from];
+    const n2 = nodeMap[edge.to];
 
     const cx1 = (n1.x / 100) * cw;
     const cy1 = (n1.y / 100) * ch;
     const cx2 = (n2.x / 100) * cw;
     const cy2 = (n2.y / 100) * ch;
 
-    // Center-to-center vector (preserves exact center-to-center orientation!)
-    const dx = cx2 - cx1;
-    const dy = cy2 - cy1;
-
     const sz1 = boxSizes[n1.id] || { hw: 100, hh: 32 };
     const sz2 = boxSizes[n2.id] || { hw: 100, hh: 32 };
-
-    // Start point right at the border of source block (pad = 2px)
-    const p1 = intersectNodeBorder(cx1, cy1, sz1.hw, sz1.hh, dx, dy, 2);
-    // End point right at the border of target block (pad = 4px so arrowhead tip touches border)
-    const p2 = intersectNodeBorder(cx2, cy2, sz2.hw, sz2.hh, -dx, -dy, 4);
-
-    const mx = (p1.x + p2.x) / 2;
-    const my = (p1.y + p2.y) / 2;
-    const pathD = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
 
     const statusKey = edge.queueStatus || (edge.liveActive ? 'live' : 'ghost');
     const isLive = statusKey === 'live';
     const isQueuedStatic = statusKey === 'blocked' || statusKey === 'parked' || statusKey === 'held' || statusKey === 'pending';
+    const isGhost = !isLive && !isQueuedStatic;
+
+    const pairKey = edge.from < edge.to ? `${edge.from}|${edge.to}` : `${edge.to}|${edge.from}`;
+    const totalForPair = pairTotal.get(pairKey) || 1;
+    const idxInPair = pairSeen.get(pairKey) || 0;
+    pairSeen.set(pairKey, idxInPair + 1);
+    let parallelIndex = 0;
+    if (totalForPair > 1) {
+      const centered = idxInPair - (totalForPair - 1) / 2;
+      // Normalize direction sign so A -> B and B -> A bow symmetrically to opposite sides
+      const dirSign = edge.from < edge.to ? 1 : -1;
+      parallelIndex = centered * 2 * dirSign;
+    }
+
+    const obstacles = visibleNodeBoxes.filter(b => b.id !== n1.id && b.id !== n2.id);
+    const { pathD, mx, my } = computeAdaptiveEdgePath({
+      cx1, cy1, sz1,
+      cx2, cy2, sz2,
+      obstacles,
+      parallelIndex,
+      isGhost,
+      padStart: 2,
+      padEnd: 4
+    });
+
     const segClass = isLive ? 'is-live' : (isQueuedStatic ? `is-${statusKey}` : 'is-ghost');
-    const isDormantGhost = !isLive && !isQueuedStatic &&
+    const isDormantGhost = isGhost &&
       (layoutResult.tiers[edge.from] === 'dormant' || layoutResult.tiers[edge.to] === 'dormant');
     const trunkWidth = isLive
       ? Math.max(4, Math.round(Math.log2(1 + (edge.calls || 1)) * 2.4))
