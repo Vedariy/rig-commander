@@ -1814,23 +1814,23 @@ Run negative control fault check?
           <div class="bento-tile bento-wide" style="border-color:rgba(168,85,247,0.34);">
             <div>
               <span class="bento-badge" style="color:#d8b4fe; background:rgba(168,85,247,0.1); border-color:rgba(168,85,247,0.35);" data-i18n="bento.t7.badge">🧠 3-TIER AI EVALUATOR · ADVISORY-ONLY</span>
-              <h3 class="bento-title" data-i18n="bento.t7.title">Heuristic + Expert Veto ➔ System 1 ➔ System 2</h3>
+              <h3 class="bento-title" data-i18n="bento.t7.title">Hard Safety Rules ➔ Fast Triage ➔ Deep Reasoning</h3>
               <p class="bento-desc" data-i18n="bento.t7.desc">
-                Zero-latency deterministic rules with non-overridable Hard Safety Vetoes (rm -rf, force-push, SQL DDL, shellExited), single-pass non-generative System 1 (/v1/systemone: Jev / Laya / Von, GLiClass-v3) gated by Shannon entropy, and deliberative System 2 (Gemini 4, GLM-5.3, GPT-6.2, local Qwen3.8 MLX) — strictly Advisory-Only with SecretRedactor.
+                Zero-latency deterministic safety guardrails with non-overridable Hard Vetoes (destructive commands, force-push, SQL DDL, bare shell exits), an optional fast triage layer, and deep reasoning escalation — strictly Advisory-Only with automatic secret redaction.
               </p>
             </div>
             <div class="bento-widget" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center;">
               <div style="background:rgba(255,0,85,0.08); border:1px solid rgba(255,0,85,0.3); border-radius:6px; padding:8px;">
-                <div style="color:#fda4af; font-weight:800;">L0 · EXPERT VETO</div>
-                <div style="color:#94a3b8; font-size:10px; margin-top:3px;" data-i18n="bento.t7.l0">U0 + Hard Safety Rules</div>
+                <div style="color:#fda4af; font-weight:800;">L0 · SAFETY VETO</div>
+                <div style="color:#94a3b8; font-size:10px; margin-top:3px;" data-i18n="bento.t7.l0">Deterministic Guardrails</div>
               </div>
               <div style="background:rgba(0,240,255,0.08); border:1px solid rgba(0,240,255,0.3); border-radius:6px; padding:8px;">
-                <div style="color:var(--cyan); font-weight:800;">S1 · /v1/systemone</div>
-                <div style="color:#94a3b8; font-size:10px; margin-top:3px;" data-i18n="bento.t7.s1">Jev / Laya / Von · H_norm</div>
+                <div style="color:var(--cyan); font-weight:800;">S1 · FAST TRIAGE</div>
+                <div style="color:#94a3b8; font-size:10px; margin-top:3px;" data-i18n="bento.t7.s1">Low-Latency Classifier</div>
               </div>
               <div style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.35); border-radius:6px; padding:8px;">
                 <div style="color:#d8b4fe; font-weight:800;">S2 · DELIBERATIVE</div>
-                <div style="color:#94a3b8; font-size:10px; margin-top:3px;" data-i18n="bento.t7.s2">Gemini 4 / Qwen3.8 · Local</div>
+                <div style="color:#94a3b8; font-size:10px; margin-top:3px;" data-i18n="bento.t7.s2">Deep Model · Cloud / Local</div>
               </div>
             </div>
             <a href="/demo?track=evaluator" class="bento-cta" style="color:#d8b4fe; border-color:rgba(168,85,247,0.35); background:rgba(168,85,247,0.08);" data-i18n="bento.t7.cta">🧠 Try 3-Tier AI Evaluator →</a>
@@ -1871,7 +1871,7 @@ Run negative control fault check?
         <div class="section-eyebrow" data-i18n="arch.eyebrow">HARDENED LOCAL-FIRST ARCHITECTURE</div>
         <h2 class="section-title" data-i18n="arch.title">Zero Dependencies. Zero-Code Instrumentation.</h2>
         <p class="section-desc" data-i18n="arch.desc">
-          Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process DECK_TOKEN, Origin checks, and allowlisted tmux keys.
+          Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process session auth, Origin checks, and allowlisted tmux keys.
         </p>
 
         <div class="steps-grid">
@@ -1897,7 +1897,7 @@ Run negative control fault check?
             <div class="step-num">03</div>
             <h3 class="step-title" data-i18n="arch.s3.title">Command, Verify &amp; Audit</h3>
             <p class="step-desc" data-i18n="arch.s3.desc">
-              Authorize HITL prompts in 1 click through the Security Gate (DECK_TOKEN + key allowlist) and verify every postcondition automatically.
+              Authorize HITL prompts in 1 click through the Security Gate (session auth + key allowlist) and verify every postcondition automatically.
             </p>
             <div class="step-code">HTTP 200 • 127.0.0.1:7440 • Audit Verified</div>
           </div>
@@ -1907,18 +1907,18 @@ Run negative control fault check?
         <div class="passport-callout">
           <div style="max-width:740px;">
             <div style="font-family:var(--font-mono); font-size:11px; font-weight:800; color:#d8b4fe; letter-spacing:0.6px; text-transform:uppercase;" data-i18n="passport.eyebrow">
-              ARCHITECTURAL &amp; OPERATIONAL PASSPORT
+              ARCHITECTURAL &amp; SECURITY PASSPORT
             </div>
             <h3 style="font-size:21px; font-weight:800; color:#fff; margin:6px 0;" data-i18n="passport.title">
-              Inspect C4 Diagrams, Ontology Schema, Security Posture &amp; Test Matrix
+              Inspect Trust Boundaries, Operational Twin, Security Posture &amp; Verification
             </h3>
             <p style="font-size:13.5px; color:#94a3b8; line-height:1.5;" data-i18n="passport.desc">
-              Full engineering blueprint with C4 Level 1 &amp; Level 3 diagrams, 8-object Operational Ontology v2.2 tables, localhost + Remote PWA security controls, and all 20 automated test suites (108 tests).
+              Clean architectural &amp; security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 125 automated tests across 24 suites.
             </p>
             <div class="passport-pills">
               <span class="passport-pill">0 npm deps • MIT</span>
-              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">108 / 108 node --test PASS</span>
-              <span class="passport-pill" style="color:#d8b4fe; border-color:rgba(168,85,247,0.4);">3-Tier AI Evaluator (L0→S1→S2)</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">125 / 125 Automated Tests PASS</span>
+              <span class="passport-pill" style="color:#d8b4fe; border-color:rgba(168,85,247,0.4);">Advisory-Only AI Guardrails</span>
               <span class="passport-pill">Shared Context Lineage &amp; RECAP</span>
               <span class="passport-pill">SUB vs PAYG FinOps + PNG Card</span>
               <span class="passport-pill">Telegram HITL + Breaker</span>
@@ -2187,11 +2187,11 @@ Run negative control fault check?
         'bento.t6.l3': 'Burn ETA, Audit & Tmux',
         'bento.t6.cta': '💡 Launch Fleet Advisor →',
         'bento.t7.badge': '🧠 3-TIER AI EVALUATOR · ADVISORY-ONLY',
-        'bento.t7.title': 'Heuristic + Expert Veto ➔ System 1 ➔ System 2',
-        'bento.t7.desc': 'Zero-latency deterministic rules with non-overridable Hard Safety Vetoes (rm -rf, force-push, SQL DDL, shellExited), single-pass non-generative System 1 (/v1/systemone: Jev / Laya / Von, GLiClass-v3) gated by Shannon entropy, and deliberative System 2 (Gemini 4, GLM-5.3, GPT-6.2, local Qwen3.8 MLX) — strictly Advisory-Only with SecretRedactor.',
-        'bento.t7.l0': 'U0 + Hard Safety Rules',
-        'bento.t7.s1': 'Jev / Laya / Von · H_norm',
-        'bento.t7.s2': 'Gemini 4 / Qwen3.8 · Local',
+        'bento.t7.title': 'Hard Safety Rules ➔ Fast Triage ➔ Deep Reasoning',
+        'bento.t7.desc': 'Zero-latency deterministic safety guardrails with non-overridable Hard Vetoes (destructive commands, force-push, SQL DDL, bare shell exits), an optional fast triage layer, and deep reasoning escalation — strictly Advisory-Only with automatic secret redaction.',
+        'bento.t7.l0': 'Deterministic Guardrails',
+        'bento.t7.s1': 'Low-Latency Classifier',
+        'bento.t7.s2': 'Deep Model · Cloud / Local',
         'bento.t7.cta': '🧠 Try 3-Tier AI Evaluator →',
         'bento.t8.badge': '🔗 SHARED CONTEXT LINEAGE',
         'bento.t8.title': 'Cross-Task Context, Drift & RECAP',
@@ -2200,17 +2200,17 @@ Run negative control fault check?
         'bento.t8.cta': '📄 Inspect Context in Demo →',
         'arch.eyebrow': 'HARDENED LOCAL-FIRST ARCHITECTURE',
         'arch.title': 'Zero Dependencies. Zero-Code Instrumentation.',
-        'arch.desc': 'Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process DECK_TOKEN, Origin checks, and allowlisted tmux keys.',
+        'arch.desc': 'Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process session auth, Origin checks, and allowlisted tmux keys.',
         'arch.s1.title': 'Run Hardened Local Bridge',
         'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.',
         'arch.s2.title': 'Ontology & FinOps Sync',
         'arch.s2.desc': 'Builds canonical Objects & Links, cleans opgate noise for Gantt chains, and streams JSONL transcripts by byte offset for real-time $ tracking.',
         'arch.s2.code': '● 8 Objects • 3-Tier Evaluator • Context Lineage',
         'arch.s3.title': 'Command, Verify & Audit',
-        'arch.s3.desc': 'Authorize HITL prompts in 1 click through the Security Gate (DECK_TOKEN + key allowlist) and verify every postcondition automatically.',
-        'passport.eyebrow': 'ARCHITECTURAL & OPERATIONAL PASSPORT',
-        'passport.title': 'Inspect C4 Diagrams, Ontology Schema, Security Posture & Test Matrix',
-        'passport.desc': 'Full engineering blueprint with C4 Level 1 & Level 3 diagrams, 8-object Operational Ontology v2.2 tables, localhost + Remote PWA security controls, and all 20 automated test suites (108 tests).',
+        'arch.s3.desc': 'Authorize HITL prompts in 1 click through the Security Gate (session auth + key allowlist) and verify every postcondition automatically.',
+        'passport.eyebrow': 'ARCHITECTURAL & SECURITY PASSPORT',
+        'passport.title': 'Inspect Trust Boundaries, Operational Twin, Security Posture & Verification',
+        'passport.desc': 'Clean architectural & security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 125 automated tests across 24 suites.',
         'passport.cta': '📄 Open Project Passport',
         'passport.guardCta': '🛡️ Try Telegram HITL & Breaker',
         'waitlist.badge': '🚀 PRIVATE ACCESS',
@@ -2342,11 +2342,11 @@ Run negative control fault check?
         'bento.t6.l3': 'Burn ETA, Аудит и Tmux',
         'bento.t6.cta': '💡 Запустить Советник флота →',
         'bento.t7.badge': '🧠 3-УРОВНЕВЫЙ AI EVALUATOR · ADVISORY-ONLY',
-        'bento.t7.title': 'Эвристика + Expert Veto ➔ System 1 ➔ System 2',
-        'bento.t7.desc': 'Мгновенный триаж с неперебиваемым Expert Veto (rm -rf, force-push, SQL DDL, shellExited), быстрый негенеративный System 1 (/v1/systemone: Jev / Laya / Von, GLiClass-v3) с энтропийным шлюзом Шеннона и глубокий System 2 (Gemini 4, GLM-5.3, GPT-6.2, локальный Qwen3.8 MLX) — строго Advisory-Only и с SecretRedactor.',
-        'bento.t7.l0': 'U0 + жёсткие Safety-правила',
-        'bento.t7.s1': 'Jev / Laya / Von · H_norm',
-        'bento.t7.s2': 'Gemini 4 / Qwen3.8 · Local',
+        'bento.t7.title': 'Жёсткие Safety-правила ➔ Быстрый триаж ➔ Глубокий разбор',
+        'bento.t7.desc': 'Мгновенные детерминированные правила безопасности с неперебиваемым вето (опасные команды, force-push, SQL DDL, выход в shell), опциональный быстрый классификатор и эскалация на глубокую модель — строго Advisory-Only и с автоматической редакцией секретов.',
+        'bento.t7.l0': 'Детерминированные правила',
+        'bento.t7.s1': 'Быстрый классификатор',
+        'bento.t7.s2': 'Глубокая модель · Облако / Локально',
         'bento.t7.cta': '🧠 Открыть AI Evaluator в демо →',
         'bento.t8.badge': '🔗 ГРАФ ОБЩЕГО КОНТЕКСТА',
         'bento.t8.title': 'Связи задач, дрейф контекста и RECAP',
@@ -2355,17 +2355,17 @@ Run negative control fault check?
         'bento.t8.cta': '📄 Смотреть контекст в демо →',
         'arch.eyebrow': 'ЗАЩИЩЁННАЯ LOCAL-FIRST АРХИТЕКТУРА',
         'arch.title': 'Ноль зависимостей. Ноль правки кода агентов.',
-        'arch.desc': 'Чистый Node.js ESM и нативные ES-модули браузера без npm-зависимостей. Работает локально на 127.0.0.1 с токеном DECK_TOKEN, проверкой Origin и allowlist клавиш tmux.',
+        'arch.desc': 'Чистый Node.js ESM и нативные ES-модули браузера без npm-зависимостей. Работает локально на 127.0.0.1 с локальной сессионной авторизацией, проверкой Origin и allowlist клавиш tmux.',
         'arch.s1.title': 'Запуск локального моста',
         'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) автоматически находит OpenRig-флоты ИЛИ обычные сессии Claude Code / Codex CLI / tmux без npm-зависимостей.',
         'arch.s2.title': 'Онтология и FinOps-синхронизация',
         'arch.s2.desc': 'Строит канонический граф Objects & Links, очищает opgate-шум для Ганта и дочитывает JSONL-транскрипты по байтовому offset.',
         'arch.s2.code': '● 8 объектов • AI Evaluator • Граф контекста',
         'arch.s3.title': 'Управление, сверка и аудит',
-        'arch.s3.desc': 'Подтверждайте HITL-запросы в 1 клик через Security Gate (DECK_TOKEN + allowlist) с автоматической проверкой результата.',
-        'passport.eyebrow': 'АРХИТЕКТУРНЫЙ И ОПЕРАЦИОННЫЙ ПАСПОРТ',
-        'passport.title': 'Изучите C4-диаграммы, схему онтологии, безопасность и матрицу тестов',
-        'passport.desc': 'Полная инженерная документация: C4 Level 1 и Level 3, таблицы операционной онтологии v2.2 (8 объектов), защита localhost + Remote PWA и все 20 наборов автотестов (108 тестов).',
+        'arch.s3.desc': 'Подтверждайте HITL-запросы в 1 клик через Security Gate (сессионная авторизация + allowlist клавиш) с автоматической проверкой результата.',
+        'passport.eyebrow': 'ПАСПОРТ АРХИТЕКТУРЫ И БЕЗОПАСНОСТИ',
+        'passport.title': 'Изучите границы доверия, цифровой двойник, гарантии безопасности и верификацию',
+        'passport.desc': 'Чистый паспорт системы: C4-границы доверия, операционный цифровой двойник, гарантии localhost + защищённого Mobile PWA и 125 автотестов по 24 наборам.',
         'passport.cta': '📄 Открыть паспорт проекта',
         'passport.guardCta': '🛡️ Telegram HITL и Авто-тормоз',
         'waitlist.badge': '🚀 ЗАКРЫТЫЙ ДОСТУП',

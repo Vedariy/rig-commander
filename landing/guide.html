@@ -680,8 +680,8 @@
           <div class="subcard">
             <div class="subcard-title">L3 · <span data-lang-block="ru">Паспорт узла, Диагноз, Live TMUX и Аудит</span><span data-lang-block="en">Node Passport, Diagnosis, Live TMUX &amp; Audit</span></div>
             <p>
-              <span data-lang-block="ru">Справа — выбранный агент: в самом верху блок <strong>Диагноз и что исправить</strong> (точные ожидающие задачи и кнопка <strong>📨 Разобрать очередь</strong>), живой 80-строчный экран <code class="inline">tmux</code> (<code class="inline">AUTO-FOLLOW</code>), распарсенные кнопки ответа с защитой от двойного клика (<code class="inline">409</code>), журнал <strong>Action Audit</strong> и <strong>Рейтинг возвратов QA</strong>.</span>
-              <span data-lang-block="en">Right panel shows the selected seat: top <strong>Diagnosis &amp; What to Fix</strong> card (exact pending queue items + 1-click <strong>📨 Process queue</strong>), live 80-line <code class="inline">tmux</code> capture (<code class="inline">AUTO-FOLLOW</code>), idempotency-guarded prompt pills, postcondition-verified <strong>Action Audit</strong>, and <strong>QA Rework Scorecard</strong>.</span>
+              <span data-lang-block="ru">Справа — выбранный агент: в самом верху блок <strong>Диагноз и что исправить</strong> (точные ожидающие задачи и кнопка <strong>📨 Разобрать очередь</strong>), потоковый 80-строчный экран <code class="inline">tmux</code> (<code class="inline">SSE</code> + <code class="inline">AUTO-FOLLOW</code>), распарсенные кнопки ответа с защитой от двойного клика, журнал <strong>Action Audit</strong> и <strong>Рейтинг возвратов QA</strong>.</span>
+              <span data-lang-block="en">Right panel shows the selected seat: top <strong>Diagnosis &amp; What to Fix</strong> card (exact pending queue items + 1-click <strong>📨 Process queue</strong>), live SSE-streamed 80-line <code class="inline">tmux</code> capture (<code class="inline">AUTO-FOLLOW</code>), idempotency-guarded prompt pills, postcondition-verified <strong>Action Audit</strong>, and <strong>QA Rework Scorecard</strong>.</span>
             </p>
           </div>
         </div>
@@ -729,8 +729,8 @@
             <span class="badge-chip chip-red">P0 • BLOCKER</span>
           </div>
           <div class="playbook-body">
-            <span data-lang-block="ru">Пульт сам сканирует последние 72 строки <code class="inline">tmux</code> (включая узкие обёрнутые меню Antigravity / Codex / Claude) и поднимает красную карточку в Triage Strip и Радаре. Нажмите <strong>🖥️ Ответить в tmux</strong> → выберите распарсенный вариант (например, <code class="inline">1 Enter</code> / <code class="inline">Yes</code>) → проверьте в <strong>Action Audit</strong> статус <code class="inline">✅ Verified</code> (агент вышел из <code class="inline">needs-input</code>).</span>
-            <span data-lang-block="en">The server probes live <code class="inline">tmux</code> panes (including narrow wrapped Antigravity / Codex / Claude menus) and surfaces a P0 red card. Click <strong>🖥️ Answer in TMUX</strong> → click the parsed option pill (e.g. <code class="inline">1 Enter</code> / <code class="inline">Yes</code>) → verify <code class="inline">✅ Verified</code> in <strong>Action Audit</strong> once the seat exits <code class="inline">needs-input</code>.</span>
+            <span data-lang-block="ru">Пульт в реальном времени анализирует живой экран <code class="inline">tmux</code> (включая узкие обёрнутые меню Antigravity / Codex / Claude) и поднимает красную карточку в Triage Strip и Радаре. Нажмите <strong>🖥️ Ответить в tmux</strong> → выберите распарсенный вариант (например, <code class="inline">1 Enter</code> / <code class="inline">Yes</code>) → проверьте в <strong>Action Audit</strong> статус <code class="inline">✅ Verified</code> (агент вышел из ожидания ввода).</span>
+            <span data-lang-block="en">The local bridge monitors live <code class="inline">tmux</code> screens (including narrow wrapped Antigravity / Codex / Claude menus) and surfaces a P0 red card. Click <strong>🖥️ Answer in TMUX</strong> → click the parsed option pill (e.g. <code class="inline">1 Enter</code> / <code class="inline">Yes</code>) → verify <code class="inline">✅ Verified</code> in <strong>Action Audit</strong> once the seat resumes.</span>
           </div>
           <a class="playbook-link" href="/demo?track=hitl"><span data-lang-block="ru">▶ Потренироваться в демо (HITL)</span><span data-lang-block="en">▶ Try HITL Unblock in Demo</span> →</a>
         </div>
@@ -799,8 +799,8 @@
           <div class="subcard">
             <div class="subcard-title">🚨 <span data-lang-block="ru">Авто-тормоз и 3-уровневый AI Evaluator</span><span data-lang-block="en">Circuit-Breaker &amp; 3-Tier AI Evaluator</span></div>
             <p>
-              <span data-lang-block="ru">В модалке <strong>Авто-тормоз / TG</strong> задайте лимиты бюджета/QA, а на вкладке <strong>🧠 AI Оценщик</strong> подключите независимые слоты <strong>System 1</strong> (<code class="inline">/v1/systemone</code>: Jev, локальные Laya / Von, GLiClass, EmbeddingGemma) и <strong>System 2</strong> (Gemini 4 Hydrogen, GLM-5.3, Qwen3.8). Строго <em>Advisory-Only</em> с редакцией секретов и правом вето Эксперта.</span>
-              <span data-lang-block="en">In <strong>Guardrails / TG</strong>, configure budget/QA caps, and use the <strong>🧠 AI Evaluator</strong> tab to bind independent <strong>System 1</strong> (<code class="inline">/v1/systemone</code>: Jev, local Laya / Von, GLiClass, EmbeddingGemma) and <strong>System 2</strong> (Gemini 4 Hydrogen, GLM-5.3, Qwen3.8) slots. Strictly <em>Advisory-Only</em> with secret redaction and Expert Vetoes.</span>
+              <span data-lang-block="ru">В модалке <strong>Авто-тормоз / TG</strong> задайте лимиты бюджета/QA, а на вкладке <strong>🧠 AI Оценщик</strong> можно опционально подключить быстрый слой триажа (System 1) и модель глубокого разбора (System 2). Строго <em>Advisory-Only</em> с автоматической редакцией секретов и неперебиваемыми правилами безопасности.</span>
+              <span data-lang-block="en">In <strong>Guardrails / TG</strong>, configure budget/QA caps, and use the <strong>🧠 AI Evaluator</strong> tab to optionally bind a fast triage layer (System 1) and a deep reasoning model (System 2). Strictly <em>Advisory-Only</em> with automatic secret redaction and hard safety vetoes.</span>
             </p>
           </div>
           <div class="subcard">
@@ -837,9 +837,9 @@
           <div class="subcard">
             <div class="subcard-title">🔒 <span data-lang-block="ru">Модель безопасности удалённого PWA</span><span data-lang-block="en">Remote Mobile PWA Security Model</span></div>
             <ul class="clean" style="margin-top:6px;">
-              <li><span data-lang-block="ru">Все внешние запросы без привязки получают <code class="inline">401</code> (телеметрия и <code class="inline">DECK_TOKEN</code> не утекают).</span><span data-lang-block="en">Unpaired remote clients always get <code class="inline">401</code> (zero telemetry or <code class="inline">DECK_TOKEN</code> exposure).</span></li>
-              <li><span data-lang-block="ru">Одноразовый QR (192 бита) + PIN (<code class="inline">XXXX-XXXX</code>) гасятся сразу после использования или после 5 ошибок.</span><span data-lang-block="en">Single-use 192-bit QR + 8-char PIN wipe immediately after use or after 5 wrong tries.</span></li>
-              <li><span data-lang-block="ru">На диске (<code class="inline">~/.config/rig-commander/remote-sessions.json</code>, <code class="inline">0600</code>) хранятся только SHA-256 хэши.</span><span data-lang-block="en">Only SHA-256 hashes persist on disk (<code class="inline">~/.config/rig-commander/remote-sessions.json</code>, mode <code class="inline">0600</code>).</span></li>
+              <li><span data-lang-block="ru">Все внешние запросы без привязки отклоняются (<code class="inline">401</code>) — телеметрия и токены управления не утекают.</span><span data-lang-block="en">Unpaired remote clients are strictly rejected (<code class="inline">401</code>) with zero telemetry or control token exposure.</span></li>
+              <li><span data-lang-block="ru">Одноразовый высокоэнтропийный QR + PIN (<code class="inline">XXXX-XXXX</code>) автоматически аннулируются после активации или при серии неверных попыток.</span><span data-lang-block="en">Single-use high-entropy QR + 8-char PIN automatically invalidate after activation or repeated wrong attempts.</span></li>
+              <li><span data-lang-block="ru">Локально на диске хранятся только криптографические хэши привязанных сессий с ограниченными правами доступа (<code class="inline">0600</code>).</span><span data-lang-block="en">Only cryptographic hashes of paired sessions persist locally on disk with restricted permissions (<code class="inline">0600</code>).</span></li>
             </ul>
           </div>
         </div>
@@ -940,8 +940,8 @@
         <details class="faq">
           <summary><span data-lang-block="ru">Почему агент в терминале висит на вопросе, а сам OpenRig считает, что он «работает»?</span><span data-lang-block="en">Why does OpenRig think an agent is "working" when it is actually waiting on a prompt?</span></summary>
           <p>
-            <span data-lang-block="ru">Некоторые терминальные харнесы (например, Antigravity / Gemini CLI) держат живой PTY без структурированного события ожидания. RigCommander решает это отдельным классификатором экранов <code class="inline">classifyTerminalScreen()</code>: он каждые 2.5с анализирует 72 строки живого <code class="inline">tmux</code>, отличает активные спиннеры Брайля от реального HITL-меню и переводит узел в <code class="inline">needs-input</code> (или в <code class="inline">shellExited</code>, если процесс вышел в shell).</span>
-            <span data-lang-block="en">Terminal runtimes (e.g. Antigravity / Gemini CLI) keep the PTY alive without structured wait hooks. RigCommander runs <code class="inline">classifyTerminalScreen()</code> on 72-line live <code class="inline">tmux</code> captures every 2.5s to distinguish active Braille spinners from real confirmation menus and bare shell exits.</span>
+            <span data-lang-block="ru">Некоторые терминальные харнесы (например, Antigravity / Gemini CLI) держат живой PTY без структурированного события ожидания. RigCommander решает это встроенным живым классификатором экранов терминала: он анализирует вывод <code class="inline">tmux</code> в реальном времени, отличает активные спиннеры от реального меню подтверждения и автоматически переводит узел в ожидание ввода (или помечает выход в shell).</span>
+            <span data-lang-block="en">Terminal runtimes (e.g. Antigravity / Gemini CLI) keep the PTY alive without structured wait hooks. RigCommander runs a live terminal state classifier over <code class="inline">tmux</code> output to distinguish active work spinners from real confirmation menus and bare shell exits.</span>
           </p>
         </details>
 

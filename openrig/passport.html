@@ -11,18 +11,18 @@
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <title>RigCommander // Паспорт проекта (Project Passport)</title>
-  <meta name="description" content="Архитектурный и операционный паспорт RigCommander: DSS SA методология, C4-контекст и компоненты, операционная онтология (Objects, Links, Actions, Audit), безопасность и покрытие тестами.">
+  <meta name="description" content="Архитектурный и операционный паспорт RigCommander: модель доверия Local-First, слои системы, операционный цифровой двойник, гарантии безопасности и верификация.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
-  <meta property="og:title" content="RigCommander — Architecture & Operational Passport (C4 + Ontology v2.2)">
-  <meta property="og:description" content="C4 Level 1 & Level 3 diagrams, 8-object Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, paired Mobile PWA & 108-test 0-dependency matrix.">
+  <meta property="og:title" content="RigCommander — Architecture & Security Passport">
+  <meta property="og:description" content="Local-first trust boundaries, 0-dependency architecture, Operational Twin, privacy & security guarantees, and 125 automated tests.">
   <meta property="og:url" content="https://rig-commander.vercel.app/passport">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="RigCommander — Architecture & Operational Passport">
-  <meta name="twitter:description" content="C4 diagrams, Operational Ontology v2.2, 3-Tier AI Evaluator, Shared Context Lineage, Remote PWA & 108-test 0-dep suite.">
+  <meta name="twitter:title" content="RigCommander — Architecture & Security Passport">
+  <meta name="twitter:description" content="Local-first trust boundaries, 0-dep architecture, Operational Twin, hardened security guarantees & 125 automated tests.">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -183,7 +183,7 @@
 
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
       gap: 12px;
       margin: 22px 0 36px;
     }
@@ -392,6 +392,8 @@
       color: var(--dim);
     }
     footer a { color: var(--cyan); text-decoration: none; }
+    html[lang="ru"] [data-lang-block="en"] { display: none !important; }
+    html[lang="en"] [data-lang-block="ru"] { display: none !important; }
   </style>
 </head>
 <body>
@@ -426,7 +428,7 @@
       <div class="eyebrow" data-i18n="hero.eyebrow">Архитектурный и операционный паспорт системы</div>
       <h1 data-i18n="hero.title">RigCommander // Neural Command Deck</h1>
       <p class="hero-sub" data-i18n="hero.sub">
-        Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux &amp; JSONL). Объединяет адаптивный граф (Динам/Фикс + X-Ray у курсора), операционную онтологию v2.2, 3-уровневый AI Evaluator (Advisory-Only), граф общего контекста задач (`blockedOn` + `body` + `RECAP.md`), поддорожечный Гант + Handoff Flow, FinOps, Remote Mobile PWA и идемпотентный HITL write-back.
+        Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig и standalone tmux / JSONL). Объединяет адаптивную топологию, живой SSE-поток TMUX, операционный цифровой двойник, Гант и передачу задач, Git Worktree Radar, сводку смены, FinOps, защищённый Mobile PWA и идемпотентный HITL-контроль.
       </p>
     </div>
 
@@ -439,8 +441,8 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.arch.l">Архитектура</div>
-        <div class="kpi-val">Modular BFF</div>
-        <div class="kpi-note" data-i18n="kpi.arch.n">Local-First + Zero-Build ES Modules</div>
+        <div class="kpi-val">Local-First</div>
+        <div class="kpi-note" data-i18n="kpi.arch.n">Zero-Build ESM • SSE Push • 0% Idle CPU</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.deps.l">Зависимости</div>
@@ -448,19 +450,19 @@
         <div class="kpi-note">Node.js &ge; 18 ESM • MIT License</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label" data-i18n="kpi.ont.l">Онтология</div>
-        <div class="kpi-val" style="color:var(--lavender);">v2.2 Live</div>
-        <div class="kpi-note" data-i18n="kpi.ont.n">8 Objects • 10 Actions • 3-Tier Evaluator</div>
+        <div class="kpi-label" data-i18n="kpi.ont.l">Цифровой двойник</div>
+        <div class="kpi-val" style="color:var(--lavender);">Ontology v2.2</div>
+        <div class="kpi-note" data-i18n="kpi.ont.n">Objects • Guarded Actions • Advisory AI</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">108 / 108 PASS</div>
-        <div class="kpi-note" data-i18n="kpi.tests.n">node --test • 20 наборов (~1s)</div>
+        <div class="kpi-val" style="color:var(--emerald);">125 / 125 PASS</div>
+        <div class="kpi-note" data-i18n="kpi.tests.n">24 тестовых набора • ~1s локально</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
         <div class="kpi-val" style="color:var(--amber);">127.0.0.1 + QR</div>
-        <div class="kpi-note" data-i18n="kpi.sec.n">DECK_TOKEN • SHA-256 Cookie • 409 Idempotency</div>
+        <div class="kpi-note" data-i18n="kpi.sec.n">Local-Only • Signed Sessions • Idempotent</div>
       </div>
     </div>
 
@@ -486,45 +488,45 @@
 
           <!-- Operator -->
           <rect x="16" y="88" width="155" height="96" rx="10" fill="#0f172a" stroke="#00f0ff" stroke-width="1.6"/>
-          <text x="93" y="120" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="13" font-weight="800">👤 ОПЕРАТОР</text>
+          <text x="93" y="120" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="13" font-weight="800">👤 OPERATOR</text>
           <text x="93" y="140" text-anchor="middle" fill="#94a3b8" font-family="Plus Jakarta Sans" font-size="11">Desktop / Phone PWA</text>
-          <text x="93" y="159" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.5">Polling 4s • QR+PIN • TG</text>
+          <text x="93" y="159" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.5">SSE Push • QR+PIN • TG</text>
 
           <!-- Local Trust Boundary -->
           <rect x="225" y="14" width="718" height="196" rx="12" fill="rgba(15,23,42,0.55)" stroke="rgba(0,255,157,0.4)" stroke-dasharray="6 4" stroke-width="1.4"/>
-          <text x="242" y="34" fill="#00ff9d" font-family="JetBrains Mono" font-size="10.5" font-weight="700">ЛОКАЛЬНЫЙ КОНТУР ДОВЕРИЯ (127.0.0.1 + PAIRED HTTPS TUNNEL)</text>
+          <text x="242" y="34" fill="#00ff9d" font-family="JetBrains Mono" font-size="10.5" font-weight="700">LOCAL TRUST BOUNDARY (127.0.0.1 + PAIRED HTTPS TUNNEL)</text>
 
-          <!-- BFF Server -->
+          <!-- Local Bridge -->
           <rect x="246" y="54" width="210" height="70" rx="9" fill="#0b1325" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="351" y="78" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="12" font-weight="800">💠 server.mjs (:7440)</text>
-          <text x="351" y="96" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">BFF • FleetIntel(6) • SelfUpdate</text>
-          <text x="351" y="112" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.2">/api/telemetry /capture /remote</text>
+          <text x="351" y="78" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="12" font-weight="800">💠 Local Bridge (:7440)</text>
+          <text x="351" y="96" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">SSE Push • Fleet Advisor • FinOps</text>
+          <text x="351" y="112" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.2">0 npm deps • Out-of-band read</text>
 
           <!-- Security Gate -->
           <rect x="246" y="138" width="210" height="58" rx="9" fill="rgba(251,191,36,0.08)" stroke="#fbbf24" stroke-width="1.5"/>
           <text x="351" y="159" text-anchor="middle" fill="#fde68a" font-family="JetBrains Mono" font-size="11" font-weight="800">🛡️ Security &amp; Idempotency</text>
-          <text x="351" y="177" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.2">TOKEN • Cookie • X-Idempotency 409</text>
+          <text x="351" y="177" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.2">Session Auth • Origin • Dedupe</text>
 
           <!-- Downstream read-only -->
           <rect x="530" y="46" width="190" height="44" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="625" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">🧠 OpenRig :7437 / tmux</text>
+          <text x="625" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">🧠 OpenRig / tmux</text>
           <text x="625" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Native + Universal Discovery</text>
 
           <rect x="740" y="46" width="186" height="44" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="833" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">📂 JSONL + TSV + RECAP</text>
-          <text x="833" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Windowed 24h/7d offset read</text>
+          <text x="833" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">📂 Logs &amp; Git Worktrees</text>
+          <text x="833" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Incremental local read-only</text>
 
           <rect x="530" y="100" width="396" height="36" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="728" y="122" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="10.8" font-weight="700">🔧 rig CLI + Screen Classifier (ps, queue -a, parked, 72L capture)</text>
+          <text x="728" y="122" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="10.8" font-weight="700">🔧 CLI Telemetry &amp; Live Terminal State Classifier (Read-Only)</text>
 
           <!-- Downstream write-back -->
           <rect x="530" y="148" width="396" height="44" rx="8" fill="rgba(255,42,109,0.08)" stroke="#ff2a6d" stroke-width="1.3"/>
-          <text x="728" y="168" text-anchor="middle" fill="#fda4af" font-family="JetBrains Mono" font-size="11.5" font-weight="700">🖥️ tmux send-keys / rig send / Breaker C-c (Write-Back)</text>
-          <text x="728" y="183" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.5">ActionFlightGuard + ServerIdempotencyCache + ActionAuditLog</text>
+          <text x="728" y="168" text-anchor="middle" fill="#fda4af" font-family="JetBrains Mono" font-size="11.5" font-weight="700">🖥️ Guarded Terminal Write-Back &amp; Circuit-Breaker</text>
+          <text x="728" y="183" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.5">Allowlisted Keys • Double-Send Guard • Postcondition Audit</text>
 
           <!-- Vercel Cloud -->
           <rect x="225" y="224" width="718" height="48" rx="10" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.45)"/>
-          <text x="584" y="253" text-anchor="middle" fill="#e9d5ff" font-family="JetBrains Mono" font-size="11.2" font-weight="700">🌐 Vercel Static Hosting (public/) — Landing (/), Guide (/guide), Passport (/passport), Demo (/demo)</text>
+          <text x="584" y="253" text-anchor="middle" fill="#e9d5ff" font-family="JetBrains Mono" font-size="11.2" font-weight="700">🌐 Static Showcase — Landing (/), Guide (/guide), Passport (/passport), Offline Demo (/demo)</text>
 
           <!-- Arrows -->
           <line x1="171" y1="110" x2="244" y2="88" stroke="#38bdf8" stroke-width="1.6" marker-end="url(#arrC)"/>
@@ -537,111 +539,100 @@
       </div>
     </section>
 
-    <!-- SECTION 2: C4 COMPONENTS -->
+    <!-- SECTION 2: ARCHITECTURAL LAYERS (C4 LEVEL 2) -->
     <section id="components">
       <div class="sec-head">
-        <h2 data-i18n="s2.title">2. Модульная структура и карта зависимостей (C4 Level 3)</h2>
-        <span class="sec-tag">ZERO-BUILD ESM • 16 PURE DOMAIN MODULES</span>
+        <h2 data-i18n="s2.title">2. Архитектурные слои и инженерные принципы (C4 Level 2)</h2>
+        <span class="sec-tag">ZERO-BUILD ESM • 0 NPM DEPS</span>
       </div>
       <div class="grid-3">
         <div class="subcard">
-          <h3>🎨 Frontend (openrig/)</h3>
+          <h3>🎨 <span data-lang-block="ru">Пульт и ситуационная осведомлённость</span><span data-lang-block="en">Presentation &amp; Situational Awareness</span></h3>
           <ul>
-            <li><code>index.html</code> — 7 проекций UI (Адаптивный граф + X-Ray у курсора, Гант + Handoff Flow, Контекст задач, Инспектор + <code>SeatDiagnosis</code> + <code>AI Evaluator</code>) + in-place DOM patching</li>
-            <li><code>assets/styles/deck.css</code> — дизайн-токены Dark Cockpit, экспоненциальная термокривая, мобильный 5-tab док</li>
-            <li><code>assets/domain/*</code> (16 модулей + <code>index.js</code>) — чистые функции без DOM: <code>context-lineage</code>, <code>evaluator-model</code>, <code>topology-layout</code>, <code>gantt-model</code>, <code>action-guard</code>, <code>thermal</code>, <code>finops</code>, <code>prompt-parser</code>, <code>edge-state</code>, <code>i18n</code>, <code>preferences</code>, <code>qr</code>, <code>quest</code>, <code>semver</code>, <code>share-card</code>, <code>audio</code></li>
-            <li><code>assets/ontology/actions.js</code> — единый реестр <code>ACTION_DEFINITIONS</code>, <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></li>
-            <li><code>assets/ontology/snapshot.js</code> — <code>buildOntologySnapshot</code> + чистые селекторы и эксклюзивные пулы моделей</li>
+            <li><span data-lang-block="ru"><strong>Адаптивная топология и Гант:</strong> режимы Динам/Фикс, X-Ray магистрали у курсора, поддорожечный Гант задач и хронологический Handoff Flow.</span><span data-lang-block="en"><strong>Adaptive Topology &amp; Gantt:</strong> Dynamic/Fixed graph modes, cursor-anchored Route X-Ray, non-overlapping sub-lane Task Gantt, and Handoff Flow.</span></li>
+            <li><span data-lang-block="ru"><strong>Live TMUX и быстрый триаж:</strong> потоковый 80-строчный просмотр терминала через SSE, палитра команд <code>⌘K</code>, сводка смены и радар веток Git.</span><span data-lang-block="en"><strong>Live TMUX &amp; Fast Triage:</strong> SSE-streamed 80-line terminal inspection, <code>⌘K</code> Command Palette, Shift Catch-Up Digest, and Git Worktree Radar.</span></li>
+            <li><span data-lang-block="ru"><strong>Нулевая сборка:</strong> нативные ES-модули браузера, дизайн-токены Dark Cockpit и мобильный 5-кнопочный PWA-док без тяжёлых бандлов.</span><span data-lang-block="en"><strong>Zero-Build UI:</strong> native browser ES modules, Dark Cockpit design tokens, and a 5-tab mobile PWA dock with zero bundler overhead.</span></li>
           </ul>
         </div>
         <div class="subcard">
-          <h3>⚡ Backend BFF (openrig/)</h3>
+          <h3>⚡ <span data-lang-block="ru">Локальный мост и аналитическое ядро</span><span data-lang-block="en">Local Bridge &amp; Advisory Core</span></h3>
           <ul>
-            <li><code>server.mjs</code> — HTTP-роутер, Security Gate, <code>ServerIdempotencyCache</code>, <code>GET /api/queue/item</code>, <code>dispatchRawCommand</code> (<code>rig send --raw</code> + TUI-фолбэк), <code>classifyTerminalScreen()</code></li>
-            <li><code>lib/ai-evaluator/*</code> — 3-уровневый AI Evaluator (<code>expert-rules</code>, <code>redactor</code>, <code>s1-adapters</code> `/v1/systemone`, <code>s2-adapters</code>, <code>router</code>)</li>
-            <li><code>lib/fleet-intelligence/*</code> — Facade + RingBuffer + <strong>6 детекторов</strong> (<code>LiveBlocker</code>, <code>Bottleneck</code>, <code>ContextEntropy</code>, <code>Ceremony</code>, <code>ModelMismatch</code>, <code>ZombieSeat</code>) + per-rig кэш</li>
-            <li><code>lib/action-audit.mjs</code> — кольцевой <code>ActionAuditLog</code> + сверка <code>postcondition</code> (вкл. <code>nudge_queue</code> и <code>evalId</code>)</li>
-            <li><code>lib/remote-access.mjs</code>, <code>self-update.mjs</code>, <code>circuit-breaker.mjs</code>, <code>telegram-bridge.mjs</code>, <code>universal-discovery.mjs</code></li>
+            <li><span data-lang-block="ru"><strong>Внеполосный сбор данных:</strong> подключается к живому OpenRig либо автоматически находит обычные <code>tmux</code>-сессии и локальные транскрипты без правки кода агентов.</span><span data-lang-block="en"><strong>Out-of-Band Telemetry:</strong> connects to OpenRig or automatically discovers standalone <code>tmux</code> sessions and local transcripts with zero code instrumentation.</span></li>
+            <li><span data-lang-block="ru"><strong>SSE Push и FinOps:</strong> доставляет изменения флота и экранов по дельтам (0% CPU в простое) и считает экономику <code>SUB vs PAYG</code> в реальном времени.</span><span data-lang-block="en"><strong>SSE Push &amp; FinOps:</strong> streams fleet &amp; terminal deltas only on change (0% idle CPU) and tracks real-time <code>SUB vs PAYG</code> unit economics.</span></li>
+            <li><span data-lang-block="ru"><strong>Опциональный 3-Tier AI Evaluator:</strong> работает строго в режиме <em>Advisory-Only</em> — сначала детерминированные правила безопасности, затем быстрый классификатор и только при необходимости глубокая модель.</span><span data-lang-block="en"><strong>Opt-in 3-Tier AI Evaluator:</strong> strictly <em>Advisory-Only</em> — deterministic safety guardrails first, fast triage tier second, and deep reasoning only when escalated.</span></li>
           </ul>
         </div>
         <div class="subcard">
-          <h3>🚀 CLI, Доставка и Тесты</h3>
+          <h3>🛡️ <span data-lang-block="ru">Управляемый Write-Back и доставка</span><span data-lang-block="en">Guarded Write-Back &amp; Delivery</span></h3>
           <ul>
-            <li><code>bin/cli.mjs</code> — точка запуска <code>npx rig-commander</code> + супервизор автообновления (<code>exit 75</code>) + <code>--public-url</code> / <code>--universal</code></li>
-            <li><code>scripts/sync-public.mjs</code> — <code>npm run sync:public</code> (единый источник правды для Vercel <code>public/</code>)</li>
-            <li><code>landing/index.html</code>, <code>landing/guide.html</code>, <code>landing/passport.html</code> — публичные страницы EN/RU</li>
-            <li><code>tests/*.test.mjs</code> — <strong>20 тестовых наборов</strong> (108 проверок) на встроенном <code>node --test</code></li>
-            <li><code>openrig/docs/*</code> — <strong>ADR-0001..0012</strong>, C4, операционная онтология <strong>v2.2</strong>, <code>docs/USER_GUIDE.md</code></li>
+            <li><span data-lang-block="ru"><strong>Безопасные действия:</strong> каждая кнопка управления учитывает тип харнеса, проверяет предусловия, блокирует двойную отправку и сверяет фактический результат в журнале аудита.</span><span data-lang-block="en"><strong>Safe Controls:</strong> every operator action respects the agent runtime, checks preconditions, prevents duplicate sends, and verifies the post-action outcome automatically.</span></li>
+            <li><span data-lang-block="ru"><strong>Авто-тормоз и Telegram HITL:</strong> настраиваемые лимиты бюджета и циклов доработок QA плюс удалённое подтверждение критичных запросов с телефона.</span><span data-lang-block="en"><strong>Circuit-Breaker &amp; Telegram HITL:</strong> configurable spend/rework caps plus optional remote confirmation of critical prompts from your phone.</span></li>
+            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@latest</code>, встроенное безопасное самообновление и 125 автоматических тестов.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@latest</code> launch, built-in safe self-update, and 125 automated tests.</span></li>
           </ul>
         </div>
       </div>
 
       <div class="rules-bar">
         <div class="rule-item">
-          <b data-i18n="r1.t">1. Чистый слой domain &amp; ontology</b>
-          <span data-i18n="r1.d">Все 16 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.</span>
+          <b data-i18n="r1.t">1. Чистая доменная логика</b>
+          <span data-i18n="r1.d">Вся математика раскладки графа, Ганта, FinOps, онтологии и триажа отделена от DOM и покрыта автономными юнит-тестами.</span>
         </div>
         <div class="rule-item">
-          <b data-i18n="r2.t">2. Единый источник правды</b>
-          <span data-i18n="r2.d">Правки вносятся только в openrig/ и landing/; папка public/ генерируется командой npm run sync:public.</span>
+          <b data-i18n="r2.t">2. Local-First и ноль облака</b>
+          <span data-i18n="r2.d">Локальный сервер не требует облачных аккаунтов; логи, история смен и настройки остаются исключительно на вашей машине.</span>
         </div>
         <div class="rule-item">
-          <b data-i18n="r3.t">3. Неблокирующая аналитика</b>
-          <span data-i18n="r3.d">FleetIntelligenceEngine принимает снапшоты через setImmediate с изоляцией сбоев 6 детекторов и шумоочисткой.</span>
+          <b data-i18n="r3.t">3. Тишина в простое</b>
+          <span data-i18n="r3.d">Аналитика и детекторы работают внеполосно без блокировки UI, а потоки SSE уходят в нулевую нагрузку при отсутствии активных вкладок.</span>
         </div>
         <div class="rule-item">
           <b data-i18n="r4.t">4. Действия по причине и с защитой</b>
-          <span data-i18n="r4.d">Все UI-поверхности берут кнопки из actions.js; у здорового idle-узла 0 write-back кнопок; двойные клики гасятся ActionFlightGuard + 409.</span>
+          <span data-i18n="r4.d">У здорового свободного узла нет лишних кнопок вмешательства; любая команда защищена от дублей и проходит автоматическую сверку результата.</span>
         </div>
       </div>
     </section>
 
-    <!-- SECTION 3: OPERATIONAL ONTOLOGY -->
+    <!-- SECTION 3: OPERATIONAL TWIN -->
     <section id="ontology">
       <div class="sec-head">
-        <h2 data-i18n="s3.title">3. Операционная онтология v2.2 (Objects • Links • Actions)</h2>
+        <h2 data-i18n="s3.title">3. Операционный цифровой двойник (Ontology v2.2)</h2>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span class="sec-tag">PALANTIR-STYLE DIGITAL TWIN</span>
+          <span class="sec-tag">OBJECTS • LINKS • GUARDED ACTIONS</span>
           <a class="cta-btn" href="/demo?track=ontology" data-i18n="s3.tryDemo">▶ Открыть в демо</a>
         </div>
       </div>
       <div class="grid-2">
         <div class="subcard">
-          <h3 data-i18n="s3.obj.t">8 Типов объектов (Objects)</h3>
+          <h3 data-i18n="s3.obj.t">Ключевые сущности модели</h3>
           <table>
             <thead>
-              <tr><th>Object</th><th>PK</th><th data-i18n="s3.src">Источник / Роль</th></tr>
+              <tr><th data-i18n="s3.ent">Сущность</th><th data-i18n="s3.src">Операционная роль</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>Rig</code></td><td><code>rigId</code></td><td>OpenRig <code>ps</code> / <code>/api/rigs</code> / Universal Discovery</td></tr>
-              <tr><td><code>Seat</code></td><td><code>seatId</code></td><td>5-state FSM + <code>shellExited</code> + <code>activityTier</code> (12s гистерезис)</td></tr>
-              <tr><td><code>OccupantSession</code></td><td><code>sessionKey</code></td><td><code>ctxPct</code>, экспоненциальная термокривая, 24h/7d токены, <code>recapText</code></td></tr>
-              <tr><td><code>WorkChain</code></td><td><code>chainId</code></td><td><code>slice:</code> или union-find <code>q:</code>, <code>qaRounds</code>, <code>isBounceBack</code>, <code>HandoffFlow</code></td></tr>
-              <tr><td><code>QueueObligation</code></td><td><code>qitemId</code></td><td>Отрезок Ганта + <code>blockedOn</code> + <code>bodyContextRef</code> + <code>GET /api/queue/item</code></td></tr>
-              <tr><td><code>Situation</code></td><td><code>situationId</code></td><td>Единое исключение <code>P0–P3</code> + <code>remediation</code> + <code>SeatDiagnosis</code></td></tr>
-              <tr><td><code>ActionRecord</code></td><td><code>execId</code></td><td>Write-back след + <code>X-Idempotency-Key</code> + статус <code>postcondition</code></td></tr>
-              <tr><td><code>EvaluationRecord</code></td><td><code>evalId</code></td><td>Вердикт 3-Tier AI Evaluator (<code>L0 Veto → S1 → S2</code>, Advisory-Only)</td></tr>
+              <tr><td><code>Rig</code></td><td><span data-lang-block="ru">Команда агентов или локальная группа <code>tmux</code>-сессий</span><span data-lang-block="en">An autonomous agent team or discovered local <code>tmux</code> group</span></td></tr>
+              <tr><td><code>Seat</code></td><td><span data-lang-block="ru">Постоянная роль с живым состоянием (работает, ждёт ввода, запаркован, выход в shell, спящий)</span><span data-lang-block="en">Persistent role with live state (working, needs input, parked, shell exited, idle)</span></td></tr>
+              <tr><td><code>OccupantSession</code></td><td><span data-lang-block="ru">Текущий процесс модели: заполнение контекста, термокривая, расход токенов и сводка <code>RECAP</code></span><span data-lang-block="en">Active runtime process: context fill, thermal curve, token spend, and <code>RECAP</code> continuity</span></td></tr>
+              <tr><td><code>WorkChain</code></td><td><span data-lang-block="ru">Сквозной поток задачи от постановки до QA и приёмки, включая круги возвратов</span><span data-lang-block="en">End-to-end task flow from assignment to QA and acceptance, including rework rounds</span></td></tr>
+              <tr><td><code>QueueObligation</code></td><td><span data-lang-block="ru">Конверт очереди с зависимостями блокировок, артефактами и временным отрезком в Ганте</span><span data-lang-block="en">Durable queue item with blocker links, referenced specs/commits, and Gantt timeline span</span></td></tr>
+              <tr><td><code>Situation</code></td><td><span data-lang-block="ru">Приоритизированное исключение (<code>P0–P3</code>) с диагнозом и рекомендованным шагом</span><span data-lang-block="en">Prioritized exception (<code>P0–P3</code>) paired with diagnosis and safe remediation</span></td></tr>
+              <tr><td><code>ActionRecord</code></td><td><span data-lang-block="ru">Аудируемый след команды оператора и автоматическая проверка её эффекта</span><span data-lang-block="en">Auditable record of an operator action and its verified postcondition outcome</span></td></tr>
+              <tr><td><code>EvaluationRecord</code></td><td><span data-lang-block="ru">Независимая рекомендация <em>Advisory-Only</em> AI-оценщика с жёстким вето безопасности</span><span data-lang-block="en"><em>Advisory-Only</em> recommendation from the opt-in AI Evaluator with hard safety vetoes</span></td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="subcard">
-          <h3 data-i18n="s3.act.t">Реестр действий (10 Actions + Postconditions)</h3>
+          <h3 data-i18n="s3.act.t">Принципы безопасных действий</h3>
           <table>
             <thead>
-              <tr><th>Action</th><th data-i18n="s3.pre">Предусловие</th><th data-i18n="s3.post">Postcondition</th></tr>
+              <tr><th data-i18n="s3.cat">Категория действия</th><th data-i18n="s3.post">Гарантия и сверка результата</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>proceed_prompt</code></td><td><code>urgent &amp;&amp; !menu &amp;&amp; !Pi</code></td><td>Выход из <code>needs-input</code></td></tr>
-              <tr><td><code>answer_prompt_option</code></td><td>Распознано меню в tmux</td><td>Выход из <code>needs-input</code></td></tr>
-              <tr><td><code>cancel_prompt</code></td><td><code>urgent || menu</code></td><td>Закрытие меню (<code>Esc</code>)</td></tr>
-              <tr><td><code>interrupt_execution</code></td><td><code>working || urgent</code></td><td>Остановка (<code>C-c</code>)</td></tr>
-              <tr><td><code>compact_context</code></td><td><code>ctxPct &ge; 65 &amp;&amp; !Pi</code></td><td>Падение <code>ctxPct &ge; 10%</code></td></tr>
-              <tr><td><code>copy_restart_seat</code></td><td><code>ctxPct &ge; 65 &amp;&amp; Pi</code></td><td>Копирование <code>rig restart</code></td></tr>
-              <tr><td><code>wake_parked_seat</code></td><td><code>isParked &amp;&amp; !shellExited</code></td><td>Снятие <code>PARKED</code> / активность</td></tr>
-              <tr><td><code>nudge_queue</code></td><td>Затор/очередь на idle-промпте (<code>!shellExited</code>)</td><td>Переход в <code>working</code> / активность</td></tr>
-              <tr><td><code>copy_restart_shell</code></td><td><code>shellExited === true</code></td><td>Копирование <code>rig restart</code> (вместо <code>Enter</code>)</td></tr>
-              <tr><td><code>open_gantt_slice</code></td><td>Контекстный слайс / задержка</td><td>Фокус слайса в Ганте / <code>Handoff Flow</code></td></tr>
+              <tr><td><strong><span data-lang-block="ru">HITL-ответы в терминале</span><span data-lang-block="en">Terminal HITL Approvals</span></strong></td><td><span data-lang-block="ru">Показываются только при реальном запросе подтверждения; аудит подтверждает выход из состояния ожидания</span><span data-lang-block="en">Shown only on active confirmation prompts; audit verifies the seat exits waiting state</span></td></tr>
+              <tr><td><strong><span data-lang-block="ru">Сжатие или ротация контекста</span><span data-lang-block="en">Context Compaction / Rotation</span></strong></td><td><span data-lang-block="ru">Отправляет <code>/compact</code> на поддерживаемых рантаймах с проверкой снижения контекста либо предлагает безопасный перезапуск</span><span data-lang-block="en">Dispatches <code>/compact</code> on supported harnesses with drop verification, or suggests safe seat rotation</span></td></tr>
+              <tr><td><strong><span data-lang-block="ru">Пробуждение и разбор очереди</span><span data-lang-block="en">Wake &amp; Queue Nudge</span></strong></td><td><span data-lang-block="ru">Различает запаркованный узел, простой на пустом промпте и аварийный выход в shell (никогда не шлёт команды в мёртвый shell)</span><span data-lang-block="en">Distinguishes parked seats, idle prompts, and crashed bare shells (never sends keystrokes to a dead shell)</span></td></tr>
+              <tr><td><strong><span data-lang-block="ru">Аварийная остановка</span><span data-lang-block="en">Safe Interrupt</span></strong></td><td><span data-lang-block="ru">Доступна только для активных узлов; дубликаты и гонки кликов блокируются на клиенте и сервере</span><span data-lang-block="en">Enabled only on active seats; accidental double-sends and races are blocked end-to-end</span></td></tr>
+              <tr><td><strong><span data-lang-block="ru">Навигация и расследование</span><span data-lang-block="en">Inspection &amp; Navigation</span></strong></td><td><span data-lang-block="ru">Мгновенный переход к проблемному слайсу в Ганте, Handoff Flow, диффу Git или 80-строчному TMUX без модификации состояния</span><span data-lang-block="en">Read-only drill-down into Gantt slices, Handoff Flow, Git diffs, or 80-line live TMUX</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -651,102 +642,107 @@
     <!-- SECTION 4: SECURITY -->
     <section id="security">
       <div class="sec-head">
-        <h2 data-i18n="s4.title">4. Безопасность и эксплуатационная устойчивость</h2>
+        <h2 data-i18n="s4.title">4. Гарантии безопасности и приватности</h2>
         <span class="sec-tag">HARDENED LOCALHOST + PAIRED REMOTE PWA</span>
       </div>
       <table>
         <thead>
-          <tr><th data-i18n="s4.c1">Контроль</th><th data-i18n="s4.c2">Механизм в коде</th><th data-i18n="s4.c3">Статус</th></tr>
+          <tr><th data-i18n="s4.c1">Контроль</th><th data-i18n="s4.c2">Гарантия безопасности</th><th data-i18n="s4.c3">Статус</th></tr>
         </thead>
         <tbody>
           <tr>
-            <td><b>Loopback-изоляция</b></td>
-            <td><code>server.listen(PORT, '127.0.0.1')</code> — сервер недоступен из локальной сети по умолчанию</td>
+            <td><b><span data-lang-block="ru">Изоляция на localhost</span><span data-lang-block="en">Loopback Isolation</span></b></td>
+            <td><span data-lang-block="ru">По умолчанию сервер слушает только <code>127.0.0.1</code> и недоступен из локальной сети или интернета</span><span data-lang-block="en">Binds strictly to <code>127.0.0.1</code> by default — unreachable from LAN or external networks</span></td>
             <td><span class="badge-ok">ACTIVE</span></td>
           </tr>
           <tr>
-            <td><b>Аутентификация Write-Back</b></td>
-            <td>Per-process <code>DECK_TOKEN</code> (24 байта), <code>crypto.timingSafeEqual</code>, проверка <code>Origin</code> и <code>application/json</code></td>
+            <td><b><span data-lang-block="ru">Авторизация Write-Back</span><span data-lang-block="en">Authenticated Write-Back</span></b></td>
+            <td><span data-lang-block="ru">Управляющие запросы защищены уникальным сессионным токеном процесса, проверкой <code>Origin</code> и строгим типом содержимого</span><span data-lang-block="en">Control endpoints enforce per-process session tokens, strict <code>Origin</code> checks, and JSON content verification</span></td>
             <td><span class="badge-ok">ACTIVE</span></td>
           </tr>
           <tr>
-            <td><b>Защита Remote Mobile PWA</b></td>
-            <td>192-bit QR + 8-симв. PIN (wipe после 5 ошибок), <code>HttpOnly; Secure</code> 30d cookie, SHA-256 хэши (<code>0600</code>), <code>401</code> без пары, origin pinning</td>
+            <td><b><span data-lang-block="ru">Защита Remote Mobile PWA</span><span data-lang-block="en">Paired Remote Mobile PWA</span></b></td>
+            <td><span data-lang-block="ru">Доступ с телефона открывается только по одноразовому QR + PIN с защитой от перебора, <code>HttpOnly; Secure</code> сессией, хэшированным локальным хранилищем (<code>0600</code>) и отзывом в 1 клик</span><span data-lang-block="en">Remote phone access requires single-use QR + PIN pairing with brute-force lockout, <code>HttpOnly; Secure</code> cookies, hashed local storage (<code>0600</code>), and 1-click revocation</span></td>
             <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
-            <td><b>Идемпотентность управления</b></td>
-            <td>Клиентский <code>ActionFlightGuard</code> (per-seat lock + cooldown) + серверный <code>ServerIdempotencyCache</code> (<code>X-Idempotency-Key</code> 30s replay и <code>409</code> dedupe)</td>
+            <td><b><span data-lang-block="ru">Идемпотентность управления</span><span data-lang-block="en">Idempotent Command Dispatch</span></b></td>
+            <td><span data-lang-block="ru">Сквозная защита от двойных кликов и повторной отправки одинаковых команд в терминал на клиенте и сервере</span><span data-lang-block="en">End-to-end client &amp; server deduplication prevents duplicate terminal keystrokes and race conditions</span></td>
             <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
-            <td><b>Защита от flag injection (tmux)</b></td>
-            <td><code>parseAllowedTmuxKeys</code> — строгий allowlist клавиш, блокировка флагов <code>-X / -l</code></td>
+            <td><b><span data-lang-block="ru">Безопасность терминала и вето</span><span data-lang-block="en">Terminal Allowlist &amp; Safety Vetoes</span></b></td>
+            <td><span data-lang-block="ru">Строгий белый список управляющих клавиш <code>tmux</code> (защита от инъекции флагов) и неперебиваемые правила безопасности для опасных команд</span><span data-lang-block="en">Strict terminal key allowlisting (blocks flag injection) plus non-overridable safety vetoes for destructive commands</span></td>
             <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
-            <td><b>Защита статики (Path Traversal)</b></td>
-            <td><code>resolveSafeStaticPath</code> — проверка префикса <code>__dirname</code>, запрет <code>..</code>, <code>\0</code>, dotfiles и <code>.mjs</code></td>
+            <td><b><span data-lang-block="ru">Приватность и редакция секретов</span><span data-lang-block="en">Privacy &amp; Secret Redaction</span></b></td>
+            <td><span data-lang-block="ru">Ключи, токены, приватные сертификаты и локальные пути автоматически маскируются до записи истории смен и до любых опциональных вызовов AI-оценщика</span><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are redacted before persisting shift history or invoking any optional AI Evaluator</span></td>
             <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
-            <td><b>Защита от XSS в UI</b></td>
-            <td>Полное <code>escapeHtml</code> (включая <code>"</code> и <code>'</code>) + единый диспетчер <code>dispatchOntologyAction(this)</code> через <code>data-*</code></td>
-            <td><span class="badge-ok">ACTIVE</span></td>
-          </tr>
-          <tr>
-            <td><b>Защита памяти и диска</b></td>
-            <td>Лимит тела <code>64KB</code> (<code>413</code>), <code>boundedMapSet</code> на кэшах, оконное инкрементальное чтение JSONL по <code>offset</code></td>
+            <td><b><span data-lang-block="ru">Защита статики, XSS и ресурсов</span><span data-lang-block="en">Static Isolation, XSS &amp; Resource Bounds</span></b></td>
+            <td><span data-lang-block="ru">Блокировка выхода за пределы директории и чтения серверных скриптов, экранирование HTML, ограниченные кэши и лимиты на размер запросов и число SSE-клиентов</span><span data-lang-block="en">Path-traversal protection, full HTML escaping, bounded in-memory caches, and strict caps on payload size and concurrent SSE streams</span></td>
             <td><span class="badge-sec">VERIFIED</span></td>
           </tr>
         </tbody>
       </table>
     </section>
 
-    <!-- SECTION 5: QUALITY & TESTS -->
+    <!-- SECTION 5: QUALITY & VERIFICATION -->
     <section id="quality">
       <div class="sec-head">
-        <h2 data-i18n="s5.title">5. Верификация, тесты и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 108/108</span>
+        <h2 data-i18n="s5.title">5. Верификация, тестирование и запуск</h2>
+        <span class="sec-tag">NODE --TEST • 125/125 PASS</span>
       </div>
       <table>
         <thead>
-          <tr><th>Test Suite (20)</th><th data-i18n="s5.cov">Покрытие</th><th>Tests</th></tr>
+          <tr><th data-i18n="s5.dom">Контур проверки</th><th data-i18n="s5.cov">Что верифицируется автоматически</th><th data-i18n="s5.st">Статус</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>tests/ai-evaluator.test.mjs</code></td><td>3-уровневый AI Evaluator (<code>L0 Heuristic+Expert ➔ S1 /v1/systemone Jev/Laya/Von, GLiClass-v3, EmbeddingGemma ➔ S2 Gemini 4 Hydrogen/GLM-5.3/Qwen3.8</code>), <code>Expert Veto</code>, <code>SecretRedactor</code>, <code>H_norm</code> энтропия, grounding и <code>0600</code> конфиг</td><td><span class="badge-ok">10 PASS</span></td></tr>
-          <tr><td><code>tests/context-lineage.test.mjs</code></td><td><code>openrig/assets/domain/context-lineage.js</code>: разбор тегов <code>blockedOn / project / mission / parent / gate / body-context</code>, извлечение артефактов (спеки, ADR, коммиты), граф предков/блокеров, детектор дрейфа контекст-паков и матчинг <code>decisions</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/server.test.mjs</code></td><td><code>buildGanttItems</code>, <code>isGanttSystemNoise</code>, чанковый JSONL (&gt;2 МБ), <code>runWithConcurrency</code>, <code>computeHistoryFingerprint</code>, <code>boundedMapSet</code>, <code>resolveSafeStaticPath</code>, <code>parseAllowedTmuxKeys</code>, <code>dispatchRawCommand</code>, <code>fetchQueueItemContextDetail</code>, PWA-статика, <code>computeHistoryStats</code></td><td><span class="badge-ok">14 PASS</span></td></tr>
-          <tr><td><code>tests/ontology-actions.test.mjs</code></td><td>Все предусловия <code>ACTION_DEFINITIONS</code>, 0 кнопок для <code>idle</code>, дедупликация меню, защита Pi и <code>shellExited</code>, канонический <code>buildNudgeQueueAction</code> и <code>resolveActionFromFinding</code></td><td><span class="badge-ok">11 PASS</span></td></tr>
-          <tr><td><code>tests/action-audit.test.mjs</code></td><td><code>ActionAuditLog</code>, <code>inferActionId</code>, сверка <code>postcondition</code> (<code>compact</code>, <code>prompt</code>, <code>wake</code>, <code>nudge_queue</code>, <code>interrupt</code>), таймаут 45с, кольцевой буфер</td><td><span class="badge-ok">5 PASS</span></td></tr>
-          <tr><td><code>tests/ontology-snapshot.test.mjs</code></td><td><code>shouldIncludeLiveNode</code>, сброс <code>ctxHistory</code> при свапе, <code>buildOntologySnapshot</code>, чистые селекторы и эксклюзивные пулы <code>computeModelPools</code></td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/fleet-intelligence.test.mjs</code></td><td><code>FleetIntelligenceEngine</code> (<code>recentQueue</code>, slim <code>TelemetryRingBuffer</code>, per-rig кэш, 6 детекторов), шумоочистка <code>BottleneckDetector</code> &amp; <code>remediation</code>, <code>classifyTerminalScreen</code>, экспоненциальная термокривая <code>thermal.js</code>, <code>LiveBlocker</code>, <code>Ceremony</code>, <code>DECK_I18N</code> EN/RU паритет</td><td><span class="badge-ok">16 PASS</span></td></tr>
-          <tr><td><code>tests/topology-layout.test.mjs</code></td><td><code>openrig/assets/domain/topology-layout.js</code>: классификация <code>activityTier</code> с 12с гистерезисом, режим <code>Dynamic</code> (clearance &ge;130px), режим <code>Fixed</code>, крайние размеры 0..17 узлов и <code>computeAnchoredPopoverRect</code> (X-Ray у курсора)</td><td><span class="badge-ok">5 PASS</span></td></tr>
-          <tr><td><code>tests/gantt-model.test.mjs</code></td><td><code>openrig/assets/domain/gantt-model.js</code>: фильтр шума <code>isGanttItemNoise</code>, поддорожечная упаковка <code>packLaneIntervals</code> без перекрытий, <code>Wait vs Work</code> KPI, <code>By Agent</code> / <code>By Slice</code> и <code>Handoff Flow</code></td><td><span class="badge-ok">3 PASS</span></td></tr>
-          <tr><td><code>tests/universal-discovery.test.mjs</code></td><td>Универсальное автообнаружение Claude Code / Codex JSONL + <code>tmux</code> панелей (без OpenRig), HITL-детектор и валидация target</td><td><span class="badge-ok">3 PASS</span></td></tr>
-          <tr><td><code>tests/circuit-breaker.test.mjs</code></td><td><code>BudgetCircuitBreaker</code>: лимиты сессии и сиденья, burn-rate <code>$/ч</code>, QA bounce-back петли, режим <code>auto_stop (C-c)</code>, fleet cooldown и сброс</td><td><span class="badge-ok">4 PASS</span></td></tr>
-          <tr><td><code>tests/telegram-bridge.test.mjs</code></td><td><code>TelegramHitlBridge</code>: inline-клавиатура, одноразовые nonces, блокировка чужих чатов, команды <code>/status /budget /stop /arm_breaker</code></td><td><span class="badge-ok">2 PASS</span></td></tr>
-          <tr><td><code>tests/quest.test.mjs</code></td><td><code>openrig/assets/domain/quest.js</code>: конечный автомат 10-сек мини-квеста (идемпотентность, прогресс 3 шагов, gating live vs demo/tracks, сброс)</td><td><span class="badge-ok">3 PASS</span></td></tr>
-          <tr><td><code>tests/preferences.test.mjs</code></td><td><code>openrig/assets/domain/preferences.js</code>: сохранение и санитизация всех настроек UI (вкл. <code>graphLayout</code>) в <code>localStorage</code>, миграция legacy-ключей, fallback рига</td><td><span class="badge-ok">3 PASS</span></td></tr>
-          <tr><td><code>tests/finops.test.mjs</code></td><td><code>openrig/assets/domain/finops.js</code> + оконный JSONL-парсер: амортизация подписок <code>24ч/7д/сессия</code>, сравнение <code>SUB vs PAYG</code>, ROI и рекомендации</td><td><span class="badge-ok">3 PASS</span></td></tr>
-          <tr><td><code>tests/share-card.test.mjs</code></td><td><code>openrig/assets/domain/share-card.js</code>: генерация <code>1200×630</code> PNG Share Card (мини-Гант, <code>SUB vs API</code> ROI), режим анонимизации и XML-экранирование</td><td><span class="badge-ok">3 PASS</span></td></tr>
-          <tr><td><code>tests/qr.test.mjs</code></td><td><code>openrig/assets/domain/qr.js</code>: локальный генератор ISO 18004 QR-матриц и crisp SVG без внешних зависимостей и с защитой от переполнения</td><td><span class="badge-ok">2 PASS</span></td></tr>
-          <tr><td><code>tests/remote-access.test.mjs</code></td><td><code>openrig/lib/remote-access.mjs</code>: динамический Live <code>manifest.webmanifest</code> (<code>/</code>), QR + 8-симв. PIN pairing, <code>HttpOnly; Secure</code> cookie, защита от перебора, origin pinning и отзыв устройств</td><td><span class="badge-ok">5 PASS</span></td></tr>
-          <tr><td><code>tests/self-update.test.mjs</code></td><td><code>openrig/assets/domain/semver.js</code> + <code>openrig/lib/self-update.mjs</code>: SemVer-сравнение, опрос <code>npmjs.org</code> с TTL, детектор режима (<code>npm/npx/git</code>) и безопасный <code>applyUpdate</code> + рестарт</td><td><span class="badge-ok">5 PASS</span></td></tr>
-          <tr><td><code>tests/action-guard.test.mjs</code></td><td><code>openrig/assets/domain/action-guard.js</code>: примитив <code>ActionFlightGuard</code> (защита контролов от двойных кликов и конкурентных команд на узел) + серверный <code>ServerIdempotencyCache</code> (<code>X-Idempotency-Key</code> и 409 dedupe)</td><td><span class="badge-ok">3 PASS</span></td></tr>
+          <tr>
+            <td><b><span data-lang-block="ru">Локальный мост, SSE Push и Discovery</span><span data-lang-block="en">Local Bridge, SSE Push &amp; Discovery</span></b></td>
+            <td><span data-lang-block="ru">Потоковая доставка дельт телеметрии и экранов TMUX, 0% CPU в простое, автообнаружение OpenRig и standalone <code>tmux</code>/JSONL, инкрементальное чтение больших логов</span><span data-lang-block="en">Delta SSE telemetry &amp; deduplicated Live TMUX streaming, 0% idle CPU, OpenRig + standalone <code>tmux</code>/JSONL discovery, chunked large-log reading</span></td>
+            <td><span class="badge-ok">PASS</span></td>
+          </tr>
+          <tr>
+            <td><b><span data-lang-block="ru">Безопасность, Remote PWA и Идемпотентность</span><span data-lang-block="en">Security, Remote PWA &amp; Idempotency</span></b></td>
+            <td><span data-lang-block="ru">QR + PIN спаривание, блокировка перебора, отзыв сессий, защита от двойного клика, allowlist клавиш <code>tmux</code>, защита статики и безопасное самообновление</span><span data-lang-block="en">QR + PIN pairing, brute-force lockout, revocation, double-send protection, terminal key allowlist, path-traversal guard, and safe self-update</span></td>
+            <td><span class="badge-ok">PASS</span></td>
+          </tr>
+          <tr>
+            <td><b><span data-lang-block="ru">Цифровой двойник, Действия и Аудит</span><span data-lang-block="en">Operational Twin, Actions &amp; Audit</span></b></td>
+            <td><span data-lang-block="ru">Предусловия кнопок управления, отсутствие лишних контролов на здоровых idle-узлах, защита мёртвых shell-сессий и автоматическая сверка postcondition</span><span data-lang-block="en">Action preconditions, zero noise on healthy idle seats, bare-shell protection, and automatic postcondition audit verification</span></td>
+            <td><span class="badge-ok">PASS</span></td>
+          </tr>
+          <tr>
+            <td><b><span data-lang-block="ru">Аналитика флота, FinOps, Git и Смены</span><span data-lang-block="en">Fleet Advisor, FinOps, Git &amp; Shifts</span></b></td>
+            <td><span data-lang-block="ru">Поиск узких мест и возвратов QA, расчёт <code>SUB vs PAYG</code>, радар веток и конфликтов Git worktree, журнал смен с редакцией секретов, <code>100%</code> паритет EN/RU</span><span data-lang-block="en">Bottleneck &amp; QA rework detection, <code>SUB vs PAYG</code> economics, Git worktree &amp; overlap conflict radar, redacted shift history digest, and 100% EN/RU parity</span></td>
+            <td><span class="badge-ok">PASS</span></td>
+          </tr>
+          <tr>
+            <td><b><span data-lang-block="ru">Топология, Гант, Контекст и Палитра ⌘K</span><span data-lang-block="en">Topology, Gantt, Lineage &amp; ⌘K Palette</span></b></td>
+            <td><span data-lang-block="ru">Адаптивная анти-коллинеарная раскладка графа (0–17+ узлов), поддорожечный Гант без наложений, граф зависимостей задач, нечёткий поиск и безопасный триаж очереди</span><span data-lang-block="en">Anti-collinear Dynamic/Fixed layout (0–17+ seats), non-overlapping sub-lane Gantt, cross-task context lineage, fuzzy palette search, and safe queue triage</span></td>
+            <td><span class="badge-ok">PASS</span></td>
+          </tr>
+          <tr>
+            <td><b><span data-lang-block="ru">Guardrails, Telegram и Advisory AI</span><span data-lang-block="en">Guardrails, Telegram &amp; Advisory AI</span></b></td>
+            <td><span data-lang-block="ru">Авто-тормоз бюджета и петель QA, авторизация Telegram HITL, редакция секретов и неперебиваемые правила безопасности в AI-оценщике</span><span data-lang-block="en">Budget &amp; rework circuit-breaker, Telegram chat allowlist, secret redaction, and hard safety veto supremacy in the Advisory AI Evaluator</span></td>
+            <td><span class="badge-ok">PASS</span></td>
+          </tr>
         </tbody>
       </table>
 
       <div class="cmd-strip">
-        <div class="cmd-box"><span>Запуск локальной деки (:7440)</span>npm start</div>
-        <div class="cmd-box"><span>Прогон всех 108 юнит-тестов</span>npm test</div>
-        <div class="cmd-box"><span>Синхронизация артефактов для Vercel</span>npm run sync:public</div>
+        <div class="cmd-box"><span data-i18n="cmd.npx">Мгновенный запуск без установки</span>npx rig-commander@latest</div>
+        <div class="cmd-box"><span data-i18n="cmd.start">Локальный запуск из репозитория (:7440)</span>npm start</div>
+        <div class="cmd-box"><span data-i18n="cmd.test">Прогон всех 125 автотестов (~1s)</span>npm test</div>
       </div>
     </section>
   </main>
 
   <footer>
-    <span>💠 RigCommander // Operational Passport v3.2 (MIT Open Source)</span>
+    <span>💠 RigCommander // Operational &amp; Security Passport v3.2 (MIT Open Source)</span>
     <span>
       <a href="/">Landing</a> · <a href="/guide">User Guide</a> · <a href="/guide#openrig-playbook">OpenRig Playbook</a> · <a href="/demo">Live Demo</a> · <a href="/demo?track=tour">SA-DSS Tour</a> · <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
     </span>
@@ -757,96 +753,108 @@
       ru: {
         badge: 'PASSPORT v3.2',
         'nav.context': 'C4 Контекст',
-        'nav.components': 'Модули',
-        'nav.ontology': 'Онтология',
+        'nav.components': 'Архитектура',
+        'nav.ontology': 'Модель',
         'nav.security': 'Безопасность',
-        'nav.quality': 'Тесты',
+        'nav.quality': 'Верификация',
         'nav.guide': 'Гайд',
         'nav.demo': '▶ Live Demo',
         'hero.eyebrow': 'Архитектурный и операционный паспорт системы',
         'hero.title': 'RigCommander // Neural Command Deck',
-        'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig / Universal tmux & JSONL). Объединяет адаптивный граф (Динам/Фикс + X-Ray у курсора), операционную онтологию v2.2, 3-уровневый AI Evaluator (Advisory-Only), граф общего контекста задач (blockedOn + body + RECAP.md), поддорожечный Гант + Handoff Flow, FinOps, Remote Mobile PWA и идемпотентный HITL write-back.',
+        'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig и standalone tmux / JSONL). Объединяет адаптивную топологию, живой SSE-поток TMUX, операционный цифровой двойник, Гант и передачу задач, Git Worktree Radar, сводку смены, FinOps, защищённый Mobile PWA и идемпотентный HITL-контроль.',
         'kpi.class.l': 'Класс системы',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Архитектура',
-        'kpi.arch.n': 'Local-First + Zero-Build ES Modules',
+        'kpi.arch.n': 'Zero-Build ESM • SSE Push • 0% Idle CPU',
         'kpi.deps.l': 'Зависимости',
-        'kpi.ont.l': 'Онтология',
-        'kpi.ont.n': '8 Objects • 10 Actions • 3-Tier Evaluator',
+        'kpi.ont.l': 'Цифровой двойник',
+        'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',
         'kpi.tests.l': 'Автотесты',
-        'kpi.tests.n': 'node --test • 20 наборов (~1s)',
+        'kpi.tests.n': '24 тестовых набора • ~1s локально',
         'kpi.sec.l': 'Граница доверия',
-        'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
+        'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
         's1.title': '1. Контекст системы и границы доверия (C4 Level 1)',
-        's2.title': '2. Модульная структура и карта зависимостей (C4 Level 3)',
-        'r1.t': '1. Чистый слой domain & ontology',
-        'r1.d': 'Все 16 модулей assets/domain/ и слой assets/ontology/ не обращаются к DOM/window и импортируются напрямую в node --test.',
-        'r2.t': '2. Единый источник правды',
-        'r2.d': 'Правки вносятся только в openrig/ и landing/; папка public/ генерируется командой npm run sync:public.',
-        'r3.t': '3. Неблокирующая аналитика',
-        'r3.d': 'FleetIntelligenceEngine принимает снапшоты через setImmediate с изоляцией сбоев 6 детекторов и шумоочисткой.',
+        's2.title': '2. Архитектурные слои и инженерные принципы (C4 Level 2)',
+        'r1.t': '1. Чистая доменная логика',
+        'r1.d': 'Вся математика раскладки графа, Ганта, FinOps, онтологии и триажа отделена от DOM и покрыта автономными юнит-тестами.',
+        'r2.t': '2. Local-First и ноль облака',
+        'r2.d': 'Локальный сервер не требует облачных аккаунтов; логи, история смен и настройки остаются исключительно на вашей машине.',
+        'r3.t': '3. Тишина в простое',
+        'r3.d': 'Аналитика и детекторы работают внеполосно без блокировки UI, а потоки SSE уходят в нулевую нагрузку при отсутствии активных вкладок.',
         'r4.t': '4. Действия по причине и с защитой',
-        'r4.d': 'Все UI-поверхности берут кнопки из actions.js; у здорового idle-узла 0 write-back кнопок; двойные клики гасятся ActionFlightGuard + 409.',
-        's3.title': '3. Операционная онтология v2.2 (Objects • Links • Actions)',
+        'r4.d': 'У здорового свободного узла нет лишних кнопок вмешательства; любая команда защищена от дублей и проходит автоматическую сверку результата.',
+        's3.title': '3. Операционный цифровой двойник (Ontology v2.2)',
         's3.tryDemo': '▶ Открыть в демо',
-        's3.obj.t': '8 Типов объектов (Objects)',
-        's3.src': 'Источник / Роль',
-        's3.act.t': 'Реестр действий (10 Actions + Postconditions)',
-        's3.pre': 'Предусловие',
-        's3.post': 'Postcondition',
-        's4.title': '4. Безопасность и эксплуатационная устойчивость',
+        's3.obj.t': 'Ключевые сущности модели',
+        's3.ent': 'Сущность',
+        's3.src': 'Операционная роль',
+        's3.act.t': 'Принципы безопасных действий',
+        's3.cat': 'Категория действия',
+        's3.post': 'Гарантия и сверка результата',
+        's4.title': '4. Гарантии безопасности и приватности',
         's4.c1': 'Контроль',
-        's4.c2': 'Механизм в коде',
+        's4.c2': 'Гарантия безопасности',
         's4.c3': 'Статус',
-        's5.title': '5. Верификация, тесты и запуск',
-        's5.cov': 'Покрытие'
+        's5.title': '5. Верификация, тестирование и запуск',
+        's5.dom': 'Контур проверки',
+        's5.cov': 'Что верифицируется автоматически',
+        's5.st': 'Статус',
+        'cmd.npx': 'Мгновенный запуск без установки',
+        'cmd.start': 'Локальный запуск из репозитория (:7440)',
+        'cmd.test': 'Прогон всех 125 автотестов (~1s)'
       },
       en: {
         badge: 'PASSPORT v3.2',
         'nav.context': 'C4 Context',
-        'nav.components': 'Modules',
-        'nav.ontology': 'Ontology',
+        'nav.components': 'Architecture',
+        'nav.ontology': 'Model',
         'nav.security': 'Security',
-        'nav.quality': 'Tests',
+        'nav.quality': 'Verification',
         'nav.guide': 'User Guide',
         'nav.demo': '▶ Live Demo',
-        'hero.eyebrow': 'Architectural & Operational System Passport',
+        'hero.eyebrow': 'Architectural & Security System Passport',
         'hero.title': 'RigCommander // Neural Command Deck',
-        'hero.sub': 'Local-first DSS SA Mission Control for autonomous AI coding fleets (OpenRig / Universal tmux & JSONL). Unifies adaptive Dynamic/Fixed topology with anchored Route X-Ray, Operational Ontology v2.2, 3-Tier Advisory-Only AI Evaluator, Shared Context Lineage (blockedOn + full body + RECAP.md), sub-lane Task Gantt + Handoff Flow, FinOps tracking, paired Live Mobile PWA, and idempotent HITL write-back.',
+        'hero.sub': 'Local-first DSS SA Mission Control for autonomous AI coding fleets (OpenRig and standalone tmux / JSONL). Unifies adaptive topology, live TMUX SSE streaming, an operational digital twin, Task Gantt & Handoff Flow, Git Worktree Radar, Shift Catch-Up Digest, FinOps, paired Mobile PWA, and idempotent HITL controls.',
         'kpi.class.l': 'System Class',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Architecture',
-        'kpi.arch.n': 'Local-First + Zero-Build ES Modules',
+        'kpi.arch.n': 'Zero-Build ESM • SSE Push • 0% Idle CPU',
         'kpi.deps.l': 'Dependencies',
-        'kpi.ont.l': 'Ontology',
-        'kpi.ont.n': '8 Objects • 10 Actions • 3-Tier Evaluator',
+        'kpi.ont.l': 'Digital Twin',
+        'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',
         'kpi.tests.l': 'Automated Tests',
-        'kpi.tests.n': 'node --test • 20 suites (~1s)',
+        'kpi.tests.n': '24 test suites • ~1s locally',
         'kpi.sec.l': 'Trust Boundary',
-        'kpi.sec.n': 'DECK_TOKEN • SHA-256 Cookie • 409 Idempotency',
+        'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
         's1.title': '1. System Context & Trust Boundaries (C4 Level 1)',
-        's2.title': '2. Modular Structure & Dependency Rules (C4 Level 3)',
-        'r1.t': '1. Pure domain & ontology layer',
-        'r1.d': 'All 16 modules in assets/domain/ and assets/ontology/ have zero DOM coupling and are imported directly by node --test.',
-        'r2.t': '2. Single source of truth',
-        'r2.d': 'Edits happen only in openrig/ and landing/; public/ is generated deterministically via npm run sync:public.',
-        'r3.t': '3. Non-blocking analytics',
-        'r3.d': 'FleetIntelligenceEngine ingests snapshots via setImmediate with fault isolation across 6 noise-filtered detectors.',
-        'r4.t': '4. Reason-driven, idempotent actions',
-        'r4.d': 'All UI surfaces source buttons from actions.js; healthy idle seats render 0 write-back buttons; double-sends are blocked by ActionFlightGuard + 409.',
-        's3.title': '3. Operational Ontology v2.2 (Objects • Links • Actions)',
+        's2.title': '2. Architectural Layers & Engineering Principles (C4 Level 2)',
+        'r1.t': '1. Pure domain logic',
+        'r1.d': 'Graph layout, Gantt packing, FinOps, ontology, and queue triage are cleanly decoupled from DOM state and verified by standalone unit tests.',
+        'r2.t': '2. Local-First, zero cloud',
+        'r2.d': 'No cloud accounts or remote telemetry — logs, shift history, and preferences stay strictly on your own machine.',
+        'r3.t': '3. Zero idle overhead',
+        'r3.d': 'Out-of-band analytics never block the UI, and SSE streams drop to zero polling load whenever no active client tab is open.',
+        'r4.t': '4. Reason-driven, guarded controls',
+        'r4.d': 'Healthy idle seats display zero write-back clutter; every operator action is deduplicated and verified against its expected postcondition.',
+        's3.title': '3. Operational Digital Twin (Ontology v2.2)',
         's3.tryDemo': '▶ Open in Demo',
-        's3.obj.t': '8 Object Types',
-        's3.src': 'Source / Role',
-        's3.act.t': 'Action Registry (10 Actions + Postconditions)',
-        's3.pre': 'Precondition',
-        's3.post': 'Postcondition',
-        's4.title': '4. Security & Operational Resilience',
+        's3.obj.t': 'Core Model Entities',
+        's3.ent': 'Entity',
+        's3.src': 'Operational Role',
+        's3.act.t': 'Guarded Action Principles',
+        's3.cat': 'Action Category',
+        's3.post': 'Guarantee & Postcondition Verification',
+        's4.title': '4. Security & Privacy Guarantees',
         's4.c1': 'Control',
-        's4.c2': 'Implementation',
+        's4.c2': 'Security Guarantee',
         's4.c3': 'Status',
-        's5.title': '5. Verification, Tests & Operations',
-        's5.cov': 'Coverage'
+        's5.title': '5. Verification Posture & Launch',
+        's5.dom': 'Verification Domain',
+        's5.cov': 'Automatically Verified Guarantees',
+        's5.st': 'Status',
+        'cmd.npx': 'Instant zero-install launch',
+        'cmd.start': 'Run locally from repository (:7440)',
+        'cmd.test': 'Run all 125 automated tests (~1s)'
       }
     };
 
