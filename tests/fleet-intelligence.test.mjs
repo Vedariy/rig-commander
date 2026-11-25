@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { getSeatTriageSignal } from '../openrig/assets/ontology/actions.js';
 import { FleetIntelligenceEngine } from '../openrig/lib/fleet-intelligence/index.mjs';
 import { compileAdvisoryReport, computeHealthScore } from '../openrig/lib/fleet-intelligence/advisory.mjs';
 import { CeremonyAmplifierDetector } from '../openrig/lib/fleet-intelligence/detectors/ceremony.mjs';
@@ -593,4 +594,36 @@ test('TelemetryRingBuffer stores bounded slim snapshots without retaining giant 
   assert.equal(latest.intelligence, undefined);
   assert.equal(latest.activeQueue[0].body, undefined);
   assert.equal(latest.nodes[0].canonicalSessionName, 'dev-owner@rig');
+});
+
+test('triage ranks live input, exited shell, critical context and moderate context', () => {
+  const signals = [
+    { ctxPct: 65 }, { ctxPct: 74 }, { ctxPct: 75 }, { shellExited: true, ctxPct: 94 },
+    { state: 'urgent', shellExited: true }
+  ].map(getSeatTriageSignal).sort((a, b) => a.priority - b.priority);
+  assert.deepEqual(signals.map(s => [s.kind, s.priority]), [
+    ['input', 0], ['shell', 0.4], ['context', 0.9], ['context', 1.4], ['context', 1.4]
+  ]);
+  assert.equal(getSeatTriageSignal({ ctxPct: 64 }), null);
+  assert.equal(getSeatTriageSignal({}), null);
+});
+
+test('per-rig health counts each deduplicated finding once per affected rig', () => {
+  const crossRig = { detectorId: 'one', severity: 'p0_urgent', metrics: {
+    affectedSeats: ['a@north', 'b@north'], affectedSlices: ['s@south', 't@north']
+  } };
+  const south = { detectorId: 'two', severity: 'p1_high', metrics: { affectedSeats: ['b@south'] } };
+  const retro = { detectorId: 'three', severity: 'p3_info', metrics: { affectedSlices: ['s@north'] } };
+  const unscoped = { detectorId: 'four', severity: 'p2_medium', metrics: { affectedSlices: ['s'] } };
+  const report = compileAdvisoryReport([crossRig, crossRig, south, retro, unscoped]);
+  assert.deepEqual(report.rigHealthById, {
+    north: { healthScore: 77, p0: 1, p1: 0, p2: 0 },
+    south: { healthScore: 68, p0: 1, p1: 1, p2: 0 }
+  });
+  assert.deepEqual(report.counts, { total: 4, p0: 1, p1: 1, p2: 1, p3: 1 });
+  assert.equal(report.healthScore, 64);
+  assert.equal(report.scoreBreakdown.totalPenalty, 36);
+  assert.deepEqual(compileAdvisoryReport([unscoped], 'south').rigHealthById,
+    { south: { healthScore: 97, p0: 0, p1: 0, p2: 1 } });
+  assert.deepEqual(compileAdvisoryReport([]).rigHealthById, {});
 });

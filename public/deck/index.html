@@ -62,6 +62,7 @@
       <button class="triage-refresh-btn" id="btnPwaInstall" onclick="triggerPwaInstall()" style="display:none; border-color:rgba(0,255,157,0.65); color:#6ee7b7;">
         📲 <span data-i18n="pwa.installBtn">Установить</span>
       </button>
+      <button type="button" class="triage-refresh-btn" id="btnReloadStaleTab" onclick="refreshWebAppCache()" style="display:none;"></button>
       <button class="triage-refresh-btn" id="btnAppUpdate" onclick="openUpdateModal()" style="display:none; border-color:rgba(0,255,157,0.75); background:rgba(0,255,157,0.14); color:#6ee7b7; font-weight:800; box-shadow:0 0 14px rgba(0,255,157,0.22);">
         ⬆ <span id="btnAppUpdateLabel">Update</span>
       </button>
@@ -2789,6 +2790,8 @@
         LIVE_OPEN_QUEUE = openQueue;
         window.LIVE_RAW_NODES = Array.isArray(data.nodes) ? data.nodes : [];
         IS_LIVE = true;
+        liveServerVersion = typeof data.update?.currentVersion === 'string' ? data.update.currentVersion : '';
+        syncStaleTabPill();
         if (typeof updatePaletteTriageBadge === 'function') updatePaletteTriageBadge();
         if (typeof syncDemoQuestVisibility === 'function') syncDemoQuestVisibility();
         if (data.history && data.history.pairEnvelopes) PAIR_ENVELOPES = data.history.pairEnvelopes;
@@ -3117,11 +3120,12 @@
       const scopedAgents = AGENTS.filter(a => inCurrentRig(a.id));
       const scopedLanes = getVisibleSliceLanes();
 
-      // P0: Agents waiting for human intervention (state === 'urgent' / needsInput)
       for (const a of scopedAgents) {
-        if (a.state === 'urgent') {
+        const signal = getSeatTriageSignal(a);
+        if (!signal) continue;
+        if (signal.kind === 'input') {
           candidates.push({
-            prio: 0,
+            prio: signal.priority,
             type: 'p0-urgent',
             tag: 'P0 • INPUT',
             title: `🚨 ${getNodeDisplayTitle(a)}: ${td('triage.waitingHuman')}`,
@@ -3129,13 +3133,20 @@
             action: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: td('triage.screenBtn'), tone: 'urgent' },
             targetAgentId: a.id
           });
+          continue;
         }
-      }
-
-      // P1: Hot Context with ETA threshold (ctxPct >= CONTEXT_WARN_PCT)
-      const hotAgents = scopedAgents.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT)
-        .sort((a, b) => b.ctxPct - a.ctxPct);
-      for (const a of hotAgents) {
+        if (signal.kind === 'shell') {
+          candidates.push({
+            prio: signal.priority,
+            type: 'p1-hot',
+            tag: 'P1 • SHELL',
+            title: `${getNodeDisplayTitle(a)}: ${td('radar.shellExitedState')}`,
+            desc: td('radar.shellExitedDesc'),
+            action: { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('triage.copyRestart'), tone: 'warn' },
+            targetAgentId: a.id
+          });
+          continue;
+        }
         const burn = computeBurn(a, deckLang);
         const isOver = a.ctxPct >= CONTEXT_CRIT_PCT;
         const burnRate = burn.perHour > 0 ? burn.perHour : 20;
@@ -3146,7 +3157,8 @@
           ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: `rig restart ${a.id}`, label: td('radar.rotateBtn'), tone: 'warn' }
           : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: '⚡ /compact', tone: isOver ? 'critical' : 'warn' };
         candidates.push({
-          prio: 1,
+          prio: signal.priority,
+          ctxPct: a.ctxPct,
           type: 'p1-hot',
           tag: isOver ? td('triage.critTag') : td('triage.ctxTag'),
           title: `🔥 ${getNodeDisplayTitle(a)}: CTX ${a.ctxPct}%`,
@@ -3198,6 +3210,8 @@
           const recSlice = rec.metrics?.affectedSlices?.[0] || rec.actionPlan?.params?.slice || rec.actionPlan?.sliceTarget || rec.metrics?.slice || '';
           if (rigSuffix && recSlice && !scopedLanes.some(l => l.id === recSlice)) continue;
           const seatObj = AGENTS.find(x => x.id === seatId) || null;
+          // The native CTX card already ranks this signal by the measured context level.
+          if (rec.detectorId === 'quality.context_entropy' && seatObj && getSeatTriageSignal(seatObj)) continue;
           const baseAction = resolveActionFromFinding(rec.actionPlan, seatObj) ||
             { id: 'focus_seat', transport: 'select_seat', seatId, payload: '', label: td('diag.inspectBtn'), tone: 'default' };
           const action = { ...baseAction, findingId: rec.id || '' };
@@ -3226,7 +3240,7 @@
       }
 
       // Sort candidates by priority score & deduplicate per seat so one seat never eats 2 of 3 top triage slots
-      candidates.sort((a, b) => a.prio - b.prio);
+      candidates.sort((a, b) => a.prio - b.prio || (b.ctxPct || 0) - (a.ctxPct || 0));
       const dedupedCandidates = [];
       const seenCandidateSeats = new Set();
       for (const c of candidates) {
@@ -3262,6 +3276,12 @@
       const top3 = dedupedCandidates.slice(0, 3);
       const healthScore = window.LIVE_INTELLIGENCE?.healthScore;
       const healthSuffix = typeof healthScore === 'number' ? ` • ${td('triage.health')}: ${healthScore}%` : '';
+
+      const scores = Object.entries(window.LIVE_INTELLIGENCE?.rigHealthById || {});
+      badge.title = td('triage.healthTip');
+      if (currentRigFilter === 'all' && scores.length >= 2) {
+        badge.title += '\n' + scores.map(([rig, score]) => `${rig}: ${score.healthScore}%`).join(' · ');
+      }
 
       // Update strip alert status
       const hasP0 = top3.some(c => c.prio === 0);
@@ -7903,6 +7923,7 @@
       const upd = document.getElementById('updateModal');
       if (upd && upd.classList.contains('open')) renderUpdateModal();
       if (typeof syncUpdateButtonUi === 'function') syncUpdateButtonUi();
+      syncStaleTabPill();
       if (saTourOpen) renderSaTour();
       if (typeof renderDemoQuest === 'function') renderDemoQuest();
     }
@@ -8650,9 +8671,9 @@
     }
 
     // ===== Auto-Update Watcher (npmjs.org Release Check + 1-Click Self-Update) =====
-    function getEmbeddedAppVersion() {
+    function getEmbeddedAppVersion(fallback = '3.2.0') {
       const m = document.querySelector('meta[name="app-version"]');
-      return (m && m.content) ? m.content.trim() : '3.2.0';
+      return (m && m.content) ? m.content.trim() : fallback;
     }
 
     let appUpdateState = {
@@ -8671,6 +8692,24 @@
       simulated: false
     };
     let updateReconnectTimer = null;
+    let liveServerVersion = '';
+
+    function parseUiVersion(value) {
+      const version = parseSemver(value);
+      if (!version) return null;
+      const [release, build] = value.trim().replace(/^v/, '').split('+');
+      if (release !== version.normalized || version.pre.some(id => !id || /^0\d/.test(id))) return null;
+      if (build && build.split('.').some(id => !id)) return null;
+      return version;
+    }
+
+    function syncStaleTabPill() {
+      const btn = document.getElementById('btnReloadStaleTab');
+      const stale = IS_LIVE && isLoopbackEndpoint(location.origin) && !/^\/demo(?:\/|$)/.test(location.pathname) &&
+        compareSemver(parseUiVersion(liveServerVersion), parseUiVersion(getEmbeddedAppVersion(''))) > 0;
+      btn.style.display = stale ? 'inline-flex' : 'none';
+      if (stale) btn.textContent = td('update.reloadTab', { ver: liveServerVersion });
+    }
 
     function applySimulatedUpdateFromUrl() {
       try {

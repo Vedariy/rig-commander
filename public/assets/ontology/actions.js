@@ -3,6 +3,15 @@ import { getLiveHitlOptions } from '../domain/prompt-parser.js';
 export const CONTEXT_WARN_PCT = 65;
 export const CONTEXT_CRIT_PCT = 75;
 
+export function getSeatTriageSignal(seat) {
+  if (seat.state === 'urgent') return { kind: 'input', priority: 0 };
+  if (seat.shellExited) return { kind: 'shell', priority: 0.4 };
+  if (typeof seat.ctxPct === 'number' && seat.ctxPct >= CONTEXT_WARN_PCT) {
+    return { kind: 'context', priority: seat.ctxPct >= CONTEXT_CRIT_PCT ? 0.9 : 1.4 };
+  }
+  return null;
+}
+
 export function isPiHarness(seat) {
   if (!seat) return false;
   const harness = String(seat.harness || '').toLowerCase();

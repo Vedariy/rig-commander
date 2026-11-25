@@ -1,6 +1,7 @@
 export {
   CONTEXT_WARN_PCT,
   CONTEXT_CRIT_PCT,
+  getSeatTriageSignal,
   isPiHarness,
   ACTION_DEFINITIONS,
   NUDGE_QUEUE_PROMPTS,

@@ -37,6 +37,37 @@ export function computeHealthScore(counts = {}) {
   };
 }
 
+function severityCounts(findings) {
+  return {
+    p0: findings.filter(f => f.severity === 'p0_urgent').length,
+    p1: findings.filter(f => f.severity === 'p1_high').length,
+    p2: findings.filter(f => f.severity === 'p2_medium').length,
+    p3: findings.filter(f => f.severity === 'p3_info').length
+  };
+}
+
+function healthByRig(findings, rigId) {
+  const groups = new Map();
+  for (const finding of findings) {
+    const rigs = new Set();
+    const { affectedSeats = [], affectedSlices = [] } = finding.metrics || {};
+    for (const target of [...(Array.isArray(affectedSeats) ? affectedSeats : []), ...(Array.isArray(affectedSlices) ? affectedSlices : [])]) {
+      const suffix = typeof target === 'string' && target.match(/@([^@\s]+)$/);
+      if (suffix) rigs.add(suffix[1]);
+    }
+    if (!rigs.size && rigId && rigId !== 'all') rigs.add(rigId);
+    for (const rig of rigs) {
+      if (!groups.has(rig)) groups.set(rig, []);
+      groups.get(rig).push(finding);
+    }
+  }
+  return Object.fromEntries(Array.from(groups, ([rig, group]) => {
+    const counts = severityCounts(group);
+    const { healthScore } = computeHealthScore(counts);
+    return [rig, { healthScore, p0: counts.p0, p1: counts.p1, p2: counts.p2 }];
+  }));
+}
+
 export function compileAdvisoryReport(findings = [], rigId = 'all') {
   // 1. Deduplicate findings by target seat / slice and detector ID
   const dedupMap = new Map();
@@ -66,13 +97,7 @@ export function compileAdvisoryReport(findings = [], rigId = 'all') {
 
   // 3. Compute Composite Fleet Health Score (0 - 100) with severity caps
   // Low/medium retrospective findings can NEVER falsely drag a healthy fleet into Critical Risk.
-  const counts = {
-    total: deduped.length,
-    p0: deduped.filter(x => x.severity === 'p0_urgent').length,
-    p1: deduped.filter(x => x.severity === 'p1_high').length,
-    p2: deduped.filter(x => x.severity === 'p2_medium').length,
-    p3: deduped.filter(x => x.severity === 'p3_info').length
-  };
+  const counts = { total: deduped.length, ...severityCounts(deduped) };
   const { healthScore, scoreBreakdown } = computeHealthScore(counts);
 
   // 4. Extract Top-3 high-impact live recommendations for the top strip (exclude pure P3 retro info)
@@ -101,6 +126,7 @@ export function compileAdvisoryReport(findings = [], rigId = 'all') {
     rigId,
     healthScore,
     scoreBreakdown,
+    rigHealthById: healthByRig(deduped, rigId),
     topRecommendations,
     allFindings: deduped,
     counts
