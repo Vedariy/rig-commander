@@ -323,9 +323,15 @@
       font-family: var(--font-mono);
       font-size: 12px;
       color: #67e8f9;
-      overflow-x: auto;
+      overflow: hidden;
     }
-    .cmd-row code { white-space: nowrap; }
+    .cmd-row code {
+      flex: 1;
+      min-width: 0;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: thin;
+    }
     .copy-btn {
       flex-shrink: 0;
       display: inline-flex;
@@ -515,6 +521,7 @@
         <a href="#quickstart"><span data-lang-block="ru">Старт</span><span data-lang-block="en">Quick Start</span></a>
         <a href="#anatomy"><span data-lang-block="ru">Экран L0–L3</span><span data-lang-block="en">L0–L3 Deck</span></a>
         <a href="#playbooks"><span data-lang-block="ru">Плейбуки</span><span data-lang-block="en">Playbooks</span></a>
+        <a href="#openrig-playbook"><span data-lang-block="ru">OpenRig L3</span><span data-lang-block="en">OpenRig L3</span></a>
         <a href="#guardrails"><span data-lang-block="ru">FinOps & TG</span><span data-lang-block="en">FinOps & TG</span></a>
         <a href="#pwa"><span data-lang-block="ru">Live PWA</span><span data-lang-block="en">Live PWA</span></a>
         <a href="/passport"><span data-lang-block="ru">Паспорт</span><span data-lang-block="en">Passport</span></a>
@@ -543,8 +550,10 @@
       <a href="#pwa"><span data-lang-block="ru">6. Live PWA (Mac + телефон)</span><span data-lang-block="en">6. Live PWA (Mac + Phone)</span></a>
       <a href="#shortcuts"><span data-lang-block="ru">7. Горячие клавиши и Share Card</span><span data-lang-block="en">7. Shortcuts & Share Card</span></a>
       <a href="#faq"><span data-lang-block="ru">8. FAQ и диагностика</span><span data-lang-block="en">8. FAQ & Troubleshooting</span></a>
+      <a href="#openrig-playbook"><span data-lang-block="ru">9. OpenRig Playbook (L3)</span><span data-lang-block="en">9. OpenRig Playbook (L3)</span></a>
       <div class="toc-sep"></div>
       <a class="toc-mini-link" href="/passport"><span data-lang-block="ru">📐 Инженерный паспорт (C4)</span><span data-lang-block="en">📐 Architecture Passport (C4)</span></a>
+      <a class="toc-mini-link" href="https://github.com/Vedariy/rig-commander/blob/main/openrig/docs/openrig-playbook.md" target="_blank" rel="noopener">🧭 OpenRig Playbook (MD)</a>
       <a class="toc-mini-link" href="https://github.com/Vedariy/rig-commander/blob/main/CHANGELOG.md" target="_blank" rel="noopener">📜 Changelog</a>
       <a class="toc-mini-link" href="https://github.com/Vedariy/rig-commander/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener">📄 Markdown (GitHub)</a>
     </aside>
@@ -567,6 +576,7 @@
         <div class="hero-pills">
           <a class="hero-pill" href="#quickstart">⚡ npx rig-commander@latest</a>
           <a class="hero-pill" href="#playbooks"><span data-lang-block="ru">🎯 5 сценариев оператора</span><span data-lang-block="en">🎯 5 Operator Playbooks</span></a>
+          <a class="hero-pill" href="#openrig-playbook"><span data-lang-block="ru">🧭 OpenRig Playbook (L3)</span><span data-lang-block="en">🧭 OpenRig Playbook (L3)</span></a>
           <a class="hero-pill" href="#pwa"><span data-lang-block="ru">📱 Live PWA (Mac + iOS/Android)</span><span data-lang-block="en">📱 Live PWA (Mac + iOS/Android)</span></a>
           <a class="hero-pill" href="/demo?track=tour"><span data-lang-block="ru">🧭 6-шаговый тур в демо</span><span data-lang-block="en">🧭 6-Step Tour in Demo</span></a>
         </div>
@@ -950,6 +960,142 @@
             <span data-lang-block="en">UI preferences (language, rig filter, CALM, density, panels) stay in browser <code class="inline">localStorage</code>. Paired phone SHA-256 session hashes and your configured HTTPS origin are stored strictly locally in <code class="inline">~/.config/rig-commander/remote-sessions.json</code> (mode <code class="inline">0600</code>). Nothing is sent to external servers.</span>
           </p>
         </details>
+      </section>
+
+      <!-- 9. OPENRIG PLAYBOOK (L3 FOUNDATION) -->
+      <section class="card" id="openrig-playbook">
+        <div class="sec-head">
+          <h2>🧭 <span data-lang-block="ru">9. OpenRig Playbook: фундамент L3 Control Plane</span><span data-lang-block="en">9. OpenRig Playbook: L3 Control Plane Foundation</span></h2>
+          <span class="sec-tag">OPENRIG v0.7+ • @openrig/cli</span>
+        </div>
+        <p class="lead">
+          <span data-lang-block="ru">RigCommander вырос поверх <strong>OpenRig</strong> — локального control plane уровня L3 (аналог <code class="inline">docker compose</code> / <code class="inline">kubectl</code> для ИИ-агентов в <code class="inline">tmux</code>). Ниже — выжимка ежедневных и нестандартных флоу: от честного восстановления ригов до пересадки рантайма на лету и Топ-7 антипаттернов. Полная Markdown-версия — <a href="https://github.com/Vedariy/rig-commander/blob/main/openrig/docs/openrig-playbook.md" target="_blank" rel="noopener" style="color:var(--cyan);">openrig-playbook.md</a>.</span>
+          <span data-lang-block="en">RigCommander was built on top of <strong>OpenRig</strong> — a local L3 control plane (think <code class="inline">docker compose</code> / <code class="inline">kubectl</code> for AI agents in <code class="inline">tmux</code>). Below is the complete operational playbook: mental model, honest recovery, queue patterns, 10 advanced flows, and the Top 7 anti-patterns. Full Markdown manual: <a href="https://github.com/Vedariy/rig-commander/blob/main/openrig/docs/openrig-playbook.md" target="_blank" rel="noopener" style="color:var(--cyan);">openrig-playbook.md</a>.</span>
+        </p>
+
+        <h3 style="margin-top:16px; font-size:15px; color:#f8fafc;">
+          <span data-lang-block="ru">Ментальная модель L0–L3 и 5 ключевых терминов</span>
+          <span data-lang-block="en">L0–L3 Mental Model & 5 Core Terms</span>
+        </h3>
+        <table>
+          <thead>
+            <tr>
+              <th><span data-lang-block="ru">Слой</span><span data-lang-block="en">Layer</span></th>
+              <th><span data-lang-block="ru">Кто это</span><span data-lang-block="en">Component</span></th>
+              <th><span data-lang-block="ru">Роль</span><span data-lang-block="en">Responsibility</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code class="inline">L0 — Model</code></td><td>Claude, GPT-6.x, GLM, Gemini</td><td><span data-lang-block="ru">Безсостоятельный движок токенов</span><span data-lang-block="en">Stateless token engine</span></td></tr>
+            <tr><td><code class="inline">L1 — Agent Core</code></td><td><span data-lang-block="ru">Цикл рассуждений</span><span data-lang-block="en">Reasoning loop</span></td><td><span data-lang-block="ru">Наблюдение → план → действие</span><span data-lang-block="en">Observe → plan → act</span></td></tr>
+            <tr><td><code class="inline">L2 — Harness</code></td><td><code class="inline">claude</code>, <code class="inline">codex</code>, CLI</td><td><span data-lang-block="ru">Инструменты, память, права, сессия</span><span data-lang-block="en">Tools, memory, permissions, session</span></td></tr>
+            <tr><td><code class="inline">L3 — OpenRig</code></td><td><span data-lang-block="ru">Демон (<code class="inline">:7437</code>) + SQLite + <code class="inline">tmux</code></span><span data-lang-block="en">Daemon (<code class="inline">:7437</code>) + SQLite + <code class="inline">tmux</code></span></td><td><span data-lang-block="ru">Топология команды, очереди, снапшоты, восстановление</span><span data-lang-block="en">Team topology, durable queues, snapshots, honest recovery</span></td></tr>
+          </tbody>
+        </table>
+
+        <div class="grid-2" style="margin-top:12px;">
+          <div class="subcard">
+            <div class="subcard-title">🏗️ <span data-lang-block="ru">5 терминов OpenRig буквально</span><span data-lang-block="en">5 OpenRig Terms Literally</span></div>
+            <ul style="padding-left:16px; display:flex; flex-direction:column; gap:5px;">
+              <li><strong>Rig</strong> — <span data-lang-block="ru">вся команда (<code class="inline">kernel</code>, <code class="inline">project</code>, <code class="inline">ephemeral</code>, <code class="inline">infra-build</code>, <code class="inline">managed-app</code>).</span><span data-lang-block="en">the whole team (<code class="inline">kernel</code>, <code class="inline">project</code>, <code class="inline">ephemeral</code>, <code class="inline">infra-build</code>, <code class="inline">managed-app</code>).</span></li>
+              <li><strong>Pod</strong> — <span data-lang-block="ru">контекстный домен (агенты, делящие общий рабочий контекст, а не этап пайплайна).</span><span data-lang-block="en">a context domain (agents sharing working context every turn, not a pipeline stage).</span></li>
+              <li><strong>Seat / Occupant</strong> — <span data-lang-block="ru">постоянное «кресло» (<code class="inline">dev.coder4</code>); процесс внутри меняется при компакции или смене рантайма, а адрес и очередь сохраняются.</span><span data-lang-block="en">permanent seat (<code class="inline">dev.coder4</code>); the underlying process rotates on compaction/handover while address &amp; queue stay intact.</span></li>
+              <li><strong>Canonical Session Name</strong> — <code class="inline">{pod}-{member}@{rig}</code> <span data-lang-block="ru">(например <code class="inline">dev-coder4@core-platform</code>; в конфигах <code class="inline">dev.coder4@core-platform</code>).</span><span data-lang-block="en">(e.g. <code class="inline">dev-coder4@core-platform</code>; logical form <code class="inline">dev.coder4@core-platform</code>).</span></li>
+              <li><strong>Qitem</strong> — <span data-lang-block="ru">долговечная задача в SQLite (<code class="inline">pending → in-progress → blocked → done</code>), переживающая рестарты и компакции.</span><span data-lang-block="en">durable SQLite work item (<code class="inline">pending → in-progress → blocked → done</code>) surviving restarts and compactions.</span></li>
+            </ul>
+          </div>
+          <div class="subcard">
+            <div class="subcard-title">🔄 <span data-lang-block="ru">Ежедневный цикл и восстановление</span><span data-lang-block="en">Daily Lifecycle & Honest Recovery</span></div>
+            <div class="cmd-row"><code>rig daemon start &amp;&amp; rig ps</code><button type="button" class="copy-btn" data-copy="rig daemon start &amp;&amp; rig ps">Cmd ⧉</button></div>
+            <div class="cmd-row"><code>rig up kernel --existing --plan</code><button type="button" class="copy-btn" data-copy="rig up kernel --existing --plan">Cmd ⧉</button></div>
+            <div class="cmd-row"><code>rig parked --rig core-platform</code><button type="button" class="copy-btn" data-copy="rig parked --rig core-platform">Cmd ⧉</button></div>
+            <p style="margin-top:6px;">
+              <span data-lang-block="ru"><strong>5 статусов восстановления:</strong> <code class="inline">resumed</code> (родной диалог), <code class="inline">fresh-primed</code> (чистый с контекстом роли), <code class="inline">awaiting-decision</code> (был остановлен намеренно ➔ <code class="inline">rig seat launch --fresh</code>), <code class="inline">attention_required</code> (проверьте <code class="inline">rig capture</code> ➔ <code class="inline">rig seat clear-attention</code>), <code class="inline">failed</code>.</span>
+              <span data-lang-block="en"><strong>5 Recovery Statuses:</strong> <code class="inline">resumed</code> (native session), <code class="inline">fresh-primed</code> (role context loaded), <code class="inline">awaiting-decision</code> (intentionally stopped ➔ <code class="inline">rig seat launch --fresh</code>), <code class="inline">attention_required</code> (verify with <code class="inline">rig capture</code> ➔ <code class="inline">rig seat clear-attention</code>), <code class="inline">failed</code>.</span>
+            </p>
+          </div>
+        </div>
+
+        <h3 style="margin-top:16px; font-size:15px; color:#f8fafc;">
+          <span data-lang-block="ru">Чат vs Очередь: главный принцип постановки задач</span>
+          <span data-lang-block="en">Chat vs Durable Queue: Task Dispatch Rules</span>
+        </h3>
+        <table>
+          <thead>
+            <tr>
+              <th><span data-lang-block="ru">Критерий</span><span data-lang-block="en">Criterion</span></th>
+              <th><code class="inline">rig send &lt;seat&gt; "..."</code></th>
+              <th><code class="inline">rig queue create / handoff</code></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span data-lang-block="ru">Назначение</span><span data-lang-block="en">Purpose</span></td>
+              <td><span data-lang-block="ru">Быстрый вопрос, пинг в соседний тайл</span><span data-lang-block="en">Quick ping or question in a terminal pane</span></td>
+              <td><span data-lang-block="ru">Поручение работы, баг-репорт, ревью, эскалация</span><span data-lang-block="en">Work assignment, bug report, QA review, escalation</span></td>
+            </tr>
+            <tr>
+              <td><span data-lang-block="ru">Переживает рестарт/компакцию</span><span data-lang-block="en">Survives restart / compact</span></td>
+              <td><span class="badge-chip chip-red"><span data-lang-block="ru">Нет</span><span data-lang-block="en">No</span></span></td>
+              <td><span class="badge-chip chip-green"><span data-lang-block="ru">Да (SQLite + цепочка handoff)</span><span data-lang-block="en">Yes (SQLite + handoff lineage)</span></span></td>
+            </tr>
+            <tr>
+              <td><span data-lang-block="ru">Защита от меню выбора</span><span data-lang-block="en">Confirmation prompt guard</span></td>
+              <td><span data-lang-block="ru"><strong>send-guard</strong> откажет при HITL-меню</span><span data-lang-block="en"><strong>send-guard</strong> refuses when HITL menu is open</span></td>
+              <td><span data-lang-block="ru">Ждёт в инбоксе, пока кресло освободится</span><span data-lang-block="en">Queued safely until the seat is ready</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout good">
+          <span data-lang-block="ru"><strong>Три золотых паттерна очереди:</strong> (1) для многострочных задач всегда используйте <code class="inline">--body-file</code> (бэктики в <code class="inline">--body</code> ломают shell); (2) принцип <strong>Hot-Potato</strong> — закрывайте работу финально либо атомарно передавайте через <code class="inline">rig queue handoff-and-complete</code>; (3) при внешнем ожидании (CI/деплой) переводите в честный <code class="inline">HELD</code> с таймером: <code class="inline">rig queue block &lt;id&gt; --on external:ci --wake-after 10m</code>.</span>
+          <span data-lang-block="en"><strong>Three Golden Queue Patterns:</strong> (1) always pass multiline payloads via <code class="inline">--body-file</code> (backticks in <code class="inline">--body</code> break shells); (2) <strong>Hot-Potato</strong> — finish explicitly or hand off atomically via <code class="inline">rig queue handoff-and-complete</code>; (3) for external waits (CI/deploy), use honest <code class="inline">HELD</code> with a wake timer: <code class="inline">rig queue block &lt;id&gt; --on external:ci --wake-after 10m</code>.</span>
+        </div>
+
+        <h3 style="margin-top:16px; font-size:15px; color:#f8fafc;">
+          <span data-lang-block="ru">10 нестандартных и продвинутых флоу OpenRig</span>
+          <span data-lang-block="en">10 Advanced OpenRig Operational Flows</span>
+        </h3>
+
+        <details class="faq" open>
+          <summary><span data-lang-block="ru">1–3. Усыновление живых tmux-агентов (discover/adopt), attach --self и горячее масштабирование (grow/expand)</span><span data-lang-block="en">1–3. Adopt running tmux agents (discover/adopt), attach --self, and live scaling (grow/expand)</span></summary>
+          <div class="cmd-row"><code>rig discover --draft &amp;&amp; rig adopt ./rig.yaml --bind dev.coder=&lt;tmuxSession&gt;</code><button type="button" class="copy-btn" data-copy="rig discover --draft">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig attach --self --rig &lt;rigId&gt; --pod operator --member person-agent --runtime codex --print-env</code><button type="button" class="copy-btn" data-copy="rig attach --self --rig &lt;rigId&gt; --pod operator --member person-agent --runtime codex --print-env">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig grow core-platform coder6 --pod dev --runtime codex --cwd /path/to/repo</code><button type="button" class="copy-btn" data-copy="rig grow core-platform coder6 --pod dev --runtime codex --cwd /path/to/repo">Cmd ⧉</button></div>
+          <p>
+            <span data-lang-block="ru"><code class="inline">rig release &lt;rigId&gt;</code> отпускает adopted-сессии живыми, не убивая терминалы. <code class="inline">attach --self</code> включает ваш внешний shell в топологию, чтобы агенты могли делать <code class="inline">handoff</code> прямо в ваш инбокс, а <code class="inline">grow/expand/add/remove</code> масштабируют живой риг без <code class="inline">rig down</code>.</span>
+            <span data-lang-block="en"><code class="inline">rig release &lt;rigId&gt;</code> detaches adopted sessions without killing terminals. <code class="inline">attach --self</code> registers your own shell as a named member so agents can hand off directly to your inbox, while <code class="inline">grow/expand/add/remove</code> scale a live rig without <code class="inline">rig down</code>.</span>
+          </p>
+        </details>
+
+        <details class="faq">
+          <summary><span data-lang-block="ru">4–6. Пересадка рантайма (set-runtime), клон прогретого агента (fork) и защита контекста (compact/watchdog/handover)</span><span data-lang-block="en">4–6. Live runtime transplant (set-runtime), warmed-agent cloning (fork), and context hygiene (compact/watchdog/handover)</span></summary>
+          <div class="cmd-row"><code>rig seat set-runtime dev-coder4@core-platform --runtime claude-code --reason "quota swap" --dry-run</code><button type="button" class="copy-btn" data-copy="rig seat set-runtime dev-coder4@core-platform --runtime claude-code --reason &quot;quota swap&quot; --dry-run">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig fork dev-coder4@core-platform --rig core-platform --pod dev --member coder4-spike --keep-image</code><button type="button" class="copy-btn" data-copy="rig fork dev-coder4@core-platform --rig core-platform --pod dev --member coder4-spike --keep-image">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig compact dev-check@core-platform</code><button type="button" class="copy-btn" data-copy="rig compact dev-check@core-platform">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig handover dev-coder4@core-platform --source fork:dev-coder4@core-platform --reason "clean successor"</code><button type="button" class="copy-btn" data-copy="rig handover dev-coder4@core-platform --source fork:dev-coder4@core-platform --reason &quot;clean successor&quot;">Cmd ⧉</button></div>
+          <p>
+            <span data-lang-block="ru"><strong>Successor-First:</strong> при <code class="inline">set-runtime</code> новый рантайм прогревается рядом с handover-пакетом, входящие сообщения придерживаются и не теряются. <code class="inline">rig fork</code> раздваивает агента с прогретым контекстом для параллельной гипотезы, а <code class="inline">rig watchdog register --policy context-usage-threshold --threshold-percent 70</code> предупреждает до деградации.</span>
+            <span data-lang-block="en"><strong>Successor-First:</strong> <code class="inline">set-runtime</code> boots the replacement runtime alongside the old seat with a handover pack while holding incoming work safely. <code class="inline">rig fork</code> clones a warmed agent to test parallel hypotheses, and <code class="inline">rig watchdog register --policy context-usage-threshold --threshold-percent 70</code> alerts before context rot.</span>
+          </p>
+        </details>
+
+        <details class="faq">
+          <summary><span data-lang-block="ru">7–10. Некромантия одного вопроса (ask --wake), дозированный контекст (context+walk), ACP, мульти-хост и crash-cart</span><span data-lang-block="en">7–10. One-question wake (ask --wake), paced context (context+walk), ACP, multi-host &amp; crash-cart</span></summary>
+          <div class="cmd-row"><code>rig ask core-platform "Why was this index chosen?" --wake dev-senior-architect@core-platform</code><button type="button" class="copy-btn" data-copy="rig ask core-platform &quot;Why was this index chosen?&quot; --wake dev-senior-architect@core-platform">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig context compose --out packs/onboarding --from ./ADR-01.md ./API.md</code><button type="button" class="copy-btn" data-copy="rig context compose --out packs/onboarding --from ./ADR-01.md ./API.md">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig walk dev-coder5@core-platform --through packs/onboarding --pace 12s</code><button type="button" class="copy-btn" data-copy="rig walk dev-coder5@core-platform --through packs/onboarding --pace 12s">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig acp run &lt;qitemId&gt; &lt;agent-cmd&gt;   # emergency: rig crash-cart --json</code><button type="button" class="copy-btn" data-copy="rig crash-cart --json">Cmd ⧉</button></div>
+          <p>
+            <span data-lang-block="ru"><code class="inline">ask --wake</code> точечно будит архивное кресло на один вопрос и снова усыпляет. <code class="inline">context + walk</code> скармливает большие спеки порциями с паузами. Для пробивки застрявшего меню (после визуальной проверки экрана) используйте <code class="inline">rig send &lt;seat&gt; "1" --dangerously-interact --reason "..."</code>, а когда демон не стартует — <code class="inline">rig crash-cart --json</code>.</span>
+            <span data-lang-block="en"><code class="inline">ask --wake</code> wakes a stopped/archived seat for a single question and puts it back to sleep. <code class="inline">context + walk</code> feeds large specs in paced chunks. To answer a stuck menu (after checking the screen), use <code class="inline">rig send &lt;seat&gt; "1" --dangerously-interact --reason "..."</code>, and when the daemon won't boot, run read-only <code class="inline">rig crash-cart --json</code>.</span>
+          </p>
+        </details>
+
+        <div class="callout warn" style="margin-top:12px;">
+          <span data-lang-block="ru"><strong>Топ-7 антипаттернов OpenRig:</strong> (1) ставить задачи через <code class="inline">rig send</code> вместо <code class="inline">rig queue create</code>; (2) передавать <code class="inline">--no-nudge</code> (оставит агента спать) или ждать от <code class="inline">--force</code> пробивки меню; (3) запускать <code class="inline">rig broadcast</code> без <code class="inline">--rig</code>/<code class="inline">--pod</code> («broadcast storm»); (4) класть многострочный текст с бэктиками в <code class="inline">--body</code> вместо <code class="inline">--body-file</code>; (5) путать <code class="inline">rig down --delete</code> и <code class="inline">rig archive</code>; (6) верить проекции <code class="inline">rig ps</code> вместо живого экрана <code class="inline">rig capture</code> и <code class="inline">rig parked</code>; (7) поднимать <code class="inline">kernel</code> без <code class="inline">--existing</code> или править SQLite вручную вместо <code class="inline">rig seat clear-attention</code>.</span>
+          <span data-lang-block="en"><strong>Top 7 OpenRig Anti-Patterns:</strong> (1) assigning work via <code class="inline">rig send</code> instead of <code class="inline">rig queue create</code>; (2) passing <code class="inline">--no-nudge</code> (leaves agents asleep) or expecting <code class="inline">--force</code> to bypass prompts; (3) running <code class="inline">rig broadcast</code> without <code class="inline">--rig</code>/<code class="inline">--pod</code> (broadcast storm); (4) putting multiline backtick text in <code class="inline">--body</code> instead of <code class="inline">--body-file</code>; (5) confusing <code class="inline">rig down --delete</code> with <code class="inline">rig archive</code>; (6) trusting <code class="inline">rig ps</code> projections over live <code class="inline">rig capture</code> &amp; <code class="inline">rig parked</code>; (7) starting <code class="inline">kernel</code> without <code class="inline">--existing</code> or hand-editing SQLite instead of <code class="inline">rig seat clear-attention</code>.</span>
+        </div>
       </section>
     </main>
   </div>

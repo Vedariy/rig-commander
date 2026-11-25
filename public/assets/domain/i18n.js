@@ -514,7 +514,9 @@ export const DECK_I18N = {
     'palette.kbClose': 'close',
     'palette.safeNote': 'Never closes or deletes queue items',
     'palette.triageBadgeTip': '{n} stalled queue handoff(s) need attention (⌘K → #)',
-    'palette.noiseHidden': '{n} daemon sweep/wake rows hidden as noise'
+    'palette.noiseHidden': '{n} daemon sweep/wake rows hidden as noise',
+    'sse.streamLive': '⚡ STREAM',
+    'sse.streamTip': 'Live Server-Sent Events TMUX stream (SHA-1 delta push, <650ms)'
   },
   ru: {
     'doc.title': 'RIGCOMMANDER // NEURAL COMMAND DECK v3.1',
@@ -1031,7 +1033,9 @@ export const DECK_I18N = {
     'palette.kbClose': 'закрыть',
     'palette.safeNote': 'Никогда не закрывает и не удаляет задачи очереди',
     'palette.triageBadgeTip': 'Зависших передач в очереди, требующих внимания: {n} (⌘K → #)',
-    'palette.noiseHidden': 'служебных sweep/wake строк демона скрыто как шум: {n}'
+    'palette.noiseHidden': 'служебных sweep/wake строк демона скрыто как шум: {n}',
+    'sse.streamLive': '⚡ ПОТОК',
+    'sse.streamTip': 'Живой Server-Sent Events поток TMUX (SHA-1 дельта-пуш, <650мс)'
   }
 };
 

@@ -1145,6 +1145,7 @@
     function onRigFilterChange(val) {
       currentRigFilter = val;
       persistDeckPref({ rigFilter: val });
+      if (typeof connectTelemetryStream === 'function' && IS_LIVE) connectTelemetryStream(true);
       renderTriageStrip();
       renderReservoirs();
       renderWaitRadarAndDecisions();
@@ -3947,7 +3948,7 @@
 
             <!-- SA Level 3: Live Tmux & Contextual Action Controls (Immediately visible) -->
             <div style="font-family:var(--font-mono); font-size:10px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:4px; flex-wrap:nowrap;">
-              <span style="white-space:nowrap; font-weight:700;">🖥️ TMUX</span>
+              <span style="display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-weight:700;">🖥️ TMUX <span id="inspTmuxStreamBadge" class="tmux-stream-pill" style="display:${tmuxStreamConnected && tmuxStreamSeat === agent.id ? 'inline-flex' : 'none'};" title="${escapeHtml(td('sse.streamTip'))}">${escapeHtml(td('sse.streamLive'))}</span></span>
               <span style="display:flex; gap:4px; flex-shrink:0; align-items:center;">
                 <button class="action-pill" type="button" style="padding:2px 5px; font-size:9.5px;" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
                 <button class="action-pill" id="btnAutoFollow" style="padding:2px 5px; font-size:9.5px; white-space:nowrap;" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
@@ -4218,6 +4219,253 @@
       }
     }
 
+    // ===== SSE Push Stream (/api/events) + Deduplicated Live TMUX Stream (/api/capture/stream) (ADR-0016) =====
+    let telemetrySseSource = null;
+    let telemetrySseConnected = false;
+    let telemetrySseRig = '';
+    let telemetrySseRetryMs = 2000;
+    let telemetrySseRetryTimer = null;
+    let sseRefreshDebounceTimer = null;
+
+    let tmuxStreamSource = null;
+    let tmuxStreamSeat = '';
+    let tmuxStreamConnected = false;
+    let tmuxStreamRetryTimer = null;
+
+    function updateLiveConnectionBadgeUi(hasLive, discoveryMode) {
+      const badge = document.getElementById('liveConnectionBadge');
+      if (!badge) return;
+      const connSuffix = location.port ? `:${location.port}` : (location.protocol === 'https:' ? 'HTTPS' : ':7440');
+      if (hasLive) {
+        const modeBase = discoveryMode === 'universal' ? 'LIVE UNIVERSAL' : 'LIVE';
+        const transportTag = telemetrySseConnected ? 'SSE' : 'API';
+        badge.textContent = `● ${modeBase} ${transportTag} ${connSuffix}`;
+        badge.classList.remove('offline');
+      } else {
+        badge.textContent = deckLang === 'en' ? `✨ DEMO SANDBOX ${connSuffix}` : `✨ ДЕМО-ПЕСОЧНИЦА ${connSuffix}`;
+        badge.classList.add('offline');
+      }
+    }
+
+    function updateTmuxStreamBadgeUi() {
+      const inspBadge = document.getElementById('inspTmuxStreamBadge');
+      const inspActive = Boolean(tmuxStreamConnected && tmuxStreamSeat && tmuxStreamSeat === selectedAgentId);
+      if (inspBadge) {
+        inspBadge.textContent = td('sse.streamLive');
+        inspBadge.title = td('sse.streamTip');
+        inspBadge.style.display = inspActive ? 'inline-flex' : 'none';
+      }
+      const modalTitle = document.getElementById('terminalModalTitle');
+      if (modalTitle && modalSeatId) {
+        const modalStreaming = Boolean(tmuxStreamConnected && tmuxStreamSeat === modalSeatId);
+        const suffix = modalStreaming
+          ? ` • ${td('sse.streamLive')}`
+          : ` • ${deckLang === 'en' ? '80 lines' : '80 строк'}`;
+        modalTitle.textContent = `🖥️ LIVE TMUX • ${modalSeatId}${suffix}`;
+      }
+    }
+
+    function applyIncomingTmuxScreen(seatId, screenText) {
+      const text = typeof screenText === 'string' && screenText.length > 0 ? screenText : '(Пустой экран терминала)';
+      lastScreenBySeat[seatId] = text;
+
+      if (selectedAgentId === seatId) {
+        liveScreenCapture = text;
+        const box = document.getElementById('tmuxScreenBox');
+        if (box && box.textContent !== text) {
+          const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 45;
+          box.textContent = text;
+          if (atBottom) box.scrollTop = box.scrollHeight;
+        }
+        const promptOptsBar = document.getElementById('inspectorPromptOptionsBar');
+        if (promptOptsBar) {
+          const nextOpts = renderInteractivePromptOptionsHtml(seatId, text, 'cmdSendStatus');
+          if (promptOptsBar.getAttribute('data-cache-key') !== nextOpts) {
+            promptOptsBar.innerHTML = nextOpts;
+            promptOptsBar.setAttribute('data-cache-key', nextOpts);
+          }
+        }
+        const curAgent = AGENTS.find(x => x.id === seatId);
+        if (IS_LIVE && curAgent && typeof detectLiveHitlPrompt === 'function') {
+          const liveHitl = detectLiveHitlPrompt(text);
+          if (liveHitl.blocked && curAgent.state !== 'urgent') {
+            curAgent.state = 'urgent';
+            curAgent.needsInputCount = 1;
+            curAgent.needsInputReason = liveHitl.reason || 'permission_prompt';
+            curAgent.activityLabel = `🚨 NEEDS INPUT (${curAgent.needsInputReason})`;
+            curAgent.isAnomaly = true;
+            renderTriageStrip();
+            renderWaitRadarAndDecisions();
+            renderTopology();
+          }
+        }
+        const quickKeysBar = document.getElementById('ctrlQuickKeysBar');
+        if (quickKeysBar && curAgent) {
+          const qHtml = renderHarnessQuickKeys(curAgent, 'cmdSendStatus');
+          if (quickKeysBar.getAttribute('data-cache-key') !== qHtml) {
+            quickKeysBar.innerHTML = qHtml;
+            quickKeysBar.setAttribute('data-cache-key', qHtml);
+          }
+        }
+      }
+
+      if (modalSeatId === seatId) {
+        const mBody = document.getElementById('terminalModalBody');
+        if (mBody && mBody.textContent !== text) {
+          const atBottom = mBody.scrollHeight - mBody.scrollTop - mBody.clientHeight < 45;
+          mBody.textContent = text;
+          if (atBottom) mBody.scrollTop = mBody.scrollHeight;
+        }
+        const modalRiskBar = document.getElementById('modalEvalRiskBar');
+        if (modalRiskBar) modalRiskBar.innerHTML = renderModalEvalRiskBarHtml(seatId, text);
+        const modalOpts = document.getElementById('modalPromptOptionsBar');
+        if (modalOpts) modalOpts.innerHTML = renderInteractivePromptOptionsHtml(seatId, text, 'modalCmdStatus');
+        const modalQuick = document.getElementById('modalQuickKeysBar');
+        const modalAgent = AGENTS.find(a => a.id === seatId);
+        if (modalQuick && modalAgent) modalQuick.innerHTML = renderHarnessQuickKeys(modalAgent, 'modalCmdStatus');
+      }
+    }
+
+    function scheduleSseTelemetryRefresh() {
+      if (sseRefreshDebounceTimer) return;
+      sseRefreshDebounceTimer = setTimeout(() => {
+        sseRefreshDebounceTimer = null;
+        refreshTelemetryNow();
+      }, 220);
+    }
+
+    function disconnectTelemetryStream() {
+      if (telemetrySseRetryTimer) {
+        clearTimeout(telemetrySseRetryTimer);
+        telemetrySseRetryTimer = null;
+      }
+      if (telemetrySseSource) {
+        try { telemetrySseSource.close(); } catch {}
+        telemetrySseSource = null;
+      }
+      telemetrySseConnected = false;
+      telemetrySseRig = '';
+    }
+
+    function connectTelemetryStream(forceReconnect = false) {
+      if (!IS_LIVE || typeof EventSource !== 'function') return;
+      const targetRig = currentRigFilter || 'all';
+      if (!forceReconnect && telemetrySseSource && telemetrySseRig === targetRig) return;
+      disconnectTelemetryStream();
+      telemetrySseRig = targetRig;
+
+      const qs = new URLSearchParams();
+      if (targetRig !== 'all') qs.set('rig', targetRig);
+      const url = `/api/events${qs.toString() ? `?${qs.toString()}` : ''}`;
+      try {
+        const es = new EventSource(url);
+        telemetrySseSource = es;
+        es.addEventListener('ready', () => {
+          telemetrySseConnected = true;
+          telemetrySseRetryMs = 2000;
+          updateLiveConnectionBadgeUi(Boolean(window.ONTOLOGY_SNAPSHOT && window.ONTOLOGY_SNAPSHOT.hasLiveDaemonData), window.LIVE_DISCOVERY_MODE);
+        });
+        es.addEventListener('telemetry', () => {
+          telemetrySseConnected = true;
+          scheduleSseTelemetryRefresh();
+        });
+        es.addEventListener('invalidate', () => {
+          telemetrySseConnected = true;
+          scheduleSseTelemetryRefresh();
+        });
+        es.addEventListener('shift_event', () => {
+          telemetrySseConnected = true;
+          const dig = document.getElementById('shiftDigestModal');
+          if (dig && dig.classList.contains('open')) refreshShiftDigestModal();
+        });
+        es.onerror = () => {
+          telemetrySseConnected = false;
+          updateLiveConnectionBadgeUi(Boolean(window.ONTOLOGY_SNAPSHOT && window.ONTOLOGY_SNAPSHOT.hasLiveDaemonData), window.LIVE_DISCOVERY_MODE);
+          try { es.close(); } catch {}
+          if (telemetrySseSource === es) telemetrySseSource = null;
+          if (!IS_LIVE) return;
+          const waitMs = telemetrySseRetryMs;
+          telemetrySseRetryMs = Math.min(15000, telemetrySseRetryMs * 2);
+          if (telemetrySseRetryTimer) clearTimeout(telemetrySseRetryTimer);
+          telemetrySseRetryTimer = setTimeout(() => {
+            telemetrySseRetryTimer = null;
+            connectTelemetryStream(true);
+          }, waitMs);
+        };
+      } catch {
+        telemetrySseConnected = false;
+      }
+    }
+
+    function disconnectTmuxStream() {
+      if (tmuxStreamRetryTimer) {
+        clearTimeout(tmuxStreamRetryTimer);
+        tmuxStreamRetryTimer = null;
+      }
+      if (tmuxStreamSource) {
+        try { tmuxStreamSource.close(); } catch {}
+        tmuxStreamSource = null;
+      }
+      tmuxStreamConnected = false;
+      tmuxStreamSeat = '';
+      updateTmuxStreamBadgeUi();
+    }
+
+    function syncTmuxStream() {
+      if (!IS_LIVE || typeof EventSource !== 'function' || document.visibilityState === 'hidden') {
+        if (tmuxStreamSource) disconnectTmuxStream();
+        return;
+      }
+      const targetSeat = modalSeatId || (autoFollow ? selectedAgentId : '');
+      if (!targetSeat || !/^[a-zA-Z0-9._@-]{1,140}$/.test(targetSeat)) {
+        if (tmuxStreamSource) disconnectTmuxStream();
+        return;
+      }
+      if (tmuxStreamSource && tmuxStreamSeat === targetSeat) {
+        updateTmuxStreamBadgeUi();
+        return;
+      }
+      disconnectTmuxStream();
+      tmuxStreamSeat = targetSeat;
+      try {
+        const es = new EventSource(`/api/capture/stream?seat=${encodeURIComponent(targetSeat)}&lines=80`);
+        tmuxStreamSource = es;
+        es.addEventListener('ready', () => {
+          tmuxStreamConnected = true;
+          updateTmuxStreamBadgeUi();
+        });
+        es.addEventListener('screen', (ev) => {
+          tmuxStreamConnected = true;
+          updateTmuxStreamBadgeUi();
+          try {
+            const payload = JSON.parse(ev.data || '{}');
+            if (payload && payload.seat === tmuxStreamSeat && typeof payload.screen === 'string') {
+              applyIncomingTmuxScreen(payload.seat, payload.screen);
+            }
+          } catch {}
+        });
+        es.onerror = () => {
+          tmuxStreamConnected = false;
+          updateTmuxStreamBadgeUi();
+          try { es.close(); } catch {}
+          if (tmuxStreamSource === es) tmuxStreamSource = null;
+          if (!IS_LIVE || document.visibilityState === 'hidden') return;
+          if (tmuxStreamRetryTimer) clearTimeout(tmuxStreamRetryTimer);
+          tmuxStreamRetryTimer = setTimeout(() => {
+            tmuxStreamRetryTimer = null;
+            syncTmuxStream();
+          }, 3500);
+        };
+      } catch {
+        tmuxStreamConnected = false;
+      }
+    }
+
+    window.addEventListener('beforeunload', () => {
+      disconnectTelemetryStream();
+      disconnectTmuxStream();
+    });
+
     let telemetryFetchInFlight = false;
     let lastTelemetryRig = null;
     let lastHistoryRev = '';
@@ -4296,16 +4544,7 @@
 
         window.LIVE_DISCOVERY_MODE = data.discoveryMode || 'none';
         const hasLiveDaemonData = snapshot.hasLiveDaemonData;
-        const badge = document.getElementById('liveConnectionBadge');
-        const connSuffix = location.port ? `:${location.port}` : (location.protocol === 'https:' ? 'HTTPS' : ':7440');
-        if (hasLiveDaemonData) {
-          const modeTag = data.discoveryMode === 'universal' ? 'LIVE UNIVERSAL' : 'LIVE API';
-          badge.textContent = `● ${modeTag} ${connSuffix}`;
-          badge.classList.remove('offline');
-        } else {
-          badge.textContent = deckLang === 'en' ? `✨ DEMO SANDBOX ${connSuffix}` : `✨ ДЕМО-ПЕСОЧНИЦА ${connSuffix}`;
-          badge.classList.add('offline');
-        }
+        updateLiveConnectionBadgeUi(hasLiveDaemonData, data.discoveryMode);
 
         if (snapshot.rigs.length > 0) {
           const rigNames = snapshot.rigs.map(r => r.name);
@@ -4689,13 +4928,18 @@
         renderEdgeXray();
         updateAlertsAndTitle();
         const selAgent = AGENTS.find(a => a.id === selectedAgentId);
+        if (hasLiveDaemonData) {
+          connectTelemetryStream();
+          syncTmuxStream();
+        }
+        const inspStreaming = Boolean(tmuxStreamConnected && tmuxStreamSeat === selectedAgentId);
         if (!hasDoneInitialCapture) {
           hasDoneInitialCapture = true;
-          fetchTerminalCapture(selectedAgentId, true);
-        } else if (autoFollow && selAgent && (selAgent.state === 'working' || selAgent.state === 'urgent')) {
+          if (!inspStreaming) fetchTerminalCapture(selectedAgentId, true);
+        } else if (!inspStreaming && autoFollow && selAgent && (selAgent.state === 'working' || selAgent.state === 'urgent')) {
           fetchTerminalCapture(selectedAgentId, true);
         }
-        if (modalSeatId) fetchModalCapture();
+        if (modalSeatId && !(tmuxStreamConnected && tmuxStreamSeat === modalSeatId)) fetchModalCapture();
       } catch {
         const badge = document.getElementById('liveConnectionBadge');
         if (badge) {
@@ -5052,7 +5296,8 @@
       applyHoverClasses();
       renderInspectorAndScorecards(true);
       if (changed) {
-        fetchTerminalCapture(id);
+        if (IS_LIVE) syncTmuxStream();
+        if (!(tmuxStreamConnected && tmuxStreamSeat === id)) fetchTerminalCapture(id);
       }
     }
 
@@ -5482,20 +5727,34 @@
       persistDeckPref({ autoFollow });
       const b = document.getElementById('btnAutoFollow');
       if (b) b.textContent = autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff');
+      syncTmuxStream();
     }
 
     function openTerminalModal(seatId) {
       modalSeatId = seatId;
+      const mBody = document.getElementById('terminalModalBody');
+      const cachedScreen = lastScreenBySeat[seatId] || '';
       document.getElementById('terminalModalTitle').textContent = `🖥️ LIVE TMUX • ${seatId} • ${deckLang === 'en' ? '80 lines' : '80 строк'}`;
-      document.getElementById('terminalModalBody').textContent = 'Загрузка rig capture...';
+      if (mBody) {
+        mBody.textContent = cachedScreen || (deckLang === 'en' ? 'Loading rig capture...' : 'Загрузка rig capture...');
+      }
       renderModalCtrl(seatId);
       document.getElementById('terminalModal').classList.add('open');
-      fetchModalCapture();
+      if (IS_LIVE) syncTmuxStream();
+      updateTmuxStreamBadgeUi();
+      if (cachedScreen) {
+        applyIncomingTmuxScreen(seatId, cachedScreen);
+        if (mBody) mBody.scrollTop = mBody.scrollHeight;
+      }
+      if (!cachedScreen || !(tmuxStreamConnected && tmuxStreamSeat === seatId)) {
+        fetchModalCapture();
+      }
     }
 
     function closeTerminalModal() {
       modalSeatId = null;
       document.getElementById('terminalModal').classList.remove('open');
+      syncTmuxStream();
     }
 
     async function fetchModalCapture() {
@@ -10164,7 +10423,10 @@
       let lastVisibleRefreshAt = Date.now();
       const scheduleNextTelemetryPoll = () => {
         if (telemetryPollTimer) clearTimeout(telemetryPollTimer);
-        const delayMs = document.visibilityState === 'hidden' ? 16000 : 4000;
+        const hidden = document.visibilityState === 'hidden';
+        const delayMs = telemetrySseConnected
+          ? (hidden ? 32000 : 20000)
+          : (hidden ? 16000 : 4000);
         telemetryPollTimer = setTimeout(async () => {
           await refreshTelemetryNow();
           scheduleNextTelemetryPoll();
@@ -10172,6 +10434,7 @@
       };
       scheduleNextTelemetryPoll();
       document.addEventListener('visibilitychange', () => {
+        syncTmuxStream();
         if (document.visibilityState === 'visible') {
           const now = Date.now();
           if (now - lastVisibleRefreshAt >= 1500) {

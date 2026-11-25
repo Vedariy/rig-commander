@@ -26,6 +26,7 @@ import {
 } from './assets/domain/context-lineage.js';
 import { collectFleetGitRadar, fetchSeatGitDiff } from './lib/git-radar.mjs';
 import { ShiftHistoryStore } from './lib/shift-history.mjs';
+import { SsePushHub } from './lib/sse-hub.mjs';
 import { buildShiftDigest, formatShiftDigestMarkdown } from './assets/domain/shift-digest.js';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
@@ -56,6 +57,16 @@ async function captureSeatScreen(seat, lines = 38) {
     : safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(lineCount)]);
 }
 
+const sseHub = new SsePushHub({ captureFn: captureSeatScreen });
+
+function schedulePostActionSseRefresh(seatId, reason = 'send') {
+  sseHub.notifyInvalidated(reason, seatId);
+  if (seatId) {
+    setTimeout(() => { sseHub.triggerSeatCaptureNow(seatId); }, 120).unref();
+    setTimeout(() => { sseHub.triggerSeatCaptureNow(seatId); }, 520).unref();
+  }
+}
+
 async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
   if (!/^[a-zA-Z0-9._@-]+$/.test(String(seatId || ''))) {
     return { ok: false, error: 'Invalid seat identifier' };
@@ -72,6 +83,7 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '') {
   terminalPromptProbeCache.delete(seatId);
   invalidateTelemetryCache();
   const rec = actionAudit.record({ actionId, seatId, type: 'key', payload: keyStroke, httpStatus: 200, ok: true, baseline });
+  schedulePostActionSseRefresh(seatId, 'key');
   return { ok: true, execId: rec.execId, output: (output || '').trim() };
 }
 
@@ -1894,10 +1906,16 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
   fleetIntelligence.ingestSnapshot(payload);
   payload.intelligence = fleetIntelligence.getLatestReport(rigKey);
   if (rigKey === 'all') {
-    shiftHistory.ingestTelemetry(payload);
+    const newShiftEvents = shiftHistory.ingestTelemetry(payload);
+    for (const ev of newShiftEvents) {
+      if (ev && ev.kind !== 'checkpoint') {
+        sseHub.publishShiftEvent(ev);
+      }
+    }
   }
   payload.shiftHistoryMeta = shiftHistory.getSummaryMeta();
   latestFleetSnapshot = payload;
+  sseHub.publishTelemetryBundle(rigKey, payload);
 
   setImmediate(async () => {
     try {
@@ -2609,6 +2627,23 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 1.29 SSE Fleet Push Stream (zero-dep Server-Sent Events, notifies clients on real delta)
+  if (url.pathname === '/api/events' && req.method === 'GET') {
+    const requestedRig = url.searchParams.get('rig') || 'all';
+    lastTelemetryClientAt = Date.now();
+    sseHub.subscribeEvents(req, res, { rigKey: requestedRig });
+    return;
+  }
+
+  // 2.0 SSE Live TMUX Capture Stream (deduplicated per seat+lines, SHA-1 delta push, 650ms->1500ms adaptive)
+  if (url.pathname === '/api/capture/stream' && req.method === 'GET') {
+    const seat = url.searchParams.get('seat') || '';
+    const lines = url.searchParams.get('lines') || '80';
+    lastTelemetryClientAt = Date.now();
+    sseHub.subscribeTmux(req, res, { seatId: seat, lines });
+    return;
+  }
+
   // 2. Live tmux terminal capture endpoint
   if (url.pathname === '/api/capture') {
     const seat = url.searchParams.get('seat') || 'dev-owner@core-platform';
@@ -2754,6 +2789,7 @@ const server = http.createServer(async (req, res) => {
             aiEvaluator.invalidateSeat(seat);
             terminalPromptProbeCache.delete(seat);
             invalidateTelemetryCache();
+            schedulePostActionSseRefresh(seat, 'send');
             const okBody = { ok: true, execId: auditRec.execId, seat, type, text, output: (output || '').trim() };
             idem.complete(200, okBody);
             await sendJson(req, res, 200, okBody);
@@ -2890,14 +2926,17 @@ if (isMainModule) {
     setTimeout(() => {
       void getTelemetryBundle('all', { forceRefresh: true }).catch(() => {});
     }, 150).unref();
-    // Keep telemetry warm strictly while at least one client polled within the last 25s (zero idle CPU!)
+    // Keep telemetry warm strictly while at least one SSE subscriber is open OR a client polled within 25s (zero idle CPU!)
     setInterval(() => {
-      if (Date.now() - lastTelemetryClientAt < 25000) {
-        for (const rigKey of telemetryCacheByRig.keys()) {
+      if (sseHub.hasActiveSubscribers() || Date.now() - lastTelemetryClientAt < 25000) {
+        const rigsToWarm = new Set(telemetryCacheByRig.keys());
+        for (const c of sseHub.eventClients) rigsToWarm.add(c.rigKey || 'all');
+        if (rigsToWarm.size === 0) rigsToWarm.add('all');
+        for (const rigKey of rigsToWarm) {
           void getTelemetryBundle(rigKey, { forceRefresh: false }).catch(() => {});
         }
       }
-    }, 3500).unref();
+    }, 2600).unref();
     setTimeout(() => {
       selfUpdater.check().then(st => {
         if (st && st.updateAvailable) {
