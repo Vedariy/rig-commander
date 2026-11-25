@@ -4,6 +4,7 @@ import {
   GRAPH_LAYOUT_MODES,
   classifyNodeActivityTier,
   estimateNodeBox,
+  evaluateClusterReadability,
   computeTopologyLayout,
   computeAnchoredPopoverRect
 } from '../openrig/assets/domain/topology-layout.js';
@@ -521,4 +522,70 @@ test('narrow multi-rig cluster stacks 2-node active pair vertically so edge badg
   // Stacked vertically (source above target) with >= 140px vertical separation
   assert.ok((pQ1.y - pC3.y) * h / 100 >= 140, `Expected vertical stack >= 140px, got ${((pQ1.y - pC3.y) * h / 100).toFixed(1)}px`);
   assertNoRectOverlaps(agents, res, w, h);
+});
+
+test('variable-width shelf packing wraps dense wide cluster to its own full-width row while keeping compact neighbors side-by-side', () => {
+  const agents = [
+    makeAgent('operator-agent@kernel', { state: 'working', displayTitle: 'operator-agent' }),
+    makeAgent('dev-coder3@rig-commander', { state: 'idle', ctxPct: 18, displayTitle: 'dev-coder3' }),
+    makeAgent('dev-check@rig-commander', { state: 'working', displayTitle: 'dev-check' }),
+    makeAgent('dev-owner@streamdonation-pwa', { state: 'working', ctxPct: 56, displayTitle: 'dev-owner' }),
+    makeAgent('dev-senior-architect@streamdonation-pwa', { state: 'idle', ctxPct: 41, displayTitle: 'dev-senior-architect' }),
+    makeAgent('dev-check-argon@streamdonation-pwa', { state: 'working', displayTitle: 'dev-check-argon' })
+  ];
+  const edges = [
+    { from: 'dev-coder3@rig-commander', to: 'dev-check@rig-commander', queueStatus: 'live', liveActive: true, slice: 'iter7-2' },
+    { from: 'dev-owner@streamdonation-pwa', to: 'dev-senior-architect@streamdonation-pwa', queueStatus: 'live', liveActive: true, slice: '0147-live' },
+    { from: 'dev-owner@streamdonation-pwa', to: 'dev-check-argon@streamdonation-pwa', queueStatus: 'live', liveActive: true, slice: 'donation-v15-auth-fix' }
+  ];
+
+  // Medium desktop width (~980px): @kernel + @rig-commander share Row 0, wide @streamdonation-pwa wraps to full-width Row 1
+  const res = computeTopologyLayout({ agents, edges, mode: 'dynamic', canvasWidth: 980, canvasHeight: 540 });
+  assert.equal(res.rigClusters.length, 3);
+  const kZone = res.rigClusters.find(c => c.rigId === 'kernel');
+  const rcZone = res.rigClusters.find(c => c.rigId === 'rig-commander');
+  const sdZone = res.rigClusters.find(c => c.rigId === 'streamdonation-pwa');
+
+  assert.ok(Math.abs(kZone.yPct - rcZone.yPct) < 0.5, 'compact @kernel and @rig-commander should share Row 0');
+  assert.ok(sdZone.yPct > kZone.yPct + kZone.hPct, 'wide @streamdonation-pwa must wrap onto Row 1 below Row 0');
+  assert.ok(sdZone.wPct > 90, `wrapped @streamdonation-pwa should span full row width, got ${sdZone.wPct.toFixed(1)}%`);
+  assert.equal(res.canvasWidth, 980, 'should wrap vertically instead of forcing horizontal scroll');
+
+  // Every card stays strictly inside its zone with zero overlaps
+  const w = res.canvasWidth, h = res.canvasHeight;
+  for (const agent of agents) {
+    const box = getBoxRect(agent, res.positions[agent.id], 'active', w, h);
+    const zone = res.rigClusters.find(c => c.rigId === agent.id.split('@').at(-1));
+    assert.ok(box.left > zone.xPct * w / 100 && box.right < (zone.xPct + zone.wPct) * w / 100,
+      `${agent.id} escaped its cluster horizontally`);
+  }
+  assertNoRectOverlaps(agents, res, w, h);
+
+  // Ultra-wide monitor (1600px): all 3 fit cleanly side-by-side in 1 single row
+  const wide = computeTopologyLayout({ agents, edges, mode: 'dynamic', canvasWidth: 1600, canvasHeight: 540 });
+  assert.ok(wide.rigClusters.every(c => Math.abs(c.yPct - wide.rigClusters[0].yPct) < 0.5), 'all 3 rigs fit on 1 row at 1600px');
+});
+
+test('evaluateClusterReadability detects border overflow, card overlap, and cramped edge badges cleanly', () => {
+  const a1 = makeAgent('dev-owner@sd', { state: 'working', displayTitle: 'dev-owner' });
+  const a2 = makeAgent('dev-senior-architect@sd', { state: 'working', displayTitle: 'dev-senior-architect' });
+  const edges = [{ from: a1.id, to: a2.id, queueStatus: 'live', liveActive: true, slice: '0147-live' }];
+
+  const cramped = evaluateClusterReadability(
+    { positions: { [a1.id]: { x: 25, y: 50 }, [a2.id]: { x: 85, y: 50 } }, tiers: { [a1.id]: 'active', [a2.id]: 'active' } },
+    [a1, a2],
+    edges,
+    300,
+    300
+  );
+  assert.ok(cramped.overflowCount >= 1 && cramped.score >= 100, `expected overflow penalty, got ${JSON.stringify(cramped)}`);
+
+  const spacious = evaluateClusterReadability(
+    { positions: { [a1.id]: { x: 22, y: 50 }, [a2.id]: { x: 78, y: 50 } }, tiers: { [a1.id]: 'active', [a2.id]: 'active' } },
+    [a1, a2],
+    edges,
+    720,
+    340
+  );
+  assert.equal(spacious.score, 0, `expected zero penalties on spacious row, got ${JSON.stringify(spacious)}`);
 });

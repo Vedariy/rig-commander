@@ -711,9 +711,301 @@ function rigIdOf(agent) {
   return id.includes('@') ? id.slice(id.lastIndexOf('@') + 1) : 'local';
 }
 
-// Each rig uses the existing single-rig engine inside a disjoint, padded region
-// sized proportionally to its seat count so single-node rigs (e.g. @kernel) never
-// starve multi-seat project pods into vertical collisions.
+function estimateEdgeBadgeWidthPx(edge) {
+  const slice = String((edge && edge.slice) || '').trim();
+  if (!slice) return 52;
+  return Math.min(168, Math.max(76, slice.length * 7.2 + 34));
+}
+
+function segmentIntersectsPaddedBox(x1, y1, x2, y2, cx, cy, halfW, halfH) {
+  const minX = cx - halfW, maxX = cx + halfW;
+  const minY = cy - halfH, maxY = cy + halfH;
+  const dx = x2 - x1, dy = y2 - y1;
+  let t0 = 0, t1 = 1;
+  const clips = [
+    [-dx, x1 - minX],
+    [dx, maxX - x1],
+    [-dy, y1 - minY],
+    [dy, maxY - y1]
+  ];
+  for (const [p, q] of clips) {
+    if (Math.abs(p) < 1e-6) {
+      if (q < 0) return false;
+    } else {
+      const r = q / p;
+      if (p < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
+    }
+  }
+  return t1 >= t0;
+}
+
+/**
+ * Deterministic sub-millisecond readability scorer for a single rig cluster layout.
+ * Detects border overflows, padded card overlaps, cramped active edge corridors,
+ * and active edges slicing through third-party cards.
+ */
+export function evaluateClusterReadability(local, agents, rigEdges, innerW, innerH, { detailed = false, measuredBoxes = null } = {}) {
+  const list = Array.isArray(agents) ? agents.filter(Boolean) : [];
+  const positions = (local && local.positions) || {};
+  const tiers = (local && local.tiers) || {};
+  const geom = new Map();
+
+  let overflowCount = 0;
+  for (const agent of list) {
+    const p = positions[agent.id];
+    if (!p) continue;
+    const tier = tiers[agent.id] || 'active';
+    const box = resolveBox(agent, tier, { detailed, measuredBoxes });
+    const cx = (p.x / 100) * innerW;
+    const cy = (p.y / 100) * innerH;
+    const hw = box.width / 2;
+    const hh = box.height / 2;
+    geom.set(agent.id, { cx, cy, hw, hh, tier });
+    if (cx - hw < 2 || cx + hw > innerW - 2 || cy - hh < 2 || cy + hh > innerH - 2) {
+      overflowCount++;
+    }
+  }
+
+  let overlapCount = 0;
+  const ids = [...geom.keys()];
+  for (let i = 0; i < ids.length; i++) {
+    const a = geom.get(ids[i]);
+    for (let j = i + 1; j < ids.length; j++) {
+      const b = geom.get(ids[j]);
+      const pad = (a.tier === 'dormant' && b.tier === 'dormant') ? 4 : 8;
+      if (Math.abs(a.cx - b.cx) < (a.hw + b.hw + pad) && Math.abs(a.cy - b.cy) < (a.hh + b.hh + pad)) {
+        overlapCount++;
+      }
+    }
+  }
+
+  let crampedEdgeCount = 0;
+  let edgeThroughCardCount = 0;
+  const seenPairs = new Set();
+  for (const edge of (Array.isArray(rigEdges) ? rigEdges : [])) {
+    if (!isEdgeActiveForLayout(edge)) continue;
+    const u = geom.get(edge.from);
+    const v = geom.get(edge.to);
+    if (!u || !v) continue;
+    const pairKey = edge.from < edge.to ? `${edge.from}|${edge.to}` : `${edge.to}|${edge.from}`;
+    if (seenPairs.has(pairKey)) continue;
+    seenPairs.add(pairKey);
+
+    const dx = v.cx - u.cx;
+    const dy = v.cy - u.cy;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 1e-3) {
+      const ux = dx / dist, uy = dy / dist;
+      const rU = Math.min(Math.abs(ux) > 1e-5 ? u.hw / Math.abs(ux) : 1e9, Math.abs(uy) > 1e-5 ? u.hh / Math.abs(uy) : 1e9);
+      const rV = Math.min(Math.abs(ux) > 1e-5 ? v.hw / Math.abs(ux) : 1e9, Math.abs(uy) > 1e-5 ? v.hh / Math.abs(uy) : 1e9);
+      const corridor = Math.max(0, dist - rU - rV);
+      const badgeW = estimateEdgeBadgeWidthPx(edge);
+      // Horizontal/shallow edges need the full badge width; steep vertical edges only need badge height + arrow margin.
+      const requiredCorridor = Math.abs(ux) > 0.65
+        ? Math.min(148, badgeW + 18)
+        : Math.max(54, Math.min(92, badgeW * 0.55));
+      if (corridor < requiredCorridor) crampedEdgeCount++;
+
+      // Trim segment slightly from endpoints so border touch doesn't self-trigger
+      const sx = u.cx + ux * (rU + 4), sy = u.cy + uy * (rU + 4);
+      const ex = v.cx - ux * (rV + 4), ey = v.cy - uy * (rV + 4);
+      if (corridor > 10) {
+        for (const otherId of ids) {
+          if (otherId === edge.from || otherId === edge.to) continue;
+          const o = geom.get(otherId);
+          if (segmentIntersectsPaddedBox(sx, sy, ex, ey, o.cx, o.cy, o.hw + 4, o.hh + 4)) {
+            edgeThroughCardCount++;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  const score = overflowCount * 100 + overlapCount * 80 + edgeThroughCardCount * 50 + crampedEdgeCount * 40;
+  return { score, overflowCount, overlapCount, crampedEdgeCount, edgeThroughCardCount };
+}
+
+function estimateRigClusterDemand(agents, rigEdges, tiers, { detailed, measuredBoxes, insetX }) {
+  const allItems = agents.map(agent => {
+    const tier = tiers[agent.id] || 'active';
+    return { agent, tier, role: getRolePlacementInfo(agent), box: resolveBox(agent, tier, { detailed, measuredBoxes }) };
+  });
+  const activeItems = allItems.filter(it => it.tier !== 'dormant');
+  const sizedItems = activeItems.length > 0 ? activeItems : allItems;
+  const maxCardW = Math.max(...allItems.map(it => it.box.width));
+  const minSingleW = Math.max(220, maxCardW + insetX * 2 + 36);
+
+  let needW = minSingleW;
+  let weight = 0.85;
+
+  if (sizedItems.length <= 1) {
+    needW = minSingleW;
+    weight = 0.75;
+  } else if (sizedItems.length === 2) {
+    // 2-node active pairs stack vertically inside compact columns with spacious vertical badges
+    needW = Math.max(280, maxCardW + insetX * 2 + 64);
+    weight = 1.3;
+  } else {
+    const activeEdges = rigEdges.filter(e => isEdgeActiveForLayout(e));
+    const byBucket = new Map([[0, []], [1, []], [2, []]]);
+    for (const it of sizedItems) byBucket.get(it.role.bucket).push(it);
+
+    let maxTierNeedW = minSingleW;
+    let occupiedBuckets = 0;
+    for (const bucketId of [0, 1, 2]) {
+      const group = byBucket.get(bucketId);
+      if (group.length === 0) continue;
+      occupiedBuckets++;
+      const rowSlice = [...group].sort((a, b) => b.box.width - a.box.width).slice(0, Math.min(3, group.length));
+      if (rowSlice.length <= 1) {
+        maxTierNeedW = Math.max(maxTierNeedW, rowSlice[0].box.width + insetX * 2 + 48);
+        continue;
+      }
+      const groupIds = new Set(group.map(it => it.agent.id));
+      let maxPeerBadgeW = 0;
+      for (const e of activeEdges) {
+        if (groupIds.has(e.from) && groupIds.has(e.to)) {
+          maxPeerBadgeW = Math.max(maxPeerBadgeW, estimateEdgeBadgeWidthPx(e));
+        }
+      }
+      const peerGap = maxPeerBadgeW > 0
+        ? Math.min(138, Math.max(92, maxPeerBadgeW + 18))
+        : (detailed ? 32 : 48);
+      const sumW = rowSlice.reduce((s, it) => s + it.box.width, 0);
+      const tierNeed = sumW + (rowSlice.length - 1) * peerGap + insetX * 2 + 36;
+      maxTierNeedW = Math.max(maxTierNeedW, tierNeed);
+    }
+
+    // 3-tier staggered triangle (Command -> Coder -> QA) needs lateral room for 0.26 / 0.74 offset
+    if (occupiedBuckets >= 3) {
+      maxTierNeedW = Math.max(maxTierNeedW, maxCardW * 2 + insetX * 2 + 64);
+    }
+    needW = Math.min(900, Math.max(360, maxTierNeedW));
+    weight = Math.min(3.8, Math.max(1.8, needW / 185));
+  }
+
+  return {
+    agents,
+    items: allItems,
+    activeCount: activeItems.length,
+    dormantCount: allItems.length - activeItems.length,
+    rigEdges,
+    needW,
+    weight
+  };
+}
+
+function packRigRows(rigs, rigMeta, availCanvasW, gap) {
+  const rows = [];
+  let curRow = [];
+  let curNeedSum = 0;
+
+  for (const rigId of rigs) {
+    const needW = rigMeta.get(rigId).needW;
+    const projected = curRow.length === 0 ? needW : curNeedSum + gap + needW;
+    if (curRow.length > 0 && (curRow.length >= 3 || projected > availCanvasW)) {
+      rows.push(curRow);
+      curRow = [rigId];
+      curNeedSum = needW;
+    } else {
+      curRow.push(rigId);
+      curNeedSum = projected;
+    }
+  }
+  if (curRow.length > 0) rows.push(curRow);
+  return rows;
+}
+
+function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed }) {
+  let width = cw;
+  for (const rowRigs of rowSlices) {
+    const rowMinTotal = pad * 2 + gap * Math.max(0, rowRigs.length - 1) +
+      rowRigs.reduce((sum, r) => sum + rigMeta.get(r).needW, 0);
+    if (rowMinTotal > width) width = rowMinTotal;
+  }
+
+  const zoneRects = new Map();
+  for (let rIdx = 0; rIdx < rowSlices.length; rIdx++) {
+    const rowRigs = rowSlices[rIdx];
+    const availW = width - pad * 2 - gap * Math.max(0, rowRigs.length - 1);
+    const sumMin = rowRigs.reduce((s, r) => s + rigMeta.get(r).needW, 0);
+    const extraW = Math.max(0, availW - sumMin);
+    const sumWeight = rowRigs.reduce((s, r) => s + rigMeta.get(r).weight, 0) || 1;
+    let cursorX = pad;
+    for (const rigId of rowRigs) {
+      const m = rigMeta.get(rigId);
+      const zW = m.needW + (extraW * m.weight) / sumWeight;
+      zoneRects.set(rigId, { x: cursorX, w: zW, rowIdx: rIdx });
+      cursorX += zW + gap;
+    }
+  }
+
+  // Per-row minimum heights so compact rows (@kernel + @rig-commander) stay crisp
+  // without inheriting the tall height of a multi-tier row below them.
+  const rowMinHeights = rowSlices.map(rowRigs => {
+    let minH = 220;
+    for (const rigId of rowRigs) {
+      const { items, activeCount, dormantCount } = rigMeta.get(rigId);
+      const innerW = Math.max(200, zoneRects.get(rigId).w - insetX * 2);
+      const activeItems = items.filter(it => it.tier !== 'dormant');
+      const stageItems = activeItems.length > 0 ? activeItems : items;
+      const cardH = Math.max(...items.map(it => it.box.height));
+      let estH;
+      if (stageItems.length <= 1 && dormantCount === 0) {
+        estH = Math.max(220, cardH + 116 + insetTop + insetBottom);
+      } else if (stageItems.length === 2 && dormantCount === 0) {
+        const pairCardW = stageItems[0].box.width + stageItems[1].box.width;
+        const verticalStack = (innerW - pairCardW) < (detailed ? 110 : 140);
+        estH = verticalStack
+          ? Math.max(320, cardH * 2 + 168 + insetTop + insetBottom)
+          : Math.max(240, cardH + 128 + insetTop + insetBottom);
+      } else {
+        let tierRows = 0;
+        for (const bucket of [0, 1, 2]) {
+          tierRows += splitIntoBalancedRows(
+            stageItems.filter(it => it.role.bucket === bucket),
+            Math.max(180, innerW - 28),
+            20,
+            4
+          ).length;
+        }
+        const benchExtra = dormantCount > 0 ? 54 : 0;
+        estH = Math.max(340, 82 + tierRows * (cardH + 50) + benchExtra) + insetTop + insetBottom;
+      }
+      if (estH > minH) minH = estH;
+    }
+    return minH;
+  });
+
+  const rows = rowSlices.length;
+  const usableCh = Math.max(240, ch - bottomReservePx);
+  const sumMinH = rowMinHeights.reduce((s, h) => s + h, 0);
+  const totalGapsH = pad * 2 + gap * Math.max(0, rows - 1);
+  const spareH = Math.max(0, usableCh - totalGapsH - sumMinH);
+  const rowHeights = rowMinHeights.map(h => h + (spareH * h) / (sumMinH || 1));
+
+  const rowTops = [];
+  let cursorY = pad;
+  for (let rIdx = 0; rIdx < rows; rIdx++) {
+    rowTops.push(cursorY);
+    cursorY += rowHeights[rIdx] + gap;
+  }
+  const contentBottom = rows > 0 ? rowTops[rows - 1] + rowHeights[rows - 1] + pad : ch;
+  const height = Math.max(ch, contentBottom + bottomReservePx);
+
+  return { width, height, zoneRects, rowHeights, rowTops };
+}
+
+// Each rig uses the existing single-rig engine inside a disjoint, padded region.
+// Variable-width shelf packing + deterministic readability scoring automatically wraps
+// wide/dense pods onto their own full-width row so cards and edge badges never clip.
 function layoutRigClusters(list, edges, options, activity, cw, ch) {
   const groups = new Map();
   for (const agent of list) {
@@ -726,90 +1018,116 @@ function layoutRigClusters(list, edges, options, activity, cw, ch) {
   const bottomReservePx = Math.max(0, Number(options.bottomReservePx) || 0);
   const pad = 12, gap = 20, insetX = 16, insetTop = 32, insetBottom = 16;
 
-  // Per-rig minimum width & proportional weight based on seat count and widest card
   const rigMeta = new Map();
   for (const rigId of rigs) {
     const agents = groups.get(rigId);
-    const items = agents.map(agent => ({ agent, box: resolveBox(agent, 'active', { detailed, measuredBoxes }) }));
-    const maxCardW = Math.max(...items.map(it => it.box.width));
-    const singleMinW = Math.max(240, maxCardW + insetX * 2 + 28);
-    const multiMinW = Math.max(360, maxCardW * 2 + insetX * 2 + 64);
-    const minW = agents.length <= 1 ? singleMinW : Math.min(Math.max(360, maxCardW + insetX * 2 + 32), multiMinW);
-    const weight = agents.length <= 1 ? 1.0 : Math.min(3.4, Math.sqrt(agents.length) * 1.35);
-    rigMeta.set(rigId, { agents, items, minW, weight });
+    const idSet = new Set(agents.map(a => a.id));
+    const rigEdges = (Array.isArray(edges) ? edges : []).filter(e => idSet.has(e.from) && idSet.has(e.to));
+    rigMeta.set(rigId, estimateRigClusterDemand(agents, rigEdges, activity.tiers, { detailed, measuredBoxes, insetX }));
   }
 
-  const maxMinW = Math.max(...[...rigMeta.values()].map(m => m.minW));
-  const cols = Math.max(1, Math.min(3, rigs.length, Math.floor((Math.max(cw, maxMinW + pad * 2) - pad * 2 + gap) / (260 + gap))));
-  const rowSlices = [];
-  for (let i = 0; i < rigs.length; i += cols) {
-    rowSlices.push(rigs.slice(i, i + cols));
-  }
+  const availRowW = Math.max(320, cw - pad * 2);
+  let rowSlices = packRigRows(rigs, rigMeta, availRowW, gap);
 
-  // Ensure overall canvas width satisfies every row's sum of minimum widths
-  let width = cw;
-  for (const rowRigs of rowSlices) {
-    const rowMinTotal = pad * 2 + gap * Math.max(0, rowRigs.length - 1) +
-      rowRigs.reduce((sum, r) => sum + rigMeta.get(r).minW, 0);
-    if (rowMinTotal > width) width = rowMinTotal;
-  }
-
-  // Allocate proportional widths per row while honoring each rig's minW
-  const zoneRects = new Map();
-  for (let rIdx = 0; rIdx < rowSlices.length; rIdx++) {
-    const rowRigs = rowSlices[rIdx];
-    const availW = width - pad * 2 - gap * Math.max(0, rowRigs.length - 1);
-    const sumMin = rowRigs.reduce((s, r) => s + rigMeta.get(r).minW, 0);
-    const extraW = Math.max(0, availW - sumMin);
-    const sumWeight = rowRigs.reduce((s, r) => s + rigMeta.get(r).weight, 0) || 1;
-    let cursorX = pad;
-    for (const rigId of rowRigs) {
+  const runPass = (slices) => {
+    const geom = computeZoneGeometry(slices, rigMeta, cw, ch, { pad, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed });
+    const locals = new Map();
+    const scores = new Map();
+    for (const rigId of rigs) {
+      const rect = geom.zoneRects.get(rigId);
+      const zoneW = rect.w;
+      const zoneH = geom.rowHeights[rect.rowIdx];
+      const innerW = zoneW - insetX * 2;
+      const innerH = zoneH - insetTop - insetBottom;
       const m = rigMeta.get(rigId);
-      const zW = m.minW + (extraW * m.weight) / sumWeight;
-      zoneRects.set(rigId, { x: cursorX, w: zW, rowIdx: rIdx });
-      cursorX += zW + gap;
+      const local = computeTopologyLayout({
+        ...options,
+        bottomReservePx: 0,
+        agents: m.agents,
+        edges: m.rigEdges,
+        canvasWidth: innerW,
+        canvasHeight: innerH
+      });
+      locals.set(rigId, local);
+      scores.set(rigId, evaluateClusterReadability(local, m.agents, m.rigEdges, innerW, innerH, { detailed, measuredBoxes }));
     }
+    return { geom, locals, scores };
+  };
+
+  let pass = runPass(rowSlices);
+
+  // Pass 2 (Readability Guard): if any cluster sharing a multi-rig row has readability
+  // penalties (overflow, overlap, edge-through-card, or cramped edge badge) AND gets
+  // meaningfully more width on its own row, promote it to a dedicated row and recompute once.
+  const refinedSlices = [];
+  let promoted = false;
+  for (const rowRigs of rowSlices) {
+    if (rowRigs.length < 2) {
+      refinedSlices.push(rowRigs);
+      continue;
+    }
+    const kept = [];
+    const solo = [];
+    for (const rigId of rowRigs) {
+      const sc = pass.scores.get(rigId);
+      const curW = pass.geom.zoneRects.get(rigId).w;
+      if (sc && sc.score >= 40 && (availRowW - curW) > 48) {
+        solo.push(rigId);
+        promoted = true;
+      } else {
+        kept.push(rigId);
+      }
+    }
+    if (kept.length > 0) refinedSlices.push(kept);
+    for (const rigId of solo) refinedSlices.push([rigId]);
+  }
+  if (promoted) {
+    rowSlices = refinedSlices;
+    pass = runPass(rowSlices);
   }
 
-  let minZoneH = 0;
-  for (const rigId of rigs) {
-    const { items } = rigMeta.get(rigId);
-    const innerW = Math.max(200, zoneRects.get(rigId).w - insetX * 2);
-    let rowCount = 0;
-    for (const bucket of [0, 1, 2]) {
-      rowCount += splitIntoBalancedRows(items.filter(it => getRolePlacementInfo(it.agent).bucket === bucket), Math.max(180, innerW - 28), 20, 4).length;
-    }
-    const cardH = Math.max(...items.map(it => it.box.height));
-    minZoneH = Math.max(minZoneH, Math.max(340, 76 + rowCount * (cardH + 46)) + insetTop + insetBottom);
-  }
-
-  const rows = rowSlices.length;
-  const usableCh = Math.max(240, ch - bottomReservePx);
-  const zoneH = Math.max(minZoneH, (usableCh - pad * 2 - gap * Math.max(0, rows - 1)) / rows);
-  const height = Math.max(ch, pad * 2 + rows * zoneH + gap * Math.max(0, rows - 1) + bottomReservePx);
+  const { width, height, zoneRects, rowHeights, rowTops } = pass.geom;
   const positions = {}, benchEdgeById = {}, rigClusters = [];
 
   for (const rigId of rigs) {
     const rect = zoneRects.get(rigId);
     const x = rect.x;
     const zoneW = rect.w;
-    const y = pad + rect.rowIdx * (zoneH + gap);
-    const agents = groups.get(rigId);
+    const zoneH = rowHeights[rect.rowIdx];
+    const y = rowTops[rect.rowIdx];
     const innerW = zoneW - insetX * 2;
     const innerH = zoneH - insetTop - insetBottom;
-    const local = computeTopologyLayout({ ...options, bottomReservePx: 0, agents, edges, canvasWidth: innerW, canvasHeight: innerH });
+    const agents = groups.get(rigId);
+    const local = pass.locals.get(rigId);
     for (const agent of agents) {
       const p = local.positions[agent.id];
-      positions[agent.id] = { x: +((x + insetX + p.x * innerW / 100) * 100 / width).toFixed(4),
-        y: +((y + insetTop + p.y * innerH / 100) * 100 / height).toFixed(4) };
+      positions[agent.id] = {
+        x: +((x + insetX + p.x * innerW / 100) * 100 / width).toFixed(4),
+        y: +((y + insetTop + p.y * innerH / 100) * 100 / height).toFixed(4)
+      };
       if (local.benchEdgeById[agent.id]) benchEdgeById[agent.id] = local.benchEdgeById[agent.id];
     }
-    rigClusters.push({ rigId, xPct: x * 100 / width, yPct: y * 100 / height,
-      wPct: zoneW * 100 / width, hPct: zoneH * 100 / height, count: agents.length });
+    rigClusters.push({
+      rigId,
+      xPct: x * 100 / width,
+      yPct: y * 100 / height,
+      wPct: zoneW * 100 / width,
+      hPct: zoneH * 100 / height,
+      count: agents.length
+    });
   }
-  return { mode, positions, tiers: activity.tiers, benchEdgeById, benchSeparatorY: null,
-    activeCount: activity.activeNodes.length, dormantCount: activity.dormantNodes.length,
-    rigClusters, canvasWidth: width, canvasHeight: height };
+  return {
+    mode,
+    positions,
+    tiers: activity.tiers,
+    benchEdgeById,
+    benchSeparatorY: null,
+    activeCount: activity.activeNodes.length,
+    dormantCount: activity.dormantNodes.length,
+    rigClusters,
+    canvasWidth: width,
+    canvasHeight: height
+  };
 }
 
 /**

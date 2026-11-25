@@ -86,6 +86,7 @@ export {
   classifyNodeActivityTier,
   getRolePlacementInfo,
   estimateNodeBox,
+  evaluateClusterReadability,
   computeTopologyLayout,
   computeAnchoredPopoverRect
 } from './topology-layout.js';
