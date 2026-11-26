@@ -5891,14 +5891,14 @@ body.demo-mode .node-meta-row > span { flex: 0 0 auto; white-space: nowrap; }
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 .ac-mode-select.is-dry {
-  border-color: rgba(251, 191, 36, 0.62);
-  background: rgba(251, 191, 36, 0.12);
-  color: #fde68a;
+  border-color: rgba(56, 189, 248, 0.42);
+  background: rgba(15, 23, 42, 0.85);
+  color: #bae6fd;
 }
 .ac-mode-select.is-armed {
-  border-color: rgba(0, 255, 157, 0.65);
-  background: rgba(0, 255, 157, 0.13);
-  color: #6ee7b7;
+  border-color: rgba(245, 158, 11, 0.78);
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
 }
 .ac-master-off-warn {
   font-family: var(--font-mono);
@@ -6258,5 +6258,697 @@ body.demo-mode .node-meta-row > span { flex: 0 0 auto; white-space: nowrap; }
   .ac-pending-toast-root { right: 8px; left: 8px; bottom: 72px; max-width: none; }
   .ac-top-grid, .ac-scopes-grid { grid-template-columns: 1fr; }
   .ac-demo-bar { margin: 0 6px 4px; padding: 7px 9px; }
+  .ac-cmd-summary { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   v3.10.0 DECK COCKPIT POLISH:
+   - 2-row compact top chrome (<= 108px on 1280x720 & 1440x900)
+   - Inline FinOps & Peak CTX pill + Popover Reservoirs
+   - Triage-First Mobile (<= 768px: single 50px bar, 3 clean 44px tabs, Screen 1 P0 HITL)
+   - Inline HITL spacing & muted secondary 80-line TMUX link (zero contradiction)
+   - Dark Cockpit thermal sparkline strip & calm routine edges
+   - Auto-Consent modal veto strip, scrollable agents list & separated footer
+   ========================================================================== */
+
+/* Auto-Consent v3.10 additions */
+.ac-cmd-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.ac-cmd-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  font-family: var(--font-mono);
+}
+.ac-cmd-col.is-safe { border-left: 3px solid #38bdf8; }
+.ac-cmd-col.is-dev { border-left: 3px solid #00ff9d; }
+.ac-cmd-col.is-veto {
+  border-left: 3px solid #ef4444;
+  border-color: rgba(239, 68, 68, 0.34);
+  background: rgba(69, 10, 10, 0.28);
+}
+.ac-cmd-col-title { font-size: 10px; font-weight: 800; color: #e2e8f0; }
+.ac-cmd-col.is-veto .ac-cmd-col-title { color: #fecaca; }
+.ac-cmd-col-body { font-size: 10px; line-height: 1.35; color: #94a3b8; }
+.ac-cmd-col.is-veto .ac-cmd-col-body { color: #fda4af; }
+.ac-policy-list-scroll {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.35) rgba(15, 23, 42, 0.4);
+}
+.ac-policy-list-scroll::-webkit-scrollbar { width: 6px; }
+.ac-policy-list-scroll::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); border-radius: 999px; }
+.ac-policy-list-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.35); border-radius: 999px; }
+.ac-policy-list-scroll::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.58); }
+.ac-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(56, 189, 248, 0.22);
+}
+.ac-footer-emergency, .ac-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ac-pause-btn.is-emergency {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.32), rgba(245, 158, 11, 0.24));
+  border: 1.5px solid #ef4444;
+  color: #fff1f2;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 6px 14px;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.38);
+}
+.ac-pause-btn.is-emergency:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.52), rgba(245, 158, 11, 0.34));
+  border-color: #f87171;
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.58);
+}
+.ac-pause-btn.is-dry-pause {
+  border-color: rgba(148, 163, 184, 0.42);
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+}
+.ac-save-btn { padding: 6px 14px; font-weight: 800; }
+
+/* Dark Cockpit: Dedicated in-flow bottom thermal sparkline strip (zero overlap with metrics) */
+.node-bottom-meter {
+  position: relative !important;
+  inset: auto !important;
+  height: 10px !important;
+  margin-top: 5px;
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+.node-bottom-meter-fill {
+  position: relative !important;
+  inset: auto !important;
+  width: 100%;
+  height: 100%;
+  clip-path: inset(0 calc(100% - var(--ctx-fill-pct, 0%)) 0 0);
+  transition: clip-path 0.35s ease;
+}
+body:not(.density-detailed) .agent-node[data-activity-tier="dormant"] .node-bottom-meter {
+  height: 6px !important;
+  margin-top: 3px;
+  opacity: 0.82;
+}
+
+/* Dark Cockpit: Calm routine live edges vs crisp P0 crimson anomaly edges */
+.edge-group.is-live:not(.is-p0-anomaly) .edge-trunk { opacity: 0.32; }
+.edge-group.is-live:not(.is-p0-anomaly) .edge-stream { opacity: 0.72; }
+.edge-group.is-live:not(.is-p0-anomaly) .edge-badge-bg {
+  fill: rgba(7, 14, 28, 0.94);
+  stroke: var(--edge-stroke, #38bdf8);
+  stroke-width: 1.2;
+}
+.edge-group.is-live:not(.is-p0-anomaly) .edge-badge-text { fill: #cbd5e1; }
+.edge-group.is-p0-anomaly .edge-badge-bg {
+  fill: rgba(32, 7, 18, 0.96);
+  stroke: #ff0055;
+  stroke-width: 1.5;
+}
+.edge-group.is-p0-anomaly .edge-badge-text { fill: #fff1f2; }
+
+/* Strictly respect closed <details> and [hidden] attributes (prevents ghost interactive targets & horizontal overflow) */
+#sliceSegmentedGroup[hidden] { display: none !important; }
+.triage-tools:not([open]) > .triage-tools-body { display: none !important; }
+.diag-ai-details:not([open]) > .diag-ai-body { display: none !important; }
+.eval-mini-btn { min-height: 26px !important; padding: 3px 8px !important; }
+.git-file-pill { min-height: 26px !important; padding: 3px 8px !important; }
+
+/* Hide OpenRig-only UI sections cleanly in Universal tmux mode */
+body.demo-preset-universal .openrig-only-section,
+body.demo-preset-universal #rigFilterSelect,
+body.demo-preset-universal .hud-cluster-scope {
+  display: none !important;
+}
+
+/* 2-Row Collapsed Top Chrome (Desktop & Laptop > 768px: <= 104px total height!) */
+.mobile-brand-chip {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #f8fafc;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.triage-tools-mobile-only {
+  display: none;
+}
+
+.finops-pill-wrap,
+.kbd-help-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.finops-pill-btn {
+  border-color: rgba(56, 189, 248, 0.42);
+  color: #bae6fd;
+  background: rgba(12, 22, 42, 0.9);
+  font-weight: 700;
+  min-height: 28px;
+}
+.finops-pill-btn.is-warn {
+  border-color: rgba(245, 158, 11, 0.58);
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.24);
+}
+.finops-pill-btn.is-crit {
+  border-color: rgba(255, 0, 85, 0.62);
+  color: #fecdd3;
+  background: rgba(127, 29, 29, 0.34);
+}
+.reservoirs-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 9600;
+  width: max-content;
+  max-width: min(680px, calc(100vw - 24px));
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(8, 14, 28, 0.98);
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.78);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.reservoirs-popover[hidden] { display: none !important; }
+.reservoirs-popover-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+  border-top: 1px solid rgba(56, 189, 248, 0.18);
+}
+
+.kbd-help-btn {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  justify-content: center;
+  font-weight: 800;
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.32);
+}
+.kbd-help-btn:hover {
+  color: #fff;
+  border-color: var(--cyan);
+}
+.kbd-help-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 9600;
+  width: 290px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(8, 14, 28, 0.98);
+  border: 1px solid rgba(56, 189, 248, 0.42);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.78);
+  font-family: var(--font-mono);
+}
+.kbd-help-popover[hidden] { display: none !important; }
+.kbd-help-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
+.kbd-help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kbd-help-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+.kbd-help-row kbd {
+  min-width: 34px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #67e8f9;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.demo-preset-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  gap: 2px;
+  border-color: rgba(56, 189, 248, 0.38);
+}
+.demo-preset-switch[hidden] { display: none !important; }
+.demo-preset-switch .hud-segment-btn {
+  min-height: 24px;
+  padding: 2px 8px;
+  font-size: 10.5px;
+}
+
+/* Desktop & Laptop (> 768px): Enforce crisp 2-row chrome <= 104px total */
+@media (min-width: 769px) {
+  .triage-strip {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 5px 12px !important;
+    min-height: 40px;
+    max-height: 46px;
+    overflow: visible !important;
+  }
+  .triage-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-width: 0;
+  }
+  .triage-badge {
+    min-height: 28px;
+    cursor: pointer;
+  }
+  .triage-cards-container {
+    display: none !important;
+  }
+
+  .hud-header {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    padding: 5px 12px !important;
+    min-height: 42px;
+    max-height: 48px;
+  }
+  .hud-header .brand {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .hud-header .brand-orb {
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+  .hud-header .brand-title {
+    font-size: 13px;
+    letter-spacing: 0.9px;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .hud-header .brand-sub {
+    display: none !important;
+  }
+  .hud-controls {
+    width: auto !important;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    gap: 5px !important;
+    overflow: visible;
+  }
+  .hud-cluster-sensory,
+  .hud-cluster-divider,
+  .hud-dock-group,
+  .hud-dock-sep,
+  body.demo-mode #btnHideIdle,
+  body.demo-mode #btnSaTour,
+  body.demo-mode .hud-cluster-dock > .hud-cluster-subdivider {
+    display: none !important;
+  }
+  .hud-header {
+    overflow: hidden !important;
+  }
+  .hud-controls {
+    min-width: 0;
+    overflow: hidden !important;
+  }
+  .hud-cluster.hud-cluster-scope {
+    flex: 0 1 auto;
+    overflow: visible;
+  }
+  .slice-select {
+    max-width: 170px;
+    min-height: 28px;
+    margin-left: 0;
+  }
+  .rig-select {
+    min-height: 28px;
+  }
+  .hud-cluster-dock {
+    margin-left: 0 !important;
+  }
+  .hud-cluster-dock .cyber-btn {
+    min-height: 28px;
+    padding: 3px 8px;
+  }
+}
+
+/* Eliminate tiny (< 24px) interactive targets across all viewports */
+.radar-tab {
+  min-height: 26px !important;
+  padding: 4px 6px;
+}
+.swimlanes-title {
+  min-height: 26px;
+}
+.swimlanes-toggle-btn {
+  min-width: 26px;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.swim-summary-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.main-layout:not(.left-collapsed) .sidebar-edge-tab.tab-left,
+.main-layout:not(.right-collapsed) .sidebar-edge-tab.tab-right {
+  display: none !important;
+}
+.sidebar-edge-tab {
+  min-width: 24px;
+  min-height: 36px;
+}
+.agent-node .status-led.led-urgent {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Inline HITL Ergonomics: >= 34px desktop, gap 8px, distinct Option 1/2/3 & subtle muted 80-line TMUX link */
+.seat-diagnosis-card {
+  padding: 7px 9px;
+  gap: 5px;
+}
+.diag-inline-hitl {
+  margin-top: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(5, 10, 22, 0.86);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+.diag-inline-hitl .ctrl-prompt-options {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+  border-bottom: none !important;
+}
+.diag-inline-hitl .key-pill {
+  min-height: 34px;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+  border-radius: 6px;
+}
+.diag-inline-hitl .key-pill.key-proceed {
+  border: 1px solid rgba(0, 255, 157, 0.65);
+  background: rgba(0, 255, 157, 0.14);
+  color: #a7f3d0;
+  font-weight: 700;
+}
+.diag-inline-hitl .key-pill.key-proceed:hover:not(:disabled) {
+  background: rgba(0, 255, 157, 0.26);
+  color: #ffffff;
+}
+.diag-inline-hitl .key-pill.key-neutral {
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  background: rgba(15, 23, 42, 0.78);
+  color: #cbd5e1;
+}
+.diag-inline-hitl .key-pill.key-neutral:hover:not(:disabled) {
+  border-color: rgba(148, 163, 184, 0.6);
+  background: rgba(30, 41, 59, 0.9);
+  color: #f8fafc;
+}
+.diag-inline-hitl .key-pill.key-cancel {
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  background: rgba(244, 63, 94, 0.08);
+  color: #fda4af;
+}
+.diag-inline-hitl .key-pill.key-cancel:hover:not(:disabled) {
+  border-color: rgba(244, 63, 94, 0.78);
+  background: rgba(244, 63, 94, 0.2);
+  color: #fff1f2;
+}
+.diag-tmux-secondary-link {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 6px;
+  min-height: 26px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.diag-tmux-secondary-link:hover {
+  color: #bae6fd;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.28);
+}
+
+/* Collapsible AI Risk Check (moves S1/S2 out of initial clutter) */
+.diag-ai-details {
+  margin-top: 2px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.18);
+  padding-top: 4px;
+}
+.diag-ai-summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  user-select: none;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.diag-ai-summary:hover {
+  color: #cbd5e1;
+}
+.diag-ai-body {
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   TRIAGE-FIRST MOBILE (<= 768px, 390x844):
+   - Single 50px top bar (Brand + P0 badge + EN|RU + Tools) <= 6% of viewport!
+   - Zero desktop clutter, 0px horizontal overflow, 0 tiny targets
+   - 3 clean 44px bottom tabs (Triage, Map, Inspector)
+   - Screen 1 lands on Inspector P0 blocker + thumb-friendly 44px Option 1/2/3!
+   ========================================================================== */
+@media (max-width: 768px) {
+  body,
+  body.demo-mode {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .triage-strip,
+  body.demo-mode .triage-strip {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    padding: 6px 8px !important;
+    height: 50px !important;
+    min-height: 50px !important;
+    max-height: 50px !important;
+    overflow: visible !important;
+    flex: 0 0 50px;
+  }
+  .triage-meta,
+  body.demo-mode .triage-meta {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 5px !important;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .mobile-brand-chip {
+    display: inline-flex !important;
+  }
+  .triage-badge,
+  body.demo-mode .triage-badge {
+    font-size: 10px !important;
+    padding: 4px 7px !important;
+    min-height: 30px !important;
+    white-space: nowrap !important;
+    letter-spacing: 0.2px !important;
+    flex-shrink: 0;
+  }
+  .triage-badge-seat {
+    display: none !important;
+  }
+  .triage-cards-container,
+  body.demo-mode .triage-cards-container,
+  #finopsPillWrap,
+  #btnAutoConsentTop,
+  #btnDemoQuest,
+  #btnPwaInstall,
+  #kbdHelpWrap {
+    display: none !important;
+  }
+  .hud-header,
+  body.demo-mode .hud-header {
+    display: none !important;
+  }
+  .triage-right-cluster {
+    flex-shrink: 0;
+    gap: 4px !important;
+  }
+  .deck-lang-btn {
+    min-height: 28px !important;
+    min-width: 28px !important;
+    padding: 2px 6px !important;
+  }
+  .triage-tools {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .triage-tools summary {
+    min-height: 30px !important;
+    padding: 4px 8px !important;
+    font-size: 10.5px !important;
+  }
+  .triage-tools-body {
+    right: 0 !important;
+    left: auto !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+  .triage-tools-mobile-only {
+    display: grid;
+    gap: 7px;
+    padding-bottom: 7px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+  }
+
+  .main-layout,
+  body.demo-mode .main-layout {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 6px 8px 10px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  .main-layout > .panel,
+  body.demo-mode .main-layout > .panel {
+    height: auto !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin-bottom: 8px !important;
+  }
+  .main-layout > .panel > .panel-body,
+  body.demo-mode .main-layout > .panel > .panel-body {
+    flex: 1 0 auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+  .sidebar-edge-tab {
+    display: none !important;
+  }
+
+  /* Inspector Screen 1 on mobile: ultra-clean P0 card with thumb-friendly 44px Option 1/2/3 buttons */
+  #panelRight > .panel-header {
+    padding: 6px 10px !important;
+    min-height: 32px;
+  }
+  #panelRight .panel-body {
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+  .diag-inline-hitl .key-pill {
+    min-height: 44px !important;
+    padding: 10px 12px !important;
+    font-size: 12.5px !important;
+  }
+  .diag-tmux-secondary-link {
+    min-height: 36px !important;
+    font-size: 11.5px !important;
+  }
+  .diag-ai-summary {
+    min-height: 32px !important;
+  }
+
+  /* 3 clean 44px bottom nav tabs (Triage, Map, Inspector) */
+  .mobile-bottom-nav {
+    grid-template-columns: repeat(3, 1fr) !important;
+    padding: 4px 8px calc(5px + env(safe-area-inset-bottom, 0px)) !important;
+    gap: 6px !important;
+  }
+  .mobile-nav-btn {
+    min-height: 46px !important;
+    font-size: 11px !important;
+  }
+  .mobile-nav-badge {
+    right: 22% !important;
+  }
 }
 

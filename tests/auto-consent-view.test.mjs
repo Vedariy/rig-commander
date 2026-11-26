@@ -1235,3 +1235,73 @@ test('v3.9.0 UX: +60m Session renders muted when global Auto-Consent is OFF, #au
     assert.doesNotMatch(onHtml, /ac-insp-btn-muted/);
   }
 });
+
+test('v3.10 UX: Auto-Consent modal polish — seatsTitle key, Allowed vs Hard-Vetoed 3-col strip, footer separation, PAUSE hidden when OFF / emergency when ARMED, scrollable agents list', () => {
+  for (const lang of ['en', 'ru']) {
+    const seenKeys = new Set();
+    const td = (key, vars) => {
+      seenKeys.add(key);
+      return tDeck(lang, key, vars);
+    };
+
+    const offState = {
+      config: sanitizeAutoConsentConfig({ enabled: false, mode: 'dry_run', masterPaused: false }, DEFAULT_AUTO_CONSENT_CONFIG),
+      sessionGrants: [],
+      pendingApprovals: [],
+      recentRuns: []
+    };
+    const dryOnState = {
+      config: sanitizeAutoConsentConfig({ enabled: true, mode: 'dry_run', masterPaused: false }, DEFAULT_AUTO_CONSENT_CONFIG),
+      sessionGrants: [],
+      pendingApprovals: [],
+      recentRuns: []
+    };
+    const armedState = makeActiveState(NOW);
+    const pausedState = { ...armedState, config: { ...armedState.config, masterPaused: true } };
+
+    const agents = [
+      { id: 'dev-check@core-platform', shortName: 'dev-check' },
+      { id: 'dev-coder4@core-platform', shortName: 'dev-coder4' }
+    ];
+
+    // 1. Master OFF: PAUSE is hidden, Save Policy is in .ac-modal-footer, seatsTitle key used, 3-col veto strip present, scroll class on agents list
+    const offHtml = renderAutoConsentTabHtml({ state: offState, rigs: ['core-platform'], agents, td, deckLang: lang, nowMs: NOW });
+    assert.ok(seenKeys.has('autoConsent.seatsTitle'), 'Must resolve autoConsent.seatsTitle via td()');
+    for (const k of [
+      'autoConsent.cmdStripLabel',
+      'autoConsent.cmdStripSafeTitle',
+      'autoConsent.cmdStripSafeBody',
+      'autoConsent.cmdStripDevTitle',
+      'autoConsent.cmdStripDevBody',
+      'autoConsent.cmdStripVetoTitle',
+      'autoConsent.cmdStripVetoBody'
+    ]) {
+      assert.ok(seenKeys.has(k), `Missing i18n key ${k}`);
+      assert.ok(offHtml.includes(escapeHtml(tDeck(lang, k))), `Missing rendered text for ${k}`);
+    }
+    assert.match(offHtml, /class="ac-cmd-summary"/);
+    assert.match(offHtml, /class="ac-cmd-col is-safe"/);
+    assert.match(offHtml, /class="ac-cmd-col is-dev"/);
+    assert.match(offHtml, /class="ac-cmd-col is-veto"/);
+    assert.match(offHtml, /class="ac-policy-list ac-policy-list-scroll"/);
+    assert.match(offHtml, /<footer class="ac-modal-footer">[\s\S]*class="ac-footer-emergency"><\/div>[\s\S]*class="ac-footer-actions">[\s\S]*data-auto-consent-action="save-policy"/);
+    assert.doesNotMatch(offHtml, /data-auto-consent-action="pause-all"/, 'PAUSE must be hidden when global Auto-Consent is OFF');
+    assert.doesNotMatch(offHtml, /class="ac-btn-row"/, 'Old inline button row must be replaced by modal footer');
+    assert.match(offHtml, /id="acModeSelect" class="rig-select ac-mode-select is-dry"/);
+    assert.doesNotMatch(offHtml, /on(?:click|change|error)=/i);
+
+    // 2. Enabled + Dry-Run: PAUSE appears without emergency class
+    const dryHtml = renderAutoConsentTabHtml({ state: dryOnState, rigs: ['core-platform'], agents, td, deckLang: lang, nowMs: NOW });
+    assert.match(dryHtml, /class="action-pill key-cancel ac-pause-btn is-dry-pause" data-auto-consent-action="pause-all"/);
+    assert.doesNotMatch(dryHtml, /ac-pause-btn is-emergency/);
+
+    // 3. Enabled + Armed: PAUSE renders with high-contrast emergency class in footer emergency zone, separated from Save Policy
+    const armedHtml = renderAutoConsentTabHtml({ state: armedState, rigs: ['core-platform'], agents, td, deckLang: lang, nowMs: NOW });
+    assert.match(armedHtml, /<footer class="ac-modal-footer">[\s\S]*class="ac-footer-emergency">[\s\S]*class="action-pill key-cancel ac-pause-btn is-emergency" data-auto-consent-action="pause-all"[\s\S]*class="ac-footer-actions">[\s\S]*data-auto-consent-action="save-policy"/);
+    assert.doesNotMatch(armedHtml, /data-auto-consent-action="pause-all"[^>]*disabled/);
+
+    // 4. Master Paused: RESUME renders in footer emergency zone
+    const pausedHtml = renderAutoConsentTabHtml({ state: pausedState, rigs: ['core-platform'], agents, td, deckLang: lang, nowMs: NOW });
+    assert.match(pausedHtml, /<footer class="ac-modal-footer">[\s\S]*class="ac-footer-emergency">[\s\S]*class="action-pill key-proceed ac-resume-btn" data-auto-consent-action="resume-all"/);
+  }
+});

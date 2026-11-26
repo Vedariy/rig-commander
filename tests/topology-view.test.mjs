@@ -270,7 +270,7 @@ test('renderQuietClustersPillHtml renders escaped parked/idle chips and expand-a
   assert.equal(renderQuietClustersPillHtml([], { td: k => k, escapeHtml }), '');
 });
 
-test('expanded quiet zone has a localized native collapse button and an escaped rig identifier', () => {
+  test('expanded quiet zone has a localized native collapse button and an escaped rig identifier', () => {
   const rigId = 'quiet" & <lab>';
   const clusters = [rigId, 'active'].map(rigId => ({ rigId, count: 1, xPct: 0, yPct: 5, wPct: 48, hPct: 80 }));
   for (const lang of ['en', 'ru']) {
@@ -282,4 +282,60 @@ test('expanded quiet zone has a localized native collapse button and an escaped 
     assert.equal((html.match(/<button /g) || []).length, 1);
     assert.ok(!html.includes(rigId));
   }
+});
+
+test('Node thermal sparkline renders as an in-flow strip after the metrics row with zero overlay positioning', () => {
+  const card = renderNodeCardHtml(agents[0], deps('en'));
+  const metaIdx = card.indexOf('class="node-meta-row"');
+  const ctxBoxIdx = card.indexOf('class="ctx-box"');
+  const meterIdx = card.indexOf('class="node-bottom-meter"');
+  assert.ok(metaIdx > 0, 'metrics row should exist');
+  assert.ok(ctxBoxIdx > metaIdx, 'ctx-box should follow metrics row');
+  assert.ok(meterIdx > ctxBoxIdx, 'sparkline strip must be placed after metrics row and ctx-box');
+  const meterTag = card.slice(meterIdx, card.indexOf('>', meterIdx) + 1);
+  includes(meterTag, 'data-meter-layout="strip"');
+  includes(meterTag, 'position:relative');
+  assert.ok(!meterTag.includes('position:absolute'), 'sparkline strip must not be absolutely positioned over metrics');
+});
+
+test('Routine active edges recolor crimson/magenta to calm cyan while P0 urgent/HITL edges stay crimson', () => {
+  const workingNodes = {
+    'owner@rig': { id: 'owner@rig', state: 'working', x: 20, y: 25 },
+    'coder@rig': { id: 'coder@rig', state: 'working', x: 80, y: 25 },
+    'qa@rig': { id: 'qa@rig', state: 'urgent', x: 50, y: 80 }
+  };
+  const baseDeps = {
+    ...deps('ru'),
+    nodeMap: workingNodes,
+    cw: 1000,
+    ch: 500,
+    boxSizes: { 'owner@rig': { hw: 100, hh: 30 }, 'coder@rig': { hw: 100, hh: 30 }, 'qa@rig': { hw: 100, hh: 30 } },
+    hasSliceMatch: false,
+    isEdgeInSlice: () => true
+  };
+
+  // Routine active handoff with crimson/magenta input must be calmed to cyan (#38bdf8 / arr-cyan)
+  const routineHtml = renderTopologyEdgesHtml({
+    ...baseDeps,
+    edges: [{ from: 'owner@rig', to: 'coder@rig', slice: 'all', calls: 12, liveActive: true, color: '#ff0055', marker: 'arr-crimson', speed: '1s' }]
+  });
+  includes(routineHtml, 'data-edge-severity="routine"');
+  includes(routineHtml, '--edge-stroke:#38bdf8;');
+  includes(routineHtml, 'stroke="#38bdf8"');
+  includes(routineHtml, 'marker-end="url(#arr-cyan)"');
+  includes(routineHtml, '📨 В работе');
+  assert.ok(!routineHtml.includes('#ff0055'), 'routine active edge must not use crimson');
+  assert.ok(!routineHtml.includes('arr-crimson'), 'routine active edge must not use crimson marker');
+
+  // P0 urgent/HITL edge keeps crimson (#ff0055 / arr-crimson) and P0 badge
+  const p0Html = renderTopologyEdgesHtml({
+    ...baseDeps,
+    edges: [{ from: 'qa@rig', to: 'owner@rig', slice: 'all', calls: 46, liveActive: true, color: '#ff0055', marker: 'arr-crimson', speed: '0.75s' }]
+  });
+  includes(p0Html, 'is-p0-anomaly');
+  includes(p0Html, 'data-edge-severity="p0"');
+  includes(p0Html, '--edge-stroke:#ff0055;');
+  includes(p0Html, 'stroke="#ff0055"');
+  includes(p0Html, 'marker-end="url(#arr-crimson)"');
+  includes(p0Html, '🚨 HITL');
 });

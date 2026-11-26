@@ -221,6 +221,119 @@ test('v3.9.0 inline HITL command preview and Option 1/2/3 buttons render directl
     assert.match(html, /data-key="2 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
     assert.match(html, /data-key="3 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
     assert.ok(html.indexOf('hitl-command-preview') < html.indexOf('data-transport="modal_terminal"'), 'Inline HITL decision must precede modal fallback button');
+    // v3.10.0: zero contradiction — no red diag-hitl-primary button when inline Option 1/2/3 buttons are rendered
+    assert.doesNotMatch(html, /diag-hitl-primary/);
+    assert.ok(!html.includes(ctx.td('diag.resolveHitlBtn')), `${lang}: contradictory red resolveHitlBtn must not render alongside inline HITL options`);
+    assert.match(html, /diag-tmux-secondary-link/);
+    assert.ok(html.includes(ctx.td('diag.openTmux80Btn')), `${lang}: muted 80-line TMUX secondary link must render`);
+    // v3.10.0: S1/S2 tucked inside expandable details; distinct key-neutral class on Option 2
+    assert.match(html, /class="diag-ai-details"/);
+    assert.match(html, /key-neutral/);
+  }
+});
+
+test('v3.10.0 Universal tmux preset, FinOps pill, zero scattered widget-hints & modal inert isolation', async () => {
+  const fs = await import('node:fs/promises');
+  const vm = await import('node:vm');
+  const indexHtml = await fs.readFile(new URL('../openrig/index.html', import.meta.url), 'utf8');
+
+  // 1. Scattered 16x16 .widget-hint micro-buttons removed; single clean ? keyboard help trigger exists
+  assert.doesNotMatch(indexHtml, /class="widget-hint"/);
+  assert.match(indexHtml, /id="btnKeyboardHelp"/);
+
+  // 2. Compact FinOps pill + popover reservoirs + Universal/OpenRig preset switcher + 3-tab mobile nav
+  assert.match(indexHtml, /id="btnFinopsPill"/);
+  assert.match(indexHtml, /id="reservoirsPopover"/);
+  assert.match(indexHtml, /id="demoPresetSwitch"/);
+  const mobileBtns = [...indexHtml.matchAll(/class="mobile-nav-btn[^"]*"/g)];
+  assert.equal(mobileBtns.length, 3, 'Mobile bottom nav must have exactly 3 clean tabs (Triage, Map, Inspector)');
+
+  // 3. Test setDemoPreset('universal') and syncModalBackgroundInert() in VM
+  const script = indexHtml.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const makeEl = (id) => ({
+    id,
+    inert: false,
+    attrs: new Map(),
+    classes: new Set(),
+    hidden: false,
+    textContent: '',
+    title: '',
+    classList: {
+      add(c) { this._s.add(c); },
+      remove(c) { this._s.delete(c); },
+      toggle(c, f) { const on = f === undefined ? !this._s.has(c) : Boolean(f); if (on) this._s.add(c); else this._s.delete(c); return on; },
+      contains(c) { return this._s.has(c); }
+    },
+    setAttribute(k, v) { this.attrs.set(k, String(v)); },
+    getAttribute(k) { return this.attrs.get(k) || null; },
+    removeAttribute(k) { this.attrs.delete(k); }
+  });
+  const els = {
+    triageStrip: makeEl('triageStrip'),
+    hudHeader: makeEl('hudHeader'),
+    mainLayout: makeEl('mainLayout'),
+    mobileBottomNav: makeEl('mobileBottomNav'),
+    guardrailsModal: makeEl('guardrailsModal')
+  };
+  for (const el of Object.values(els)) el.classList._s = el.classes;
+  const bodyClasses = new Set();
+  const sandbox = {
+    console,
+    location: { pathname: '/demo', search: '', protocol: 'http:', port: '7440', hostname: '127.0.0.1' },
+    navigator: { language: 'en' },
+    localStorage: { getItem: () => null, setItem() {} },
+    sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    document: {
+      addEventListener() {},
+      getElementById: (id) => els[id] || null,
+      querySelector: (sel) => {
+        if (sel === '.hud-header') return els.hudHeader;
+        if (sel === '.modal-overlay.open, .palette-overlay.open') return els.guardrailsModal.classes.has('open') ? els.guardrailsModal : null;
+        return null;
+      },
+      querySelectorAll: () => [],
+      body: { classList: { toggle: (c, f) => (f ? bodyClasses.add(c) : bodyClasses.delete(c)), contains: (c) => bodyClasses.has(c) } }
+    },
+    addEventListener() {},
+    requestAnimationFrame() {},
+    setTimeout() {},
+    clearTimeout() {},
+    CONTEXT_WARN_PCT: 65,
+    CONTEXT_CRIT_PCT: 75,
+    tDeck
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(script, sandbox);
+
+  // Switch to Universal tmux preset: 4 sessions, codex-tests HITL npm test, claude-refactor CTX 78%, zero OpenRig slices
+  vm.runInContext("deckLang='en'; setDemoPreset('universal', true)", sandbox);
+  const uniAgents = JSON.parse(vm.runInContext('JSON.stringify(AGENTS)', sandbox));
+  assert.deepEqual(uniAgents.map(a => a.id), ['claude-api', 'codex-tests', 'gemini-docs', 'claude-refactor']);
+  assert.equal(uniAgents.find(a => a.id === 'codex-tests').state, 'urgent');
+  assert.equal(uniAgents.find(a => a.id === 'claude-refactor').ctxPct, 78);
+  assert.equal(vm.runInContext('SLICES_LANES.length', sandbox), 0);
+  assert.equal(vm.runInContext('RECENT_DECISIONS.length', sandbox), 0);
+  assert.match(vm.runInContext("getDemoTerminalCapture('codex-tests')", sandbox), /Bash\(npm test\)/);
+  assert.doesNotMatch(vm.runInContext("getDemoTerminalCapture('codex-tests')", sandbox), /rig capture|decisions\/\*\.tsv|parked: no live wake/i);
+  assert.equal(bodyClasses.has('demo-preset-universal'), true);
+
+  // Switch back to OpenRig Pod losslessly
+  vm.runInContext("setDemoPreset('openrig', true)", sandbox);
+  assert.equal(vm.runInContext('selectedAgentId', sandbox), 'dev-check@core-platform');
+  assert.ok(vm.runInContext('SLICES_LANES.length', sandbox) >= 6);
+  assert.equal(bodyClasses.has('demo-preset-universal'), false);
+
+  // Modal inert isolation: openGuardrailsModal sets inert & aria-hidden on background chrome, close clears them
+  vm.runInContext('setGuardrailsTab = () => {}; openGuardrailsModal("auto-consent")', sandbox);
+  for (const k of ['triageStrip', 'hudHeader', 'mainLayout', 'mobileBottomNav']) {
+    assert.equal(els[k].inert, true, `${k} must be inert while #guardrailsModal is open`);
+    assert.equal(els[k].getAttribute('aria-hidden'), 'true', `${k} must have aria-hidden="true" while modal is open`);
+  }
+  vm.runInContext('closeGuardrailsModal()', sandbox);
+  for (const k of ['triageStrip', 'hudHeader', 'mainLayout', 'mobileBottomNav']) {
+    assert.equal(els[k].inert, false, `${k} inert must clear when #guardrailsModal closes`);
+    assert.equal(els[k].getAttribute('aria-hidden'), null, `${k} aria-hidden must clear on close`);
   }
 });
 
@@ -259,6 +372,8 @@ test('v3.9.0 index.html enforces #autoConsentInspectorRoot below #nodeInspector,
     requestAnimationFrame() {},
     setTimeout() {},
     clearTimeout() {},
+    CONTEXT_WARN_PCT: 65,
+    CONTEXT_CRIT_PCT: 75,
     tDeck
   };
   sandbox.window = sandbox;
