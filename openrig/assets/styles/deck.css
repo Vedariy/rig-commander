@@ -5023,6 +5023,7 @@
 /* Resilience stays silent while healthy; outage advice does not block the Deck. */
 #resilienceRoot { flex: 0 0 auto; max-height: 32vh; overflow: auto; }
 .resilience-banner { margin: 0 12px 6px; padding: 12px; border: 1px solid #fbbf2455; border-radius: 10px; background: #171a22; font-size: 12px; }
+.resilience-banner.is-collapsed { padding: 6px 12px; }
 .resilience-heading, .resilience-provider-head, .resilience-actions, .resilience-modal header, .resilience-modal footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .resilience-heading > div { flex: 1; min-width: 160px; }
 .resilience-banner p, .resilience-modal p { color: #cbd5e1; line-height: 1.5; }

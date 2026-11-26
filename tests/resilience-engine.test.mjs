@@ -191,6 +191,23 @@ test('native roster supplies authoritative stop intent and preserves rig-qualifi
   assert.equal((await native.getReceipt(5,'other')).status,'unknown');
 });
 
+test('native provider treats attention_required, degraded and hasLiveAgents rigs as online (not false rig_down)', async () => {
+  const rows = {
+    '/api/rigs/summary': [
+      { id: 'r1', name: 'pod-hitl', lifecycleState: 'attention_required', restoreLifecycleState: 'attention_required', hasLiveAgents: true },
+      { id: 'r2', name: 'pod-partial', lifecycleState: 'running', restoreLifecycleState: 'degraded', hasLiveAgents: true },
+      { id: 'r3', name: 'pod-down', lifecycleState: 'recoverable', restoreLifecycleState: 'recoverable', hasLiveAgents: null }
+    ],
+    '/api/rigs/r1/nodes': [{ canonicalSessionName: 'dev-a@pod-hitl', sessionStatus: 'running', intentionallyStopped: false }],
+    '/api/rigs/r2/nodes': [{ canonicalSessionName: 'dev-b@pod-partial', sessionStatus: 'running', intentionallyStopped: false }],
+    '/api/rigs/r3/nodes': [{ canonicalSessionName: 'dev-c@pod-down', sessionStatus: null, intentionallyStopped: false }]
+  };
+  const native = new OpenRigResilienceProvider({ fetchFn: async url => ({ ok: true, json: async () => rows[new URL(url).pathname] }) });
+  const probed = await native.probe();
+  const byId = Object.fromEntries(probed.liveRigs.map(r => [r.rigId, r.running]));
+  assert.deepEqual(byId, { 'pod-hitl': true, 'pod-partial': true, 'pod-down': false });
+});
+
 test('telemetry saves a verified local roster for outage reporting without recordings at rest', async t => {
   const {service,provider,calls} = await fixture(t);
   const live = {discoveryMode:'openrig',requestedRig:'all',availableRigs:[{name:'blue',nodeCount:1}],

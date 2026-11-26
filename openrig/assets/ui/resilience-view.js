@@ -8,11 +8,21 @@ const providerReport = (status, provider) => provider.report || (array(status.pr
 const button = (action, label, attributes = '', disabled = false) => `<button type="button" class="cyber-btn" data-resilience-action="${action}" ${attributes}${disabled ? ' disabled' : ''}>${esc(label)}</button>`;
 const targetAttrs = request => `data-provider-id="${esc(request.providerId)}" data-scope="${esc(request.scope)}" data-target="${esc(request.target || '')}"`;
 const sameTarget = (a, b) => a && b && a.providerId === b.providerId && a.scope === b.scope && (a.target || null) === (b.target || null);
+function formatRelativeSnapshotAge(ageMs, lang) {
+  if (!Number.isFinite(ageMs)) return '';
+  const minutes = Math.max(0, Math.round(ageMs / 60000));
+  const rtf = new Intl.RelativeTimeFormat(lang === 'ru' ? 'ru' : 'en', { style: 'short', numeric: 'always' });
+  if (minutes >= 1440) return rtf.format(-Math.round(minutes / 1440), 'day');
+  if (minutes >= 60) return rtf.format(-Math.round(minutes / 60), 'hour');
+  return rtf.format(-minutes, 'minute');
+}
 
-export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = false, busy = false } = {}) {
+export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = false, busy = false, collapsed = false } = {}) {
   if (!status || !(status.report?.tier === 'daemon_down' || array(status.report?.offlineRigs).length ||
     array(status.providers).some(p => p.report?.tier === 'daemon_down' || array(p.report?.offlineRigs).length))) return '';
-  const content = array(status.providers).map(provider => {
+  const isDaemonDown = status.report?.tier === 'daemon_down' || array(status.providers).some(p => p.report?.tier === 'daemon_down');
+  const isCollapsed = Boolean(collapsed && !isDaemonDown);
+  const content = isCollapsed ? '' : array(status.providers).map(provider => {
     const report = providerReport(status, provider), caps = provider.capabilities || {};
     if (!(report?.tier === 'daemon_down' || array(report?.offlineRigs).length)) return '';
     const fleet = { providerId: provider.id, scope: 'fleet', target: null };
@@ -23,8 +33,7 @@ export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = fals
         const request = { providerId: provider.id, scope: 'rig', target: rig.rigId };
         const freshness = ['fresh', 'aging', 'stale'].includes(rig.snapshot?.freshness) ? rig.snapshot.freshness : 'missing';
         const label = { fresh: 'snapFresh', aging: 'snapAging', stale: 'snapStale', missing: 'snapMissing' }[freshness];
-        const minutes = Number.isFinite(rig.snapshot?.ageMs) ? Math.max(0, Math.round(rig.snapshot.ageMs / 60000)) : null;
-        const age = minutes == null ? '' : new Intl.RelativeTimeFormat(lang === 'ru' ? 'ru' : 'en', { style: 'short', numeric: 'always' }).format(-minutes, 'minute');
+        const age = formatRelativeSnapshotAge(rig.snapshot?.ageMs, lang);
         return `<div class="resilience-rig"><div><b>${esc(rig.rigId)}</b><span class="resilience-snapshot ${freshness}">${esc(td(`resilience.${label}`))}</span>
           ${age ? `<small>${esc(td('resilience.snapshotAge', { age }))}</small>` : ''}</div><div class="resilience-actions">
           ${caps.unitRecover === true && caps.planPreview === true ? button('plan', td('resilience.wakeupBtn', { rig: rig.rigId }), targetAttrs(request), busy) : ''}
@@ -32,10 +41,11 @@ export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = fals
           ${button('copy', td('resilience.copyCommandBtn'), `data-command="${esc(rig.commandPreview || '')}"`, !rig.commandPreview)}</div></div>`;
       }).join('')}</section>`;
   }).join('');
-  return `<aside class="resilience-banner" aria-live="polite"><div class="resilience-heading"><div><strong>${esc(td(status.report?.tier === 'daemon_down' ? 'resilience.daemonDownTitle' : 'resilience.rigDownTitle', { rig: array(status.report?.offlineRigs).join(', ') }))}</strong>
-    <p>${esc(td(status.report?.tier === 'daemon_down' ? 'resilience.daemonDownDesc' : 'resilience.rigDownDesc'))}</p></div>
+  const toggleBtn = isDaemonDown ? '' : button('toggle-collapse', isCollapsed ? '▾' : '▴', `aria-expanded="${!isCollapsed}"`);
+  return `<aside class="resilience-banner${isCollapsed ? ' is-collapsed' : ''}" aria-live="polite"><div class="resilience-heading"><div><strong>${esc(td(isDaemonDown ? 'resilience.daemonDownTitle' : 'resilience.rigDownTitle', { rig: array(status.report?.offlineRigs).join(', ') }))}</strong>
+    ${isCollapsed ? '' : `<p>${esc(td(isDaemonDown ? 'resilience.daemonDownDesc' : 'resilience.rigDownDesc'))}</p>`}</div>
     <span class="resilience-vault">${esc(td(status.vault?.encrypted === true ? 'resilience.vaultEncrypted' : 'resilience.vaultLocal'))}</span>
-    ${button('refresh', td('triage.refresh'), '', busy)}</div>${demo ? `<p class="resilience-demo">${esc(td('resilience.demoNotice'))}</p>` : ''}${content}</aside>`;
+    ${button('refresh', td('triage.refresh'), '', busy)}${toggleBtn}</div>${demo && !isCollapsed ? `<p class="resilience-demo">${esc(td('resilience.demoNotice'))}</p>` : ''}${content}</aside>`;
 }
 
 export function renderResilienceModalHtml(state, { td, demo = false, now = Date.now() } = {}) {
@@ -70,10 +80,10 @@ export function renderResilienceModalHtml(state, { td, demo = false, now = Date.
 export function createResilienceController({ root, modalRoot, td, lang = () => 'en', isLive = () => false, demo = false,
   getJson, postJson, copyCommand = () => Promise.reject(new Error('Clipboard unavailable')),
   guard = new ActionFlightGuard(), now = Date.now } = {}) {
-  let status = null, state = { phase: 'closed' }, epoch = 0, refreshing = null, destroyed = false, focusReturn = null;
+  let status = null, state = { phase: 'closed' }, epoch = 0, refreshing = null, destroyed = false, focusReturn = null, collapsed = false;
   const lockScope = 'resilience:operator';
   const busy = () => guard.isScopeInFlight(lockScope);
-  const deps = () => ({ td, lang: lang(), demo, now: now(), busy: busy() });
+  const deps = () => ({ td, lang: lang(), demo, now: now(), busy: busy(), collapsed });
   const revision = value => JSON.stringify(array(value?.providers).map(p => [p.id, p.capabilities, providerReport(value, p)?.offlineRigs,
     array(providerReport(value, p)?.rigReports).map(r => [r.rigId, r.online, r.intentionallyStopped, r.snapshot?.id])]));
   function render() {
@@ -174,6 +184,7 @@ export function createResilienceController({ root, modalRoot, td, lang = () => '
     const action = el.dataset.resilienceAction;
     const request = { providerId: el.dataset.providerId, scope: el.dataset.scope, target: el.dataset.target || null };
     if (action === 'cancel') return cancel();
+    if (action === 'toggle-collapse') { collapsed = !collapsed; render(); return; }
     if (action === 'refresh') return refresh();
     if (action === 'copy') {
       try { await copyCommand(el.dataset.command || ''); }

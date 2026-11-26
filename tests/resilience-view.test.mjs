@@ -131,3 +131,22 @@ test('offline controller walks explicit simulation with no GET/POST, and does no
   const idle = setup({ demo: false, isLive: () => false, getJson: () => assert.fail('non-live GET'), postJson: () => assert.fail('non-live POST') });
   await idle.ui.refresh(); await idle.root.click('plan'); assert.equal(idle.ui.getState().phase, 'closed');
 });
+
+test('rig_down banner formats multi-day snapshot age cleanly and supports collapse toggle without hiding daemon_down', async () => {
+  const rigDown = status();
+  rigDown.report.tier = 'rig_down';
+  rigDown.providers[0].report.tier = 'rig_down';
+  rigDown.report.rigReports[0].snapshot.ageMs = 4 * 24 * 3600 * 1000;
+  rigDown.report.rigReports[0].snapshot.freshness = 'stale';
+  const expanded = renderCrashCartBannerHtml(rigDown, deps('en'));
+  assert.match(expanded, /4 days ago/);
+  assert.match(expanded, /data-resilience-action="toggle-collapse"/);
+  const folded = renderCrashCartBannerHtml(rigDown, { ...deps('en'), collapsed: true });
+  assert.match(folded, /is-collapsed/);
+  assert.doesNotMatch(folded, /resilience-provider/);
+  // daemon_down stays expanded even when collapsed=true
+  const daemonDown = status();
+  const ddHtml = renderCrashCartBannerHtml(daemonDown, { ...deps('en'), collapsed: true });
+  assert.doesNotMatch(ddHtml, /is-collapsed/);
+  assert.match(ddHtml, /resilience-provider/);
+});

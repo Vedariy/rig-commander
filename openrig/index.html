@@ -2851,7 +2851,9 @@
         const openQueue = Array.isArray(data.activeQueue) ? data.activeQueue : [];
         LIVE_OPEN_QUEUE = openQueue;
         window.LIVE_RAW_NODES = Array.isArray(data.nodes) ? data.nodes : [];
+        const wasLive = IS_LIVE;
         IS_LIVE = true;
+        if (!wasLive) resilienceUi?.refresh();
         liveServerVersion = typeof data.update?.currentVersion === 'string' ? data.update.currentVersion : '';
         syncStaleTabPill();
         if (typeof updatePaletteTriageBadge === 'function') updatePaletteTriageBadge();

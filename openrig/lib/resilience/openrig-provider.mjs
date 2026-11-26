@@ -7,6 +7,7 @@ import {
 } from '../../assets/domain/resilience-model.js';
 
 const runFile = promisify(execFile);
+const LIVE_RIG_STATES = new Set(['running', 'attention_required', 'degraded', 'partial']);
 const unknown = attemptId => normalizeRestoreReceipt({ attemptId });
 function argsFor({ scope, target }) {
   if (!validateResilienceTarget({ providerId: 'openrig', scope, target })) throw new Error('invalid_target');
@@ -48,7 +49,7 @@ export class OpenRigResilienceProvider {
           const intentionallyStopped = rig.intentionallyStopped === true || (launched.length > 0 &&
             launched.every(n => n.intentionallyStopped === true));
           liveRigs.push({ rigId: rig.name, intentionallyStopped,
-            running: (rig.restoreLifecycleState ?? rig.lifecycleState) === 'running' });
+            running: rig.hasLiveAgents === true || LIVE_RIG_STATES.has(rig.lifecycleState) || LIVE_RIG_STATES.has(rig.restoreLifecycleState) });
           for (const node of nodes) liveNodes.push({ ...node, rigName: rig.name });
         }
       };

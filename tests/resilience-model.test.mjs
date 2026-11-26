@@ -29,6 +29,9 @@ test('snapshot parser matches installed CLI padded table including long kind, JS
   const parsed = model.parseSnapshotTable(`${table}\nmalformed\nNo snapshots\n`);
   assert.deepEqual(parsed.map(s => [s.id, s.restoreUsable]), [['snap-bad', false], ['snap-new', true], ['snap-old', true]]);
   assert.deepEqual(model.parseSnapshotTable(JSON.stringify(parsed)), parsed);
+  // Real OpenRig SQLite timestamps (YYYY-MM-DD HH:MM:SS without offset) are UTC, never local time
+  const sqliteOut = 'ID  Kind  Status  Created\n01M8BG  auto-periodic  complete  2026-11-26 08:44:18\n';
+  assert.equal(model.parseSnapshotTable(sqliteOut)[0].createdAt, '2026-11-26T08:44:18.000Z');
   for (const bad of ['', null, '{}', '[]', 'No snapshots', 'x  manual  complete  no-date', 'x'.repeat(1024 * 1024 + 1)]) assert.deepEqual(model.parseSnapshotTable(bad), []);
 });
 

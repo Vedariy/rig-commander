@@ -10,7 +10,9 @@ const text = value => typeof value === 'string' ? value : '';
 const cmp = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const rigId = value => typeof value === 'string' ? value : text(value?.rigName || value?.rigId || value?.name || value?.id);
 const seatId = value => typeof value === 'string' ? value : text(value?.canonicalSessionName || value?.seatId || value?.id);
-const dateMs = value => typeof value === 'string' ? Date.parse(value) : NaN;
+const SQLITE_UTC_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/;
+const normalizeTimestamp = value => typeof value === 'string' && SQLITE_UTC_RE.test(value.trim()) ? value.trim().replace(' ', 'T') + 'Z' : value;
+const dateMs = value => typeof value === 'string' ? Date.parse(normalizeTimestamp(value)) : NaN;
 
 /** Boolean validator; fleet uses no target (null/undefined/empty/'all'). */
 export function validateResilienceTarget({ providerId, scope, target } = {}) {
@@ -30,7 +32,7 @@ export function parseSnapshotTable(stdout) {
   return rows.filter(row => row && SAFE_ATTEMPT_ID_RE.test(text(row.id)) &&
     /^[a-z][a-z0-9-]{0,63}$/i.test(text(row.kind)) && /^[a-z][a-z0-9_-]{0,31}$/i.test(text(row.status)) &&
     Number.isFinite(dateMs(row.createdAt)))
-    .map(({ id, kind, status, createdAt }) => ({ id, kind, status, createdAt: new Date(createdAt).toISOString(), restoreUsable: status === 'complete' }))
+    .map(({ id, kind, status, createdAt }) => ({ id, kind, status, createdAt: new Date(dateMs(createdAt)).toISOString(), restoreUsable: status === 'complete' }))
     .sort((a, b) => dateMs(b.createdAt) - dateMs(a.createdAt) || cmp(a.id, b.id));
 }
 
