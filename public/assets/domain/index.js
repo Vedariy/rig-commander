@@ -177,3 +177,31 @@ export {
   buildResurrectPlanPreview, normalizeRestoreReceipt, buildDemoResilienceScenario
 } from './resilience-model.js';
 
+export {
+  AUTO_CONSENT_SCHEMA_VERSION,
+  AUTO_CONSENT_MODES,
+  AUTO_CONSENT_PROFILES,
+  AUTO_CONSENT_LIMITS,
+  AUTO_CONSENT_VETO_CODES,
+  DEFAULT_AUTO_CONSENT_FLAGS,
+  DEFAULT_AUTO_CONSENT_CONFIG,
+  DESTRUCTIVE_VETO_PATTERNS,
+  PACKAGE_INSTALL_PATTERNS,
+  EXTERNAL_NETWORK_PATTERNS,
+  SHELL_METACHAR_RE,
+  SAFE_READONLY_COMMAND_RE,
+  hasForbiddenExecFlag,
+  isSafeReadOnlyCommand,
+  normalizeCommandText,
+  computePromptFingerprint,
+  classifyDestructiveVetoes,
+  sanitizeAutoConsentFlags,
+  sanitizeAutoConsentConfig,
+  createSessionGrant,
+  isSessionGrantValid,
+  resolveEffectiveConsentPolicy,
+  evaluateAutoConsentPrompt,
+  summarizeActiveAutoConsentScopes
+} from './auto-consent-model.js';
+
+
