@@ -30,14 +30,27 @@
 </head>
 <body>
 
-  <!-- LEVEL 0: COMPACT TOP TRIAGE & FINOPS BAR (ROW 1) -->
-  <div class="triage-strip" id="triageStrip">
-    <div class="triage-meta">
+  <!-- UNIFIED SINGLE-ROW 54px COCKPIT TOP BAR (Desktop, Laptop & Mobile) -->
+  <div class="triage-strip unified-topbar" id="triageStrip">
+    <div class="topbar-left">
+      <div class="topbar-brand-desktop">
+        <span class="brand-orb" aria-hidden="true">💠</span>
+        <span id="deckBrandTitle" class="topbar-brand-name">RIGCOMMANDER</span>
+        <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
+        <span class="read-only-badge" id="readOnlyModeBadge" hidden data-i18n="hud.readOnlyBadge" title="Read-only mode (--read-only): zero terminal writes or mutations">🔒 READ-ONLY</span>
+        <div class="hud-segmented-group demo-preset-switch" id="demoPresetSwitch" hidden role="group" aria-label="Demo fleet preset">
+          <button type="button" class="hud-segment-btn active" id="btnPresetUniversal" onclick="setDemoPreset('universal')" data-i18n="preset.universal">tmux / Universal</button>
+          <button type="button" class="hud-segment-btn" id="btnPresetOpenRig" onclick="setDemoPreset('openrig')" data-i18n="preset.openrig">OpenRig Pod</button>
+        </div>
+      </div>
       <span class="mobile-brand-chip" aria-label="RigCommander">💠 <b>RigCmd</b></span>
+    </div>
+
+    <div class="topbar-center">
       <button type="button" class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal('health')" title="Индекс здоровья и План действий (Triage)">🟢 LIVE TELEMETRY</button>
       <div class="finops-pill-wrap" id="finopsPillWrap">
         <button type="button" class="triage-refresh-btn finops-pill-btn" id="btnFinopsPill" aria-expanded="false" aria-haspopup="true" onclick="toggleReservoirsPopover(event)" title="FinOps & Peak CTX">
-          <span id="finopsPillText">⚡ $0.00 · CTX — ▾</span>
+          <span id="finopsPillText"><span class="finops-desktop-txt">⚡ $0.00 · CTX — ▾</span><span class="finops-mobile-txt">$0.00</span></span>
         </button>
         <div class="reservoirs-popover" id="reservoirsPopover" hidden onclick="event.stopPropagation()">
           <div class="reservoirs" id="reservoirsContainer">
@@ -48,6 +61,10 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="triage-meta topbar-right">
+      <div id="autoConsentHudRoot" class="ac-hud-mount"></div>
       <button class="triage-refresh-btn" id="btnFleetAdvisor" onclick="openFleetAdvisorModal('findings')" style="border-color:rgba(0,240,255,0.45); color:var(--cyan);" title="Аналитика Советника флота (Находки, QA, Бюджет, Топология)">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
         <span data-i18n="triage.advisor">Советник флота</span>
@@ -74,8 +91,8 @@
       <button class="triage-refresh-btn" id="btnRefresh" onclick="refreshTelemetryNow(true)" title="Обновить телеметрию">
         🔄 <span data-i18n="triage.refresh">Обновить</span>
       </button>
-      <button class="triage-refresh-btn" id="btnCopyStatusCmd" onclick="copyCmd(demoPreset === 'universal' ? 'tmux ls' : 'rig status')" title="rig status">
-        📋 <span id="btnCopyStatusLabel" data-i18n="cmd.copyRigStatus">Скопировать rig status</span>
+      <button class="triage-refresh-btn" id="btnCopyStatusCmd" onclick="copyCmd(demoPreset === 'universal' ? 'tmux ls' : 'rig status')" title="tmux ls">
+        📋 <span id="btnCopyStatusLabel" data-i18n="cmd.copyTmuxLs">Скопировать tmux ls</span>
       </button>
       <a class="triage-refresh-btn" id="linkGuideTool" href="/guide" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(0,240,255,0.42); color:#7dd3fc;" title="Руководство пользователя / User Guide">
         📖 Guide
@@ -86,6 +103,8 @@
       <button class="triage-refresh-btn" id="btnDemoQuest" onclick="toggleDemoQuest()" style="display:none; border-color:rgba(0,240,255,0.55); color:#67e8f9;">
         🎯 <span data-i18n="quest.btn">Миссия 10с</span> <span id="btnDemoQuestCount" style="font-weight:800; color:#00ff9d;">0/3</span>
       </button>
+      <button type="button" class="triage-refresh-btn kbd-help-btn" id="btnKeyboardHelp" aria-expanded="false" aria-label="Keyboard shortcuts and help" onclick="toggleKeyboardHelpPopover(event)" title="Keyboard shortcuts & help (?)">⌨️ <span data-i18n="help.title">Горячие клавиши</span></button>
+      <a class="triage-refresh-btn" id="demoBackLink" href="/" hidden style="text-decoration:none; color:#67e8f9;" data-i18n="demo.backToSite">← На сайт</a>
       <button class="triage-refresh-btn" id="btnPwaInstall" onclick="triggerPwaInstall()" style="display:none; border-color:rgba(0,255,157,0.65); color:#6ee7b7;">
         📲 <span data-i18n="pwa.installBtn">Установить</span>
       </button>
@@ -100,31 +119,19 @@
       </div>
     </div>
     <div class="triage-right-cluster" style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
-      <div class="kbd-help-wrap" id="kbdHelpWrap">
-        <button type="button" class="triage-refresh-btn kbd-help-btn" id="btnKeyboardHelp" aria-expanded="false" aria-label="Keyboard shortcuts and help" onclick="toggleKeyboardHelpPopover(event)" title="Keyboard shortcuts & help (?)">?</button>
-        <div class="kbd-help-popover" id="keyboardHelpPopover" hidden onclick="event.stopPropagation()"></div>
-      </div>
-      <div class="deck-lang-group" style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
+      <div class="deck-lang-group" id="desktopLangGroup" style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
         <button type="button" id="deckLangEn" class="triage-refresh-btn deck-lang-btn" onclick="setDeckLang('en')">EN</button>
         <button type="button" id="deckLangRu" class="triage-refresh-btn deck-lang-btn" onclick="setDeckLang('ru')">RU</button>
       </div>
     </div>
+    <div class="kbd-help-popover" id="keyboardHelpPopover" hidden onclick="event.stopPropagation()"></div>
   </div>
 
-  <!-- TOP HUD: BRAND + PRESET SWITCHER + WORKSPACE CONTROLS (ROW 2) -->
-  <header class="hud-header">
+  <!-- SECONDARY WORKSPACE CONTROLS HOST (Folded into Tools menu on unified single-row bar) -->
+  <header class="hud-header" id="hudHeader">
     <div class="brand">
-      <div class="brand-orb">💠</div>
       <div class="brand-copy">
         <div class="brand-title">
-          <span id="deckBrandTitle">RIGCOMMANDER</span>
-          <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
-          <span class="read-only-badge" id="readOnlyModeBadge" hidden data-i18n="hud.readOnlyBadge" title="Read-only mode (--read-only): zero terminal writes or mutations">🔒 READ-ONLY</span>
-          <div class="hud-segmented-group demo-preset-switch" id="demoPresetSwitch" hidden role="group" aria-label="Demo fleet preset">
-            <button type="button" class="hud-segment-btn" id="btnPresetUniversal" onclick="setDemoPreset('universal')" data-i18n="preset.universal">tmux / Universal</button>
-            <button type="button" class="hud-segment-btn active" id="btnPresetOpenRig" onclick="setDemoPreset('openrig')" data-i18n="preset.openrig">OpenRig Pod</button>
-          </div>
-          <a id="demoBackLink" href="/" hidden data-i18n="demo.backToSite"></a>
           <select id="rigFilterSelect" class="rig-select" aria-label="Rig filter" onchange="onRigFilterChange(this.value)">
             <option value="all" selected data-i18n="hud.allRigs">🌐 ВСЕ РИГИ (2)</option>
             <option value="core-platform">🎯 core-platform</option>
@@ -136,7 +143,6 @@
     </div>
 
     <div class="hud-controls" id="hudControlsBar">
-      <div id="autoConsentHudRoot" class="ac-hud-mount"></div>
       <!-- CLUSTER 1: SENSORY & ALARM HYGIENE (tucked in Tools on compact/demo) -->
       <div class="hud-cluster hud-cluster-sensory">
         <button class="cyber-btn calm-toggle" id="btnCalmMode" onclick="toggleCalmMode()" data-i18n="hud.calmOff" title="Calm Focus: приглушает спокойные узлы">
@@ -363,7 +369,7 @@
     <!-- COLUMN C: TELEMETRY INSPECTOR, LIVE TMUX CAPTURE & ACTIVE ENVELOPES -->
     <section class="panel" id="panelRight">
       <div class="panel-header">
-        <span data-i18n="insp.header">🔬 ПАСПОРТ УЗЛА, ЭКРАН TMUX & КОНВЕРТЫ L3</span>
+        <span data-i18n="insp.header">🔬 ПАСПОРТ УЗЛА &amp; TMUX</span>
         <span style="display:flex; align-items:center; gap:6px;">
           <span id="selectedNodeHeaderBadge" style="color:#00f0ff; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.45); border-radius:999px; padding:1px 7px; font-size:10px; letter-spacing:0.4px;">◎ SELECTED</span>
         </span>
@@ -434,25 +440,25 @@
     </div>
   </div>
 
-  <!-- GUARDRAILS: BUDGET CIRCUIT-BREAKER & TELEGRAM HITL MODAL -->
+  <!-- GUARDRAILS & AUTO-CONSENT MODAL -->
   <div class="modal-overlay" id="guardrailsModal" onclick="if (event.target === this) closeGuardrailsModal()">
-    <div class="modal-fleet-card" style="max-width:980px;">
-      <div class="modal-fleet-header">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <span id="guardrailsModalTitle" style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#6ee7b7;" data-i18n="guard.title">
-            🛡️ GUARDRAILS // ПРЕДОХРАНИТЕЛЬ БЮДЖЕТА И TELEGRAM HITL
-          </span>
-          <span class="triage-badge" id="modalGuardStatusBadge" style="margin:0; font-size:10.5px;"></span>
-          <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:7px; padding:2px; gap:2px;" role="tablist">
-            <button type="button" id="btnGuardTabMain" class="hud-segment-btn active" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('guardrails')">🛡️ Авто-тормоз / TG</button>
-            <button type="button" id="btnGuardTabAutoConsent" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('auto-consent')">⚡ Авто-согласие</button>
-            <button type="button" id="btnGuardTabPlaybooks" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('playbooks')">🤖 Плейбуки</button>
-            <button type="button" id="btnGuardTabEval" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('evaluator')">🧠 AI Оценщик</button>
+    <div class="modal-fleet-card guardrails-modal-card" style="max-width:980px;">
+      <div class="modal-fleet-header guardrails-modal-header">
+        <div class="guardrails-header-top">
+          <div class="guardrails-title-group">
+            <span id="guardrailsModalTitle" style="font-family:var(--font-mono); font-size:13px; font-weight:800; letter-spacing:0.6px; color:#6ee7b7;" data-i18n="guard.dialogTitle">
+              🛡️ ЗАЩИТНЫЕ ПОЛИТИКИ И АВТО-СОГЛАСИЕ
+            </span>
+            <span class="triage-badge" id="modalGuardStatusBadge" style="margin:0; font-size:10.5px;"></span>
           </div>
+          <button type="button" class="action-pill guardrails-close-btn" style="white-space:nowrap;" onclick="closeGuardrailsModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
         </div>
-        <span style="display:flex; gap:8px; flex-shrink:0;">
-          <button class="action-pill" style="white-space:nowrap;" onclick="closeGuardrailsModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
-        </span>
+        <div class="guardrails-tabs-bar" role="tablist">
+          <button type="button" id="btnGuardTabMain" class="hud-segment-btn active" onclick="setGuardrailsTab('guardrails')">🛡️ Авто-тормоз / TG</button>
+          <button type="button" id="btnGuardTabAutoConsent" class="hud-segment-btn" onclick="setGuardrailsTab('auto-consent')">⚡ Авто-согласие</button>
+          <button type="button" id="btnGuardTabPlaybooks" class="hud-segment-btn" onclick="setGuardrailsTab('playbooks')">🤖 Плейбуки</button>
+          <button type="button" id="btnGuardTabEval" class="hud-segment-btn" onclick="setGuardrailsTab('evaluator')">🧠 AI Оценщик</button>
+        </div>
       </div>
       <div class="modal-fleet-body" id="guardrailsModalBody"></div>
     </div>
@@ -1356,6 +1362,7 @@
         renderTopology();
         renderSwimlanes();
         renderInspectorAndScorecards(true);
+        autoConsentUi?.renderAll?.();
         syncMobileRadarBadge();
         updateAlertsAndTitle();
       }
@@ -1488,35 +1495,49 @@
       summary.textContent = td('demo.tools');
       const body = document.createElement('div');
       body.className = 'triage-tools-body';
-      // Keep primary high-signal toggles directly visible in Row 1; fold secondary tools into Tools menu.
-      const keepDirect = new Set(['triageBadge', 'btnAutoConsentTop', 'btnDemoQuest', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
+      // Keep only Auto-Consent + conditional install/update buttons directly in the single 54px bar;
+      // tuck secondary tools (?, 10s Mission, Back to Site, Fullscreen, Rig/Slice filters, etc.) inside Tools.
+      const keepDirect = new Set(['btnAutoConsentTop', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
       for (const el of [...host.querySelectorAll(':scope > button, :scope > a')]) {
         if (!keepDirect.has(el.id)) body.appendChild(el);
       }
-      if (IS_OFFLINE_DEMO) {
-        const densBtn = document.getElementById('btnDensityMode');
-        if (densBtn) body.appendChild(densBtn);
+      // Tuck secondary workspace controls from #hudHeader & graph layout switcher into Tools popover
+      for (const ctrlId of ['rigFilterSelect', 'sliceFilterSelect', 'graphLayoutSwitch', 'btnDensityMode', 'btnHideIdle', 'btnCalmMode', 'btnAudioRadar', 'btnSaTour', 'btnFullscreen']) {
+        const ctrl = document.getElementById(ctrlId);
+        if (ctrl) body.appendChild(ctrl);
       }
-      // Mobile-only quick items inside Tools menu (Budget, Auto-Consent, Preset switcher, Back to Site)
-      if (IS_OFFLINE_DEMO) {
-        const presetRow = document.createElement('div');
-        presetRow.className = 'triage-tools-mobile-only';
-        presetRow.innerHTML = `
-          <button type="button" class="triage-refresh-btn" onclick="openGuardrailsModal('auto-consent')">⚡ Auto-Consent</button>
-          <button type="button" class="triage-refresh-btn" onclick="openFleetAdvisorModal('budget')">💰 Budget / FinOps</button>
-          <button type="button" class="triage-refresh-btn" onclick="setDemoPreset(demoPreset === 'universal' ? 'openrig' : 'universal')">⇄ tmux / OpenRig Pod</button>
-          <a class="triage-refresh-btn" href="/" style="text-decoration:none; color:#67e8f9;" data-i18n="demo.backToSite">${escapeHtml(td('demo.backToSite'))}</a>
-        `;
-        body.prepend(presetRow);
-      }
+      // Mobile-only quick items inside Tools drawer (EN|RU language switcher, Auto-Consent, Budget, Preset toggle)
+      const mobileQuick = document.createElement('div');
+      mobileQuick.className = 'triage-tools-mobile-only';
+      mobileQuick.innerHTML = `
+        <div class="mobile-lang-row" role="group" aria-label="Language">
+          <button type="button" class="triage-refresh-btn mobile-lang-btn" data-mobile-lang="en" onclick="setDeckLang('en')">EN</button>
+          <button type="button" class="triage-refresh-btn mobile-lang-btn" data-mobile-lang="ru" onclick="setDeckLang('ru')">RU</button>
+        </div>
+        <button type="button" class="triage-refresh-btn" onclick="openGuardrailsModal('auto-consent')">⚡ <span data-i18n="autoConsent.topBtn">${escapeHtml(td('autoConsent.topBtn'))}</span></button>
+        ${IS_OFFLINE_DEMO ? `<button type="button" class="triage-refresh-btn" onclick="setDemoPreset(demoPreset === 'universal' ? 'openrig' : 'universal')">⇄ tmux / OpenRig Pod</button>` : ''}
+      `;
+      body.prepend(mobileQuick);
       menu.append(summary, body); host.appendChild(menu);
-      body.addEventListener('click', event => { if (event.target.closest('button, a')) menu.open = false; });
+      document.querySelectorAll('.mobile-lang-btn[data-mobile-lang]').forEach(btn => {
+        const active = btn.getAttribute('data-mobile-lang') === deckLang;
+        btn.style.background = active ? 'rgba(0,240,255,0.2)' : 'transparent';
+        btn.style.color = active ? '#00f0ff' : '#94a3b8';
+        btn.style.borderColor = active ? 'rgba(0,240,255,0.55)' : 'rgba(148,163,184,0.28)';
+      });
+      body.addEventListener('click', event => {
+        if (event.target.closest('select')) return;
+        if (event.target.closest('button, a')) menu.open = false;
+      });
       document.addEventListener('click', (e) => {
         if (menu.open && !menu.contains(e.target)) menu.open = false;
         const finWrap = document.getElementById('finopsPillWrap');
         if (finWrap && !finWrap.contains(e.target)) closeReservoirsPopover();
-        const kbdWrap = document.getElementById('kbdHelpWrap');
-        if (kbdWrap && !kbdWrap.contains(e.target)) closeKeyboardHelpPopover();
+        const kbdPop = document.getElementById('keyboardHelpPopover');
+        const kbdBtn = document.getElementById('btnKeyboardHelp');
+        if (kbdPop && !kbdPop.hidden && !kbdPop.contains(e.target) && (!kbdBtn || !kbdBtn.contains(e.target))) {
+          closeKeyboardHelpPopover();
+        }
       });
     }
 
@@ -1570,6 +1591,9 @@
         isLive: () => !IS_OFFLINE_DEMO && Boolean(IS_LIVE || getDeckToken()),
         getAgents: () => AGENTS,
         getRigs: () => {
+          if (!IS_LIVE && demoPreset === 'universal') {
+            return ['payments-api'];
+          }
           if (window.ONTOLOGY_SNAPSHOT && Array.isArray(window.ONTOLOGY_SNAPSHOT.rigs) && window.ONTOLOGY_SNAPSHOT.rigs.length > 0) {
             return window.ONTOLOGY_SNAPSHOT.rigs;
           }
@@ -2152,7 +2176,7 @@
         }
       }
 
-      // P1.5: context overheating >= 65% (unified with Ontology Action Registry + Pi guard)
+      // P1.5: context overheating >= 65% (unified with Ontology Action Registry + Pi guard; calm amber, never crimson)
       for (const a of rigAgents) {
         if (typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT) {
           const burn = computeBurn(a, deckLang);
@@ -2160,14 +2184,14 @@
           const isPi = isPiHarness(a);
           const ctxAction = isPi
             ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: buildSeatRelaunchCommand(a.id, 'context rotation'), label: td('radar.rotateBtn'), title: buildSeatRelaunchCommand(a.id, 'context rotation'), tone: 'warn' }
-            : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: td('radar.compactBtn'), title: `/compact → ${a.id}`, tone: isCrit ? 'critical' : 'warn' };
+            : { id: 'compact_context', transport: 'tmux_raw', seatId: a.id, payload: '/compact', label: td('radar.compactBtn'), title: `/compact → ${a.id}`, tone: 'warn' };
           items.push({
             prio: isCrit ? 0.8 : 2.1,
             category: isCrit ? 'blocker' : 'task',
             seatId: a.id,
             actionKind: isPi ? 'restart' : 'compact',
             action: ctxAction,
-            color: isCrit ? '#ff2a6d' : '#fbbf24',
+            color: '#f59e0b',
             from: getNodeDisplayTitle(a), to: td('radar.toRotation'),
             slice: `CTX ${a.ctxPct}%`, state: isCrit ? td('radar.ctxOverState') : td('radar.ctxWarnState'),
             summary: `CTX ${a.ctxPct}%${a.ctxUsedTokens && a.ctxWindowSize ? ` (${Math.round(a.ctxUsedTokens / 1000)}K / ${Math.round(a.ctxWindowSize / 1000)}K tok)` : ''}. ${burn.label}`
@@ -2218,7 +2242,7 @@
           category: isSystemNoise ? 'system' : 'task',
           seatId: targetSeatId,
           actionKind: 'focus',
-          actionLabel: targetSeatId ? td('radar.toSeat') : '',
+          actionLabel: '',
           color: isSystemNoise ? '#64748b' : (inProg ? '#00ff9d' : '#f59e0b'),
           from: shortSeat(src), to: shortSeat(dst),
           slice: sliceTag,
@@ -2227,18 +2251,38 @@
         });
       }
 
-      // P3: working without a queue row
+      // P3: working without a queue row (card click already focuses seat; skip redundant Focus button)
       for (const a of rigAgents) {
         if (a.state === 'working' && !LIVE_OPEN_QUEUE.some(q => q.destinationSession === a.id || q.sourceSession === a.id)) {
           items.push({
-            prio: 3, category: 'task', seatId: a.id, actionKind: 'focus', actionLabel: td('radar.toSeat'),
+            prio: 3, category: 'task', seatId: a.id, actionKind: 'focus', actionLabel: '',
             color: '#00f0ff', from: getNodeDisplayTitle(a), to: td('radar.workingTerminal'),
             slice: 'active', state: td('radar.workingState'),
             summary: td('radar.workingSummary', { last: a.lastActivityAt ? ` (${new Date(a.lastActivityAt).toLocaleTimeString(deckLang === 'en' ? 'en-US' : 'ru-RU')})` : '' })
           });
         }
       }
-      return items.sort((x, y) => x.prio - y.prio);
+      const sorted = items.sort((x, y) => x.prio - y.prio);
+      if (typeof InspectorView !== 'undefined' && typeof InspectorView.dedupeRadarItemsByAgent === 'function') {
+        return InspectorView.dedupeRadarItemsByAgent(sorted);
+      }
+      // Fallback inline agent deduplication when InspectorView module is not attached
+      const deduped = [];
+      const seenBySeat = new Map();
+      for (const it of sorted) {
+        const sid = String(it.seatId || '').trim();
+        if (!sid) { deduped.push(it); continue; }
+        const primary = seenBySeat.get(sid);
+        if (!primary) {
+          const entry = { ...it, secondaryChips: [] };
+          seenBySeat.set(sid, entry);
+          deduped.push(entry);
+        } else if (/^CTX\s+\d+%/i.test(String(it.slice || '').trim())) {
+          const lbl = `⚠️ ${it.slice}`;
+          if (!primary.secondaryChips.some(c => c.label === lbl)) primary.secondaryChips.push({ label: lbl, tone: 'amber' });
+        }
+      }
+      return deduped;
     }
 
     const expandedRadarDescs = new Set();
@@ -2312,19 +2356,25 @@
             const groupBtn = g.items.length > 1 && idx === 0
               ? `<button class="wait-group-badge" data-group-key="${safeKey}" onclick="event.stopPropagation(); toggleRadarGroup(this.getAttribute('data-group-key'))" title="Свернуть или раскрыть повторяющиеся события">${isExpanded ? `▲ Свернуть (${g.items.length})` : `×${g.items.length} похожих`}</button>`
               : '';
+            const isSelectedHitlInRight = Boolean(w.seatId && w.seatId === selectedAgentId && w.prio === 0);
             const radarActionDesc = w.action || (w.seatId && w.actionLabel
               ? { id: 'focus_seat', transport: 'select_seat', seatId: w.seatId, payload: '', label: w.actionLabel, tone: 'default' }
               : null);
-            const quickActionBtn = radarActionDesc
-              ? renderOntologyActionBtn(radarActionDesc, {
-                  className: `radar-quick-btn ${w.actionKind === 'tmux' ? 'urgent' : ''}`,
-                  stopPropagation: true
-                })
+            const quickActionBtn = isSelectedHitlInRight
+              ? `<span class="radar-selected-pill">${escapeHtml(td('radar.selectedRight'))}</span>`
+              : (radarActionDesc
+                ? renderOntologyActionBtn(radarActionDesc, {
+                    className: `radar-quick-btn ${w.actionKind === 'tmux' ? 'urgent' : ''}`,
+                    stopPropagation: true
+                  })
+                : '');
+            const secondaryChipsHtml = Array.isArray(w.secondaryChips) && w.secondaryChips.length > 0
+              ? w.secondaryChips.map(ch => `<span class="wait-secondary-chip">${escapeHtml(ch.label)}</span>`).join('')
               : '';
             const descKey = `${g.key}|${idx}`;
             const isLongDesc = String(w.summary || '').length > 125;
             const isDescOpen = expandedRadarDescs.has(descKey);
-            const washColor = w.color === '#ff0055' || w.color === '#ff2a6d'
+            const washColor = w.prio === 0
               ? 'rgba(255, 0, 85, 0.14)'
               : w.color === '#00ff9d' || w.color === '#10b981'
                 ? 'rgba(0, 255, 157, 0.10)'
@@ -2332,7 +2382,7 @@
                   ? 'rgba(0, 240, 255, 0.10)'
                   : 'rgba(245, 158, 11, 0.11)';
             return `
-        <div class="wait-card" style="--wait-color:${w.color}; --wait-wash:${washColor};"
+        <div class="wait-card${w.seatId === selectedAgentId ? ' is-selected-card' : ''}" style="--wait-color:${w.color}; --wait-wash:${washColor};"
              data-seat="${safeSeat}"
              onmouseenter="if (this.getAttribute('data-seat')) setHoverAgent(this.getAttribute('data-seat'))"
              onmouseleave="if (this.getAttribute('data-seat')) setHoverAgent(null)"
@@ -2345,7 +2395,10 @@
           </div>
           <div class="wait-meta-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:5px; gap:3px 6px;">
             <span class="wait-slice-label" style="font-family:var(--font-mono); font-size:10.5px; color:var(--cyan); line-height:1.3; word-break:break-word;">🏷️ ${w.slice}</span>
-            <span class="${w.prio === 0 ? 'wait-state-pill is-p0' : 'wait-state-pill'}" style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:${w.prio === 0 ? '#fecdd3' : w.color}; white-space:nowrap;">${w.state}</span>
+            <span style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">
+              ${secondaryChipsHtml}
+              <span class="${w.prio === 0 ? 'wait-state-pill is-p0' : 'wait-state-pill'}" style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:${w.prio === 0 ? '#fecdd3' : w.color}; white-space:nowrap;">${w.state}</span>
+            </span>
           </div>
           <div class="${isLongDesc ? `wait-desc-clamped${isDescOpen ? ' expanded' : ''}` : ''}" style="${isLongDesc ? '' : 'font-size:12px; line-height:1.4; color:#cbd5e1;'}">${w.summary}</div>
           ${isLongDesc ? `<button type="button" class="wait-desc-toggle" data-desc-key="${escapeHtml(descKey)}" onclick="event.stopPropagation(); toggleRadarDesc(this.getAttribute('data-desc-key'))">${isDescOpen ? td('radar.collapseDesc') : td('radar.expandDesc')}</button>` : ''}
@@ -2757,12 +2810,42 @@
 
     const lastScreenBySeat = {};
 
+    function disarmAlwaysConfirmBtn(btn) {
+      if (!btn) return;
+      if (btn._confirmTimer) {
+        clearTimeout(btn._confirmTimer);
+        btn._confirmTimer = null;
+      }
+      btn.removeAttribute('data-confirm-armed');
+      btn.classList?.remove('is-confirm-armed');
+      if (btn._origInnerHtml !== undefined) {
+        btn.innerHTML = btn._origInnerHtml;
+        delete btn._origInnerHtml;
+      }
+    }
+
+    function armAlwaysConfirmBtn(btn, durationMs = 4000) {
+      if (!btn) return;
+      if (btn._confirmTimer) clearTimeout(btn._confirmTimer);
+      if (btn._origInnerHtml === undefined) btn._origInnerHtml = btn.innerHTML;
+      btn.setAttribute('data-confirm-armed', 'true');
+      btn.classList?.add('is-confirm-armed');
+      const confirmLabel = btn.getAttribute('data-confirm-label') || td('insp.hitlConfirmAlways');
+      btn.textContent = confirmLabel;
+      btn._confirmTimer = setTimeout(() => disarmAlwaysConfirmBtn(btn), durationMs);
+    }
+
     function triggerPromptOption(btn) {
       if (!btn || btn.disabled) return;
       const seat = btn.getAttribute('data-seat');
       const key = btn.getAttribute('data-key');
       const statusElId = btn.getAttribute('data-status') || 'cmdSendStatus';
       if (!seat || !key) return;
+      if (btn.getAttribute('data-confirm-always') === 'true' && btn.getAttribute('data-confirm-armed') !== 'true') {
+        armAlwaysConfirmBtn(btn, 4000);
+        return;
+      }
+      disarmAlwaysConfirmBtn(btn);
       sendTerminalKey(seat, key, statusElId, 'answer_prompt_option', btn);
     }
 
@@ -4093,7 +4176,7 @@
         const winApiUsd = fp ? fp.apiEqUsd : pool.totalEstUsd;
         const ctxFillWidth = pool.hasValidCtx ? Math.min(100, pool.peakCtx) : 0;
         const ctxFillBg = pool.isOver
-          ? '#ff0055'
+          ? '#f59e0b'
           : (pool.hasValidCtx && pool.peakCtx >= 65 ? 'linear-gradient(90deg, #3b82f6, #f59e0b)' : pool.color);
         const ctxRightText = pool.hasValidCtx ? `${pool.peakCtx}%` : td('pool.noMeter');
 
@@ -4124,12 +4207,12 @@
 
         const isWarnPool = !pool.isOver && pool.hasValidCtx && pool.peakCtx >= 65;
         const tankTint = pool.isOver
-          ? 'rgba(127, 29, 29, 0.32)'
+          ? 'rgba(120, 53, 15, 0.28)'
           : isWarnPool
             ? 'rgba(245, 158, 11, 0.12)'
             : 'rgba(148, 163, 184, 0.05)';
         const tankAccent = pool.isOver
-          ? '#ff0055'
+          ? '#f59e0b'
           : isWarnPool
             ? '#f59e0b'
             : 'rgba(100, 116, 139, 0.55)';
@@ -4146,13 +4229,13 @@
             <div class="meter-track">
               <div class="meter-fill" style="width: ${ctxFillWidth}%; background: ${ctxFillBg};"></div>
             </div>
-            <span style="color:${pool.isOver ? '#fecdd3' : pool.hasValidCtx ? '#e2e8f0' : '#64748b'}; font-weight:${pool.isOver ? '800' : '600'}; font-family:var(--font-mono); font-size:10.5px;">${ctxRightText}</span>
+            <span style="color:${pool.isOver ? '#fde68a' : pool.hasValidCtx ? '#e2e8f0' : '#64748b'}; font-weight:${pool.isOver ? '800' : '600'}; font-family:var(--font-mono); font-size:10.5px;">${ctxRightText}</span>
           </div>
           ${secondRowHtml}
         </div>`;
       }).join('');
 
-      // Sync compact inline FinOps & Peak CTX summary pill in Row 1
+      // Sync compact inline FinOps & Peak CTX summary pill in unified top bar
       const pillBtn = document.getElementById('btnFinopsPill');
       const pillText = document.getElementById('finopsPillText');
       if (pillText) {
@@ -4162,7 +4245,7 @@
         }, 0);
         const peakPoolCtx = activePools.reduce((mx, p) => (p.hasValidCtx ? Math.max(mx, Number(p.peakCtx) || 0) : mx), -1);
         const ctxStr = peakPoolCtx >= 0 ? `CTX ${peakPoolCtx}%` : 'CTX —';
-        pillText.textContent = `⚡ $${totalUsd.toFixed(2)} · ${ctxStr} ▾`;
+        pillText.innerHTML = `<span class="finops-desktop-txt">⚡ $${totalUsd.toFixed(2)} · ${escapeHtml(ctxStr)} ▾</span><span class="finops-mobile-txt">$${totalUsd.toFixed(2)}</span>`;
         if (pillBtn) {
           pillBtn.title = td('finops.pillTip');
           pillBtn.classList.toggle('is-crit', peakPoolCtx >= CONTEXT_CRIT_PCT);
@@ -4199,6 +4282,7 @@
       if (changed && calmMode && currentRigFilter === 'all') renderTopology();
       persistDeckPref({ selectedAgentId: id });
       applyHoverClasses();
+      if (changed) renderWaitRadarAndDecisions();
       renderInspectorAndScorecards(true);
       if (changed) {
         if (IS_LIVE) syncTmuxStream();
@@ -6007,13 +6091,7 @@
       }
       const titleEl = document.getElementById('guardrailsModalTitle');
       if (titleEl) {
-        titleEl.textContent = activeGuardrailsTab === 'evaluator'
-          ? td('eval.settingsTitle')
-          : activeGuardrailsTab === 'playbooks'
-            ? td('pb.modalTitle')
-            : activeGuardrailsTab === 'auto-consent'
-              ? td('autoConsent.modalTitle')
-              : td('guard.title');
+        titleEl.textContent = td('guard.dialogTitle');
       }
       if (activeGuardrailsTab === 'auto-consent' && IS_LIVE && !IS_OFFLINE_DEMO) {
         autoConsentUi?.refresh();
@@ -8286,110 +8364,213 @@
       window.LIVE_FLEET_USAGE = fleetUsageSummary;
 
       let demoGitRadar = null;
-      if (typeof analyzeFleetGitRadar === 'function' && demoPreset !== 'universal') {
+      if (typeof analyzeFleetGitRadar === 'function') {
         const seatStates = {};
         for (const a of AGENTS) {
           seatStates[a.id] = a.state === 'working' ? 'working' : (a.state === 'urgent' ? 'needs-input' : 'idle');
         }
-        demoGitRadar = analyzeFleetGitRadar([
-          {
-            isGit: true,
-            workspaceId: 'wt-demo-main',
-            repoKey: 'remote:demo/core-platform',
-            repoLabel: 'core-platform',
-            dirName: 'core-platform',
-            isWorktree: false,
-            branch: 'dev',
-            oid: '8a4f21c9',
-            detached: false,
-            ahead: 2,
-            behind: 4,
-            files: [
-              { path: 'src/core/dispatcher.ts', code: '.M', unstaged: true, ins: 28, del: 9 },
-              { path: 'src/core/retry-queue.ts', code: '.M', unstaged: true, ins: 24, del: 6 },
-              { path: 'tests/elb-001.test.ts', code: 'M.', staged: true, ins: 16, del: 4 }
-            ],
-            dirtyCount: 3,
-            stagedCount: 1,
-            unstagedCount: 2,
-            untrackedCount: 0,
-            unmergedCount: 0,
-            insertions: 68,
-            deletions: 19,
-            seatIds: ['dev-owner@core-platform', 'dev-coder@core-platform', 'dev-check@core-platform', 'dev-operator@core-platform', 'dev-senior-architector@core-platform']
-          },
-          {
-            isGit: true,
-            workspaceId: 'wt-demo-coder4',
-            repoKey: 'remote:demo/core-platform',
-            repoLabel: 'core-platform',
-            dirName: 'core-platform-wt-coder4',
-            isWorktree: true,
-            branch: 'feat/tts-strict-chunked',
-            oid: 'd2b9104e',
-            detached: false,
-            ahead: 5,
-            behind: 3,
-            files: [
-              { path: 'src/core/dispatcher.ts', code: '.M', unstaged: true, ins: 41, del: 12 },
-              { path: 'src/tts/chunker.ts', code: '.M', unstaged: true, ins: 73, del: 15 }
-            ],
-            dirtyCount: 2,
-            stagedCount: 0,
-            unstagedCount: 2,
-            untrackedCount: 0,
-            unmergedCount: 0,
-            insertions: 114,
-            deletions: 27,
-            seatIds: ['dev-coder4@core-platform']
-          },
-          {
-            isGit: true,
-            workspaceId: 'wt-demo-coder3',
-            repoKey: 'remote:demo/core-platform',
-            repoLabel: 'core-platform',
-            dirName: 'core-platform-wt-coder3',
-            isWorktree: true,
-            branch: 'feat/pi-worker',
-            oid: '4c10af21',
-            detached: false,
-            ahead: 1,
-            behind: 22,
-            files: [
-              { path: 'src/workers/pi-loop.ts', code: '.M', unstaged: true, ins: 18, del: 6 }
-            ],
-            dirtyCount: 1,
-            stagedCount: 0,
-            unstagedCount: 1,
-            untrackedCount: 0,
-            unmergedCount: 0,
-            insertions: 18,
-            deletions: 6,
-            seatIds: ['dev-coder3@core-platform']
-          },
-          {
-            isGit: true,
-            workspaceId: 'wt-demo-kernel',
-            repoKey: 'remote:demo/openrig-kernel',
-            repoLabel: 'openrig-kernel',
-            dirName: 'openrig-kernel',
-            isWorktree: false,
-            branch: 'main',
-            oid: 'f01bc331',
-            detached: false,
-            ahead: 0,
-            behind: 0,
-            files: [],
-            dirtyCount: 0,
-            stagedCount: 0,
-            unstagedCount: 0,
-            untrackedCount: 0,
-            unmergedCount: 0,
-            insertions: 0,
-            deletions: 0,
-            seatIds: ['operator-agent@kernel']
-          }
-        ], seatStates);
+        const gitWorkspaces = demoPreset === 'universal'
+          ? [
+              {
+                isGit: true,
+                workspaceId: 'wt-uni-api',
+                repoKey: 'remote:demo/payments-api',
+                repoLabel: 'payments-api',
+                dirName: 'payments-api',
+                isWorktree: false,
+                branch: 'feat/webhooks-v2',
+                oid: '7b3e91a4',
+                detached: false,
+                ahead: 3,
+                behind: 1,
+                files: [
+                  { path: 'src/routes/webhooks.ts', code: '.M', unstaged: true, ins: 54, del: 11 },
+                  { path: 'src/middleware/verify-hmac.ts', code: 'M.', staged: true, ins: 38, del: 4 }
+                ],
+                dirtyCount: 2,
+                stagedCount: 1,
+                unstagedCount: 1,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 92,
+                deletions: 15,
+                seatIds: ['claude-api']
+              },
+              {
+                isGit: true,
+                workspaceId: 'wt-uni-tests',
+                repoKey: 'remote:demo/payments-api',
+                repoLabel: 'payments-api',
+                dirName: 'payments-api-wt-tests',
+                isWorktree: true,
+                branch: 'feat/webhooks-v2',
+                oid: '7b3e91a4',
+                detached: false,
+                ahead: 2,
+                behind: 0,
+                files: [
+                  { path: 'tests/webhooks.test.mjs', code: '.M', unstaged: true, ins: 62, del: 9 },
+                  { path: 'tests/helpers/hmac.ts', code: 'M.', staged: true, ins: 22, del: 3 }
+                ],
+                dirtyCount: 2,
+                stagedCount: 1,
+                unstagedCount: 1,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 84,
+                deletions: 12,
+                seatIds: ['codex-tests']
+              },
+              {
+                isGit: true,
+                workspaceId: 'wt-uni-docs',
+                repoKey: 'remote:demo/payments-api',
+                repoLabel: 'payments-api',
+                dirName: 'payments-api-wt-docs',
+                isWorktree: true,
+                branch: 'docs/webhooks-v2',
+                oid: '5e1c22b0',
+                detached: false,
+                ahead: 1,
+                behind: 0,
+                files: [
+                  { path: 'docs/openapi.yaml', code: '.M', unstaged: true, ins: 41, del: 6 }
+                ],
+                dirtyCount: 1,
+                stagedCount: 0,
+                unstagedCount: 1,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 41,
+                deletions: 6,
+                seatIds: ['gemini-docs']
+              },
+              {
+                isGit: true,
+                workspaceId: 'wt-uni-refactor',
+                repoKey: 'remote:demo/payments-api',
+                repoLabel: 'payments-api',
+                dirName: 'payments-api-wt-refactor',
+                isWorktree: true,
+                branch: 'refactor/storage-pool',
+                oid: 'c91a40f2',
+                detached: false,
+                ahead: 2,
+                behind: 0,
+                files: [
+                  { path: 'src/storage/pool.ts', code: '.M', unstaged: true, ins: 48, del: 24 },
+                  { path: 'tests/storage-pool.test.mjs', code: '.M', unstaged: true, ins: 16, del: 7 }
+                ],
+                dirtyCount: 2,
+                stagedCount: 0,
+                unstagedCount: 2,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 64,
+                deletions: 31,
+                seatIds: ['claude-refactor']
+              }
+            ]
+          : [
+              {
+                isGit: true,
+                workspaceId: 'wt-demo-main',
+                repoKey: 'remote:demo/core-platform',
+                repoLabel: 'core-platform',
+                dirName: 'core-platform',
+                isWorktree: false,
+                branch: 'dev',
+                oid: '8a4f21c9',
+                detached: false,
+                ahead: 2,
+                behind: 4,
+                files: [
+                  { path: 'src/core/dispatcher.ts', code: '.M', unstaged: true, ins: 28, del: 9 },
+                  { path: 'src/core/retry-queue.ts', code: '.M', unstaged: true, ins: 24, del: 6 },
+                  { path: 'tests/elb-001.test.ts', code: 'M.', staged: true, ins: 16, del: 4 }
+                ],
+                dirtyCount: 3,
+                stagedCount: 1,
+                unstagedCount: 2,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 68,
+                deletions: 19,
+                seatIds: ['dev-owner@core-platform', 'dev-coder@core-platform', 'dev-check@core-platform', 'dev-operator@core-platform', 'dev-senior-architector@core-platform']
+              },
+              {
+                isGit: true,
+                workspaceId: 'wt-demo-coder4',
+                repoKey: 'remote:demo/core-platform',
+                repoLabel: 'core-platform',
+                dirName: 'core-platform-wt-coder4',
+                isWorktree: true,
+                branch: 'feat/tts-strict-chunked',
+                oid: 'd2b9104e',
+                detached: false,
+                ahead: 5,
+                behind: 3,
+                files: [
+                  { path: 'src/core/dispatcher.ts', code: '.M', unstaged: true, ins: 41, del: 12 },
+                  { path: 'src/tts/chunker.ts', code: '.M', unstaged: true, ins: 73, del: 15 }
+                ],
+                dirtyCount: 2,
+                stagedCount: 0,
+                unstagedCount: 2,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 114,
+                deletions: 27,
+                seatIds: ['dev-coder4@core-platform']
+              },
+              {
+                isGit: true,
+                workspaceId: 'wt-demo-coder3',
+                repoKey: 'remote:demo/core-platform',
+                repoLabel: 'core-platform',
+                dirName: 'core-platform-wt-coder3',
+                isWorktree: true,
+                branch: 'feat/pi-worker',
+                oid: '4c10af21',
+                detached: false,
+                ahead: 1,
+                behind: 22,
+                files: [
+                  { path: 'src/workers/pi-loop.ts', code: '.M', unstaged: true, ins: 18, del: 6 }
+                ],
+                dirtyCount: 1,
+                stagedCount: 0,
+                unstagedCount: 1,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 18,
+                deletions: 6,
+                seatIds: ['dev-coder3@core-platform']
+              },
+              {
+                isGit: true,
+                workspaceId: 'wt-demo-kernel',
+                repoKey: 'remote:demo/openrig-kernel',
+                repoLabel: 'openrig-kernel',
+                dirName: 'openrig-kernel',
+                isWorktree: false,
+                branch: 'main',
+                oid: 'f01bc331',
+                detached: false,
+                ahead: 0,
+                behind: 0,
+                files: [],
+                dirtyCount: 0,
+                stagedCount: 0,
+                unstagedCount: 0,
+                untrackedCount: 0,
+                unmergedCount: 0,
+                insertions: 0,
+                deletions: 0,
+                seatIds: ['operator-agent@kernel']
+              }
+            ];
+        demoGitRadar = analyzeFleetGitRadar(gitWorkspaces, seatStates);
         for (const a of AGENTS) {
           a.git = (demoGitRadar.bySeatId && demoGitRadar.bySeatId[a.id]) || null;
         }
@@ -8401,10 +8582,12 @@
         requestedRig: 'all',
         hasLiveDaemonData: false,
         gitRadar: demoGitRadar,
-        rigs: [
-          { rigId: 'core-platform', name: 'core-platform', status: 'running', nodeCount: 8, runningCount: 4 },
-          { rigId: 'kernel', name: 'kernel', status: 'running', nodeCount: 1, runningCount: 0 }
-        ],
+        rigs: demoPreset === 'universal'
+          ? [{ rigId: 'payments-api', name: 'payments-api', status: 'running', nodeCount: 4, runningCount: 4 }]
+          : [
+              { rigId: 'core-platform', name: 'core-platform', status: 'running', nodeCount: 8, runningCount: 4 },
+              { rigId: 'kernel', name: 'kernel', status: 'running', nodeCount: 1, runningCount: 0 }
+            ],
         seats: [],
         seatsById: {},
         sessionsBySeatId,
@@ -8694,6 +8877,12 @@
         bRu.style.background = deckLang === 'ru' ? 'rgba(0,240,255,0.2)' : 'transparent';
         bRu.style.color = deckLang === 'ru' ? '#00f0ff' : '#94a3b8';
       }
+      document.querySelectorAll('.mobile-lang-btn[data-mobile-lang]').forEach(btn => {
+        const active = btn.getAttribute('data-mobile-lang') === deckLang;
+        btn.style.background = active ? 'rgba(0,240,255,0.2)' : 'transparent';
+        btn.style.color = active ? '#00f0ff' : '#94a3b8';
+        btn.style.borderColor = active ? 'rgba(0,240,255,0.55)' : 'rgba(148,163,184,0.28)';
+      });
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const k = el.getAttribute('data-i18n');
@@ -8883,14 +9072,16 @@
         applyGanttFocus();
         showTrackToast('📊 UX-трек: Диаграмма Ганта (клавиша G) • подсветка цепочки single-writer');
       } else if (track === 'hitl') {
-        selectAgent('dev-check@core-platform');
-        openTerminalModal('dev-check@core-platform');
+        const hitlId = AGENTS.find(a => a.state === 'urgent')?.id || AGENTS[0]?.id || 'codex-tests';
+        selectAgent(hitlId);
+        openTerminalModal(hitlId);
         showTrackToast('⚡ UX-трек: Кликабельный HITL • 80-строчный TMUX экран');
       } else if (track === 'finops' || track === 'budget') {
         openFleetAdvisorModal('budget');
         showTrackToast('💰 UX-трек: FinOps-бюджет токенов и эксклюзивные пулы моделей');
       } else if (track === 'ontology' || track === 'audit') {
-        selectAgent('dev-check@core-platform');
+        const auditId = AGENTS.find(a => a.state === 'urgent')?.id || AGENTS[0]?.id || 'dev-check@core-platform';
+        selectAgent(auditId);
         const auditEl = document.getElementById('inspActionAudit');
         if (auditEl) auditEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         showTrackToast('🧬 UX-трек: Онтология v2.0 • Actions по причине + Журнал postcondition');
@@ -9048,9 +9239,15 @@
       initCompactTriageTools();
       const initialPreset = (() => {
         try {
-          const p = (new URLSearchParams(window.location.search).get('preset') || '').toLowerCase();
-          return (p === 'universal' || p === 'tmux') ? 'universal' : 'openrig';
-        } catch { return 'openrig'; }
+          const params = new URLSearchParams(window.location.search);
+          const p = (params.get('preset') || '').toLowerCase().trim();
+          const tr = (params.get('track') || window.location.hash.replace(/^#/, '') || '').toLowerCase().trim();
+          if (p === 'openrig' || tr === 'openrig' || ['auto-consent', 'autoconsent', 'auto_consent', 'gantt', 'git', 'worktrees', 'conflicts', 'triage', 'queue'].includes(tr)) {
+            return 'openrig';
+          }
+          if (p === 'universal' || p === 'tmux') return 'universal';
+          return 'universal';
+        } catch { return 'universal'; }
       })();
       if (IS_OFFLINE_DEMO && initialPreset === 'universal') {
         setDemoPreset('universal', true);

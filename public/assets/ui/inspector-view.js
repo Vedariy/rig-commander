@@ -184,27 +184,97 @@ export function renderGuidanceHtml(ctx, agent) {
   return '';
 }
 
+export function dedupeRadarItemsByAgent(items) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const out = [];
+  const primaryBySeat = new Map();
+  for (const raw of items) {
+    if (!raw || typeof raw !== 'object') continue;
+    const seatId = String(raw.seatId || '').trim();
+    if (!seatId) {
+      out.push(raw);
+      continue;
+    }
+    const existing = primaryBySeat.get(seatId);
+    if (!existing) {
+      const entry = {
+        ...raw,
+        secondaryChips: Array.isArray(raw.secondaryChips) ? raw.secondaryChips.slice() : []
+      };
+      primaryBySeat.set(seatId, entry);
+      out.push(entry);
+      continue;
+    }
+    // Fold secondary signals for the same agent into compact inline chips on the primary card.
+    const sliceText = String(raw.slice || '').trim();
+    let chipLabel = '';
+    if (/^CTX\s+\d+%/i.test(sliceText)) {
+      chipLabel = `⚠️ ${sliceText}`;
+    } else if (raw.prio < 1.5 && raw.state) {
+      chipLabel = String(raw.state).trim();
+    }
+    if (chipLabel && !existing.secondaryChips.some(c => c.label === chipLabel)) {
+      existing.secondaryChips.push({ label: chipLabel, tone: 'amber' });
+    }
+  }
+  return out;
+}
+
 export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, statusElId = 'cmdSendStatus') {
   const { td, escapeHtml, getControlLockAttrs } = ctx;
   const { preview, fullCommand, options } = getHitlPromptPresentation(screenText);
   if (!preview && !options.length) return '';
+  const agent = Array.isArray(ctx.agents) ? ctx.agents.find(a => a && a.id === seatId) : null;
+  const shortName = ctx.shortSeat ? ctx.shortSeat(seatId) : String(seatId || '').split('@')[0];
+  const cwdText = agent && agent.cwd ? String(agent.cwd).trim() : '';
+  const scopeLabel = td('insp.hitlScopeSingle');
+  const targetScopeHtml = options.length
+    ? `<div class="hitl-target-scope">tmux: <b>${escapeHtml(shortName)}</b>${cwdText ? ` · <span>${escapeHtml(cwdText)}</span>` : ''} · <span>${escapeHtml(scopeLabel)}</span></div>`
+    : '';
   const banner = preview
     ? `<div class="hitl-command-preview" title="${escapeHtml(fullCommand)}"><strong>🔍 ${escapeHtml(td('insp.hitlCmdLabel'))}</strong> <code>${escapeHtml(preview)}</code></div>`
     : '';
   if (!options.length) return banner;
   const scopeKey = buildSeatScopeKey(seatId);
-  const btns = options.map(opt => {
-    const cls = opt.isCancel ? 'action-pill key-pill key-cancel' : (opt.isPrimary ? 'action-pill key-pill key-proceed' : 'action-pill key-pill key-neutral');
-    const icon = opt.isCancel ? '❌' : (opt.isPrimary ? '✅' : '🔹');
+  const primaryOpt = options.find(opt => opt.isPrimary && !opt.isCancel) || (!options[0].isCancel ? options[0] : null);
+  const secondaryOpts = options
+    .filter(opt => opt !== primaryOpt)
+    .sort((a, b) => Number(Boolean(b.isCancel)) - Number(Boolean(a.isCancel)));
+
+  const renderOptBtn = (opt, isPrimarySlot) => {
+    const isAlways = !isPrimarySlot && !opt.isCancel && (opt.badge === '2' || /always|всегда|remember|запомнить/i.test(`${opt.fullText || ''} ${opt.shortLabel || ''}`));
+    const cls = isPrimarySlot
+      ? 'action-pill key-pill key-proceed hitl-btn-primary'
+      : (opt.isCancel ? 'action-pill key-pill key-cancel hitl-btn-secondary' : 'action-pill key-pill key-neutral hitl-btn-secondary');
     const fp = buildSeatSendKey(seatId, 'key', opt.keyStroke);
     const lockAttrs = getControlLockAttrs(scopeKey, fp);
-    return `<button type="button" class="${cls}" title="${escapeHtml(opt.fullText)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}"${lockAttrs} onclick="triggerPromptOption(this)">${icon} <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}</button>`;
-  }).join('');
+    const confirmAttrs = isAlways
+      ? ` data-confirm-always="true" data-confirm-label="${escapeHtml(td('insp.hitlConfirmAlways'))}"`
+      : '';
+    let labelHtml;
+    if (isPrimarySlot) {
+      labelHtml = `✅ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}`;
+    } else if (opt.isCancel) {
+      labelHtml = `❌ ${escapeHtml(td('insp.hitlCancelShort'))}`;
+    } else if (isAlways) {
+      labelHtml = `🔹 ${escapeHtml(td('insp.hitlAlwaysShort'))}`;
+    } else {
+      labelHtml = `🔹 <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}`;
+    }
+    return `<button type="button" class="${cls}" title="${escapeHtml(opt.fullText)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}"${confirmAttrs}${lockAttrs} onclick="triggerPromptOption(this)">${labelHtml}</button>`;
+  };
+
+  const primaryHtml = primaryOpt ? renderOptBtn(primaryOpt, true) : '';
+  const secondaryHtml = secondaryOpts.length
+    ? `<div class="hitl-secondary-row${secondaryOpts.length === 1 ? ' is-single' : ''}">${secondaryOpts.map(opt => renderOptBtn(opt, false)).join('')}</div>`
+    : '';
   return `
     <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
+      ${targetScopeHtml}
       ${banner}
-      <span style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
-      ${btns}
+      <span class="hitl-options-kicker" style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
+      ${primaryHtml}
+      ${secondaryHtml}
     </div>
   `;
 }
@@ -620,7 +690,8 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
 
   if (canPatchInPlace) {
     // --- SURGICAL IN-PLACE DOM PATCHING (Preserves input focus, text selection, scroll) ---
-    existingCard.style.borderColor = thermal.color;
+    // Dark Cockpit discipline: outer Inspector card stays calm slate/cyan (red is strictly inner P0 HITL card)
+    existingCard.style.borderColor = '';
 
     const elAct = document.getElementById('inspValActivity');
     if (elAct) {
@@ -641,7 +712,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
     if (elCtx) {
       const isCritCtx = thermal.tier === 'crit';
       elCtx.className = isCritCtx ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill';
-      elCtx.style.color = isCritCtx ? '#fecdd3' : thermal.color;
+      elCtx.style.color = isCritCtx ? '#fde68a' : thermal.color;
       elCtx.title = exactTokensLine;
       elCtx.textContent = `${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}`;
     }
@@ -649,7 +720,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
     const elCtxBar = document.getElementById('inspCtxBarFill');
     if (elCtxBar) {
       elCtxBar.style.width = `${thermal.pct}%`;
-      elCtxBar.style.background = thermal.color;
+      elCtxBar.style.background = thermal.tier === 'crit' ? '#f59e0b' : thermal.color;
     }
 
     const elDiag = document.getElementById('inspSeatDiagnosis');
@@ -735,7 +806,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
     const curInputVal = prevInput ? prevInput.value : '';
 
     box.innerHTML = `
-      <div class="inspector-box" id="inspectorBoxCard" data-seat="${escapeHtml(agent.id)}" style="border-color:${thermal.color}; transition: box-shadow 0.25s ease;">
+      <div class="inspector-box" id="inspectorBoxCard" data-seat="${escapeHtml(agent.id)}" style="transition: box-shadow 0.25s ease;">
         <!-- SA Level 1: Identity & Primary Actions -->
         <div class="insp-identity-row" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:5px 6px; margin-bottom:5px; width:100%; box-sizing:border-box;">
           <div style="display:flex; align-items:center; gap:6px; min-width:130px; flex:1 1 130px;">
@@ -744,12 +815,11 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
               <div style="font-family:var(--font-mono); font-size:12.5px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;" title="${escapeHtml(agent.id)}">
                 ${escapeHtml(getNodeDisplayTitle(agent))}
               </div>
-              <div style="font-size:10.5px; color:#94a3b8; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(formatRoleForRig(agent.role))}</div>
+              <div class="insp-role-subtitle" style="font-size:10.5px; color:#94a3b8; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(formatRoleForRig(agent.role))}</div>
             </div>
           </div>
-          <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
-            <button class="action-pill" style="padding:3px 7px; font-size:10px; min-height:26px;" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.screenBtn')}</button>
-            <button class="action-pill" style="padding:3px 7px; font-size:10px; min-height:26px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 ${escapeHtml(td('insp.copyAttachBtn'))}</button>
+          <div class="insp-identity-actions" style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
+            <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 8px; font-size:10px; min-height:28px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 ${escapeHtml(td('insp.copyAttachBtn'))}</button>
           </div>
         </div>
 
@@ -763,9 +833,9 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <div style="flex:1 1 56px; min-width:44px; height:5px; background:rgba(148,163,184,0.16); border-radius:999px; overflow:hidden;">
-              <div id="inspCtxBarFill" style="width:${thermal.pct}%; height:100%; background:${thermal.color}; transition:width 0.3s ease;"></div>
+              <div id="inspCtxBarFill" style="width:${thermal.pct}%; height:100%; background:${thermal.tier === 'crit' ? '#f59e0b' : thermal.color}; transition:width 0.3s ease;"></div>
             </div>
-            <span id="inspValContext" class="${thermal.tier === 'crit' ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill'}" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.tier === 'crit' ? '#fecdd3' : thermal.color}; max-width:100%; white-space:normal; line-height:1.35; overflow-wrap:anywhere;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
+            <span id="inspValContext" class="${thermal.tier === 'crit' ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill'}" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.tier === 'crit' ? '#fde68a' : thermal.color}; max-width:100%; white-space:normal; line-height:1.35; overflow-wrap:anywhere;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
           </div>
         </div>
 
@@ -781,14 +851,15 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
         <!-- SA Level 2: Management-by-Exception Signals -->
         <div id="inspWarningSignsGrid">${renderWarningSignsHtml(ctx, agent)}</div>
 
-        <!-- SA Level 3: Live Tmux & Contextual Action Controls (Immediately visible) -->
+        <!-- SA Level 3: Action Feedback, Live TMUX Preview & Collapsible Manual Operator Input -->
+        <div id="cmdSendStatus" class="ctrl-status"></div>
         <div style="font-family:var(--font-mono); font-size:10px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:4px; flex-wrap:nowrap;">
           <span style="display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-weight:700;">🖥️ TMUX <span id="inspTmuxStreamBadge" class="tmux-stream-pill" style="display:${tmuxStreamConnected && tmuxStreamSeat === agent.id ? 'inline-flex' : 'none'};" title="${escapeHtml(td('sse.streamTip'))}">${escapeHtml(td('sse.streamLive'))}</span></span>
-          <span style="display:flex; gap:4px; flex-shrink:0; align-items:center;">
-            <button class="action-pill" type="button" style="padding:2px 5px; font-size:9.5px;" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
-            <button class="action-pill" id="btnAutoFollow" style="padding:2px 5px; font-size:9.5px; white-space:nowrap;" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
-            <button class="action-pill" style="padding:2px 5px; font-size:9.5px; white-space:nowrap;" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
-          </span>
+          ${agent.state === 'urgent' ? '' : `<span style="display:flex; gap:4px; flex-shrink:0; align-items:center;">
+            <button class="action-pill tmux-hdr-btn" type="button" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
+            <button class="action-pill tmux-hdr-btn" type="button" id="btnAutoFollow" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
+            <button class="action-pill tmux-hdr-btn" type="button" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
+          </span>`}
         </div>
         <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(liveScreenCapture)}</div>
 
@@ -797,12 +868,14 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
           <div class="ctrl-quick-keys" id="ctrlQuickKeysBar" data-cache-key="${escapeHtml(quickKeysHtml)}">
             ${quickKeysHtml}
           </div>
-          <form class="ctrl-input-form" data-seat="${escapeHtml(agent.id)}" onsubmit="submitAgentPrompt(this.dataset.seat, event, 'terminalCmdInput', 'cmdSendStatus')">
-            <div class="ctrl-prompt-tag">&gt;</div>
-            <input type="text" id="terminalCmdInput" class="ctrl-input" placeholder="${escapeHtml(td('insp.cmdPlaceholder'))}" autocomplete="off" onkeydown="handleHistoryKey(event, 'terminalCmdInput')" />
-            <button type="submit" class="cyber-btn active ctrl-send-btn"${getControlLockAttrs(buildSeatScopeKey(agent.id))}>${td('insp.sendBtn')}</button>
-          </form>
-          <div id="cmdSendStatus" class="ctrl-status"></div>
+          <details class="manual-cmd-disclosure" id="manualCmdDisclosure">
+            <summary class="manual-cmd-summary">${escapeHtml(td('insp.manualCmdSummary'))}</summary>
+            <form class="ctrl-input-form" data-seat="${escapeHtml(agent.id)}" onsubmit="submitAgentPrompt(this.dataset.seat, event, 'terminalCmdInput', 'cmdSendStatus')">
+              <div class="ctrl-prompt-tag">&gt;</div>
+              <input type="text" id="terminalCmdInput" class="ctrl-input" placeholder="${escapeHtml(td('insp.cmdPlaceholder'))}" autocomplete="off" onkeydown="handleHistoryKey(event, 'terminalCmdInput')" />
+              <button type="submit" class="cyber-btn active ctrl-send-btn"${getControlLockAttrs(buildSeatScopeKey(agent.id))}>${td('insp.sendBtn')}</button>
+            </form>
+          </details>
         </div>
 
         <!-- SA Level 3: Verified Action Audit Trail (Always visible when records exist) -->

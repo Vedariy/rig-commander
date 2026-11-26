@@ -926,9 +926,9 @@ test('v3.8.1 #39: Tactile role="switch" pill toggles, immediate apply, 2.5s cool
     }
     assert.match(html, /class="ac-switch-track"/);
     assert.match(html, /class="ac-switch-thumb"/);
-    assert.match(html, /class="ac-switch-state"/);
-    assert.ok(html.includes(lang === 'ru' ? 'ВКЛ' : 'ON'));
-    assert.ok(html.includes(lang === 'ru' ? 'ВЫКЛ' : 'OFF'));
+    assert.doesNotMatch(html, /class="ac-switch-state"/, 'v3.11.0: redundant outlined ON/OFF state pills next to tactile switch removed');
+    assert.doesNotMatch(html, /class="ac-default-off-chip"/, 'v3.11.0: borderless subtext replaces fake-button default-off chip');
+    assert.match(html, /class="ac-default-off-hint"/);
     assert.match(html, /id="acModeSelect"[^>]*data-auto-consent-action="change-mode"/);
     assert.doesNotMatch(html, /on(?:click|change|error)=/i);
 
@@ -1284,14 +1284,17 @@ test('v3.10 UX: Auto-Consent modal polish — seatsTitle key, Allowed vs Hard-Ve
     assert.match(offHtml, /class="ac-cmd-col is-dev"/);
     assert.match(offHtml, /class="ac-cmd-col is-veto"/);
     assert.match(offHtml, /class="ac-policy-list ac-policy-list-scroll"/);
+    assert.match(offHtml, /class="ac-count-label"/);
+    assert.doesNotMatch(offHtml, /data-auto-consent-action="grant-session"/, 'v3.11.0: per-row +60m Session buttons hidden when global Auto-Consent is OFF');
     assert.match(offHtml, /<footer class="ac-modal-footer">[\s\S]*class="ac-footer-emergency"><\/div>[\s\S]*class="ac-footer-actions">[\s\S]*data-auto-consent-action="save-policy"/);
     assert.doesNotMatch(offHtml, /data-auto-consent-action="pause-all"/, 'PAUSE must be hidden when global Auto-Consent is OFF');
     assert.doesNotMatch(offHtml, /class="ac-btn-row"/, 'Old inline button row must be replaced by modal footer');
     assert.match(offHtml, /id="acModeSelect" class="rig-select ac-mode-select is-dry"/);
     assert.doesNotMatch(offHtml, /on(?:click|change|error)=/i);
 
-    // 2. Enabled + Dry-Run: PAUSE appears without emergency class
+    // 2. Enabled + Dry-Run: PAUSE appears without emergency class and per-row +60m Session buttons appear
     const dryHtml = renderAutoConsentTabHtml({ state: dryOnState, rigs: ['core-platform'], agents, td, deckLang: lang, nowMs: NOW });
+    assert.match(dryHtml, /data-auto-consent-action="grant-session"/, 'per-row +60m Session buttons appear when Auto-Consent is enabled');
     assert.match(dryHtml, /class="action-pill key-cancel ac-pause-btn is-dry-pause" data-auto-consent-action="pause-all"/);
     assert.doesNotMatch(dryHtml, /ac-pause-btn is-emergency/);
 

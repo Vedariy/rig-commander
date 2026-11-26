@@ -571,19 +571,6 @@
       border-radius: 9999px;
       text-transform: uppercase;
     }
-    .sim-btn-demo {
-      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
-      border: 1px solid rgba(255, 255, 255, 0.6);
-      color: #020617;
-      font-weight: 800;
-      box-shadow: 0 0 16px rgba(0, 255, 157, 0.45);
-      text-decoration: none;
-    }
-    .sim-btn-demo:hover {
-      box-shadow: 0 0 24px rgba(0, 255, 157, 0.78);
-      color: #000;
-      transform: translateY(-1px);
-    }
     @keyframes demoGlowPulse {
       0%, 100% { box-shadow: 0 0 32px rgba(0, 255, 157, 0.45), 0 10px 30px rgba(0, 240, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.65); }
       50% { box-shadow: 0 0 46px rgba(0, 255, 157, 0.68), 0 12px 42px rgba(0, 240, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.8); }
@@ -623,12 +610,12 @@
     .cli-copy-box:hover .cli-icon { opacity: 1; }
 
     .operator-faq { padding-block: 3rem; }
-    .operator-faq details { padding-block: .8rem; border-bottom: 1px solid var(--border-subtle); }
-    .operator-faq summary { cursor: pointer; font-weight: 700; }
+    .operator-faq details { padding-block: .6rem; border-bottom: 1px solid var(--border-subtle); }
+    .operator-faq summary { cursor: pointer; font-weight: 700; min-height: 36px; display: flex; align-items: center; }
     .operator-faq p { margin-top: .5rem; }
     html[lang="en"] .operator-faq [lang="ru"], html[lang="ru"] .operator-faq [lang="en"] { display: none; }
 
-    /* INTERACTIVE PRODUCT HERO SIMULATOR */
+    /* INTERACTIVE PRODUCT HERO SIMULATOR (SYNCHRONIZED WITH REAL /demo HEADER) */
     .hero-simulator-wrapper {
       background: linear-gradient(180deg, rgba(56, 189, 248, 0.25) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
       padding: 1px;
@@ -644,62 +631,114 @@
       display: flex;
       flex-direction: column;
       border: 1px solid rgba(0, 240, 255, 0.2);
+      text-align: left;
     }
 
     .sim-header {
-      background: rgba(6, 14, 30, 0.95);
-      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
-      padding: 10px 18px;
+      background: rgba(6, 14, 30, 0.96);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+      padding: 8px 16px;
+      min-height: 48px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
     }
-    .sim-window-dots {
-      display: flex;
-      gap: 6px;
-    }
-    .sim-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-    .sim-dot.red { background: #ff5f56; }
-    .sim-dot.yellow { background: #ffbd2e; }
-    .sim-dot.green { background: #27c93f; }
-
-    .sim-bar-controls {
-      display: flex;
+    .sim-brand-cluster {
+      display: inline-flex;
       align-items: center;
       gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11.5px;
+      color: #e2e8f0;
     }
-    .sim-btn {
-      background: rgba(0, 240, 255, 0.08);
-      border: 1px solid rgba(0, 240, 255, 0.35);
-      color: var(--cyan);
-      font-family: var(--font-mono);
-      font-size: 11px;
+    .sim-brand-name {
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+    .sim-demo-pill {
+      font-size: 10px;
+      font-weight: 800;
+      color: #6ee7b7;
+      background: rgba(0, 255, 157, 0.12);
+      border: 1px solid rgba(0, 255, 157, 0.35);
+      border-radius: 999px;
+      padding: 2px 7px;
+      letter-spacing: 0.5px;
+    }
+    .sim-preset-pill {
+      font-size: 10.5px;
       font-weight: 700;
-      min-height: 32px;
-      padding: 4px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: all 0.18s ease;
+      color: #bae6fd;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 6px;
+      padding: 3px 8px;
+    }
+    .sim-telemetry-cluster {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11px;
+    }
+    .sim-triage-pill {
       display: inline-flex;
       align-items: center;
       gap: 5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(255, 0, 85, 0.14);
+      border: 1px solid rgba(255, 0, 85, 0.42);
+      color: #fecdd3;
+      font-weight: 800;
     }
-    .sim-btn:hover, .sim-btn.active {
-      background: rgba(0, 240, 255, 0.22);
-      box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
-      color: #fff;
+    .sim-triage-pill.is-clear {
+      background: rgba(0, 255, 157, 0.12);
+      border-color: rgba(0, 255, 157, 0.38);
+      color: #6ee7b7;
     }
-    .sim-btn.purple-active {
-      background: rgba(168, 85, 247, 0.25);
-      border-color: #a855f7;
-      color: #f3e8ff;
-      box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+    .sim-finops-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: #fde68a;
+      font-weight: 700;
+    }
+    .sim-view-switch {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 7px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .sim-tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .sim-tab-btn:hover { color: #f8fafc; }
+    .sim-tab-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      color: #7dd3fc;
     }
 
     /* SIMULATOR STAGE / WORKSPACE */
@@ -843,11 +882,125 @@
       border: 1px solid rgba(0, 240, 255, 0.3);
       border-radius: 6px;
       padding: 10px;
-      font-size: 10px;
-      line-height: 1.45;
+      font-size: 10.5px;
+      line-height: 1.48;
       color: #a7f3d0;
+      text-align: left;
+      white-space: pre-wrap;
+      font-variant-numeric: tabular-nums;
+      word-break: break-word;
       flex: 1;
       overflow: hidden;
+    }
+
+    /* NATIVE MOBILE P0 HITL PREVIEW CARD (matches real mobile /demo) */
+    .sim-mobile-hitl {
+      display: none;
+      background: #01040a;
+      padding: 12px;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .sim-m-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sim-m-seat {
+      font-size: 13px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .sim-m-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #fecdd3;
+      background: rgba(255, 0, 85, 0.16);
+      border: 1px solid rgba(255, 0, 85, 0.48);
+    }
+    .sim-m-badge.is-ok {
+      color: #6ee7b7;
+      background: rgba(0, 255, 157, 0.14);
+      border-color: rgba(0, 255, 157, 0.45);
+    }
+    .sim-m-badge.is-paused {
+      color: #fde68a;
+      background: rgba(251, 191, 36, 0.14);
+      border-color: rgba(251, 191, 36, 0.45);
+    }
+    .sim-m-term {
+      background: #020814;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11px;
+      line-height: 1.48;
+      color: #a7f3d0;
+      text-align: left;
+      white-space: pre-wrap;
+      font-variant-numeric: tabular-nums;
+      word-break: break-word;
+    }
+    .sim-m-primary {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(0, 255, 157, 0.16);
+      border: 1.5px solid rgba(0, 255, 157, 0.72);
+      color: #6ee7b7;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .sim-m-primary:hover {
+      background: rgba(0, 255, 157, 0.24);
+      color: #ecfdf5;
+    }
+    .sim-m-secondary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .sim-m-sec-btn {
+      min-height: 38px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+    }
+    .sim-m-sec-btn.is-cancel {
+      border-color: rgba(255, 0, 85, 0.36);
+      color: #fda4af;
+    }
+    .sim-m-audit {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 10.5px;
+      color: #94a3b8;
+      padding-top: 4px;
+      border-top: 1px dashed rgba(148, 163, 184, 0.18);
     }
 
     /* SECURITY & PRIVACY GUARANTEES STRIP */
@@ -916,7 +1069,15 @@
       line-height: 1.5;
       color: #cbd5e1;
     }
-    .sec-guarantee-desc a { color: #7dd3fc; text-decoration: underline; text-underline-offset: 2px; }
+    .sec-guarantee-desc a {
+      display: inline-block;
+      padding: 4px 2px;
+      line-height: 1.5;
+      min-height: 28px;
+      color: #7dd3fc;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
     .sec-guarantee-desc code {
       font-family: var(--font-mono);
       font-size: 11px;
@@ -1319,6 +1480,12 @@
       font-size: 11.5px;
       color: #94a3b8;
     }
+    .footer-status a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 2px 3px;
+    }
     .footer-keycaps {
       display: flex;
       flex-wrap: wrap;
@@ -1421,30 +1588,6 @@
       color: #fff;
       box-shadow: 0 0 24px rgba(0, 240, 255, 0.28);
       transform: translateY(-2px);
-    }
-    .sim-pool-strip {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      padding: 8px 14px;
-      background: rgba(3, 8, 20, 0.92);
-      border-bottom: 1px solid rgba(56, 189, 248, 0.14);
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-    }
-    @media (max-width: 820px) {
-      .sim-pool-strip { grid-template-columns: repeat(2, 1fr); }
-    }
-    .sim-pool-chip {
-      background: rgba(15, 23, 42, 0.65);
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 6px;
-      padding: 6px 9px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 6px;
-      text-align: left;
     }
     .sim-gantt-view {
       width: 100%;
@@ -1565,6 +1708,7 @@
     .bento-cta {
       display: inline-flex;
       align-items: center;
+      min-height: 32px;
       gap: 6px;
       margin-top: 14px;
       font-family: var(--font-mono);
@@ -1584,73 +1728,6 @@
       border-color: var(--cyan);
       color: #fff;
       transform: translateX(2px);
-    }
-    .sim-video-stage {
-      display: none;
-      background: #01040a;
-      padding: 14px;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .sim-video-frame {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #020612;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
-    }
-    .sim-video-frame video {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: contain;
-      background: #020612;
-    }
-    .sim-video-chapters {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: #94a3b8;
-    }
-    .sim-chapter-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .sim-chapter-btn {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      color: #cbd5e1;
-      font-family: var(--font-mono);
-      font-size: 10.5px;
-      font-weight: 700;
-      padding: 4px 9px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: all 0.16s ease;
-    }
-    .sim-chapter-btn:hover {
-      border-color: var(--cyan);
-      color: #fff;
-      background: rgba(0, 240, 255, 0.14);
-    }
-    .sim-btn-video {
-      background: rgba(168, 85, 247, 0.16);
-      border-color: rgba(168, 85, 247, 0.55);
-      color: #e9d5ff;
-    }
-    .sim-btn-video:hover, .sim-btn-video.active {
-      background: rgba(168, 85, 247, 0.32);
-      border-color: #c084fc;
-      color: #fff;
-      box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
     }
     .sim-graph-view {
       position: absolute;
@@ -1728,9 +1805,20 @@
       }
       .lang-switch { padding: 2px; }
       .nav-cta {
-        padding: 0 10px;
+        padding: 0 11px;
         font-size: 11.5px;
         gap: 4px;
+        background: transparent;
+        color: #cbd5e1;
+        border: 1px solid rgba(148, 163, 184, 0.34);
+        box-shadow: none;
+        font-weight: 700;
+      }
+      .nav-cta:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        box-shadow: none;
+        transform: none;
       }
       .nav-cta-dot,
       .nav-cta-full {
@@ -1740,21 +1828,32 @@
         display: inline;
       }
       .hero {
-        padding-top: 28px;
-        padding-bottom: 40px;
+        padding-top: 18px;
+        padding-bottom: 36px;
       }
-      .sim-btn { min-height: 34px; }
       .hero-eyebrow {
         max-width: 100%;
         font-size: 10px;
         padding: 5px 12px;
+        margin-bottom: 10px;
       }
       .hero-title {
-        font-size: clamp(30px, 8.5vw, 52px);
+        font-size: clamp(26px, 7.6vw, 38px);
+        line-height: 1.1;
+      }
+      .hero-subtitle {
+        font-size: 14px;
+        line-height: 1.48;
+        margin-bottom: 14px;
+      }
+      .hero-actions {
+        margin-bottom: 14px;
+        gap: 8px;
       }
       .hero-primary-paths {
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
       }
       .btn-demo-hero {
         width: 100%;
@@ -1778,37 +1877,20 @@
         min-height: 44px;
       }
       .sim-header {
-        padding: 10px 12px;
-      }
-      .sim-bar-controls {
-        flex-wrap: wrap;
+        padding: 8px 12px;
+        min-height: 42px;
         gap: 6px;
       }
-      .sim-body {
-        min-height: 0;
-      }
-      .sim-canvas {
-        padding: 12px;
-        display: block;
-      }
-      .sim-graph-view {
-        position: static;
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 8px;
-      }
-      #simSvgLines {
+      .sim-preset-pill,
+      .sim-view-switch,
+      .sim-finops-ctx {
         display: none;
       }
-      .sim-node {
-        position: static !important;
-        min-width: 0 !important;
-        width: 100%;
-        transform: none !important;
+      .sim-body {
+        display: none !important;
       }
-      .sim-gantt-row {
-        grid-template-columns: 82px 1fr;
-        padding: 6px 8px;
+      .sim-mobile-hitl {
+        display: flex;
       }
       .compare-card,
       .compare-matrix-wrap,
@@ -1882,12 +1964,12 @@
       </div>
 
       <h1 class="hero-title" data-i18n-html="hero.title">
-        Stop Agent Chaos.<br>
-        <span class="accent-cyan">Command Your AI Fleets.</span>
+        See which AI terminal agent is blocked —<br>
+        <span class="accent-cyan">approve in 1 click.</span>
       </h1>
 
       <p class="hero-subtitle" data-i18n="hero.subtitle">
-        Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux agents — no cloud account, works with or without OpenRig.
+        Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux agents. Works with or without OpenRig — start safely with --read-only.
       </p>
 
       <div class="hero-actions">
@@ -1924,48 +2006,40 @@
       <div class="hero-simulator-wrapper">
         <div class="hero-simulator">
           <div class="sim-header">
-            <div class="sim-window-dots">
-              <span class="sim-dot red"></span>
-              <span class="sim-dot yellow"></span>
-              <span class="sim-dot green"></span>
+            <div class="sim-brand-cluster">
+              <span class="sim-brand-name">💠 RIGCOMMANDER</span>
+              <span class="sim-demo-pill">DEMO</span>
+              <span class="sim-preset-pill">tmux / Universal</span>
             </div>
 
-            <div style="font-family:var(--font-mono); font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span style="color:#fff; font-weight:700;">COMMAND DECK v{{APP_VERSION}}</span>
-              <span>•</span>
-              <span style="color:var(--emerald);" data-i18n="sim.liveTelemetry">● LOCAL BRIDGE</span>
-              <span>•</span>
-              <span data-i18n="sim.agentsConnected">9 AGENTS • $6.63 SESSION</span>
+            <div class="sim-telemetry-cluster">
+              <span class="sim-triage-pill" id="simTriagePill">🔴 1 P0 · 1 P1</span>
+              <span class="sim-finops-pill" id="simFinopsPill">⚡ $5.42<span class="sim-finops-ctx"> · CTX 78%</span></span>
             </div>
 
-            <div class="sim-bar-controls">
-              <button class="sim-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">🕸️ GRAPH</button>
-              <button class="sim-btn" id="simViewGantt" onclick="setSimView('gantt')" data-i18n="sim.viewGantt">📊 GANTT</button>
-              <button class="sim-btn sim-btn-video" id="simViewVideo" onclick="setSimView('video')" data-i18n="sim.viewVideo">🎬 20s VIDEO</button>
-              <button class="sim-btn" id="simCalmBtn" onclick="toggleSimCalm()" data-i18n="sim.calmOff">🧘 CALM FOCUS</button>
-              <button class="sim-btn active" id="simSliceAll" onclick="setSimSlice('all')" data-i18n="sim.allLanes">🌐 ALL LANES</button>
-              <button class="sim-btn" id="simSliceUx" onclick="setSimSlice('ux')">🏷️ UX-GATE</button>
-              <a class="sim-btn sim-btn-demo" id="simDeepLink" href="/demo?track=hitl" data-i18n="sim.openDemo">↗ FULL DEMO</a>
+            <div class="sim-view-switch" role="tablist" aria-label="Preview mode">
+              <button type="button" class="sim-tab-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">Graph</button>
+              <button type="button" class="sim-tab-btn" id="simViewGantt" onclick="setSimView('gantt')" data-i18n="sim.viewGantt">Gantt</button>
             </div>
           </div>
 
-          <!-- Exclusive Model Pool Strip -->
-          <div class="sim-pool-strip">
-            <div class="sim-pool-chip">
-              <span style="color:#c084fc; font-weight:700;">🟣 CODEX (4)</span>
-              <span style="color:#e2e8f0;">68% · <b style="color:#fde68a;">~$5.00</b></span>
+          <!-- Native Mobile P0 HITL Preview Card (<= 640px, matches real mobile /demo) -->
+          <div class="sim-mobile-hitl" id="simMobileHitl">
+            <div class="sim-m-head">
+              <span class="sim-m-seat">codex-tests</span>
+              <span class="sim-m-badge" id="simMobileBadge" data-i18n="sim.mobileBadge">P0 NEEDS INPUT</span>
             </div>
-            <div class="sim-pool-chip">
-              <span style="color:#fbbf24; font-weight:700;">🟠 CLAUDE (1)</span>
-              <span style="color:#e2e8f0;">26% · <b style="color:#fde68a;">~$0.98</b></span>
+            <div class="sim-m-term" id="simMobileTerm" data-i18n="sim.mobileTerm">Command: npm test
+[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry
+⚠️ Allow Codex to run npm test in worktree?</div>
+            <button type="button" class="sim-m-primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Allow once (y)</button>
+            <div class="sim-m-secondary-row">
+              <button type="button" class="sim-m-sec-btn" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">2. Always allow</button>
+              <button type="button" class="sim-m-sec-btn is-cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">3. Cancel (esc)</button>
             </div>
-            <div class="sim-pool-chip" style="border-color:rgba(255,0,85,0.45);">
-              <span style="color:#34d399; font-weight:700;">🟢 FAST (3)</span>
-              <span style="color:#fda4af; font-weight:800;">79% ⚠️ · ~$0.65</span>
-            </div>
-            <div class="sim-pool-chip">
-              <span style="color:#38bdf8; font-weight:700;">🔵 GEMINI (1)</span>
-              <span style="color:#64748b;" data-i18n="sim.noMeter">no meter · CLI</span>
+            <div class="sim-m-audit" id="simMobileAudit">
+              <span data-i18n="sim.mobileFootLeft">tmux / Universal · Allowlisted quick keys</span>
+              <span style="color:#6ee7b7;" data-i18n="sim.mobileFootRight">CTX 78% · 1-click HITL</span>
             </div>
           </div>
 
@@ -1974,30 +2048,30 @@
             <div class="sim-left-col">
               <div class="sim-col-title">
                 <span data-i18n="sim.waitRadar">WAIT RADAR</span>
-                <span style="color:var(--amber);">P0–P2</span>
+                <span style="color:var(--amber);">P0–P1</span>
               </div>
-              <div class="sim-card" style="border-left: 3px solid var(--coral);">
+              <div class="sim-card" style="border-left: 3px solid var(--coral); cursor:pointer;" onclick="selectSimNode(document.getElementById('simQaNode'), 'codex-tests', 'Test Runner (tmux %4)', '78% CTX • permission_prompt HITL', 'alert')">
                 <div class="sim-card-header">
-                  <span style="color:var(--coral);">P0 • dev-check (QA)</span>
+                  <span style="color:var(--coral);">P0 • codex-tests</span>
                 </div>
                 <div class="sim-card-body" data-i18n="sim.card3">
-                  Stopped at terminal permission_prompt: 3 parsed options ready for 1-click HITL.
+                  NEEDS INPUT: Command npm test — 3 parsed options ready for 1-click HITL.
                 </div>
               </div>
-              <div class="sim-card" style="border-left: 3px solid var(--amber);">
+              <div class="sim-card" style="border-left: 3px solid var(--amber); cursor:pointer;" onclick="selectSimNode(document.getElementById('simClaudeNode'), 'claude-auth', 'Auth Refactor (tmux %2)', '78% CTX • claude-sonnet-4 • ~$2.14', 'warm')">
                 <div class="sim-card-header">
-                  <span>P1 • dev-coder3 (Pi)</span>
+                  <span>P1 • claude-auth</span>
                 </div>
                 <div class="sim-card-body" data-i18n="sim.card1">
-                  PARKED (2 open items) without active wake timer. Needs wake signal.
+                  Context at 78% (threshold 75%): preemptive /compact ready before quality drops.
                 </div>
               </div>
-              <div class="sim-card" style="border-left: 3px solid var(--emerald);">
+              <div class="sim-card" style="border-left: 3px solid var(--emerald); cursor:pointer;" onclick="selectSimNode(document.getElementById('simGeminiNode'), 'gemini-docs', 'Docs & Migration (tmux %5)', '24% CTX • gemini-cli • ~$0.42', 'active')">
                 <div class="sim-card-header">
-                  <span>dev-coder4 → QA</span>
+                  <span>WORK • gemini-docs</span>
                 </div>
                 <div class="sim-card-body" data-i18n="sim.card2">
-                  slice:tts-strict-chunked passed 104/104 probes. CTX at 68% (preemptive /compact ready).
+                  Updating OpenAPI migration notes (24% CTX, 0 blockers).
                 </div>
               </div>
             </div>
@@ -2007,72 +2081,50 @@
               <div id="simGraphView" class="sim-graph-view">
                 <!-- SVG Connection Lines -->
                 <svg style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;" id="simSvgLines">
-                  <line x1="20%" y1="20%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" stroke-dasharray="4,4" />
-                  <line x1="80%" y1="22%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-                  <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="rgba(0, 255, 157, 0.5)" stroke-width="3" />
-                  <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-                  <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="rgba(251, 191, 36, 0.5)" stroke-width="2" />
-                  <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
+                  <line x1="50%" y1="22%" x2="24%" y2="54%" stroke="rgba(251, 191, 36, 0.45)" stroke-width="2" />
+                  <line x1="50%" y1="22%" x2="76%" y2="54%" stroke="rgba(0, 255, 157, 0.45)" stroke-width="2" />
+                  <line x1="24%" y1="54%" x2="50%" y2="80%" stroke="rgba(255, 0, 85, 0.55)" stroke-width="2.5" stroke-dasharray="5,4" />
+                  <line x1="76%" y1="54%" x2="50%" y2="80%" stroke="rgba(56, 189, 248, 0.35)" stroke-width="2" />
                 </svg>
 
-                <!-- Node 1: Kernel Operator -->
-                <div class="sim-node" style="top: 10%; left: 6%;" onclick="selectSimNode(this, 'kernel-operator', 'Operator', '14% CTX • gpt-5-codex • ~$0.28 • 0 alerts', 'healthy')">
+                <!-- Node 1: Lead / Orchestrator -->
+                <div class="sim-node" style="top: 10%; left: 36%; min-width:165px;" onclick="selectSimNode(this, 'tmux-lead', 'Session Lead (tmux %1)', '31% CTX • gpt-5-codex • ~$1.12', 'active')">
                   <div class="sim-node-title">
-                    <span>🛰️ kernel-op</span>
-                    <span style="color:var(--emerald);">Zzz</span>
-                  </div>
-                  <div class="sim-node-meta">CTX: 14% • gpt-5-codex</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:14%;"></div></div>
-                </div>
-
-                <!-- Node 2: Architect -->
-                <div class="sim-node" style="top: 10%; right: 6%;" onclick="selectSimNode(this, 'dev-architect', 'Senior Architect', '26% CTX • claude-sonnet-4 • ~$0.98', 'healthy')">
-                  <div class="sim-node-title">
-                    <span>📐 dev-architect</span>
-                    <span style="color:var(--emerald);">Zzz</span>
-                  </div>
-                  <div class="sim-node-meta">CTX: 26% • claude-sonnet-4</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:26%; background:var(--amber);"></div></div>
-                </div>
-
-                <!-- Node 3: Owner (Hub) -->
-                <div class="sim-node" style="top: 26%; left: 37%; min-width:165px;" onclick="selectSimNode(this, 'dev-owner', 'Dispatch Hub', '48% CTX • ~$1.74 • 2 active chains', 'active')">
-                  <div class="sim-node-title">
-                    <span>🏛️ dev-owner</span>
+                    <span>💠 tmux-lead</span>
                     <span style="color:var(--cyan); font-weight:800;">ACTIVE</span>
                   </div>
-                  <div class="sim-node-meta">CTX: 48% • 94 calls in flight</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:48%; background:var(--cyan);"></div></div>
+                  <div class="sim-node-meta">CTX: 31% • gpt-5-codex</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:31%; background:var(--cyan);"></div></div>
                 </div>
 
-                <!-- Node 4: Coder 3 (Parked) -->
-                <div class="sim-node pulse-amber" style="top: 52%; left: 10%;" onclick="selectSimNode(this, 'dev-coder3', 'Pi Isolated Coder', 'PARKED (2) • deepseek-flash', 'parked')">
+                <!-- Node 2: Claude Auth (P1 CTX 78%) -->
+                <div class="sim-node pulse-amber" id="simClaudeNode" style="top: 44%; left: 8%;" onclick="selectSimNode(this, 'claude-auth', 'Auth Refactor (tmux %2)', '78% CTX • claude-sonnet-4 • ~$2.14', 'warm')">
                   <div class="sim-node-title">
-                    <span>🔧 dev-coder3</span>
-                    <span style="color:var(--amber); font-weight:800;">PARKED</span>
+                    <span>🟠 claude-auth</span>
+                    <span style="color:var(--amber); font-weight:800;">CTX 78%</span>
                   </div>
-                  <div class="sim-node-meta">2 open items • no wake</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:0%;"></div></div>
+                  <div class="sim-node-meta">claude-sonnet-4 • /compact ready</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:78%; background:var(--amber);"></div></div>
                 </div>
 
-                <!-- Node 5: Coder 4 -->
-                <div class="sim-node" style="top: 52%; right: 10%;" onclick="selectSimNode(this, 'dev-coder4', 'Parallel Worktree', '68% CTX • gpt-5-codex • ~$2.26 • 78% cache', 'active')">
+                <!-- Node 3: Gemini Docs -->
+                <div class="sim-node" id="simGeminiNode" style="top: 44%; right: 8%;" onclick="selectSimNode(this, 'gemini-docs', 'Docs & Migration (tmux %5)', '24% CTX • gemini-cli • ~$0.42', 'active')">
                   <div class="sim-node-title">
-                    <span>⚡ dev-coder4</span>
+                    <span>🔵 gemini-docs</span>
                     <span style="color:var(--emerald); font-weight:800;">WORK</span>
                   </div>
-                  <div class="sim-node-meta">CTX: 68% • gpt-5-codex</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:68%; background:var(--amber);"></div></div>
+                  <div class="sim-node-meta">CTX: 24% • gemini-cli</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:24%; background:var(--emerald);"></div></div>
                 </div>
 
-                <!-- Node 6: QA Checker (Alert) -->
-                <div class="sim-node pulse-coral selected" id="simQaNode" style="bottom: 10%; left: 36%;" onclick="selectSimNode(this, 'dev-check (QA)', 'Quality Assurance', '79% CTX • permission_prompt HITL', 'alert')">
+                <!-- Node 4: Codex Tests (P0 NEEDS INPUT) -->
+                <div class="sim-node pulse-coral selected" id="simQaNode" style="bottom: 10%; left: 35%; min-width:175px;" onclick="selectSimNode(this, 'codex-tests', 'Test Runner (tmux %4)', '64% CTX • permission_prompt HITL', 'alert')">
                   <div class="sim-node-title">
-                    <span>🛡️ dev-check (QA)</span>
-                    <span id="simQaBadge" style="color:var(--coral); font-weight:800;">NEED INPUT</span>
+                    <span>🟣 codex-tests</span>
+                    <span id="simQaBadge" style="color:var(--coral); font-weight:800;">NEEDS INPUT</span>
                   </div>
-                  <div class="sim-node-meta">CTX: 79% • Threshold 75% ⚠️</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:79%; background:var(--coral);"></div></div>
+                  <div class="sim-node-meta">Command: npm test • P0</div>
+                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:64%; background:var(--coral);"></div></div>
                 </div>
               </div>
 
@@ -2080,41 +2132,32 @@
               <div class="sim-gantt-view" id="simGanttView">
                 <div style="display:flex; justify-content:space-between; align-items:center; color:#94a3b8; padding-bottom:4px; border-bottom:1px solid rgba(56,189,248,0.18);">
                   <span style="color:var(--cyan); font-weight:800;" data-i18n="sim.ganttTitle">📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)</span>
-                  <span style="color:#64748b;">opgate noise filtered</span>
+                  <span style="color:#64748b;">tmux / Universal</span>
                 </div>
                 <div class="sim-gantt-row">
-                  <span style="color:#e2e8f0; font-weight:700;">📐 architect</span>
+                  <span style="color:#7dd3fc; font-weight:700;">💠 tmux-lead</span>
                   <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:4%; width:18%; background:#38bdf8;">spec:single-writer</div>
+                    <div class="sim-gantt-work" style="left:4%; width:20%; background:#38bdf8;">plan:auth-v2</div>
                   </div>
                 </div>
                 <div class="sim-gantt-row">
-                  <span style="color:#e2e8f0; font-weight:700;">⚡ coder4</span>
+                  <span style="color:#fde68a; font-weight:700;">🟠 claude-auth</span>
                   <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:23%; width:24%; background:#38bdf8;">impl + tests</div>
-                    <div class="sim-gantt-work" style="left:60%; width:16%; background:#38bdf8;">fix race</div>
+                    <div class="sim-gantt-work" style="left:24%; width:38%; background:#fbbf24;">refresh-token + guard</div>
+                    <div class="sim-gantt-work" style="left:70%; width:18%; background:#00ff9d;">/compact ready</div>
                   </div>
                 </div>
                 <div class="sim-gantt-row">
-                  <span style="color:#e2e8f0; font-weight:700;">💻 coder</span>
+                  <span style="color:#e2e8f0; font-weight:700;">🔵 gemini-docs</span>
                   <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:16%; width:32%; background:#00ff9d;">viewer-chat</div>
-                    <div class="sim-gantt-wait" style="left:68%; width:16%;" title="Queue wait 38m"></div>
-                    <div class="sim-gantt-work" style="left:84%; width:14%; background:#c084fc;">ctx-guard</div>
+                    <div class="sim-gantt-work" style="left:32%; width:34%; background:#00ff9d;">openapi-migration</div>
                   </div>
                 </div>
                 <div class="sim-gantt-row" style="border-color:rgba(255,0,85,0.35);">
-                  <span style="color:#fda4af; font-weight:700;">🛡️ dev-check</span>
+                  <span style="color:#fda4af; font-weight:700;">🟣 codex-tests</span>
                   <div class="sim-gantt-track">
-                    <div class="sim-gantt-wait" style="left:47%; width:7%;" title="Wait before claim"></div>
-                    <div class="sim-gantt-work" style="left:54%; width:6%; background:#fbbf24;">QA #1</div>
-                    <div class="sim-gantt-work" style="left:77%; width:11%; background:#00ff9d;">QA GREEN</div>
-                  </div>
-                </div>
-                <div class="sim-gantt-row">
-                  <span style="color:#7dd3fc; font-weight:700;">🏛️ owner</span>
-                  <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:89%; width:10%; background:#38bdf8;">push dev</div>
+                    <div class="sim-gantt-work" style="left:44%; width:18%; background:#c084fc;">unit + auth</div>
+                    <div class="sim-gantt-wait" style="left:62%; width:24%;" title="Waiting for HITL approval"></div>
                   </div>
                 </div>
               </div>
@@ -2124,22 +2167,22 @@
             <div class="sim-right-col">
               <div class="sim-col-title">
                 <span data-i18n="sim.inspector">INSPECTOR &amp; HITL</span>
-                <span style="color:var(--cyan);" id="simInspectorId">dev-check (QA)</span>
+                <span style="color:var(--cyan);" id="simInspectorId">codex-tests</span>
               </div>
-              <div class="sim-terminal-screen" id="simTerminalScreen">[dev-check@core-platform]
-$ npx playwright test e2e/tts.spec.ts
-  ✓ 12 passed  ✘ 2 boundary-timeout
+              <div class="sim-terminal-screen" id="simTerminalScreen">[codex-tests · tmux %4]
+$ npm test -- --grep "auth-refresh"
+  ✓ 18 passed  ✘ 1 token-expiry
 --------------------------------
 ⚠️ PERMISSION PROMPT (HITL):
-Run negative control fault check?
-› 1. Yes, allow once (y)
+Command: npm test
+› 1. Allow once (y)
   2. Always allow in worktree
-  3. No, cancel (esc)</div>
+  3. Cancel (esc)</div>
 
               <div class="sim-prompt-pills" id="simPromptPills">
-                <button class="sim-prompt-pill primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Yes, allow once (y)</button>
-                <button class="sim-prompt-pill" onclick="simChoosePrompt(2)" data-i18n="sim.opt2">🔹 2. Always allow in worktree</button>
-                <button class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3">❌ 3. No, cancel (esc)</button>
+                <button type="button" class="sim-prompt-pill primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Allow once (y)</button>
+                <button type="button" class="sim-prompt-pill" onclick="simChoosePrompt(2)" data-i18n="sim.opt2">2. Always allow in worktree</button>
+                <button type="button" class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3">3. Cancel (esc)</button>
               </div>
 
               <div class="sim-audit-box" id="simAuditBox">
@@ -2149,28 +2192,10 @@ Run negative control fault check?
                   <span style="color:#6ee7b7;">78% → 19%</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:4px;">
-                  <span style="color:#e2e8f0;">⏳ wake_parked_seat</span>
-                  <span style="color:#7dd3fc;">coder3</span>
+                  <span style="color:#e2e8f0;">⏳ answer_prompt</span>
+                  <span style="color:#fda4af;">codex-tests</span>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Real 1280x720 Live Walkthrough Recording Stage -->
-          <div class="sim-video-stage" id="simVideoStage">
-            <div class="sim-video-frame">
-              <video id="demoWalkthroughVideo" controls muted playsinline loop preload="none" poster="/media/demo-poster.jpg">
-                <source src="/media/demo-walkthrough.mp4" type="video/mp4">
-              </video>
-            </div>
-            <div class="sim-video-chapters">
-              <div class="sim-chapter-pills">
-                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(0)" data-i18n="sim.ch1">0:00 ⚡ HITL Unblock</button>
-                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(6.5)" data-i18n="sim.ch2">0:07 📊 Task Gantt</button>
-                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(11)" data-i18n="sim.ch3">0:11 💰 SUB vs PAYG</button>
-                <button type="button" class="sim-chapter-btn" onclick="seekDemoChapter(15)" data-i18n="sim.ch4">0:15 📸 Share Card PNG</button>
-              </div>
-              <a href="/demo?track=share" style="color:var(--cyan); text-decoration:none; font-weight:700;" data-i18n="sim.tryYourself">Try live in /demo →</a>
             </div>
           </div>
         </div>
@@ -2196,17 +2221,17 @@ Run negative control fault check?
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">--READ-ONLY FLAG</span>
             <div class="sec-guarantee-title" data-i18n="sec.g2.t">Zero-Write First Evaluation</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g2.d">Launch with <code>--read-only</code> to inspect live sessions safely with every terminal write and mutation disabled.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g2.d">Launch with <code>--read-only</code> for 0 terminal writes, 0 disk writes, and 0 outbound calls — all mutating routes return <code>403</code>.</div>
           </div>
           <div class="sec-guarantee-card">
-            <span class="sec-guarantee-tag">STRICTLY OPT-IN</span>
-            <div class="sec-guarantee-title" data-i18n="sec.g3.t">External Modules OFF by Default</div>
-            <div class="sec-guarantee-desc" data-i18n="sec.g3.d">Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent &amp; optional AI Evaluator stay OFF until enabled.</div>
+            <span class="sec-guarantee-tag">STRICTLY OPT-IN · TOCTOU</span>
+            <div class="sec-guarantee-title" data-i18n="sec.g3.t">External Modules OFF + TOCTOU Guard</div>
+            <div class="sec-guarantee-desc" data-i18n="sec.g3.d">Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent &amp; optional AI Evaluator stay OFF until enabled. Before any optional Auto-Consent keypress fires after the 3s grace window, RigCommander re-captures the live terminal and verifies a SHA-256 prompt hash — if the prompt changed by a single character, dispatch aborts with zero writes.</div>
           </div>
           <div class="sec-guarantee-card">
-            <span class="sec-guarantee-tag">AUTO REDACTION</span>
-            <div class="sec-guarantee-title" data-i18n="sec.g4.t">Secrets Masked Automatically</div>
-            <div class="sec-guarantee-desc" data-i18n="sec.g4.d">API keys, tokens, private key blocks &amp; local paths are redacted before writing shift history or calling optional evaluators.</div>
+            <span class="sec-guarantee-tag">AUTO REDACTION · TESTED</span>
+            <div class="sec-guarantee-title" data-i18n="sec.g4.t">Secrets Masked &amp; Verified by npm test</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g4.d">API keys, tokens, private key blocks &amp; local paths are redacted before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.</div>
           </div>
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">OWNER-ONLY FILES</span>
@@ -2216,12 +2241,12 @@ Run negative control fault check?
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">CSRF + DNS-REBINDING GUARD</span>
             <div class="sec-guarantee-title" data-i18n="sec.g6.t">Malicious Browser Tabs Can't Drive Your Terminals</div>
-            <div class="sec-guarantee-desc" data-i18n="sec.g6.d">Local HTTP→tmux control checks every request's Host and Origin, requires per-process session authentication, and sends only allowlisted terminal keystrokes — CSRF and DNS-rebinding from other tabs are rejected.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g6.d">Local HTTP→tmux control checks every request's Host and Origin and requires per-process session auth. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>) — CSRF and DNS-rebinding from other tabs are rejected.</div>
           </div>
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">SIGSTORE PROVENANCE</span>
             <div class="sec-guarantee-title" data-i18n="sec.g7.t">Verified Supply Chain &amp; 30-Second Audit</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Audit the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a> or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify with <code>npm audit signatures</code> or <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>, inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
           </div>
         </div>
       </div>
@@ -2274,7 +2299,7 @@ Run negative control fault check?
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good2"><b>1-Click Terminal HITL with Safety Guards:</b> Read the live <code>tmux</code> prompt and parsed approval options before clicking; every keystroke is allowlisted, deduplicated, and verified after send.</span>
+                <span data-i18n-html="pain.good2"><b>1-Click Terminal HITL with Safety Guards:</b> Read the live <code>tmux</code> prompt and parsed approval options before clicking; quick-action buttons dispatch strictly allowlisted control keys (optional manual input requires explicit typing + confirmation), deduplicated and verified after send.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
@@ -2387,7 +2412,7 @@ Run negative control fault check?
               <span class="bento-badge" data-i18n="bento.t2.badge">⚡ CLICKABLE HITL &amp; TMUX</span>
               <h3 class="bento-title" data-i18n="bento.t2.title">1-Click Prompts &amp; Safe Delivery</h3>
               <p class="bento-desc" data-i18n="bento.t2.desc">
-                Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Slash commands &amp; nudges ship safely via allowlisted tmux delivery + paced TUI guards.
+                Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Quick-action keys dispatch through a strict allowlist (optional manual input requires explicit operator typing + confirmation) with paced TUI guards.
               </p>
             </div>
             <div class="bento-widget" style="display:flex; flex-direction:column; gap:6px;">
@@ -2562,7 +2587,7 @@ Run negative control fault check?
         <div class="section-eyebrow" data-i18n="arch.eyebrow">HARDENED LOCAL-FIRST ARCHITECTURE</div>
         <h2 class="section-title" data-i18n="arch.title">Zero Dependencies. Zero-Code Instrumentation.</h2>
         <p class="section-desc" data-i18n="arch.desc">
-          Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process session auth, Origin checks, and allowlisted tmux keys.
+          Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process session auth, Origin checks, allowlisted quick-action keys, and explicit confirmation for optional manual input.
         </p>
 
         <div class="steps-grid">
@@ -2588,7 +2613,7 @@ Run negative control fault check?
             <div class="step-num">03</div>
             <h3 class="step-title" data-i18n="arch.s3.title">Command, Verify &amp; Audit</h3>
             <p class="step-desc" data-i18n="arch.s3.desc">
-              Authorize HITL prompts in 1 click through the Security Gate (session auth + key allowlist) and verify every postcondition automatically.
+              Authorize HITL prompts in 1 click through the Security Gate (session auth + quick-action allowlist, explicit confirmation for manual input, and 403 hard-block in --read-only) and verify every postcondition automatically.
             </p>
             <div class="step-code">HTTP 200 • 127.0.0.1:7440 • Audit Verified</div>
           </div>
@@ -2831,8 +2856,8 @@ Run negative control fault check?
         'nav.cta': 'Live Demo',
         'nav.ctaShort': 'Demo',
         'hero.eyebrow': 'LOCAL-FIRST AI AGENT MISSION CONTROL',
-        'hero.title': 'Stop Agent Chaos.<br><span class="accent-cyan">Command Your AI Fleets.</span>',
-        'hero.subtitle': 'Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account, works with or without OpenRig.',
+        'hero.title': 'See which AI terminal agent is blocked —<br><span class="accent-cyan">approve in 1 click.</span>',
+        'hero.subtitle': 'Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents. Works with or without OpenRig — start safely with --read-only.',
         'hero.demoCta': '▶ Launch Interactive Demo',
         'hero.demoCtaShort': '▶ Interactive Demo',
         'hero.demoTag': '0 SETUP',
@@ -2844,30 +2869,23 @@ Run negative control fault check?
         'qr.copy': '📋 Copy URL',
         'hero.passportCta': '🛡️ Security Passport →',
         'hero.cliTitle': 'Click to copy safe read-only CLI command',
-        'sim.liveTelemetry': '● LOCAL BRIDGE',
-        'sim.agentsConnected': '9 AGENTS • $6.63 SESSION',
-        'sim.viewGraph': '🕸️ GRAPH',
-        'sim.viewGantt': '📊 GANTT',
-        'sim.viewVideo': '🎬 20s VIDEO',
-        'sim.ch1': '0:00 ⚡ HITL Unblock',
-        'sim.ch2': '0:07 📊 Task Gantt',
-        'sim.ch3': '0:11 💰 SUB vs PAYG',
-        'sim.ch4': '0:15 📸 Share Card PNG',
-        'sim.tryYourself': 'Try live in /demo →',
-        'sim.calmOff': '🧘 CALM FOCUS',
-        'sim.calmOn': '🧘 CALM: ON',
-        'sim.allLanes': '🌐 ALL LANES',
-        'sim.openDemo': '↗ FULL DEMO',
-        'sim.noMeter': 'no meter · CLI',
+        'sim.viewGraph': 'Graph',
+        'sim.viewGantt': 'Gantt',
+        'sim.mobileBadge': 'P0 NEEDS INPUT',
+        'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Allow Codex to run npm test in worktree?',
+        'sim.mobileFootLeft': 'tmux / Universal · Allowlisted quick keys',
+        'sim.mobileFootRight': 'CTX 78% · 1-click HITL',
         'sim.waitRadar': 'WAIT RADAR',
-        'sim.card1': 'PARKED (2 open items) without active wake timer. Needs wake signal.',
-        'sim.card2': 'slice:tts-strict-chunked passed 104/104 probes. CTX at 68% (preemptive /compact ready).',
-        'sim.card3': 'Stopped at terminal permission_prompt: 3 parsed options ready for 1-click HITL.',
+        'sim.card1': 'Context at 78% (threshold 75%): preemptive /compact ready before quality drops.',
+        'sim.card2': 'Updating OpenAPI migration notes (24% CTX, 0 blockers).',
+        'sim.card3': 'NEEDS INPUT: Command npm test — 3 parsed options ready for 1-click HITL.',
         'sim.ganttTitle': '📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)',
         'sim.inspector': 'INSPECTOR & HITL',
-        'sim.opt1': '✅ 1. Yes, allow once (y)',
-        'sim.opt2': '🔹 2. Always allow in worktree',
-        'sim.opt3': '❌ 3. No, cancel (esc)',
+        'sim.opt1': '✅ 1. Allow once (y)',
+        'sim.opt2': '2. Always allow in worktree',
+        'sim.opt3': '3. Cancel (esc)',
+        'sim.opt2Short': '2. Always allow',
+        'sim.opt3Short': '3. Cancel (esc)',
         'sim.auditTitle': '🧾 ACTION AUDIT (POSTCONDITION)',
         'sec.eyebrow': 'SECURITY & PRIVACY GUARANTEES AT A GLANCE',
         'sec.title': 'Local-First by Default. Zero Cloud Traps.',
@@ -2875,15 +2893,15 @@ Run negative control fault check?
         'sec.g1.t': '0 Outbound Requests by Default',
         'sec.g1.d': 'Binds strictly to <code>127.0.0.1</code> with zero outbound network calls, no cloud account, and no telemetry upload.',
         'sec.g2.t': 'Zero-Write First Evaluation',
-        'sec.g2.d': 'Launch with <code>--read-only</code> to inspect live sessions safely with every terminal write and mutation disabled.',
-        'sec.g3.t': 'External Modules OFF by Default',
-        'sec.g3.d': 'Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent & optional AI Evaluator stay OFF until enabled.',
-        'sec.g4.t': 'Secrets Masked Automatically',
-        'sec.g4.d': 'API keys, tokens, private key blocks & local paths are redacted before writing shift history or calling optional evaluators.',
+        'sec.g2.d': 'Launch with <code>--read-only</code> for 0 terminal writes, 0 disk writes, and 0 outbound calls — all mutating routes return <code>403</code>.',
+        'sec.g3.t': 'External Modules OFF + TOCTOU Guard',
+        'sec.g3.d': 'Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent & optional AI Evaluator stay OFF until enabled. Before any optional Auto-Consent keypress fires after the 3s grace window, RigCommander re-captures the live terminal and verifies a SHA-256 prompt hash — if the prompt changed by a single character, dispatch aborts with zero writes.',
+        'sec.g4.t': 'Secrets Masked & Verified by npm test',
+        'sec.g4.d': 'API keys, tokens, private key blocks & local paths are redacted before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.',
         'sec.g6.t': 'Malicious Browser Tabs Can\'t Drive Your Terminals',
-        'sec.g6.d': 'Local HTTP→tmux control checks every request\'s Host and Origin, requires per-process session authentication, and sends only allowlisted terminal keystrokes — CSRF and DNS-rebinding from other tabs are rejected.',
+        'sec.g6.d': 'Local HTTP→tmux control checks every request\'s Host and Origin and requires per-process session auth. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>) — CSRF and DNS-rebinding from other tabs are rejected.',
         'sec.g7.t': 'Verified Supply Chain & 30-Second Audit',
-        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Audit the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a> or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify with <code>npm audit signatures</code> or <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>, inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Honest Local Storage Model',
         'sec.g5.d': 'Local recovery & shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.',
         'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
@@ -2896,7 +2914,7 @@ Run negative control fault check?
         'pain.bad4': '<b>Blind Token Spend &amp; Unverified Commands:</b> No visibility into per-seat $ burn, cache-hit rates, or whether /compact actually reduced context.',
         'pain.goodTitle': 'With RigCommander: Deterministic Control',
         'pain.good1': '<b>One Live Map for Every Agent:</b> Auto-discover parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux sessions, then flip between live graph and task timeline (<code>G</code>) to spot waits and rework loops.',
-        'pain.good2': '<b>1-Click Terminal HITL with Safety Guards:</b> Read the live <code>tmux</code> prompt and parsed approval options before clicking; every keystroke is allowlisted, deduplicated, and verified after send.',
+        'pain.good2': '<b>1-Click Terminal HITL with Safety Guards:</b> Read the live <code>tmux</code> prompt and parsed approval options before clicking; quick-action buttons dispatch strictly allowlisted control keys (optional manual input requires explicit typing + confirmation), deduplicated and verified after send.',
         'pain.good3': '<b>Proactive Context &amp; Spend Guardrails:</b> Catch overheating sessions (≥75% context) with 1-click <code>/compact</code>, flag repeating QA loops, and cap token burn with a local circuit-breaker.',
         'pain.good4': '<b>Local-First Cost Clarity &amp; Zero-Write Start:</b> Compare subscription usage (<code>SUB</code>) vs estimated API spend (<code>PAYG</code>), evaluate safely with <code>--read-only</code>, and keep all logs on your machine.',
         'cmp.title': 'Raw tmux vs Cloud Tracing vs RigCommander',
@@ -2936,7 +2954,7 @@ Run negative control fault check?
         'bento.t1.cta': '📊 Try Gantt Timeline in Demo →',
         'bento.t2.badge': '⚡ CLICKABLE HITL & TMUX',
         'bento.t2.title': '1-Click Prompts & Safe Delivery',
-        'bento.t2.desc': 'Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Slash commands & nudges ship safely via allowlisted tmux delivery + paced TUI guards.',
+        'bento.t2.desc': 'Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Quick-action keys dispatch through a strict allowlist (optional manual input requires explicit operator typing + confirmation) with paced TUI guards.',
         'bento.t2.cta': '⚡ Open Live HITL Screen →',
         'bento.t3.badge': '💰 FINOPS & THERMAL CURVE',
         'bento.t3.title': 'Token Spend & Exponential Context Physics',
@@ -2975,14 +2993,14 @@ Run negative control fault check?
         'bento.t8.cta': '📄 Inspect Context in Demo →',
         'arch.eyebrow': 'HARDENED LOCAL-FIRST ARCHITECTURE',
         'arch.title': 'Zero Dependencies. Zero-Code Instrumentation.',
-        'arch.desc': 'Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process session auth, Origin checks, and allowlisted tmux keys.',
+        'arch.desc': 'Pure Node.js ESM and native browser ES modules with 0 npm dependencies. Connects out-of-band on 127.0.0.1 with per-process session auth, Origin checks, allowlisted quick-action keys, and explicit confirmation for optional manual input.',
         'arch.s1.title': 'Run Hardened Local Bridge',
         'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.',
         'arch.s2.title': 'Ontology & FinOps Sync',
         'arch.s2.desc': 'Builds canonical Objects & Links, cleans opgate noise for Gantt chains, and streams JSONL transcripts by byte offset for real-time $ tracking.',
         'arch.s2.code': '● 8 Objects • 3-Tier Evaluator • Context Lineage',
         'arch.s3.title': 'Command, Verify & Audit',
-        'arch.s3.desc': 'Authorize HITL prompts in 1 click through the Security Gate (session auth + key allowlist) and verify every postcondition automatically.',
+        'arch.s3.desc': 'Authorize HITL prompts in 1 click through the Security Gate (session auth + quick-action allowlist, explicit confirmation for manual input, and 403 hard-block in --read-only) and verify every postcondition automatically.',
         'passport.eyebrow': 'ARCHITECTURAL & SECURITY PASSPORT',
         'passport.title': 'Inspect Trust Boundaries, Operational Twin, Security Posture & Verification',
         'passport.desc': 'Clean architectural & security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 353 automated tests across 41 suites.',
@@ -3030,8 +3048,8 @@ Run negative control fault check?
         'nav.cta': 'Живое демо',
         'nav.ctaShort': 'Демо',
         'hero.eyebrow': 'ЛОКАЛЬНЫЙ ПУЛЬТ ДЛЯ ИИ-АГЕНТОВ',
-        'hero.title': 'Остановите хаос агентов.<br><span class="accent-cyan">Управляйте ИИ-флотом.</span>',
-        'hero.subtitle': 'Локальный пульт под лицензией MIT без внешних npm-зависимостей для параллельных агентов Claude Code, Codex CLI, Gemini CLI и tmux — без облачного аккаунта, работает с OpenRig и без него.',
+        'hero.title': 'Видьте, какой ИИ-агент застрял в терминале —<br><span class="accent-cyan">отвечайте в 1 клик.</span>',
+        'hero.subtitle': 'Локальный пульт под лицензией MIT без внешних npm-зависимостей для параллельных агентов Claude Code, Codex CLI, Gemini CLI и tmux. Работает с OpenRig и без него — безопасный старт через --read-only.',
         'hero.demoCta': '▶ Открыть интерактивное демо',
         'hero.demoCtaShort': '▶ Интерактивное демо',
         'hero.demoTag': 'БЕЗ УСТАНОВКИ',
@@ -3043,30 +3061,23 @@ Run negative control fault check?
         'qr.copy': '📋 Скопировать ссылку',
         'hero.passportCta': '🛡️ Паспорт безопасности →',
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду безопасного read-only запуска',
-        'sim.liveTelemetry': '● ЛОКАЛЬНЫЙ МОСТ',
-        'sim.agentsConnected': '9 АГЕНТОВ • ~$6.63 СЕССИЯ',
-        'sim.viewGraph': '🕸️ ГРАФ',
-        'sim.viewGantt': '📊 ГАНТ',
-        'sim.viewVideo': '🎬 ВИДЕО 20с',
-        'sim.ch1': '0:00 ⚡ HITL-разблокировка',
-        'sim.ch2': '0:07 📊 Гант задач',
-        'sim.ch3': '0:11 💰 SUB vs PAYG',
-        'sim.ch4': '0:15 📸 Карточка PNG',
-        'sim.tryYourself': 'Попробовать в /demo →',
-        'sim.calmOff': '🧘 CALM ФОКУС',
-        'sim.calmOn': '🧘 CALM: ВКЛ',
-        'sim.allLanes': '🌐 ВСЕ ПОТОКИ',
-        'sim.openDemo': '↗ ПОЛНОЕ ДЕМО',
-        'sim.noMeter': 'нет замеров · CLI',
+        'sim.viewGraph': 'Граф',
+        'sim.viewGantt': 'Гант',
+        'sim.mobileBadge': 'P0 ЖДЁТ ВВОДА',
+        'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Разрешить Codex запуск npm test в worktree?',
+        'sim.mobileFootLeft': 'tmux / Universal · Разрешённые быстрые клавиши',
+        'sim.mobileFootRight': 'CTX 78% · HITL в 1 клик',
         'sim.waitRadar': 'РАДАР ОЖИДАНИЯ',
-        'sim.card1': 'PARKED (2 открытые задачи) без активного wake-таймера. Требует пробуждения.',
-        'sim.card2': 'slice:tts-strict-chunked прошёл 104/104 проб. CTX 68% (готов превентивный /compact).',
-        'sim.card3': 'Остановлен на permission_prompt: 3 варианта распарсены для HITL в 1 клик.',
+        'sim.card1': 'Контекст 78% (порог 75%): готов превентивный /compact до потери качества.',
+        'sim.card2': 'Обновляет заметки миграции OpenAPI (24% CTX, 0 блокеров).',
+        'sim.card3': 'ЖДЁТ ВВОДА: команда npm test — 3 варианта распарсены для HITL в 1 клик.',
         'sim.ganttTitle': '📊 ДИАГРАММА ГАНТА • ПОСЛЕДНИЕ 6Ч (ШТРИХОВКА = ОЖИДАНИЕ)',
         'sim.inspector': 'ИНСПЕКТОР И HITL',
-        'sim.opt1': '✅ 1. Да, разрешить один раз (y)',
-        'sim.opt2': '🔹 2. Всегда разрешать в worktree',
-        'sim.opt3': '❌ 3. Нет, отменить (esc)',
+        'sim.opt1': '✅ 1. Разрешить один раз (y)',
+        'sim.opt2': '2. Всегда разрешать в worktree',
+        'sim.opt3': '3. Отмена (esc)',
+        'sim.opt2Short': '2. Всегда разрешать',
+        'sim.opt3Short': '3. Отмена (esc)',
         'sim.auditTitle': '🧾 ЖУРНАЛ ДЕЙСТВИЙ (POSTCONDITION)',
         'sec.eyebrow': 'ГАРАНТИИ БЕЗОПАСНОСТИ И ПРИВАТНОСТИ',
         'sec.title': 'Локально по умолчанию. Без облачных ловушек.',
@@ -3074,15 +3085,15 @@ Run negative control fault check?
         'sec.g1.t': '0 исходящих запросов по умолчанию',
         'sec.g1.d': 'Слушает строго <code>127.0.0.1</code> — ноль сетевых обращений наружу, без облачного аккаунта и скрытой телеметрии.',
         'sec.g2.t': 'Первый осмотр без записи',
-        'sec.g2.d': 'Флаг <code>--read-only</code> позволяет безопасно осмотреть живые сессии с полным запретом записи в терминал.',
-        'sec.g3.t': 'Внешние модули выключены',
-        'sec.g3.d': 'Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛ, пока вы их не включите.',
-        'sec.g4.t': 'Автоматическая редакция секретов',
-        'sec.g4.d': 'API-ключи, токены, приватные ключи и локальные пути маскируются до записи истории смен и до вызова опциональных оценщиков.',
+        'sec.g2.d': 'Запуск с <code>--read-only</code> гарантирует 0 записей в терминал, 0 записей на диск и 0 исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.',
+        'sec.g3.t': 'Внешние модули ВЫКЛ + защита TOCTOU',
+        'sec.g3.d': 'Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛ, пока вы их не включите. Перед срабатыванием любого опционального авто-подтверждения после 3-секундного окна отмены RigCommander повторно снимает живой экран терминала и сверяет SHA-256 хэш промпта — если запрос изменился хотя бы на один символ, отправка отменяется с нулём записей.',
+        'sec.g4.t': 'Редакция секретов и проверка npm test',
+        'sec.g4.d': 'API-ключи, токены, приватные ключи и локальные пути маскируются до записи истории смен, экспортов и любых вызовов опциональных оценщиков. Автотесты (<code>npm test</code>) проверяют нулевую запись <code>--read-only</code>, редакцию секретов, защиту CSRF/Origin и отмену при дрейфе TOCTOU.',
         'sec.g6.t': 'Вкладки браузера не управляют вашими терминалами',
-        'sec.g6.d': 'Локальный мост HTTP→tmux проверяет Host и Origin каждого запроса, требует аутентификации сессии процесса и отправляет только разрешённые клавиши — CSRF и DNS-rebinding из других вкладок отклоняются.',
+        'sec.g6.d': 'Локальный мост HTTP→tmux проверяет Host и Origin каждого запроса и требует аутентификации сессии процесса. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>) — CSRF и DNS-rebinding из других вкладок отклоняются.',
         'sec.g7.t': 'Проверяемая цепочка поставки и аудит за 30 секунд',
-        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте локально через <code>npm audit signatures</code> или <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>, изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Честное локальное хранение',
         'sec.g5.d': 'Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска.',
         'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
@@ -3095,7 +3106,7 @@ Run negative control fault check?
         'pain.bad4': '<b>Слепой расход и команды без сверки:</b> не видно расхода $ по сиденьям, % кэша и того, действительно ли /compact снизил контекст.',
         'pain.goodTitle': 'С RigCommander: детерминированный контроль',
         'pain.good1': '<b>Единая карта для всех агентов:</b> автообнаружение параллельных сессий Claude Code, Codex CLI, Gemini CLI и <code>tmux</code>, плюс переключение на Гант задач (<code>G</code>) для поиска простоев и циклов доработок.',
-        'pain.good2': '<b>HITL в терминале в 1 клик с защитой:</b> прочитайте живой промпт <code>tmux</code> и распарсенные варианты до клика — каждая команда проходит белый список клавиш, защиту от дублей и проверку результата.',
+        'pain.good2': '<b>HITL в терминале в 1 клик с защитой:</b> прочитайте живой промпт <code>tmux</code> и распарсенные варианты до клика — кнопки быстрых действий отправляют строго разрешённые управляющие клавиши (опциональный ручной ввод требует явного набора и подтверждения), с защитой от дублей и проверкой результата.',
         'pain.good3': '<b>Защита от перегрева контекста и петель:</b> замечайте агентов на ≥75% контекста с <code>/compact</code> в 1 клик, отлавливайте возвраты QA и задавайте локальный авто-тормоз бюджета.',
         'pain.good4': '<b>Ясная экономика и старт без записи:</b> сравнивайте подписку (<code>SUB</code>) с оценкой API-токенов (<code>PAYG</code>), начните безопасно с <code>--read-only</code> и держите все логи строго на своей машине.',
         'cmp.title': 'Обычный tmux vs Облачная трассировка vs RigCommander',
@@ -3135,7 +3146,7 @@ Run negative control fault check?
         'bento.t1.cta': '📊 Открыть Гант в демо →',
         'bento.t2.badge': '⚡ КЛИКАБЕЛЬНЫЙ HITL & TMUX',
         'bento.t2.title': 'HITL в 1 клик и безопасная доставка команд',
-        'bento.t2.desc': 'Клик по красному бейджу на узле сразу открывает распарсенные кнопки Codex/Claude. Slash-команды и пинки уходят через безопасную доставку в tmux с белым списком клавиш и TUI-защитой.',
+        'bento.t2.desc': 'Клик по красному бейджу на узле сразу открывает распарсенные кнопки Codex/Claude. Быстрые клавиши отправляются строго по белому списку (опциональный ручной ввод требует явного набора и подтверждения) с TUI-защитой.',
         'bento.t2.cta': '⚡ Открыть экран HITL →',
         'bento.t3.badge': '💰 FINOPS И ТЕРМОКРИВАЯ',
         'bento.t3.title': 'Расход токенов и экспоненциальная шкала контекста',
@@ -3174,14 +3185,14 @@ Run negative control fault check?
         'bento.t8.cta': '📄 Смотреть контекст в демо →',
         'arch.eyebrow': 'ЗАЩИЩЁННАЯ LOCAL-FIRST АРХИТЕКТУРА',
         'arch.title': 'Ноль зависимостей. Ноль правки кода агентов.',
-        'arch.desc': 'Чистый Node.js ESM и нативные ES-модули браузера без npm-зависимостей. Работает локально на 127.0.0.1 с локальной сессионной авторизацией, проверкой Origin и allowlist клавиш tmux.',
+        'arch.desc': 'Чистый Node.js ESM и нативные ES-модули браузера без npm-зависимостей. Работает локально на 127.0.0.1 с сессионной авторизацией, проверкой Origin, белым списком быстрых клавиш и явным подтверждением для ручного ввода.',
         'arch.s1.title': 'Запуск локального моста',
         'arch.s1.desc': 'Loopback-only Node.js BFF (127.0.0.1) автоматически находит OpenRig-флоты ИЛИ обычные сессии Claude Code / Codex CLI / tmux без npm-зависимостей.',
         'arch.s2.title': 'Онтология и FinOps-синхронизация',
         'arch.s2.desc': 'Строит канонический граф Objects & Links, очищает opgate-шум для Ганта и дочитывает JSONL-транскрипты по байтовому offset.',
         'arch.s2.code': '● 8 объектов • AI Evaluator • Граф контекста',
         'arch.s3.title': 'Управление, сверка и аудит',
-        'arch.s3.desc': 'Подтверждайте HITL-запросы в 1 клик через Security Gate (сессионная авторизация + allowlist клавиш) с автоматической проверкой результата.',
+        'arch.s3.desc': 'Подтверждайте HITL-запросы в 1 клик через Security Gate (сессионная авторизация + белый список быстрых клавиш, явное подтверждение для ручного ввода и блок 403 в --read-only) с автоматической проверкой результата.',
         'passport.eyebrow': 'ПАСПОРТ АРХИТЕКТУРЫ И БЕЗОПАСНОСТИ',
         'passport.title': 'Изучите границы доверия, цифровой двойник, гарантии безопасности и верификацию',
         'passport.desc': 'Чистый паспорт системы: C4-границы доверия, операционный цифровой двойник, гарантии localhost + защищённого Mobile PWA и 353 автотеста по 41 набору.',
@@ -3246,11 +3257,6 @@ Run negative control fault check?
         if (dict[key] !== undefined) el.setAttribute('title', dict[key]);
       });
 
-      const calmBtn = document.getElementById('simCalmBtn');
-      if (calmBtn) {
-        calmBtn.textContent = simCalm ? dict['sim.calmOn'] : dict['sim.calmOff'];
-      }
-
       try { localStorage.setItem('rigcommander_lang', currentLang); } catch {}
     }
 
@@ -3264,44 +3270,19 @@ Run negative control fault check?
       setTimeout(() => { t.style.display = 'none'; }, 2200);
     }
 
-    // Interactive Hero Simulator Logic
-    let simCalm = false;
+    // Interactive Hero Simulator Logic (synchronized with /demo)
     let simView = 'graph';
 
-    function syncSimDeepLink() {
-      const link = document.getElementById('simDeepLink');
-      if (!link) return;
-      if (simView === 'gantt') link.setAttribute('href', '/demo?track=gantt');
-      else if (simView === 'video') link.setAttribute('href', '/demo?track=share');
-      else if (simCalm) link.setAttribute('href', '/demo?track=calm');
-      else link.setAttribute('href', '/demo?track=hitl');
-    }
-
     function setSimView(mode) {
-      simView = mode === 'gantt' ? 'gantt' : (mode === 'video' ? 'video' : 'graph');
-      document.getElementById('simViewGraph').classList.toggle('active', simView === 'graph');
-      document.getElementById('simViewGantt').classList.toggle('active', simView === 'gantt');
-      const vBtn = document.getElementById('simViewVideo');
-      if (vBtn) vBtn.classList.toggle('active', simView === 'video');
-      const bodyGrid = document.getElementById('simBodyGrid');
-      const videoStage = document.getElementById('simVideoStage');
-      const videoEl = document.getElementById('demoWalkthroughVideo');
-      if (simView === 'video') {
-        if (bodyGrid) bodyGrid.style.display = 'none';
-        if (videoStage) videoStage.style.display = 'flex';
-        if (videoEl) {
-          videoEl.play().catch(() => {});
-        }
-      } else {
-        if (videoEl) {
-          try { videoEl.pause(); } catch {}
-        }
-        if (videoStage) videoStage.style.display = 'none';
-        if (bodyGrid) bodyGrid.style.display = '';
-        document.getElementById('simGraphView').style.display = simView === 'graph' ? '' : 'none';
-        document.getElementById('simGanttView').style.display = simView === 'gantt' ? 'flex' : 'none';
-      }
-      syncSimDeepLink();
+      simView = mode === 'gantt' ? 'gantt' : 'graph';
+      const gBtn = document.getElementById('simViewGraph');
+      const tBtn = document.getElementById('simViewGantt');
+      if (gBtn) gBtn.classList.toggle('active', simView === 'graph');
+      if (tBtn) tBtn.classList.toggle('active', simView === 'gantt');
+      const graphEl = document.getElementById('simGraphView');
+      const ganttEl = document.getElementById('simGanttView');
+      if (graphEl) graphEl.style.display = simView === 'graph' ? '' : 'none';
+      if (ganttEl) ganttEl.style.display = simView === 'gantt' ? 'flex' : 'none';
     }
 
     function toggleMobileNav() {
@@ -3325,65 +3306,17 @@ Run negative control fault check?
       }
     }
 
-    function seekDemoChapter(sec) {
-      const v = document.getElementById('demoWalkthroughVideo');
-      if (!v) return;
-      try {
-        v.currentTime = Number(sec) || 0;
-        v.play().catch(() => {});
-      } catch {}
-    }
-
-    function toggleSimCalm() {
-      simCalm = !simCalm;
-      const btn = document.getElementById('simCalmBtn');
-      const dict = I18N[currentLang] || I18N.en;
-      btn.classList.toggle('purple-active', simCalm);
-      btn.textContent = simCalm ? dict['sim.calmOn'] : dict['sim.calmOff'];
-
-      const nodes = document.querySelectorAll('.sim-node');
-      nodes.forEach(n => {
-        if (simCalm && !n.classList.contains('pulse-coral') && !n.classList.contains('pulse-amber') && !n.classList.contains('selected')) {
-          n.style.opacity = '0.35';
-        } else {
-          n.style.opacity = '1';
-        }
-      });
-      syncSimDeepLink();
-    }
-
-    function setSimSlice(slice) {
-      document.getElementById('simSliceAll').classList.toggle('active', slice === 'all');
-      document.getElementById('simSliceUx').classList.toggle('active', slice === 'ux');
-      if (simView !== 'graph') setSimView('graph');
-
-      const lines = document.getElementById('simSvgLines');
-      if (slice === 'ux') {
-        lines.innerHTML = `
-          <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="#00f0ff" stroke-width="4" />
-          <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="#00ff9d" stroke-width="3" />
-        `;
-      } else {
-        lines.innerHTML = `
-          <line x1="20%" y1="20%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" stroke-dasharray="4,4" />
-          <line x1="80%" y1="22%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-          <line x1="50%" y1="28%" x2="25%" y2="55%" stroke="rgba(0, 255, 157, 0.5)" stroke-width="3" />
-          <line x1="50%" y1="28%" x2="70%" y2="55%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-          <line x1="25%" y1="55%" x2="50%" y2="82%" stroke="rgba(251, 191, 36, 0.5)" stroke-width="2" />
-          <line x1="70%" y1="55%" x2="50%" y2="82%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" />
-        `;
-      }
-    }
-
     function selectSimNode(el, id, role, status, mood) {
       document.querySelectorAll('.sim-node').forEach(n => n.classList.remove('selected'));
       if (el) el.classList.add('selected');
 
-      document.getElementById('simInspectorId').textContent = id;
+      const inspectorId = document.getElementById('simInspectorId');
+      if (inspectorId) inspectorId.textContent = id;
       const screen = document.getElementById('simTerminalScreen');
       const pills = document.getElementById('simPromptPills');
+      if (!screen) return;
       if (mood === 'alert') {
-        screen.textContent = `[dev-check@core-platform]\n$ npx playwright test e2e/tts.spec.ts\n  ✓ 12 passed  ✘ 2 boundary-timeout\n--------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nRun negative control fault check?\n› 1. Yes, allow once (y)\n  2. Always allow in worktree\n  3. No, cancel (esc)`;
+        screen.textContent = `[codex-tests · tmux %4]\n$ npm test -- --grep "auth-refresh"\n  ✓ 18 passed  ✘ 1 token-expiry\n--------------------------------\n⚠️ PERMISSION PROMPT (HITL):\nCommand: npm test\n› 1. Allow once (y)\n  2. Always allow in worktree\n  3. Cancel (esc)`;
         if (pills) pills.style.display = 'flex';
       } else {
         screen.textContent = `[${id}]\nRole: ${role}\nStatus: ${status}\n--------------------------------\n$ git status --short\nOn branch feat/${id.split(' ')[0]}\nPostconditions: verified\nState: ${mood.toUpperCase()}`;
@@ -3396,12 +3329,18 @@ Run negative control fault check?
       const qaNode = document.getElementById('simQaNode');
       const qaBadge = document.getElementById('simQaBadge');
       const auditBox = document.getElementById('simAuditBox');
+      const triagePill = document.getElementById('simTriagePill');
+      const mBadge = document.getElementById('simMobileBadge');
+      const mTerm = document.getElementById('simMobileTerm');
       const title = (I18N[currentLang] && I18N[currentLang]['sim.auditTitle']) || '🧾 ACTION AUDIT (POSTCONDITION)';
 
       if (opt === 3) {
-        screen.textContent = `[dev-check@core-platform]\nSent key: 3 Enter (cancel_prompt)\n✕ Prompt cancelled by operator.\nWorktree preserved for manual review.`;
+        if (screen) screen.textContent = `[codex-tests · tmux %4]\nSent key: 3 Enter (cancel_prompt)\n✕ Prompt cancelled by operator.\nWorktree preserved for manual review.`;
+        if (mTerm) mTerm.textContent = `Command: npm test\nSent key: 3 Enter (cancel_prompt)\n✕ Cancelled · worktree preserved`;
         if (qaNode) { qaNode.classList.remove('pulse-coral'); qaNode.classList.add('pulse-amber'); }
         if (qaBadge) { qaBadge.textContent = 'PAUSED'; qaBadge.style.color = 'var(--amber)'; }
+        if (mBadge) { mBadge.textContent = currentLang === 'ru' ? 'ПАУЗА · ESC' : 'PAUSED · ESC'; mBadge.className = 'sim-m-badge is-paused'; }
+        if (triagePill) { triagePill.textContent = '🟡 0 P0 · 1 P1'; triagePill.classList.remove('is-clear'); }
         if (auditBox) {
           auditBox.innerHTML = `<div style="color:#94a3b8; font-weight:800;">${title}</div>` +
             `<div style="display:flex; justify-content:space-between;"><span>✅ cancel_prompt</span><span style="color:#6ee7b7;">Esc closed</span></div>` +
@@ -3411,9 +3350,12 @@ Run negative control fault check?
       }
 
       const modeLabel = opt === 2 ? 'always allow' : 'allow once';
-      screen.textContent = `[dev-check@core-platform]\nSent key: ${opt} Enter (${modeLabel})\n✓ HITL Authorization accepted.\nRunning negative control...\n================================\nPASSED 14 / 14 tests (100%)\nPostcondition: exit needs-input ✅`;
-      if (qaNode) qaNode.classList.remove('pulse-coral');
+      if (screen) screen.textContent = `[codex-tests · tmux %4]\nSent key: ${opt} Enter (${modeLabel})\n✓ HITL Authorization accepted.\nRunning npm test...\n================================\nPASSED 19 / 19 tests (100%)\nPostcondition: exit needs-input ✅`;
+      if (mTerm) mTerm.textContent = `Command: npm test\nSent key: ${opt} Enter (${modeLabel})\n✓ PASSED 19 / 19 tests · postcondition verified`;
+      if (qaNode) { qaNode.classList.remove('pulse-coral'); qaNode.classList.remove('pulse-amber'); }
       if (qaBadge) { qaBadge.textContent = 'WORKING'; qaBadge.style.color = 'var(--emerald)'; }
+      if (mBadge) { mBadge.textContent = currentLang === 'ru' ? '✓ РАБОТАЕТ' : '✓ WORKING'; mBadge.className = 'sim-m-badge is-ok'; }
+      if (triagePill) { triagePill.textContent = '🟢 0 P0 · 1 P1'; triagePill.classList.add('is-clear'); }
       if (auditBox) {
         auditBox.innerHTML = `<div style="color:#94a3b8; font-weight:800;">${title}</div>` +
           `<div style="display:flex; justify-content:space-between;"><span>✅ answer_prompt</span><span style="color:#6ee7b7;">verified</span></div>` +
@@ -3603,11 +3545,11 @@ Run negative control fault check?
             <div style="font-size:10.5px; color:#94a3b8;">${ru ? 'Запустить или обновить локальный RigCommander:' : 'Run or upgrade your local RigCommander:'}</div>
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.92); border:1px solid rgba(56,189,248,0.25); border-radius:7px; padding:7px 9px;">
               <code style="font-size:11px; color:#67e8f9;">npx rig-commander@latest</code>
-              <button type="button" onclick="copyCli('npx rig-commander@latest')" style="background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.4); color:#67e8f9; border-radius:6px; padding:4px 8px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; cursor:pointer;">Cmd ⧉</button>
+              <button type="button" onclick="copyCli('npx rig-commander@latest')" style="background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.4); color:#67e8f9; border-radius:6px; padding:4px 8px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; cursor:pointer;">${ru ? 'Копировать' : 'Copy'}</button>
             </div>
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:rgba(2,6,23,0.92); border:1px solid rgba(56,189,248,0.25); border-radius:7px; padding:7px 9px;">
               <code style="font-size:11px; color:#67e8f9;">npm install -g rig-commander@latest</code>
-              <button type="button" onclick="copyCli('npm install -g rig-commander@latest')" style="background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.4); color:#67e8f9; border-radius:6px; padding:4px 8px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; cursor:pointer;">Cmd ⧉</button>
+              <button type="button" onclick="copyCli('npm install -g rig-commander@latest')" style="background:rgba(0,240,255,0.12); border:1px solid rgba(0,240,255,0.4); color:#67e8f9; border-radius:6px; padding:4px 8px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; cursor:pointer;">${ru ? 'Копировать' : 'Copy'}</button>
             </div>
           </div>
           <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:11px;">
