@@ -981,11 +981,21 @@ export function renderContextBadgesHtml(ctx, meta) {
   if (meta.parent) {
     chips.push(`<button type="button" class="ctx-chip is-clickable" title="parent:${escapeHtml(meta.parent)}" data-qitem="${escapeHtml(meta.parent)}" onclick="event.stopPropagation(); openQueueItemContext(this.dataset.qitem)">🔗 parent:${escapeHtml(String(meta.parent).slice(-8))}</button>`);
   }
-  if (meta.handedOffFrom) {
-    chips.push(`<button type="button" class="ctx-chip is-clickable" title="handedOffFrom: ${escapeHtml(meta.handedOffFrom)}" data-qitem="${escapeHtml(meta.handedOffFrom)}" onclick="event.stopPropagation(); openQueueItemContext(this.dataset.qitem)">↖ ${escapeHtml(String(meta.handedOffFrom).slice(-8))}</button>`);
-  }
-  if (meta.handedOffTo) {
-    chips.push(`<button type="button" class="ctx-chip is-clickable" title="handedOffTo: ${escapeHtml(meta.handedOffTo)}" data-qitem="${escapeHtml(meta.handedOffTo)}" onclick="event.stopPropagation(); openQueueItemContext(this.dataset.qitem)">↘ ${escapeHtml(String(meta.handedOffTo).slice(-8))}</button>`);
+  for (const [field, arrow] of [['handedOffFrom', '↖'], ['handedOffTo', '↘']]) {
+    const ref = String(meta[field] ?? '').trim();
+    if (!ref) continue;
+    const escapedRef = escapeHtml(ref);
+    const title = `${field}: ${escapedRef}`;
+    if (/^qitem-/i.test(ref)) {
+      chips.push(`<button type="button" class="ctx-chip is-clickable" title="${title}" data-qitem="${escapedRef}" onclick="event.stopPropagation(); openQueueItemContext(this.dataset.qitem)">${arrow} ${escapeHtml(ref.slice(-8))}</button>`);
+    } else if (ref.includes('@')) {
+      const label = ctx.shortSeat(ref.split('@')[0]) || ref;
+      chips.push(`<button type="button" class="ctx-chip is-clickable" title="${title}" data-seat="${escapedRef}" onclick="event.stopPropagation(); selectAgent(this.dataset.seat)">${arrow} ${escapeHtml(label)}</button>`);
+    } else {
+      const chars = Array.from(ref);
+      const label = chars.length > 24 ? chars.slice(0, 23).join('') + '…' : ref;
+      chips.push(`<span class="ctx-chip" title="${title}">${arrow} ${escapeHtml(label)}</span>`);
+    }
   }
   if (meta.evidenceRef) {
     chips.push(`<span class="ctx-chip is-artifact" title="${escapeHtml(meta.evidenceRef)}">📎 ${escapeHtml(meta.evidenceRef.split('/').pop())}</span>`);

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { tDeck } from '../openrig/assets/domain/i18n.js';
 import {
-  renderActionAuditHtml, renderContextLineageHtml, renderCurrentTaskHtml, renderHarnessQuickKeys,
+  renderActionAuditHtml, renderContextBadgesHtml, renderContextLineageHtml, renderCurrentTaskHtml, renderHarnessQuickKeys,
   renderInteractivePromptOptionsHtml, renderSeatDiagnosisHtml, renderSeatGitWorktreeHtml
 } from '../openrig/assets/ui/inspector-view.js';
 
@@ -163,4 +163,42 @@ test('preview-only yes/no prompts and repeated credentials in option labels have
     'Requesting permission for:\n  tool --password fixture-only\nRun this command?\n1. Yes, run with --password fixture-only\n2. No, cancel');
   assert.match(numbered, /triggerPromptOption/);
   assert.doesNotMatch(numbered, /fixture-only/);
+});
+
+test('handoff chips dispatch full queue and seat IDs in either direction', () => {
+  const ctx = { ...context(), shortSeat: id => id }; // All Rigs can retain the rig suffix.
+  const seatId = 'dev-check@rig-commander';
+  const queueIds = ['qitem-20261125224306-8f3c8035', 'QITEM-demo@source-8f3c8035'];
+  for (const [field, arrow] of [['handedOffFrom', '↖'], ['handedOffTo', '↘']]) {
+    const seatChip = renderContextBadgesHtml(ctx, { [field]: seatId });
+    assert.ok(seatChip.includes(`title="${field}: ${seatId}" data-seat="${seatId}"`));
+    assert.ok(seatChip.includes(`selectAgent(this.dataset.seat)">${arrow} dev-check</button>`));
+    for (const qitemId of queueIds) {
+      const queueChip = renderContextBadgesHtml(ctx, { [field]: qitemId });
+      assert.ok(queueChip.includes(`title="${field}: ${qitemId}" data-qitem="${qitemId}"`));
+      assert.ok(queueChip.includes(`openQueueItemContext(this.dataset.qitem)">${arrow} 8f3c8035</button>`));
+    }
+  }
+});
+
+test('untyped handoff labels are trimmed, limited to 24 characters and inert', () => {
+  const ref = 'First review of the 🚀 launch checklist';
+  const html = renderContextBadgesHtml(context(), { handedOffFrom: '   ', handedOffTo: '  ' + ref + '  ' });
+  assert.ok(html.includes(`title="handedOffTo: ${ref}">↘ First review of the 🚀 l…</span>`));
+  assert.doesNotMatch(html, /handedOffFrom|onclick|<button|data-seat|data-qitem/);
+  const exact = 'a'.repeat(24);
+  assert.ok(renderContextBadgesHtml(context(), { handedOffFrom: exact }).includes(`↖ ${exact}</span>`));
+});
+
+test('handoff titles, labels and routing attributes escape markup in both directions', () => {
+  const ctx = context();
+  for (const field of ['handedOffFrom', 'handedOffTo']) {
+    for (const ref of [special, special + '@rig', 'qitem-' + special]) {
+      const html = renderContextBadgesHtml(ctx, { [field]: ref });
+      assert.ok(html.includes(`title="${field}: ${ctx.escapeHtml(ref)}"`));
+      assert.ok(!html.includes('<file'));
+      if (ref.includes('@')) assert.ok(html.includes(`data-seat="${ctx.escapeHtml(ref)}"`));
+      if (ref.startsWith('qitem-')) assert.ok(html.includes(`data-qitem="${ctx.escapeHtml(ref)}"`));
+    }
+  }
 });
