@@ -15,6 +15,7 @@ const mutations = [
   'guardrails/config', 'guardrails/reset', 'guardrails/telegram',
   'evaluator/config', 'evaluator/models', 'evaluator/run',
   'playbooks/config', 'playbooks/reset', 'playbooks/dry-run',
+  'auto-consent/policy', 'auto-consent/session-grant', 'auto-consent/cancel', 'auto-consent/pause-all',
   'remote/config', 'remote/pair', 'remote/revoke', 'update/check', 'update/apply', 'send',
   'resilience/plan', 'resilience/snapshot', 'resilience/resurrect'
 ];
@@ -164,7 +165,7 @@ test('Deck HTTP router with an isolated bridge on a kernel-assigned port', async
   await t.test('paired remote status is readable, remote settings and update actions are local only', async () => {
     const remote = { 'x-forwarded-proto': 'https', origin: publicUrl };
     const paired = { ...remote, cookie };
-    for (const route of ['telemetry', 'guardrails', 'playbooks', 'update/status', 'resilience/status']) {
+    for (const route of ['telemetry', 'guardrails', 'playbooks', 'auto-consent/state', 'update/status', 'resilience/status']) {
       assert.equal((await get('/api/' + route, remote)).status, 401, route);
     }
     const status = await get('/api/update/status', paired);
@@ -231,6 +232,133 @@ test('Deck HTTP router with an isolated bridge on a kernel-assigned port', async
     assert.equal(preview.status, 200);
     assert.ok((await preview.json()).dryRun);
   });
+
+  await t.test('auto-consent routes enforce validation, caps, pause-all, session grants, and expose telemetry.autoConsent', async () => {
+    const initialRes = await get('/api/auto-consent/state');
+    assert.equal(initialRes.status, 200);
+    const initial = await initialRes.json();
+    assert.equal(initial.ok, true);
+    assert.equal(initial.state.status, 'disabled');
+    assert.equal(initial.state.config.enabled, false);
+    assert.equal(initial.state.config.mode, 'dry_run');
+    assert.deepEqual(initial.state.sessionGrants, []);
+    assert.deepEqual(initial.state.pendingApprovals, []);
+
+    // Malformed JSON and invalid policy payloads -> 400
+    assert.equal((await post('auto-consent/policy', authorized, '{')).status, 400);
+    for (const badPolicy of [
+      { mode: 'turbo' },
+      { enabled: 'yes' },
+      { graceWindowMs: -10 },
+      { scope: 'invalid', targetId: 'sandbox', profile: 'trusted_dev' },
+      { scope: 'project', targetId: '../evil', profile: 'trusted_dev' },
+      { scope: 'project', targetId: 'sandbox', profile: 'sprint_all' },
+      { scope: 'seat', targetId: 'bad seat', profile: 'safe_readonly' }
+    ]) {
+      const r = await post('auto-consent/policy', authorized, JSON.stringify(badPolicy));
+      assert.equal(r.status, 400, JSON.stringify(badPolicy));
+      assert.equal((await r.json()).ok, false);
+    }
+
+    // Valid policy updates (direct patch + { patch } envelope + scoped convenience patch)
+    const p1 = await post('auto-consent/policy', authorized, JSON.stringify({ enabled: true, mode: 'armed', graceWindowMs: 3000 }));
+    assert.equal(p1.status, 200);
+    assert.equal((await p1.json()).state.status, 'armed');
+
+    const p2 = await post('auto-consent/policy', authorized, JSON.stringify({
+      scope: 'project', targetId: 'sandbox', profile: 'trusted_dev', overrides: { allowPackageInstall: false }
+    }));
+    assert.equal(p2.status, 200);
+    assert.equal((await p2.json()).state.config.projects.sandbox.profile, 'trusted_dev');
+
+    const p3 = await post('auto-consent/policy', authorized, JSON.stringify({
+      patch: { seats: { 'dev-owner@sandbox': { profile: 'manual_only' } } }
+    }));
+    assert.equal(p3.status, 200);
+    assert.equal((await p3.json()).state.config.seats['dev-owner@sandbox'].profile, 'manual_only');
+
+    // Invalid / over-cap session grants -> 400
+    for (const badGrant of [
+      { action: 'bogus' },
+      { scope: 'rig', targetId: 'sandbox', profile: 'trusted_dev', ttlMin: 180 },
+      { scope: 'rig', targetId: 'sandbox', profile: 'sprint_all', maxApprovals: 41 },
+      { scope: 'seat', targetId: 'dev-coder@sandbox', profile: 'trusted_dev', ttlMin: 30 },
+      { action: 'revoke' }
+    ]) {
+      const r = await post('auto-consent/session-grant', authorized, JSON.stringify(badGrant));
+      assert.equal(r.status, 400, JSON.stringify(badGrant));
+      assert.equal((await r.json()).ok, false);
+    }
+
+    // Create & revoke ephemeral session grant
+    const createdRes = await post('auto-consent/session-grant', authorized, JSON.stringify({
+      scope: 'seat', targetId: 'dev-coder@sandbox', profile: 'sprint_all', ttlMin: 45, maxApprovals: 20, seatSessionEpoch: 'ep-42'
+    }));
+    assert.equal(createdRes.status, 200);
+    const created = await createdRes.json();
+    assert.equal(created.ok, true);
+    assert.equal(created.grant.profile, 'sprint_all');
+    assert.equal(created.grant.remainingApprovals, 20);
+    assert.equal(created.state.sessionGrants.length, 1);
+
+    // Verify telemetry bundle exposes live payload.autoConsent
+    const tel = await (await get('/api/telemetry?rig=fixture&force=1')).json();
+    assert.ok(tel.autoConsent);
+    assert.equal(tel.autoConsent.status, 'armed');
+    assert.equal(tel.autoConsent.sessionGrants.length, 1);
+
+    // Revoke session grant
+    const revRes = await post('auto-consent/session-grant', authorized, JSON.stringify({
+      action: 'revoke', grantId: created.grant.grantId
+    }));
+    assert.equal(revRes.status, 200);
+    const rev = await revRes.json();
+    assert.equal(rev.ok, true);
+    assert.equal(rev.revoked, true);
+    assert.equal(rev.state.sessionGrants.length, 0);
+
+    // Cancel validation & idempotency
+    assert.equal((await post('auto-consent/cancel', authorized, JSON.stringify({ seatId: '../bad' }))).status, 400);
+    const cancelOk = await (await post('auto-consent/cancel', authorized, JSON.stringify({}))).json();
+    assert.equal(cancelOk.ok, true);
+    assert.equal(cancelOk.canceledCount, 0);
+
+    // Pause-all validation & toggle (default paused=true) + live SSE auto_consent_state broadcast
+    const sse = await get('/api/events?rig=fixture');
+    assert.equal(sse.status, 200);
+    const reader = sse.body.getReader();
+    try {
+      // Drain initial ready frame
+      let buf = '';
+      while (!buf.includes('event: ready')) {
+        const { value, done } = await reader.read();
+        assert.equal(done, false);
+        buf += Buffer.from(value).toString();
+      }
+
+      assert.equal((await post('auto-consent/pause-all', authorized, JSON.stringify({ paused: 'yes' }))).status, 400);
+      const paused = await (await post('auto-consent/pause-all', authorized, JSON.stringify({}))).json();
+      assert.equal(paused.ok, true);
+      assert.equal(paused.state.status, 'paused');
+      assert.equal(paused.state.config.masterPaused, true);
+
+      // Verify live SSE stream received auto_consent_state frame
+      while (!buf.includes('event: auto_consent_state')) {
+        const { value, done } = await reader.read();
+        assert.equal(done, false);
+        buf += Buffer.from(value).toString();
+      }
+      assert.match(buf, /event: auto_consent_state/);
+      assert.match(buf, /"status":"paused"/);
+
+      const resumed = await (await post('auto-consent/pause-all', authorized, JSON.stringify({ paused: false }))).json();
+      assert.equal(resumed.ok, true);
+      assert.equal(resumed.state.status, 'armed');
+      assert.equal(resumed.state.config.masterPaused, false);
+    } finally {
+      await reader.cancel();
+    }
+  });
 });
 
 test('second provider uses the real authorized router, single-flight, replay and honest receipts', async t => {
@@ -273,4 +401,113 @@ test('second provider uses the real authorized router, single-flight, replay and
   assert.equal((await post('snapshot',target,'once')).status,200);
   assert.equal(await effects(),'execute blue\nexecute red\nsnapshot\n');
   assert.deepEqual((await status()).history.map(r => r.status),['partial','failed']);
+});
+
+test('server manual /api/send cancels pending auto-consent before dispatch and shares sendIdempotency single-flight & dedupe', async t => {
+  const home = await mkdtemp(path.join(tmpdir(), 'rigcmd-ac-race-'));
+  const preload = path.join(home, 'offline.cjs');
+  await writeFile(preload, "globalThis.fetch = async () => { throw new Error('Offline test fixture'); };");
+
+  // Fake tmux stub recording every send-keys invocation with a brief delay on Escape so races are observable
+  const tmuxLog = path.join(home, 'tmux.log');
+  const fakeTmux = path.join(home, 'tmux');
+  await writeFile(tmuxLog, '');
+  await writeFile(fakeTmux, `#!/bin/sh
+echo "$@" >> ${JSON.stringify(tmuxLog)}
+exit 0
+`, { mode: 0o755 });
+
+  const fixturePath = path.join(home, 'ac-race-fixture.mjs');
+  await writeFile(fixturePath, `
+    import { server, autoConsent } from ${JSON.stringify(new URL('../openrig/server.mjs', import.meta.url).href)};
+    const SAFE_PROMPT = [
+      'Requesting permission for: run_command',
+      '$ npm test',
+      'Run this command?',
+      '› 1. Yes, allow once (y)',
+      '  2. Always allow in this workspace',
+      '  3. No, cancel (esc)',
+      '↑/↓ Navigate · Enter to confirm'
+    ].join('\\n');
+    autoConsent.captureSeatScreen = async () => SAFE_PROMPT;
+    autoConsent.updatePolicy({ enabled: true, mode: 'armed', graceWindowMs: 3000, projects: { sandbox: { profile: 'trusted_dev' } } });
+    // Arm a pending approval on dev-coder@sandbox
+    await autoConsent.observeSeat({
+      seat: { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } },
+      screenText: SAFE_PROMPT
+    });
+    // Also execute one auto-consent Option-1 dispatch on dev-check@sandbox to prove shared sendIdempotency with /api/send
+    await autoConsent.dispatchOptionOne({
+      seatId: 'dev-check@sandbox',
+      rigId: 'sandbox',
+      keyStroke: '1 Enter',
+      commandPreview: 'npm test',
+      matchedProfile: 'trusted_dev',
+      sourceScope: 'project',
+      promptHash: 'sha256:test'
+    });
+    server.listen(0, '127.0.0.1', () => console.log('at http://127.0.0.1:' + server.address().port));
+  `);
+
+  const child = spawn(process.execPath, ['--require', preload, fixturePath], {
+    cwd: home,
+    env: { HOME: home, PATH: `${home}:/bin:/usr/bin`, TMUX_BIN: fakeTmux, RIGCOMMANDER_PORT: '0' },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const exited = once(child, 'exit');
+  t.after(async () => {
+    child.kill();
+    await exited;
+    await rm(home, { recursive: true, force: true });
+  });
+
+  let origin = '';
+  let stderr = '';
+  child.stderr.setEncoding('utf8').on('data', d => { stderr += d; });
+  const lines = createInterface({ input: child.stdout });
+  try {
+    for await (const line of lines) {
+      const m = line.match(/at (http:\/\/127\.0\.0\.1:[1-9]\d*)/);
+      if (m) { origin = m[1]; break; }
+    }
+  } finally {
+    lines.close();
+  }
+  assert.ok(origin, 'Fixture server failed to start: ' + stderr);
+
+  const html = await (await fetch(origin)).text();
+  const token = html.match(/<meta name="deck-token" content="([^"]+)">/)?.[1];
+  assert.ok(token);
+  const headers = { origin, 'content-type': 'application/json', 'x-deck-token': token };
+
+  // 1. Verify pending approval is armed
+  const before = await (await fetch(origin + '/api/auto-consent/state')).json();
+  assert.equal(before.state.pendingApprovals.length, 1);
+  assert.equal(before.state.pendingApprovals[0].seatId, 'dev-coder@sandbox');
+
+  // 2. Manual /api/send Escape cancels pending auto-consent immediately
+  const sendRes = await fetch(origin + '/api/send', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ seat: 'dev-coder@sandbox', type: 'key', text: 'Escape' })
+  });
+  assert.equal(sendRes.status, 200);
+  const after = await (await fetch(origin + '/api/auto-consent/state')).json();
+  assert.equal(after.state.pendingApprovals.length, 0, 'Manual /api/send must cancel pending auto-consent immediately');
+  assert.equal(after.state.stats.canceledCount, 1);
+
+  // 3. Shared sendIdempotency: auto-consent Option-1 dispatch on dev-check@sandbox blocks racing manual /api/send "1 Enter" within 1.5s!
+  const racingManual = await fetch(origin + '/api/send', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ seat: 'dev-check@sandbox', type: 'key', text: '1 Enter' })
+  });
+  assert.equal(racingManual.status, 409, 'Shared sendIdempotency must deduplicate manual 1 Enter right after auto-consent 1 Enter');
+  assert.equal((await racingManual.json()).deduplicated, true);
+
+  const logLines = (await readFile(tmuxLog, 'utf8')).trim().split('\n').filter(Boolean);
+  const sendKeysLines = logLines.filter(l => l.startsWith('send-keys'));
+  assert.equal(sendKeysLines.length, 2, 'Only 1 auto-consent 1 Enter on dev-check + 1 manual Escape on dev-coder should send-keys to tmux');
+  assert.match(sendKeysLines[0], /send-keys -t dev-check@sandbox 1 Enter/);
+  assert.match(sendKeysLines[1], /send-keys -t dev-coder@sandbox Escape/);
 });

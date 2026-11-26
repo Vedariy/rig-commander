@@ -26,14 +26,17 @@ import {
 } from './assets/domain/context-lineage.js';
 import { collectFleetGitRadar } from './lib/git-radar.mjs';
 import { ShiftHistoryStore } from './lib/shift-history.mjs';
-import { SsePushHub } from './lib/sse-hub.mjs';
+import { SsePushHub, formatSseFrame } from './lib/sse-hub.mjs';
 import { SafePlaybookEngine } from './lib/playbook-engine.mjs';
+import { AutoConsentEngine, deriveSeatSessionEpoch } from './lib/auto-consent-engine.mjs';
+import { stripAnsiAndRedact } from './lib/ai-evaluator/redactor.mjs';
 import { FleetResilienceService } from './lib/resilience/index.mjs';
 import { OpenRigResilienceProvider } from './lib/resilience/openrig-provider.mjs';
 import { registerResilienceRoutes } from './lib/routes/resilience.mjs';
 import { registerTelemetryRoutes } from './lib/routes/telemetry.mjs';
 import { registerGuardrailRoutes } from './lib/routes/guardrails.mjs';
 import { registerPlaybookRoutes } from './lib/routes/playbooks.mjs';
+import { registerAutoConsentRoutes } from './lib/routes/auto-consent.mjs';
 import { registerGitShiftRoutes } from './lib/routes/git-shift.mjs';
 
 // Per-process secret: injected into index.html on load, required on /api/send.
@@ -69,6 +72,27 @@ async function captureSeatScreen(seat, lines = 38) {
 
 const sseHub = new SsePushHub({ captureFn: captureSeatScreen });
 
+function broadcastAutoConsentSse(eventName, data, rigId = 'all') {
+  if (!sseHub || sseHub.eventClients.size === 0) return 0;
+  const frame = formatSseFrame(eventName, data, String(++sseHub.eventSeq));
+  let sent = 0;
+  for (const c of Array.from(sseHub.eventClients)) {
+    if (c.rigKey === 'all' || !rigId || rigId === 'all' || rigId === c.rigKey) {
+      if (c.res && !c.res.writableEnded && !c.res.destroyed) {
+        try {
+          c.res.write(frame);
+          sent++;
+        } catch {
+          sseHub._removeEventClient(c);
+        }
+      } else {
+        sseHub._removeEventClient(c);
+      }
+    }
+  }
+  return sent;
+}
+
 function schedulePostActionSseRefresh(seatId, reason = 'send') {
   sseHub.notifyInvalidated(reason, seatId);
   if (seatId) {
@@ -89,6 +113,7 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '', evalId = n
   }
   const universalTarget = universalTmuxTargets.get(seatId);
   const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
+  autoConsent.cancelPending({ seatId, recordOperatorCancel: true });
   const output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
   terminalPromptProbeCache.delete(seatId);
   invalidateTelemetryCache();
@@ -372,7 +397,8 @@ function formatTelegramFleetSummary(kind = 'status') {
 const telegramBridge = new TelegramHitlBridge({
   onExecuteAction: ({ seatId, keyStroke, actionId }) => executeSeatKeyAction(seatId, keyStroke, actionId),
   getFleetSummary: (kind) => formatTelegramFleetSummary(kind),
-  onBreakerModeToggle: (mode) => circuitBreaker.updateConfig({ mode })
+  onBreakerModeToggle: (mode) => circuitBreaker.updateConfig({ mode }),
+  onPauseAutoConsent: () => autoConsent.pauseAll(true)
 });
 
 const circuitBreaker = new BudgetCircuitBreaker(
@@ -2085,6 +2111,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
       telegram: telegramBridge.getStatus(),
       playbooks: playbookEngine.getState()
     },
+    autoConsent: autoConsent.getState(),
     update: selfUpdater.getStatus(),
     evaluator: aiEvaluator.getTelemetrySummary(),
     intelligence: null
@@ -2147,13 +2174,30 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
     } catch {
       // non-blocking playbook error
     }
-    if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1()) {
+    const hasActiveClient = sseHub.hasActiveSubscribers() || Date.now() - lastTelemetryClientAt < 25000;
+    const autoConsentActive = hasActiveClient && autoConsent.isObservingActive();
+    if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1() || autoConsentActive) {
+      const liveBreaker = circuitBreaker.getState();
+      const liveConflicts = payload.gitRadar?.conflicts || null;
+      if (autoConsentActive) {
+        autoConsent.reconcileSeatStates(nodes);
+      }
       for (const n of nodes) {
         const disp = (n && n.activityState && n.activityState.display) || '';
         const needsCount = (n && n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
         if ((disp === 'needs-input' || needsCount > 0) && n.canonicalSessionName) {
           try {
-            const scr = await captureSeatScreen(n.canonicalSessionName, 45);
+            const scr = await captureSeatScreen(n.canonicalSessionName, 64);
+            if (autoConsentActive) {
+              await autoConsent.observeSeat({
+                seat: n,
+                seatId: n.canonicalSessionName,
+                rigId: n.rigName || n.rigId || '',
+                screenText: scr,
+                breakerState: liveBreaker,
+                gitConflicts: liveConflicts
+              });
+            }
             if (telegramBridge.isConfigured()) {
               await telegramBridge.notifyHitlPrompt(n.canonicalSessionName, scr);
             }
@@ -2172,7 +2216,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
               });
             }
           } catch {
-            // ignore capture/telegram/evaluator transient failure
+            // ignore capture/auto-consent/telegram/evaluator transient failure
           }
         }
       }
@@ -2305,6 +2349,9 @@ async function sendToSeat({ req, json, body: payload }) {
     return;
   }
 
+  // Cancel any pending/in-flight auto-consent timer immediately before manual dispatch
+  autoConsent.cancelPending({ seatId: seat, recordOperatorCancel: true });
+
   const universalTarget = universalTmuxTargets.get(seat);
   const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seat;
 
@@ -2412,8 +2459,150 @@ const guardrailStatus = ({ json }) => json(200, {
 });
 
 const stateDirArg = process.argv.indexOf('--state-dir');
+const resolvedStateDir = stateDirArg >= 0 ? process.argv[stateDirArg + 1] : process.env.RIGCOMMANDER_STATE_DIR;
+
+const seatPaneEpochCache = new Map();
+async function resolveLiveSeatSessionEpoch(seatId, seatNode = null, { fresh = false } = {}) {
+  const node = seatNode || (latestFleetSnapshot?.nodes || []).find(
+    n => n && (n.canonicalSessionName || n.seatId || n.id) === seatId
+  ) || null;
+  if (seatId && /^[a-zA-Z0-9._@-]+$/.test(seatId)) {
+    const universalTarget = universalTmuxTargets.get(seatId);
+    const hasLiveTarget = Boolean((universalTarget && isValidTmuxTarget(universalTarget)) || node);
+    if (hasLiveTarget) {
+      const cached = seatPaneEpochCache.get(seatId);
+      if (!fresh && cached && Date.now() - cached.ts < 3000) {
+        return cached.epoch;
+      }
+      const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
+      const res = await execWithStatus(TMUX_BIN, ['display-message', '-p', '-t', tmuxTarget, '#{pane_id}:#{pane_pid}'], 3000);
+      const out = (res.ok && res.stdout) ? res.stdout.trim() : '';
+      if (/^%\d+:\d+$/.test(out)) {
+        const epoch = `tmux:${out}`;
+        boundedMapSet(seatPaneEpochCache, seatId, { ts: Date.now(), epoch }, MAX_GUIDANCE_CACHE);
+        return epoch;
+      }
+    }
+  }
+  return deriveSeatSessionEpoch(node);
+}
+
+async function executeAutoConsentOptionOne({
+  seatId, rigId, keyStroke, evalId, commandPreview, matchedProfile, sourceScope, grantId, promptHash
+}) {
+  if (keyStroke !== '1 Enter') {
+    return { ok: false, error: 'Auto-consent strictly permits Option 1 ("1 Enter") only' };
+  }
+  if (!/^[a-zA-Z0-9._@-]+$/.test(String(seatId || ''))) {
+    return { ok: false, error: 'Invalid seat identifier' };
+  }
+
+  // Share per-seat single-flight lock & 1.5s semantic dedupe with /api/send
+  const semanticKey = buildSeatSendKey(seatId, 'key', '1 Enter');
+  const idem = sendIdempotency.begin({ seatId, semanticKey });
+  if (idem.action !== 'proceed') {
+    return {
+      ok: false,
+      deduplicated: true,
+      auditRecorded: true,
+      shiftRecorded: true,
+      error: idem.reason || `Another command to ${seatId} is already in flight`
+    };
+  }
+
+  try {
+    const baseline = latestSeatBaselines.get(seatId) || null;
+    const universalTarget = universalTmuxTargets.get(seatId);
+    const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
+    const sendRes = await execWithStatus(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '1', 'Enter'], 8000);
+    const ok = Boolean(sendRes && sendRes.ok);
+    const safePreview = stripAnsiAndRedact(String(commandPreview || ''), { redactPaths: true }).text
+      .replace(/[\r\n]+/g, ' ')
+      .trim()
+      .slice(0, 96);
+    const safeErr = ok
+      ? ''
+      : stripAnsiAndRedact(String((sendRes && sendRes.output) || 'tmux send-keys failed'), { redactPaths: true }).text
+          .replace(/[\r\n]+/g, ' ')
+          .trim()
+          .slice(0, 140);
+    const rec = actionAudit.record({
+      actionId: 'answer_prompt_option',
+      evalId: evalId || `auto_consent:${matchedProfile || 'policy'}:${sourceScope || 'scope'}`,
+      seatId,
+      type: 'auto_consent',
+      payload: `1 Enter${safePreview ? ` (${safePreview})` : ''}`,
+      httpStatus: ok ? 200 : 502,
+      ok,
+      baseline
+    });
+    shiftHistory.recordGuardrailEvent({
+      severity: ok ? 'info' : 'warn',
+      rigId: rigId || 'all',
+      seatId,
+      key: `auto_consent:${seatId}:${String(promptHash || '').slice(0, 18)}:${Date.now()}`,
+      title: `Auto-Consent (${matchedProfile || 'policy'}/${sourceScope || 'scope'}) → ${seatId}`,
+      detail: ok
+        ? `Dispatched 1 Enter${safePreview ? `: ${safePreview}` : ''}`
+        : `Dispatch failed: ${safeErr || 'tmux error'}`,
+      meta: {
+        profile: matchedProfile || null,
+        sourceScope: sourceScope || null,
+        grantId: grantId || null,
+        promptHash: String(promptHash || '').slice(0, 23),
+        keyStroke: '1 Enter',
+        execId: rec.execId
+      }
+    });
+    if (ok) {
+      terminalPromptProbeCache.delete(seatId);
+      aiEvaluator.invalidateSeat(seatId);
+      invalidateTelemetryCache();
+      schedulePostActionSseRefresh(seatId, 'auto_consent');
+      idem.complete(200, { ok: true, execId: rec.execId });
+    } else {
+      idem.abort();
+    }
+    return {
+      ok,
+      execId: rec.execId,
+      auditRecorded: true,
+      shiftRecorded: true,
+      output: (sendRes && sendRes.output) || '',
+      error: ok ? undefined : (safeErr || 'tmux send-keys failed')
+    };
+  } catch (err) {
+    idem.abort();
+    throw err;
+  }
+}
+
+const autoConsent = new AutoConsentEngine({
+  stateDir: resolvedStateDir,
+  captureSeatScreen: (seatId, lines = 64) => captureSeatScreen(seatId, lines),
+  getSeatSessionEpoch: (seatId, seatNode, opts) => resolveLiveSeatSessionEpoch(seatId, seatNode, opts),
+  getLiveContext: async (seatId) => {
+    const snap = latestFleetSnapshot || {};
+    const node = (snap.nodes || []).find(n => n && (n.canonicalSessionName || n.seatId || n.id) === seatId) || null;
+    const epoch = await resolveLiveSeatSessionEpoch(seatId, node, { fresh: true });
+    return {
+      seat: node,
+      breakerState: circuitBreaker.getState(),
+      gitConflicts: snap.gitRadar?.conflicts || null,
+      seatSessionEpoch: epoch
+    };
+  },
+  dispatchOptionOne: (args) => executeAutoConsentOptionOne(args),
+  actionAudit,
+  shiftHistory,
+  onEvent: (eventName, data, rigId) => {
+    invalidateTelemetryCache();
+    broadcastAutoConsentSse(eventName, data, rigId);
+  }
+});
+
 const resilience = new FleetResilienceService({
-  stateDir: stateDirArg >= 0 ? process.argv[stateDirArg + 1] : process.env.RIGCOMMANDER_STATE_DIR,
+  stateDir: resolvedStateDir,
   providers: [new OpenRigResilienceProvider({ rigBin: RIG_BIN, daemonUrl: DAEMON_URL })],
   actionAudit, shiftHistory,
   notify: async advisory => {
@@ -2431,6 +2620,7 @@ registerGuardrailRoutes(registry, {
   guardrailStatus, actionAudit, circuitBreaker, telegramBridge, aiEvaluator, getFleetSnapshot, captureSeatScreen
 });
 registerPlaybookRoutes(registry, { guardrailStatus, playbookEngine, sseHub, getFleetSnapshot, actionAudit, circuitBreaker });
+registerAutoConsentRoutes(registry, { autoConsent, invalidateTelemetryCache });
 registerGitShiftRoutes(registry, {
   getPort, remoteAccess, selfUpdater, getFleetSnapshot, boundedMapSet, getTelemetryBundle, shiftHistory, actionAudit
 });
@@ -2478,7 +2668,9 @@ async function dispatchApi(req, res, url, isRemote) {
       if (!updateAction) {
         try { context.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); }
         catch (error) {
-          if (url.pathname.startsWith('/api/resilience/')) return deny(400, 'invalid_json');
+          if (url.pathname.startsWith('/api/resilience/') || url.pathname.startsWith('/api/auto-consent/')) {
+            return deny(400, 'invalid_json');
+          }
           throw error;
         }
       }
@@ -2695,9 +2887,10 @@ function resolveSafeStaticPath(baseDir, pathname) {
 }
 
 server.on('listening', () => { remoteAccess.port = getPort(); });
+server.on('close', () => { autoConsent.dispose(); });
 
 export {
-  server, resilience,
+  server, resilience, autoConsent,
   buildGanttItems,
   isGanttSystemNoise,
   computeHistoryStats,
