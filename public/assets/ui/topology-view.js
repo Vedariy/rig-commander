@@ -26,7 +26,7 @@ export function renderStateIndicatorHtml(agent, { escapeHtml, deckLang = 'en', t
 
 export function getNodeThermalFillGrad(ctxPct) {
   if (typeof ctxPct !== 'number' || !Number.isFinite(ctxPct) || ctxPct <= 0) return 'transparent';
-  if (ctxPct >= 75) return 'linear-gradient(90deg, rgba(255, 0, 85, 0.22), rgba(255, 0, 85, 0.05))';
+  if (ctxPct >= 75) return 'linear-gradient(90deg, rgba(245, 158, 11, 0.20), rgba(245, 158, 11, 0.04))';
   if (ctxPct >= 65) return 'linear-gradient(90deg, rgba(251, 146, 60, 0.17), rgba(251, 146, 60, 0.04))';
   if (ctxPct >= 55) return 'linear-gradient(90deg, rgba(250, 204, 21, 0.12), rgba(250, 204, 21, 0.02))';
   if (ctxPct >= 40) return 'linear-gradient(90deg, rgba(56, 189, 248, 0.11), rgba(56, 189, 248, 0.02))';
@@ -150,6 +150,9 @@ export function renderNodeCardHtml(agent, deps) {
     agent.state === 'waiting' ? 'led-waiting' : 'led-idle';
 
   const burn = computeBurn(agent, deckLang);
+  // Dark Cockpit Color Discipline: RED = strictly P0 HITL only; P1 CTX overheat uses calm amber.
+  const displayCtxColor = thermal.tier === 'crit' ? '#f59e0b' : thermal.color;
+  const displayCtxGlow = thermal.tier === 'crit' ? 'rgba(245, 158, 11, 0.35)' : thermal.glow;
 
   return `
     <div class="agent-node state-${agent.state} ${calmClass} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}"
@@ -157,7 +160,7 @@ export function renderNodeCardHtml(agent, deps) {
          data-thermal-tier="${thermal.tier || 'none'}"
          data-activity-tier="${tier}"
          ${benchEdge ? `data-bench-edge="${escapeHtml(benchEdge)}"` : ''}
-         style="left:${agent.x}%; top:${agent.y}%; ${isHidden ? 'display:none;' : ''} --ctx-color:${thermal.color}; --ctx-glow:${thermal.glow}; --ctx-fill-pct:${thermal.pct}%; --ctx-fill-grad:${getNodeThermalFillGrad(agent.ctxPct)};"
+         style="left:${agent.x}%; top:${agent.y}%; ${isHidden ? 'display:none;' : ''} --ctx-color:${displayCtxColor}; --ctx-glow:${displayCtxGlow}; --ctx-fill-pct:${thermal.pct}%; --ctx-fill-grad:${getNodeThermalFillGrad(agent.ctxPct)};"
          onmouseenter="setHoverAgent(this.getAttribute('data-agent-id'))"
          onmouseleave="setHoverAgent(null)"
          onmousedown="selectAgent(this.getAttribute('data-agent-id'), event)"
@@ -181,11 +184,11 @@ export function renderNodeCardHtml(agent, deps) {
 
       <div class="ctx-box">
         <div class="ctx-header">
-          <span class="ctx-thermal-label" style="color:${thermal.color}; font-weight:700;">${thermal.label}</span>
+          <span class="ctx-thermal-label" style="color:${displayCtxColor}; font-weight:700;">${thermal.label}</span>
           <span style="color:#94a3b8;" title="${escapeHtml(td('demo.queueTraffic'))}">${escapeHtml(td('demo.queueTraffic'))}: 📥${agent.callsIn} / 📤${agent.callsOut}</span>
         </div>
         <div class="ctx-bar-bg">
-          <div class="ctx-bar-fill" style="width:${thermal.pct}%; background:${thermal.color};"></div>
+          <div class="ctx-bar-fill" style="width:${thermal.pct}%; background:${displayCtxColor};"></div>
         </div>
       </div>
 
@@ -686,8 +689,10 @@ export function renderTopology(deps) {
       else el.removeAttribute('data-bench-edge');
       el.style.left = `${agent.x}%`;
       el.style.top = `${agent.y}%`;
-      el.style.setProperty('--ctx-color', thermal.color);
-      el.style.setProperty('--ctx-glow', thermal.glow);
+      const displayCtxColor = thermal.tier === 'crit' ? '#f59e0b' : thermal.color;
+      const displayCtxGlow = thermal.tier === 'crit' ? 'rgba(245, 158, 11, 0.35)' : thermal.glow;
+      el.style.setProperty('--ctx-color', displayCtxColor);
+      el.style.setProperty('--ctx-glow', displayCtxGlow);
       el.style.setProperty('--ctx-fill-pct', `${thermal.pct}%`);
       el.style.setProperty('--ctx-fill-grad', getNodeThermalFillGrad(agent.ctxPct));
 
@@ -748,13 +753,13 @@ export function renderTopology(deps) {
       const ctxLabelEl = el.querySelector('.ctx-thermal-label');
       if (ctxLabelEl) {
         ctxLabelEl.textContent = thermal.label;
-        ctxLabelEl.style.color = thermal.color;
+        ctxLabelEl.style.color = displayCtxColor;
       }
 
       const fillEl = el.querySelector('.ctx-bar-fill');
       if (fillEl) {
         fillEl.style.width = `${thermal.pct}%`;
-        fillEl.style.background = thermal.color;
+        fillEl.style.background = displayCtxColor;
       }
 
       // Update integrated compact telemetry (Row 1 % + Row 2 tokens/traffic) in-place

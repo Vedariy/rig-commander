@@ -418,11 +418,14 @@ export function renderAutoConsentTabHtml({
           AUTO_CONSENT_PROFILES.SAFE_READONLY,
           AUTO_CONSENT_PROFILES.TRUSTED_DEV
         ].map((p) => `<option value="${escapeHtml(p)}"${currentProfile === p ? ' selected' : ''}>${escapeHtml(getProfileLabel(p, td))}</option>`).join('');
+        const grantBtnHtml = cfg.enabled
+          ? `<button type="button" class="action-pill ac-mini-btn" data-auto-consent-action="grant-session" data-scope="rig" data-target="${escapeHtml(rigId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>`
+          : '';
         return `<div class="ac-policy-row">` +
           `<div class="ac-policy-target"><span class="ac-scope-chip is-scope">${escapeHtml(td('autoConsent.scopeProject'))}</span><b>${escapeHtml(rigId)}</b></div>` +
           `<div class="ac-policy-controls">` +
             `<select class="rig-select ac-policy-select" aria-label="${escapeHtml(rigId)}" data-auto-consent-action="set-project-policy" data-target="${escapeHtml(rigId)}"${disabledAttr}>${opts}</select>` +
-            `<button type="button" class="action-pill ac-mini-btn" data-auto-consent-action="grant-session" data-scope="rig" data-target="${escapeHtml(rigId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>` +
+            `${grantBtnHtml}` +
           `</div>` +
         `</div>`;
       }).join('');
@@ -458,6 +461,9 @@ export function renderAutoConsentTabHtml({
           { val: AUTO_CONSENT_PROFILES.TRUSTED_DEV, label: getProfileLabel(AUTO_CONSENT_PROFILES.TRUSTED_DEV, td) }
         ].map((o) => `<option value="${escapeHtml(o.val)}"${explicitProfile === o.val ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('');
 
+        const seatGrantBtnHtml = cfg.enabled
+          ? `<button type="button" class="action-pill ac-mini-btn" data-auto-consent-action="grant-session" data-scope="seat" data-target="${escapeHtml(seatId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>`
+          : '';
         return `<div class="ac-policy-row">` +
           `<div class="ac-policy-target">` +
             `<b>${escapeHtml(shortSeat(seatId))}</b>` +
@@ -466,7 +472,7 @@ export function renderAutoConsentTabHtml({
           `</div>` +
           `<div class="ac-policy-controls">` +
             `<select class="rig-select ac-policy-select" aria-label="${escapeHtml(seatId)}" data-auto-consent-action="set-seat-policy" data-target="${escapeHtml(seatId)}"${disabledAttr}>${opts}</select>` +
-            `<button type="button" class="action-pill ac-mini-btn" data-auto-consent-action="grant-session" data-scope="seat" data-target="${escapeHtml(seatId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>` +
+            `${seatGrantBtnHtml}` +
           `</div>` +
         `</div>`;
       }).join('');
@@ -550,15 +556,13 @@ export function renderAutoConsentTabHtml({
     return remMs > 0 ? Math.max(1, Math.ceil(remMs / 1000)) : 0;
   };
   const formatCooldown = (sec) => `⏳ ${en ? `${sec}s` : `${sec}с`}`;
-  const renderSwitch = ({ id, checked, label, isMaster = false }) => {
+  const renderSwitch = ({ id, checked, label, isMaster = false, subHint = '' }) => {
     const coolSec = cooldownSecFor(id);
     const isDisabled = busy || coolSec > 0;
-    const stateLabel = checked ? td('autoConsent.switchOn') : td('autoConsent.switchOff');
     return `<label class="ac-switch${isMaster ? ' is-master' : ''}${checked ? ' is-on' : ' is-off'}${isDisabled ? ' is-disabled' : ''}${coolSec > 0 ? ' is-cooling' : ''}">` +
       `<input type="checkbox" role="switch" id="${escapeHtml(id)}" class="ac-switch-input" data-auto-consent-action="toggle-switch" data-switch-id="${escapeHtml(id)}"${checked ? ' checked' : ''}${isDisabled ? ' disabled' : ''} />` +
       `<span class="ac-switch-track" aria-hidden="true"><span class="ac-switch-thumb"></span></span>` +
-      `<span class="ac-switch-state">${escapeHtml(stateLabel)}</span>` +
-      `<span class="ac-switch-text">${escapeHtml(label)}</span>` +
+      `<span class="ac-switch-text">${escapeHtml(label)}${subHint ? ` <span class="ac-default-off-hint">(${escapeHtml(subHint)})</span>` : ''}</span>` +
       `${coolSec > 0 ? `<span class="ac-cooldown-chip" data-cooldown-for="${escapeHtml(id)}" aria-live="polite">${escapeHtml(formatCooldown(coolSec))}</span>` : ''}` +
     `</label>`;
   };
@@ -566,97 +570,104 @@ export function renderAutoConsentTabHtml({
   const modeDisabledAttr = (busy || modeCoolSec > 0) ? ' disabled' : '';
 
   return `<div class="ac-tab-wrap">` +
-    `${demoTrack ? `<div class="ac-demo-notice">${escapeHtml(td('autoConsent.demoTrackBanner'))}</div>` : ''}` +
-    `${cfg.masterPaused ? `<div class="ac-paused-banner"><span>${escapeHtml(td('autoConsent.pausedBanner'))}</span><button type="button" class="action-pill key-proceed" data-auto-consent-action="resume-all"${disabledAttr}>${escapeHtml(td('autoConsent.resumeAllBtn'))}</button></div>` : ''}` +
-    `<div class="ac-subtitle-box">${escapeHtml(td('autoConsent.subtitle'))}</div>` +
+    `<div class="ac-tab-scroll">` +
+      `${demoTrack ? `<div class="ac-demo-notice">${escapeHtml(td('autoConsent.demoTrackBanner'))}</div>` : ''}` +
+      `${cfg.masterPaused ? `<div class="ac-paused-banner"><span>${escapeHtml(td('autoConsent.pausedBanner'))}</span><button type="button" class="action-pill key-proceed" data-auto-consent-action="resume-all"${disabledAttr}>${escapeHtml(td('autoConsent.resumeAllBtn'))}</button></div>` : ''}` +
+      `<div class="ac-subtitle-box">${escapeHtml(td('autoConsent.subtitle'))}</div>` +
 
-    `<div class="ac-top-grid">` +
-      `<section class="ac-card">` +
-        `<div class="ac-card-head">` +
-          `${renderSwitch({ id: 'acMasterEnable', checked: cfg.enabled, label: td('autoConsent.masterEnable'), isMaster: true })}` +
-          `<span class="ac-quota-chip">${escapeHtml(en ? 'Quota' : 'Квота')}: <b>${escapeHtml(stats.actionsLastHour)} / ${escapeHtml(cfg.maxActionsPerHour)}/h</b></span>` +
-        `</div>` +
-        `<div class="ac-mode-field">` +
-          `<div class="ac-mode-label-row">` +
-            `<label for="acModeSelect" class="ac-mode-label">${escapeHtml(td('autoConsent.modeLabel'))}</label>` +
-            `${modeCoolSec > 0 ? `<span class="ac-cooldown-chip" data-cooldown-for="acModeSelect" aria-live="polite">${escapeHtml(formatCooldown(modeCoolSec))}</span>` : ''}` +
+      `<div class="ac-top-grid">` +
+        `<section class="ac-card">` +
+          `<div class="ac-card-head">` +
+            `${renderSwitch({ id: 'acMasterEnable', checked: cfg.enabled, label: td('autoConsent.masterEnable'), isMaster: true })}` +
+            `<span class="ac-quota-chip">${escapeHtml(en ? 'Quota' : 'Квота')}: <b>${escapeHtml(stats.actionsLastHour)} / ${escapeHtml(cfg.maxActionsPerHour)}/h</b></span>` +
           `</div>` +
-          `<select id="acModeSelect" class="rig-select ac-mode-select ${modeToneClass}${modeCoolSec > 0 ? ' is-cooling' : ''}" data-auto-consent-action="change-mode"${modeDisabledAttr}>` +
-            `<option value="dry_run"${cfg.mode === AUTO_CONSENT_MODES.DRY_RUN ? ' selected' : ''}>${escapeHtml(td('autoConsent.modeDryRun'))}</option>` +
-            `<option value="armed"${cfg.mode === AUTO_CONSENT_MODES.ARMED ? ' selected' : ''}>${escapeHtml(td('autoConsent.modeArmed'))}</option>` +
-          `</select>` +
+          `<div class="ac-mode-field">` +
+            `<div class="ac-mode-label-row">` +
+              `<label for="acModeSelect" class="ac-mode-label">${escapeHtml(td('autoConsent.modeLabel'))}</label>` +
+              `${modeCoolSec > 0 ? `<span class="ac-cooldown-chip" data-cooldown-for="acModeSelect" aria-live="polite">${escapeHtml(formatCooldown(modeCoolSec))}</span>` : ''}` +
+            `</div>` +
+            `<select id="acModeSelect" class="rig-select ac-mode-select ${modeToneClass}${modeCoolSec > 0 ? ' is-cooling' : ''}" data-auto-consent-action="change-mode"${modeDisabledAttr}>` +
+              `<option value="dry_run"${cfg.mode === AUTO_CONSENT_MODES.DRY_RUN ? ' selected' : ''}>${escapeHtml(td('autoConsent.modeDryRun'))}</option>` +
+              `<option value="armed"${cfg.mode === AUTO_CONSENT_MODES.ARMED ? ' selected' : ''}>${escapeHtml(td('autoConsent.modeArmed'))}</option>` +
+            `</select>` +
+          `</div>` +
+          `${masterOffWarnHtml}` +
+          `<div class="ac-stats-strip">` +
+            `<span>${escapeHtml(en ? 'Approved' : 'Одобрено')}: <b class="ac-stat-ok">${escapeHtml(stats.approvedCount)}</b></span>` +
+            `<span>${escapeHtml(en ? 'Escalated' : 'Эскалаций')}: <b class="ac-stat-warn">${escapeHtml(stats.escalatedCount)}</b></span>` +
+            `<span>${escapeHtml(en ? 'Canceled' : 'Отменено')}: <b class="ac-stat-cancel">${escapeHtml(stats.canceledCount)}</b></span>` +
+          `</div>` +
+        `</section>` +
+
+        `<section class="ac-card">` +
+          `<div class="ac-section-title">🛡️ ${escapeHtml(td('autoConsent.settingsTitle'))}</div>` +
+          `<div class="ac-setting-row">` +
+            `<label for="acGraceWindowSelect">${escapeHtml(td('autoConsent.graceWindowLabel'))}</label>` +
+            `<select id="acGraceWindowSelect" class="rig-select ac-compact-select"${disabledAttr}>` +
+              `${graceOptions.map((g) => `<option value="${g.ms}"${selectedGrace === g.ms ? ' selected' : ''}>${escapeHtml(g.label)}</option>`).join('')}` +
+            `</select>` +
+          `</div>` +
+          `<div class="ac-setting-row">` +
+            `${renderSwitch({ id: 'acPauseCtxCheck', checked: cfg.defaults.pauseOnCtxOverheat, label: td('autoConsent.ctxOverheatToggle') })}` +
+            `<label class="ac-threshold-wrap">` +
+              `<span>${escapeHtml(td('autoConsent.ctxThresholdLabel'))}</span>` +
+              `<input id="acCtxThresholdInput" type="number" min="${AUTO_CONSENT_LIMITS.MIN_CTX_THRESHOLD_PCT}" max="${AUTO_CONSENT_LIMITS.MAX_CTX_THRESHOLD_PCT}" value="${escapeHtml(cfg.defaults.ctxPauseThresholdPct)}" class="ctrl-input ac-num-input"${disabledAttr} />` +
+            `</label>` +
+          `</div>` +
+          `<div class="ac-setting-row">` +
+            `${renderSwitch({ id: 'acAllowPkgCheck', checked: cfg.defaults.allowPackageInstall, label: td('autoConsent.allowPkgInstallLabel'), subHint: td('autoConsent.defaultOffHint') })}` +
+          `</div>` +
+          `<div class="ac-setting-row">` +
+            `${renderSwitch({ id: 'acAllowNetCheck', checked: cfg.defaults.allowReadOnlyNetwork, label: td('autoConsent.allowReadOnlyNetLabel'), subHint: td('autoConsent.defaultOffHint') })}` +
+          `</div>` +
+        `</section>` +
+      `</div>` +
+
+      `<div class="ac-cmd-summary" role="region" aria-label="${escapeHtml(td('autoConsent.cmdStripLabel'))}">` +
+        `<div class="ac-cmd-col is-safe">` +
+          `<span class="ac-cmd-col-title">🟢 ${escapeHtml(td('autoConsent.cmdStripSafeTitle'))}</span>` +
+          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripSafeBody'))}</span>` +
         `</div>` +
-        `${masterOffWarnHtml}` +
-        `<div class="ac-stats-strip">` +
-          `<span>${escapeHtml(en ? 'Approved' : 'Одобрено')}: <b class="ac-stat-ok">${escapeHtml(stats.approvedCount)}</b></span>` +
-          `<span>${escapeHtml(en ? 'Escalated' : 'Эскалаций')}: <b class="ac-stat-warn">${escapeHtml(stats.escalatedCount)}</b></span>` +
-          `<span>${escapeHtml(en ? 'Canceled' : 'Отменено')}: <b class="ac-stat-cancel">${escapeHtml(stats.canceledCount)}</b></span>` +
+        `<div class="ac-cmd-col is-dev">` +
+          `<span class="ac-cmd-col-title">⚡ ${escapeHtml(td('autoConsent.cmdStripDevTitle'))}</span>` +
+          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
         `</div>` +
+        `<div class="ac-cmd-col is-veto">` +
+          `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}</span>` +
+          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
+        `</div>` +
+      `</div>` +
+
+      `${statusMessage ? `<div class="ac-status-banner" role="status">${escapeHtml(statusMessage)}</div>` : ''}` +
+
+      `<div class="ac-scopes-grid">` +
+        `<section class="ac-card">` +
+          `<div class="ac-section-head">` +
+            `<span class="ac-section-title">🏛️ ${escapeHtml(td('autoConsent.projectsTitle'))}</span>` +
+          `</div>` +
+          `<div class="ac-policy-list">${projectRowsHtml}</div>` +
+        `</section>` +
+        `<section class="ac-card">` +
+          `<div class="ac-section-head">` +
+            `<span class="ac-section-title">🤖 ${escapeHtml(td('autoConsent.seatsTitle'))}</span>` +
+            `<span class="ac-count-label">${escapeHtml(td('autoConsent.agentsCount', { n: seatList.length }))}</span>` +
+          `</div>` +
+          `<div class="ac-scroll-wrap${seatList.length > 3 ? ' has-scroll-fade' : ''}">` +
+            `<div class="ac-policy-list ac-policy-list-scroll">${seatRowsHtml}</div>` +
+          `</div>` +
+        `</section>` +
+      `</div>` +
+
+      `<section class="ac-card">` +
+        `<div class="ac-section-title">⏱️ ${escapeHtml(td('autoConsent.sessionsTitle'))} (${activeGrants.length})</div>` +
+        `<div class="ac-policy-list">${grantsHtml}</div>` +
       `</section>` +
 
       `<section class="ac-card">` +
-        `<div class="ac-section-title">🛡️ ${escapeHtml(td('autoConsent.settingsTitle'))}</div>` +
-        `<div class="ac-setting-row">` +
-          `<label for="acGraceWindowSelect">${escapeHtml(td('autoConsent.graceWindowLabel'))}</label>` +
-          `<select id="acGraceWindowSelect" class="rig-select ac-compact-select"${disabledAttr}>` +
-            `${graceOptions.map((g) => `<option value="${g.ms}"${selectedGrace === g.ms ? ' selected' : ''}>${escapeHtml(g.label)}</option>`).join('')}` +
-          `</select>` +
-        `</div>` +
-        `<div class="ac-setting-row">` +
-          `${renderSwitch({ id: 'acPauseCtxCheck', checked: cfg.defaults.pauseOnCtxOverheat, label: td('autoConsent.ctxOverheatToggle') })}` +
-          `<label class="ac-threshold-wrap">` +
-            `<span>${escapeHtml(td('autoConsent.ctxThresholdLabel'))}</span>` +
-            `<input id="acCtxThresholdInput" type="number" min="${AUTO_CONSENT_LIMITS.MIN_CTX_THRESHOLD_PCT}" max="${AUTO_CONSENT_LIMITS.MAX_CTX_THRESHOLD_PCT}" value="${escapeHtml(cfg.defaults.ctxPauseThresholdPct)}" class="ctrl-input ac-num-input"${disabledAttr} />` +
-          `</label>` +
-        `</div>` +
-        `<div class="ac-setting-row">` +
-          `${renderSwitch({ id: 'acAllowPkgCheck', checked: cfg.defaults.allowPackageInstall, label: td('autoConsent.allowPkgInstallLabel') })}` +
-          `<span class="ac-default-off-chip">${escapeHtml(td('autoConsent.defaultOffHint'))}</span>` +
-        `</div>` +
-        `<div class="ac-setting-row">` +
-          `${renderSwitch({ id: 'acAllowNetCheck', checked: cfg.defaults.allowReadOnlyNetwork, label: td('autoConsent.allowReadOnlyNetLabel') })}` +
-          `<span class="ac-default-off-chip">${escapeHtml(td('autoConsent.defaultOffHint'))}</span>` +
-        `</div>` +
+        `<div class="ac-section-title">📜 ${escapeHtml(td('autoConsent.recentRunsTitle'))}</div>` +
+        `<div class="ac-runs-list">${runsHtml}</div>` +
       `</section>` +
     `</div>` +
-
-    `<div class="ac-cmd-summary" role="region" aria-label="${escapeHtml(td('autoConsent.cmdStripLabel'))}">` +
-      `<div class="ac-cmd-col is-safe">` +
-        `<span class="ac-cmd-col-title">🟢 ${escapeHtml(td('autoConsent.cmdStripSafeTitle'))}</span>` +
-        `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripSafeBody'))}</span>` +
-      `</div>` +
-      `<div class="ac-cmd-col is-dev">` +
-        `<span class="ac-cmd-col-title">⚡ ${escapeHtml(td('autoConsent.cmdStripDevTitle'))}</span>` +
-        `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
-      `</div>` +
-      `<div class="ac-cmd-col is-veto">` +
-        `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}</span>` +
-        `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
-      `</div>` +
-    `</div>` +
-
-    `${statusMessage ? `<div class="ac-status-banner" role="status">${escapeHtml(statusMessage)}</div>` : ''}` +
-
-    `<div class="ac-scopes-grid">` +
-      `<section class="ac-card">` +
-        `<div class="ac-section-title">🏛️ ${escapeHtml(td('autoConsent.projectsTitle'))}</div>` +
-        `<div class="ac-policy-list">${projectRowsHtml}</div>` +
-      `</section>` +
-      `<section class="ac-card">` +
-        `<div class="ac-section-title">🤖 ${escapeHtml(td('autoConsent.seatsTitle'))}</div>` +
-        `<div class="ac-policy-list ac-policy-list-scroll">${seatRowsHtml}</div>` +
-      `</section>` +
-    `</div>` +
-
-    `<section class="ac-card">` +
-      `<div class="ac-section-title">⏱️ ${escapeHtml(td('autoConsent.sessionsTitle'))} (${activeGrants.length})</div>` +
-      `<div class="ac-policy-list">${grantsHtml}</div>` +
-    `</section>` +
-
-    `<section class="ac-card">` +
-      `<div class="ac-section-title">📜 ${escapeHtml(td('autoConsent.recentRunsTitle'))}</div>` +
-      `<div class="ac-runs-list">${runsHtml}</div>` +
-    `</section>` +
 
     `<footer class="ac-modal-footer">` +
       `<div class="ac-footer-emergency">` +

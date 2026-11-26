@@ -6952,3 +6952,663 @@ body.demo-preset-universal .hud-cluster-scope {
   }
 }
 
+/* ==========================================================================
+   v3.11.0 DARK COCKPIT CALM, HITL FAT-FINGER SAFETY, SINGLE-ROW 54px CHROME
+   & AUTO-CONSENT MODAL DE-NOISING
+   ========================================================================== */
+
+/* 1. Strict Dark Cockpit Color Discipline: RED = strictly P0 HITL only */
+#panelRight {
+  border-color: rgba(56, 189, 248, 0.16) !important;
+}
+.inspector-box {
+  border: 1px solid rgba(56, 189, 248, 0.24) !important;
+}
+.agent-node[data-thermal-tier="crit"]:not(.state-urgent),
+.agent-node.state-idle[data-thermal-tier="crit"] {
+  border-width: 1.5px;
+  border-color: rgba(245, 158, 11, 0.76) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.62), 0 0 12px rgba(245, 158, 11, 0.24) !important;
+}
+.node-ctx-val.pill-crit,
+.insp-ctx-pill.is-crit,
+.finops-pill-btn.is-crit {
+  background: rgba(120, 53, 15, 0.34) !important;
+  border: 1px solid rgba(245, 158, 11, 0.64) !important;
+  color: #fde68a !important;
+}
+.node-meta-git-conflict {
+  color: #fde68a !important;
+  background: rgba(245, 158, 11, 0.18) !important;
+  border: 1px solid rgba(245, 158, 11, 0.56) !important;
+}
+.git-worktree-card.has-conflict {
+  border-color: rgba(245, 158, 11, 0.52) !important;
+  background: rgba(120, 53, 15, 0.16) !important;
+}
+.git-conflict-banner {
+  color: #fde68a !important;
+  background: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+}
+.git-file-pill.is-conflict {
+  color: #fde68a !important;
+  background: rgba(120, 53, 15, 0.28) !important;
+  border-color: rgba(245, 158, 11, 0.56) !important;
+}
+/* Give urgent node LED badge clean breathing room so it never overlaps node name/ctx% */
+body.demo-mode .agent-node.state-urgent,
+.agent-node.state-urgent {
+  padding-top: 36px !important;
+}
+body.demo-mode .agent-node.state-urgent .status-led,
+.agent-node.state-urgent .status-led {
+  top: 4px !important;
+  bottom: auto !important;
+  right: 5px !important;
+}
+
+/* 2. HITL Fat-Finger Safety & Blast-Radius Clarity */
+.hitl-target-scope {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.35;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 5px;
+  padding: 4px 8px;
+  overflow-wrap: anywhere;
+}
+.hitl-target-scope b {
+  color: #e2e8f0;
+}
+.diag-inline-hitl .hitl-options-kicker {
+  display: none;
+}
+.diag-inline-hitl .ctrl-prompt-options {
+  gap: 0 !important;
+}
+.diag-inline-hitl .hitl-target-scope {
+  margin-bottom: 6px;
+}
+.diag-inline-hitl .hitl-command-preview {
+  margin-bottom: 10px;
+}
+.diag-inline-hitl .hitl-btn-primary {
+  min-height: 48px !important;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 10px 11px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  border-radius: 8px !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.82) !important;
+  background: rgba(16, 185, 129, 0.22) !important;
+  color: #ecfdf5 !important;
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.18);
+}
+.diag-inline-hitl .hitl-btn-primary:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.34) !important;
+  border-color: #34d399 !important;
+  color: #ffffff !important;
+}
+.hitl-secondary-row {
+  margin-top: 16px !important;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.hitl-secondary-row.is-single {
+  grid-template-columns: 1fr;
+}
+.diag-inline-hitl .hitl-btn-secondary {
+  min-height: 42px !important;
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  padding: 8px 10px !important;
+  font-size: 11px !important;
+  border-radius: 7px !important;
+}
+.key-pill.is-confirm-armed {
+  border: 1.5px solid #f59e0b !important;
+  background: rgba(245, 158, 11, 0.24) !important;
+  color: #fef3c7 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.32);
+}
+
+/* Clear Interactive Affordance for TMUX 80-line & AI Risk Check Disclosures */
+.diag-tmux-secondary-link,
+.diag-ai-summary {
+  width: 100%;
+  min-height: 36px !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  background: rgba(15, 23, 42, 0.78) !important;
+  border: 1px solid rgba(56, 189, 248, 0.26) !important;
+  color: #cbd5e1 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.diag-ai-summary {
+  list-style: none;
+}
+.diag-ai-summary::-webkit-details-marker {
+  display: none;
+}
+.diag-tmux-secondary-link::after,
+.diag-ai-summary::after {
+  content: '›';
+  margin-left: auto;
+  font-size: 16px;
+  line-height: 1;
+  color: #7dd3fc;
+  opacity: 0.85;
+  transition: transform 0.15s ease;
+}
+.diag-ai-details[open] > .diag-ai-summary::after {
+  transform: rotate(90deg);
+}
+.diag-tmux-secondary-link:hover,
+.diag-ai-summary:hover {
+  border-color: rgba(56, 189, 248, 0.56) !important;
+  background: rgba(30, 41, 59, 0.92) !important;
+  color: #f8fafc !important;
+}
+.diag-ai-details {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 4px !important;
+}
+
+/* Collapsible Manual Operator Command Disclosure */
+.manual-cmd-disclosure {
+  width: 100%;
+  margin-top: 4px;
+}
+.manual-cmd-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.68);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  user-select: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.manual-cmd-summary::-webkit-details-marker {
+  display: none;
+}
+.manual-cmd-summary::after {
+  content: '›';
+  font-size: 15px;
+  line-height: 1;
+  color: #64748b;
+  transition: transform 0.15s ease;
+}
+.manual-cmd-summary:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.85);
+}
+.manual-cmd-disclosure[open] > .manual-cmd-summary::after {
+  transform: rotate(90deg);
+}
+.manual-cmd-disclosure:not([open]) > .ctrl-input-form {
+  display: none !important;
+}
+.manual-cmd-disclosure[open] > .ctrl-input-form {
+  margin-top: 6px;
+}
+.tmux-raw-disclosure {
+  width: 100%;
+  margin-top: 4px;
+}
+.tmux-raw-disclosure:not([open]) > div {
+  display: none !important;
+}
+.tmux-raw-disclosure[open] > .manual-cmd-summary::after {
+  transform: rotate(90deg);
+}
+.tmux-raw-disclosure .manual-cmd-disclosure > .manual-cmd-summary {
+  display: none;
+}
+
+/* Left Wait Radar Selected Pill & Inline Secondary Chips */
+.radar-selected-pill {
+  margin-top: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  min-height: 28px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+}
+.wait-secondary-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.52);
+  white-space: nowrap;
+}
+
+/* 3. Zero Tiny Targets Across Deck, OpenRig Swimlanes & Modals */
+.swimlanes-toggle-btn {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 13px !important;
+}
+.tmux-hdr-btn {
+  min-height: 28px !important;
+  min-width: 32px !important;
+  padding: 3px 8px !important;
+  font-size: 10px !important;
+  white-space: nowrap;
+}
+.agent-node .status-led.led-urgent {
+  min-height: 28px !important;
+  min-width: 32px !important;
+  padding: 2px 8px !important;
+}
+.ac-insp-gear {
+  min-width: 32px !important;
+  min-height: 28px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ac-eff-chip-btn {
+  min-height: 28px !important;
+  min-width: 32px !important;
+  padding: 3px 9px !important;
+  display: inline-flex;
+  align-items: center;
+}
+#nodeInspector details > summary {
+  min-height: 32px !important;
+  padding: 4px 2px;
+}
+#inspectorBoxCard .terminal-screen {
+  min-height: 112px;
+}
+#panelCenter .hud-segment-btn {
+  min-height: 28px !important;
+  min-width: 32px !important;
+  padding: 3px 8px !important;
+}
+.eval-mini-btn,
+.git-file-pill,
+.radar-tab {
+  min-height: 28px !important;
+  min-width: 32px !important;
+}
+
+/* 4. Single-Row 54px Unified Top Bar (Desktop & Laptop > 768px) */
+.hud-header,
+body.demo-mode .hud-header {
+  display: none !important;
+}
+.finops-desktop-txt { display: inline; }
+.finops-mobile-txt { display: none; }
+.mobile-lang-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.mobile-lang-btn {
+  justify-content: center;
+  min-height: 34px !important;
+  font-weight: 800;
+}
+
+@media (min-width: 769px) {
+  .triage-strip.unified-topbar,
+  body.demo-mode .triage-strip.unified-topbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    padding: 0 12px !important;
+    height: 54px !important;
+    min-height: 54px !important;
+    max-height: 54px !important;
+    overflow: visible !important;
+    background: linear-gradient(180deg, rgba(10, 17, 34, 0.97), rgba(6, 11, 23, 0.96)) !important;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.28) !important;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .topbar-brand-desktop {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  .topbar-brand-desktop .brand-orb {
+    width: 24px;
+    height: 24px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .topbar-brand-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.9px;
+    color: #f8fafc;
+  }
+  .topbar-brand-desktop .live-dot {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    min-height: 22px;
+    letter-spacing: 0.5px;
+  }
+  .topbar-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+  .demo-preset-switch .hud-segment-btn {
+    min-height: 28px !important;
+    min-width: 32px !important;
+    padding: 3px 9px !important;
+    font-size: 10.5px !important;
+  }
+  #triageBadge,
+  #btnFinopsPill,
+  #btnAutoConsentTop,
+  .triage-tools > summary {
+    min-height: 30px !important;
+    min-width: 32px !important;
+  }
+  .deck-lang-btn {
+    min-height: 28px !important;
+    min-width: 32px !important;
+    padding: 2px 7px !important;
+  }
+  .triage-tools > .triage-tools-body {
+    right: 0 !important;
+    left: auto !important;
+    min-width: 230px;
+  }
+  .triage-tools > .triage-tools-body .rig-select,
+  .triage-tools > .triage-tools-body .cyber-btn,
+  .triage-tools > .triage-tools-body .triage-refresh-btn {
+    width: 100%;
+    justify-content: flex-start;
+    min-height: 32px;
+    margin-left: 0;
+  }
+  .kbd-help-popover {
+    position: fixed;
+    top: 58px;
+    right: 14px;
+    z-index: 9700;
+  }
+}
+
+@media (max-width: 1360px) and (min-width: 769px) {
+  .triage-strip.unified-topbar,
+  body.demo-mode .triage-strip.unified-topbar {
+    gap: 6px !important;
+    padding: 0 10px !important;
+  }
+  .topbar-brand-name {
+    font-size: 12px;
+    letter-spacing: 0.6px;
+  }
+  .demo-preset-switch .hud-segment-btn {
+    padding: 3px 7px !important;
+    font-size: 10px !important;
+  }
+  #triageBadge,
+  #btnFinopsPill,
+  #btnAutoConsentTop {
+    font-size: 10px !important;
+    padding: 3px 7px !important;
+  }
+}
+
+/* Mobile <= 768px: Single 50px bar (Brand + P0/P1 + $5.42 + Tools w/ EN|RU inside) */
+@media (max-width: 768px) {
+  .topbar-brand-desktop,
+  .triage-right-cluster {
+    display: none !important;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .topbar-center {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .topbar-right {
+    flex: 0 0 auto !important;
+    margin-left: auto;
+  }
+  #finopsPillWrap {
+    display: inline-flex !important;
+    flex-shrink: 0;
+  }
+  .finops-desktop-txt {
+    display: none !important;
+  }
+  .finops-mobile-txt {
+    display: inline !important;
+  }
+  #btnFinopsPill {
+    padding: 4px 7px !important;
+    min-height: 30px !important;
+    min-width: 44px !important;
+    font-size: 10.5px !important;
+  }
+  .triage-tools summary {
+    min-height: 30px !important;
+    min-width: 32px !important;
+  }
+  .main-layout > .panel,
+  body.demo-mode .main-layout > .panel {
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .diag-inline-hitl .hitl-btn-primary {
+    min-height: 52px !important;
+    font-size: 13px !important;
+  }
+  .diag-inline-hitl .hitl-btn-secondary {
+    min-height: 44px !important;
+    font-size: 11.5px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .insp-copy-attach-btn {
+    display: none !important;
+  }
+}
+
+/* 5. Auto-Consent Modal De-Noising, Balanced Grid, Sticky Footer & Zero Tiny Targets */
+.guardrails-modal-header {
+  flex-direction: column;
+  align-items: stretch !important;
+  gap: 10px;
+  padding: 12px 18px !important;
+}
+.guardrails-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.guardrails-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.guardrails-close-btn {
+  min-height: 32px !important;
+  min-width: 32px !important;
+  padding: 5px 12px !important;
+  flex-shrink: 0;
+}
+.guardrails-tabs-bar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 7px;
+  padding: 3px;
+  gap: 3px;
+  align-self: flex-start;
+}
+.guardrails-tabs-bar .hud-segment-btn {
+  min-height: 30px !important;
+  min-width: 36px !important;
+  padding: 4px 11px !important;
+  font-size: 11px !important;
+}
+#guardrailsModal button,
+#guardrailsModal input:not([type="checkbox"]),
+#guardrailsModal select {
+  min-height: 28px;
+  min-width: 32px;
+}
+#acCtxThresholdInput,
+.ac-num-input {
+  height: 32px !important;
+  min-height: 32px !important;
+  min-width: 72px !important;
+  width: 76px !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+.ac-top-grid,
+.ac-scopes-grid {
+  align-items: start !important;
+}
+.ac-default-off-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #64748b;
+  background: none;
+  border: none;
+  padding: 0;
+  white-space: nowrap;
+}
+.ac-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ac-count-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.ac-scroll-wrap {
+  position: relative;
+}
+.ac-scroll-wrap.has-scroll-fade::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 8px;
+  bottom: 0;
+  height: 22px;
+  background: linear-gradient(transparent, rgba(15, 23, 42, 0.94));
+  pointer-events: none;
+  border-radius: 0 0 6px 6px;
+}
+#guardrailsModal .modal-fleet-body:has(.ac-tab-wrap) {
+  overflow: hidden !important;
+  padding-bottom: 12px !important;
+}
+.ac-tab-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  gap: 10px;
+}
+.ac-tab-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding-right: 4px;
+}
+.ac-modal-footer {
+  flex-shrink: 0;
+  padding-top: 10px;
+  margin-top: 0;
+  background: rgba(4, 10, 24, 0.98);
+}
+
+

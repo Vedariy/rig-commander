@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { tDeck } from '../openrig/assets/domain/i18n.js';
 import {
-  renderActionAuditHtml, renderContextBadgesHtml, renderContextLineageHtml, renderCurrentTaskHtml, renderHarnessQuickKeys,
+  dedupeRadarItemsByAgent, renderActionAuditHtml, renderContextBadgesHtml, renderContextLineageHtml, renderCurrentTaskHtml, renderHarnessQuickKeys,
   renderInteractivePromptOptionsHtml, renderSeatDiagnosisHtml, renderSeatGitWorktreeHtml
 } from '../openrig/assets/ui/inspector-view.js';
 
@@ -396,4 +396,111 @@ test('v3.9.0 index.html enforces #autoConsentInspectorRoot below #nodeInspector,
   assert.equal(vm.runInContext('demoQuestOpen', sandbox), false);
   vm.runInContext("initDemoQuest('quest')", sandbox);
   assert.equal(vm.runInContext('demoQuestOpen', sandbox), true);
+});
+
+test('v3.11.0 HITL fat-finger safety: destination+scope line, sole full-width primary CTA, 2-col [Cancel | Always] & 2-step confirmation guard on Option 2', async () => {
+  const fs = await import('node:fs/promises');
+  const vm = await import('node:vm');
+  const indexHtml = await fs.readFile(new URL('../openrig/index.html', import.meta.url), 'utf8');
+
+  for (const lang of ['en', 'ru']) {
+    const ctx = context(lang);
+    ctx.agents = [{ id: 'codex-tests', shortName: 'codex-tests', cwd: '~/projects/payments-api', state: 'urgent', harness: 'codex' }];
+    const screen = lang === 'en'
+      ? '[tmux: codex-tests] ~/projects/payments-api\nPERMISSION PROMPT (HITL):\n● Bash(npm test)\nRun this command?\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this directory\n  3. No, cancel and tell agent (esc)'
+      : '[tmux: codex-tests] ~/projects/payments-api\nЗАПРОС РАЗРЕШЕНИЯ (HITL):\n● Bash(npm test)\nВыполнить эту команду?\n› 1. Да, разрешить один раз (y)\n  2. Да, всегда разрешать в этом каталоге\n  3. Нет, отменить и сообщить агенту (esc)';
+    const html = renderInteractivePromptOptionsHtml(ctx, 'codex-tests', screen);
+
+    // 1. Target + scope line above command preview
+    assert.match(html, /class="hitl-target-scope"/);
+    assert.ok(html.includes('codex-tests'));
+    assert.ok(html.includes('~/projects/payments-api'));
+    assert.ok(html.includes(ctx.td('insp.hitlScopeSingle')));
+    assert.ok(html.indexOf('hitl-target-scope') < html.indexOf('hitl-command-preview'));
+
+    // 2. Primary full-width CTA precedes 2-column secondary row with Cancel LEFT and Always RIGHT
+    assert.match(html, /class="action-pill key-pill key-proceed hitl-btn-primary"/);
+    assert.match(html, /class="hitl-secondary-row"/);
+    const cancelIdx = html.indexOf('key-cancel hitl-btn-secondary');
+    const alwaysIdx = html.indexOf('key-neutral hitl-btn-secondary');
+    assert.ok(cancelIdx > 0 && alwaysIdx > cancelIdx, `${lang}: Cancel must sit left of Always in 2-col secondary row`);
+    assert.match(html, /data-key="2 Enter"[^>]*data-confirm-always="true"/);
+  }
+
+  // 3. Test 2-step confirmation guard in VM: 1st click arms for 4s (0 dispatches), 2nd click dispatches Option 2
+  const script = indexHtml.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const sent = [];
+  const timers = [];
+  const sandbox = {
+    console,
+    location: { pathname: '/demo', search: '', protocol: 'http:', port: '7440', hostname: '127.0.0.1' },
+    navigator: { language: 'en' },
+    localStorage: { getItem: () => null, setItem() {} },
+    sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    document: { addEventListener() {}, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], body: { classList: { toggle() {}, contains: () => false } } },
+    addEventListener() {},
+    requestAnimationFrame() {},
+    setTimeout: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+    clearTimeout() {},
+    CONTEXT_WARN_PCT: 65,
+    CONTEXT_CRIT_PCT: 75,
+    tDeck
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(script, sandbox);
+  sandbox.sendTerminalKey = (seatId, key) => sent.push({ seatId, key });
+
+  const attrs = new Map([
+    ['data-seat', 'codex-tests'],
+    ['data-key', '2 Enter'],
+    ['data-status', 'cmdSendStatus'],
+    ['data-confirm-always', 'true'],
+    ['data-confirm-label', '⚠️ Confirm Always?']
+  ]);
+  const cls = new Set();
+  const alwaysBtn = {
+    disabled: false,
+    innerHTML: '🔹 Always in repo...',
+    textContent: '🔹 Always in repo...',
+    classList: { add: c => cls.add(c), remove: c => cls.delete(c), contains: c => cls.has(c) },
+    getAttribute: k => attrs.get(k) ?? null,
+    setAttribute: (k, v) => attrs.set(k, String(v)),
+    removeAttribute: k => attrs.delete(k)
+  };
+  sandbox.__btn = alwaysBtn;
+  vm.runInContext('triggerPromptOption(__btn)', sandbox);
+  assert.equal(sent.length, 0, 'First click on Always must NOT dispatch Option 2');
+  assert.equal(attrs.get('data-confirm-armed'), 'true');
+  assert.equal(cls.has('is-confirm-armed'), true);
+  assert.equal(alwaysBtn.textContent, '⚠️ Confirm Always?');
+  assert.equal(timers.at(-1).ms, 4000);
+
+  // Second click while armed dispatches Option 2 and disarms
+  vm.runInContext('triggerPromptOption(__btn)', sandbox);
+  assert.deepEqual(sent, [{ seatId: 'codex-tests', key: '2 Enter' }]);
+  assert.equal(attrs.get('data-confirm-armed'), undefined);
+  assert.equal(cls.has('is-confirm-armed'), false);
+});
+
+test('v3.11.0 Wait Radar deduplication merges multiple alerts per agent into ONE card with inline CTX chip & single-row topbar structure', async () => {
+  const fs = await import('node:fs/promises');
+  const indexHtml = await fs.readFile(new URL('../openrig/index.html', import.meta.url), 'utf8');
+
+  // 1. dedupeRadarItemsByAgent merges P0 + P1 CTX for same agent into 1 card with inline chip
+  const merged = dedupeRadarItemsByAgent([
+    { prio: 0, seatId: 'dev-check@core-platform', slice: 'terminal gate', state: 'P0 • NEEDS HUMAN', category: 'blocker' },
+    { prio: 0.8, seatId: 'dev-check@core-platform', slice: 'CTX 79%', state: '75% THRESHOLD PASSED', category: 'blocker' },
+    { prio: 1.1, seatId: 'dev-coder3@core-platform', slice: 'parked', state: 'PARKED', category: 'blocker' },
+    { prio: 3, seatId: 'dev-coder3@core-platform', slice: 'active', state: 'WORKING', category: 'task' }
+  ]);
+  assert.equal(merged.length, 2, 'Each agent must appear at most once in Wait Radar');
+  assert.equal(merged[0].seatId, 'dev-check@core-platform');
+  assert.deepEqual(merged[0].secondaryChips, [{ label: '⚠️ CTX 79%', tone: 'amber' }]);
+  assert.equal(merged[1].seatId, 'dev-coder3@core-platform');
+
+  // 2. Single-row unified topbar + default Universal preset active + unified Guardrails dialog title
+  assert.match(indexHtml, /class="triage-strip unified-topbar"/);
+  assert.match(indexHtml, /id="btnPresetUniversal"[^>]*active|class="hud-segment-btn active" id="btnPresetUniversal"/);
+  assert.match(indexHtml, /data-i18n="guard\.dialogTitle"/);
 });

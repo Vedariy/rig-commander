@@ -81,7 +81,8 @@ test('Injected X-Ray placement stays within desktop/mobile canvas bounds at ever
 for (const lang of ['en', 'ru']) {
   test(`Node thermal/meta/status/card renderers preserve heat, queue/git metrics, measured ETA and LED hooks (${lang})`, () => {
     const d = deps(lang), agent = agents[0], hot = getContextThermal(80, 200000), warm = getContextThermal(68, 200000);
-    includes(getNodeThermalFillGrad(80), '255, 0, 85');
+    includes(getNodeThermalFillGrad(80), '245, 158, 11');
+    assert.ok(!getNodeThermalFillGrad(80).includes('255, 0, 85'), 'P1 CTX overheat fill must use calm amber, not crimson');
     assert.equal(getNodeThermalFillGrad(NaN), 'transparent');
     assert.equal(getNodeCtxValText({ ctxPct: 121 }, hot), '100%!');
     assert.equal(getNodeCtxValText({ ctxPct: null }, hot), '');
