@@ -503,6 +503,16 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
     </div>
   ` : '';
 
+  const inlineHitlScreen = agent.state === 'urgent'
+    ? ((ctx.lastScreenBySeat && ctx.lastScreenBySeat[agent.id]) || (agent.id === ctx.selectedAgentId ? ctx.liveScreenCapture : '') || '')
+    : '';
+  const inlineHitlHtml = inlineHitlScreen
+    ? renderInteractivePromptOptionsHtml(ctx, agent.id, inlineHitlScreen, 'cmdSendStatus')
+    : '';
+  const inlineHitlBlockHtml = inlineHitlHtml
+    ? `<div class="diag-inline-hitl" id="inspDiagInlineHitl">${inlineHitlHtml}</div>`
+    : '';
+
   return `
     <div class="seat-diagnosis-card ${sevClass} ${isSpotlight ? 'is-spotlight' : ''}" id="seatDiagnosisCard">
       <div class="diag-kicker">
@@ -511,8 +521,9 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
       </div>
       <div class="diag-title">${escapeHtml(primary.title || '')}</div>
       ${primary.summary ? `<div class="diag-summary">${escapeHtml(primary.summary)}</div>` : ''}
+      ${inlineHitlBlockHtml}
       ${queueBoxHtml}
-      ${remediationText ? `<div class="diag-remediation"><b style="color:var(--cyan);">${escapeHtml(td('diag.whatToDo'))}</b> ${escapeHtml(remediationText)}</div>` : ''}
+      ${remediationText && !inlineHitlHtml ? `<div class="diag-remediation"><b style="color:var(--cyan);">${escapeHtml(td('diag.whatToDo'))}</b> ${escapeHtml(remediationText)}</div>` : ''}
       ${actionBtns.length > 0 ? `<div class="diag-actions">${actionBtns.join('')}</div>` : ''}
       ${evalVerdictHtml}
       ${extrasHtml}
@@ -600,8 +611,10 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
 
     const elAct = document.getElementById('inspValActivity');
     if (elAct) {
-      elAct.style.color = agent.state === 'working' ? '#00ff9d' : agent.state === 'urgent' ? '#ff0055' : '#7dd3fc';
-      elAct.innerHTML = `${renderStateIndicatorHtml(agent)} <span style="font-size:10.5px; color:#94a3b8; font-weight:500;">(${lastActStr})</span>`;
+      const isUrg = agent.state === 'urgent';
+      elAct.className = isUrg ? 'insp-act-pill is-urgent' : 'insp-act-pill';
+      elAct.style.color = isUrg ? '#fecdd3' : (agent.state === 'working' ? '#6ee7b7' : '#7dd3fc');
+      elAct.innerHTML = `${renderStateIndicatorHtml(agent)} <span style="font-size:10.5px; color:${isUrg ? '#ffe4e6' : '#94a3b8'}; font-weight:500;">(${lastActStr})</span>`;
     }
 
     const elHarness = document.getElementById('inspValHarness');
@@ -613,7 +626,9 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
 
     const elCtx = document.getElementById('inspValContext');
     if (elCtx) {
-      elCtx.style.color = thermal.color;
+      const isCritCtx = thermal.tier === 'crit';
+      elCtx.className = isCritCtx ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill';
+      elCtx.style.color = isCritCtx ? '#fecdd3' : thermal.color;
       elCtx.title = exactTokensLine;
       elCtx.textContent = `${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}`;
     }
@@ -728,16 +743,16 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
         <!-- SA Level 1: Unified Status & Context Pulse Strip -->
         <div style="background:rgba(15,23,42,0.62); border:1px solid rgba(56,189,248,0.18); border-radius:6px; padding:7px 9px; display:flex; flex-direction:column; gap:6px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
-            <div id="inspValActivity" style="display:flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:${agent.state === 'working' ? '#00ff9d' : agent.state === 'urgent' ? '#ff0055' : '#7dd3fc'};">
-              ${renderStateIndicatorHtml(agent)} <span style="font-size:10.5px; color:#94a3b8; font-weight:500;">(${lastActStr})</span>
+            <div id="inspValActivity" class="${agent.state === 'urgent' ? 'insp-act-pill is-urgent' : 'insp-act-pill'}" style="display:flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:${agent.state === 'urgent' ? '#fecdd3' : agent.state === 'working' ? '#6ee7b7' : '#7dd3fc'};">
+              ${renderStateIndicatorHtml(agent)} <span style="font-size:10.5px; color:${agent.state === 'urgent' ? '#ffe4e6' : '#94a3b8'}; font-weight:500;">(${lastActStr})</span>
             </div>
-            <span id="inspValHarness" style="font-family:var(--font-mono); font-size:10.5px; color:#e9d5ff; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px; max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(formatAgentHarnessLabel(ctx, agent))}">${escapeHtml(formatAgentHarnessLabel(ctx, agent))}</span>
+            <span id="inspValHarness" style="font-family:var(--font-mono); font-size:10.5px; color:#e9d5ff; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(formatAgentHarnessLabel(ctx, agent))}">${escapeHtml(formatAgentHarnessLabel(ctx, agent))}</span>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <div style="flex:1 1 56px; min-width:44px; height:5px; background:rgba(148,163,184,0.16); border-radius:999px; overflow:hidden;">
               <div id="inspCtxBarFill" style="width:${thermal.pct}%; height:100%; background:${thermal.color}; transition:width 0.3s ease;"></div>
             </div>
-            <span id="inspValContext" style="font-family:var(--font-mono); font-size:10px; font-weight:700; color:${thermal.color}; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
+            <span id="inspValContext" class="${thermal.tier === 'crit' ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill'}" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.tier === 'crit' ? '#fecdd3' : thermal.color}; max-width:100%; white-space:normal; line-height:1.35; overflow-wrap:anywhere;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
           </div>
         </div>
 

@@ -6,9 +6,9 @@ export function renderStateIndicatorHtml(agent, { escapeHtml, deckLang = 'en', t
     const suffix = (agent.activityLabel || '').includes('ELB-003')
       ? 'ELB-003'
       : agent.assignedWorkCount
-        ? `(${agent.assignedWorkCount})`
-        : 'ACTIVE';
-    return `<span class="heart-anim" title="${escapeHtml(td ? td('demo.harnessWorking') : 'Working')}"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span>${escapeHtml(suffix)}</span>`;
+        ? `${agent.assignedWorkCount}`
+        : 'WORK';
+    return `<span class="heart-anim work-status-dot" aria-hidden="true" title="${escapeHtml(td ? td('demo.harnessWorking') : 'Working')}">●</span><span>${escapeHtml(suffix)}</span>`;
   }
   if (agent.state === 'idle') {
     return `<span class="zzz-anim" title="${escapeHtml(td ? td('demo.harnessSleeping') : 'Sleeping (idle)')}"><span>Z</span><span>z</span><span>z...</span></span>`;
@@ -260,8 +260,8 @@ export function renderTopologyEdgesHtml({
       obstacles,
       parallelIndex,
       isGhost,
-      padStart: 2,
-      padEnd: 3
+      padStart: 6,
+      padEnd: 8
     });
 
     const segClass = isLive ? 'is-live' : (isQueuedStatic ? `is-${statusKey}` : 'is-ghost');
@@ -468,25 +468,31 @@ export function renderTopology(deps) {
 
   const measuredBoxes = {};
   const visibleById = new Map(visibleAgents.map(a => [a.id, a]));
-  nodesLayer.querySelectorAll('.agent-node').forEach(domEl => {
-    const aid = domEl.getAttribute('data-agent-id');
-    if (!aid || aid === hoveredAgentId || domEl.style.display === 'none') return;
-    const ag = visibleById.get(aid);
-    if (!ag) return;
-    const nameEl = domEl.querySelector('.node-name');
-    const expectedTitle = resolveCardTitle(ag);
-    // Ignore stale DOM measurements when rig filter or title just changed!
-    if (nameEl && nameEl.textContent !== expectedTitle) return;
-    if (domEl.offsetWidth > 30 && domEl.offsetHeight > 16) {
-      measuredBoxes[aid] = {
-        width: domEl.offsetWidth,
-        height: domEl.offsetHeight,
-        tier: domEl.getAttribute('data-activity-tier') || 'active',
-        detailed: isDetailed
-      };
-    }
-  });
+  const densityChanged = viewState.lastDetailed !== undefined && viewState.lastDetailed !== isDetailed;
+  viewState.lastDetailed = isDetailed;
+  if (!densityChanged) {
+    nodesLayer.querySelectorAll('.agent-node').forEach(domEl => {
+      const aid = domEl.getAttribute('data-agent-id');
+      if (!aid || aid === hoveredAgentId || domEl.style.display === 'none') return;
+      const ag = visibleById.get(aid);
+      if (!ag) return;
+      const nameEl = domEl.querySelector('.node-name');
+      const expectedTitle = resolveCardTitle(ag);
+      // Ignore stale DOM measurements when rig filter or title just changed!
+      if (nameEl && nameEl.textContent !== expectedTitle) return;
+      if (domEl.offsetWidth > 30 && domEl.offsetHeight > 16) {
+        measuredBoxes[aid] = {
+          width: domEl.offsetWidth,
+          height: domEl.offsetHeight,
+          tier: domEl.getAttribute('data-activity-tier') || 'active',
+          detailed: isDetailed
+        };
+      }
+    });
+  }
 
+  const baseCw = cw;
+  const baseCh = ch;
   const bottomReservePx = 0;
   const layoutResult = (typeof computeTopologyLayout === 'function')
     ? computeTopologyLayout({
@@ -516,12 +522,16 @@ export function renderTopology(deps) {
   const svgEl = doc.getElementById('topologySvg');
   cw = layoutResult.canvasWidth || cw;
   ch = layoutResult.canvasHeight || ch;
-  if (wrapEl) wrapEl.classList.toggle('has-rig-clusters', clustered);
-  nodesLayer.style.width = clustered ? `${cw}px` : '';
-  nodesLayer.style.height = clustered ? `${ch}px` : '';
+  const needsCanvasScroll = clustered || cw > baseCw + 1 || ch > baseCh + 1;
+  if (wrapEl) {
+    wrapEl.classList.toggle('has-rig-clusters', clustered);
+    wrapEl.classList.toggle('has-canvas-scroll', needsCanvasScroll);
+  }
+  nodesLayer.style.width = needsCanvasScroll ? `${cw}px` : '';
+  nodesLayer.style.height = needsCanvasScroll ? `${ch}px` : '';
   if (svgEl) {
-    svgEl.style.width = clustered ? `${cw}px` : '';
-    svgEl.style.height = clustered ? `${ch}px` : '';
+    svgEl.style.width = needsCanvasScroll ? `${cw}px` : '';
+    svgEl.style.height = needsCanvasScroll ? `${ch}px` : '';
     let zones = doc.getElementById('rigClusterZones');
     if (!zones && clustered) {
       zones = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -538,10 +548,14 @@ export function renderTopology(deps) {
   const benchLbl = doc.getElementById('dormantBenchLabel');
   if (benchDiv) {
     if (layoutResult.benchSeparatorY != null && layoutResult.dormantCount > 0) {
-      benchDiv.style.top = `${layoutResult.benchSeparatorY}%`;
+      benchDiv.style.top = needsCanvasScroll
+        ? `${Math.round((layoutResult.benchSeparatorY / 100) * ch)}px`
+        : `${layoutResult.benchSeparatorY}%`;
+      benchDiv.style.width = needsCanvasScroll ? `${cw}px` : '';
       if (benchLbl) benchLbl.textContent = `${td('graph.dormantBench')} · ${layoutResult.dormantCount}`;
       benchDiv.classList.add('visible');
     } else {
+      benchDiv.style.width = '';
       benchDiv.classList.remove('visible');
     }
   }
@@ -709,15 +723,17 @@ export function renderTopology(deps) {
   if (svgEl) svgEl.setAttribute('viewBox', `0 0 ${cw} ${ch}`);
 
   // Measure DOM node boxes ONCE before drawing / animating to prevent Forced Synchronous Layout inside rAF!
+  // Include outer glow/selection halo buffer so edge splines anchor cleanly outside borders & metric text.
   const cachedDomById = new Map();
   const cachedBoxSizes = {};
   nodesLayer.querySelectorAll('.agent-node').forEach(domEl => {
     const aid = domEl.getAttribute('data-agent-id');
     if (!aid) return;
     cachedDomById.set(aid, domEl);
+    const haloPad = domEl.classList.contains('selected') ? 7 : 2;
     cachedBoxSizes[aid] = {
-      hw: domEl.offsetWidth ? domEl.offsetWidth / 2 : 80,
-      hh: domEl.offsetHeight ? domEl.offsetHeight / 2 : 18
+      hw: (domEl.offsetWidth ? domEl.offsetWidth / 2 : 80) + haloPad,
+      hh: (domEl.offsetHeight ? domEl.offsetHeight / 2 : 18) + haloPad
     };
   });
 

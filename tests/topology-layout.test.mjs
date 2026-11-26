@@ -710,3 +710,111 @@ test('quiet minimization requires an explicit dormant tier and preserves current
   const expanded = new Set(['quiet', 'busy']);
   assert.deepEqual([...classify(dormant, [], { expandedQuietRigs: expanded }).collapsibleRigIds], ['quiet']);
 });
+
+test('v3.9.0 detailed (non-compact) 10-seat pod has cardH >= 152px, rowGap >= 34px, and zero vertical overlap in multi-rig & single-rig clusters', () => {
+  const sampleBox = estimateNodeBox(makeAgent('dev-owner@streamdonation-pwa', { state: 'working', ctxPct: 55 }), 'active', { detailed: true });
+  assert.ok(sampleBox.height >= 152, `Detailed cardH must be >= 152px, got ${sampleBox.height}px`);
+
+  const sdSeats = [
+    makeAgent('dev-owner@streamdonation-pwa', { state: 'working', ctxPct: 62, callsIn: 140, callsOut: 120 }),
+    makeAgent('dev-operator@streamdonation-pwa', { state: 'idle', ctxPct: 35, callsIn: 90, callsOut: 60 }),
+    makeAgent('dev-senior-architector@streamdonation-pwa', { shortName: 'dev-senior-architect', displayTitle: 'dev-senior-architect', state: 'working', ctxPct: 48, callsIn: 45, callsOut: 38 }),
+    makeAgent('dev-coder@streamdonation-pwa', { state: 'working', ctxPct: 31, callsIn: 22, callsOut: 19 }),
+    makeAgent('dev-coder2@streamdonation-pwa', { state: 'idle', ctxPct: 18 }),
+    makeAgent('dev-coder3@streamdonation-pwa', { state: 'idle', ctxPct: 24 }),
+    makeAgent('dev-coder4@streamdonation-pwa', { state: 'working', ctxPct: 66, callsIn: 55, callsOut: 40 }),
+    makeAgent('dev-coder5@streamdonation-pwa', { state: 'idle', ctxPct: 12 }),
+    makeAgent('dev-check-argon@streamdonation-pwa', { state: 'working', ctxPct: 51, callsIn: 30, callsOut: 18 }),
+    makeAgent('dev-check@streamdonation-pwa', { state: 'urgent', ctxPct: 79, callsIn: 57, callsOut: 46 })
+  ];
+  const multiFleet = [
+    makeAgent('operator-agent@kernel', { state: 'working', ctxPct: 41 }),
+    makeAgent('dev-owner@rig-commander', { state: 'working', ctxPct: 52 }),
+    makeAgent('dev-coder@rig-commander', { state: 'working', ctxPct: 33 }),
+    ...sdSeats
+  ];
+  const edges = [
+    { from: 'dev-owner@streamdonation-pwa', to: 'dev-coder@streamdonation-pwa', queueStatus: 'live', liveActive: true, slice: 'slice-a' },
+    { from: 'dev-owner@streamdonation-pwa', to: 'dev-coder4@streamdonation-pwa', queueStatus: 'live', liveActive: true, slice: 'slice-b' },
+    { from: 'dev-coder4@streamdonation-pwa', to: 'dev-check@streamdonation-pwa', queueStatus: 'live', liveActive: true, slice: 'slice-b' },
+    { from: 'dev-owner@rig-commander', to: 'dev-coder@rig-commander', queueStatus: 'live', liveActive: true, slice: 'slice-c' }
+  ];
+
+  const assertDetailedVerticalClearance = (fleet, res) => {
+    const w = res.canvasWidth, h = res.canvasHeight;
+    assertNoRectOverlaps(fleet, res, w, h, true);
+    const rects = fleet.map(a => getBoxRect(a, res.positions[a.id], res.tiers[a.id], w, h, true));
+    for (let i = 0; i < rects.length; i++) {
+      for (let j = i + 1; j < rects.length; j++) {
+        const a = rects[i], b = rects[j];
+        const horizOverlap = a.left < b.right + 8 && a.right + 8 > b.left;
+        if (!horizOverlap) continue;
+        const vertGap = Math.max(b.top - a.bottom, a.top - b.bottom);
+        assert.ok(vertGap >= 34, `Detailed vertical rowGap between ${a.id} and ${b.id} must be >= 34px, got ${vertGap.toFixed(1)}px`);
+      }
+    }
+  };
+
+  for (const mode of ['dynamic', 'fixed']) {
+    for (const cw of [960, 1280]) {
+      const multiRes = computeTopologyLayout({ agents: multiFleet, edges, mode, canvasWidth: cw, canvasHeight: 540, detailed: true });
+      assert.equal(multiRes.rigClusters.length, 3);
+      assertDetailedVerticalClearance(multiFleet, multiRes);
+
+      const singleRes = computeTopologyLayout({ agents: sdSeats, edges: edges.slice(0, 3), mode, canvasWidth: cw, canvasHeight: 540, detailed: true });
+      assertDetailedVerticalClearance(sdSeats, singleRes);
+    }
+  }
+});
+
+test('v3.9.0 1280x720 /demo topology enforces >= 20px horizontal gap (dev-coder vs dev-check QA) and clean outer-edge spline clearance', () => {
+  const demoVisible = [
+    makeAgent('dev-owner@core-platform', { shortName: 'dev-owner', displayTitle: 'dev-owner', state: 'working', ctxPct: 48, ctxWindowSize: 475000, callsIn: 120, callsOut: 92 }),
+    makeAgent('dev-coder@core-platform', { shortName: 'dev-coder', displayTitle: 'dev-coder', state: 'working', ctxPct: 24, ctxWindowSize: 200000, callsIn: 25, callsOut: 14 }),
+    makeAgent('dev-coder4@core-platform', { shortName: 'dev-coder4', displayTitle: 'dev-coder4', state: 'working', ctxPct: 68, ctxWindowSize: 475000, callsIn: 56, callsOut: 27 }),
+    makeAgent('dev-check@core-platform', { shortName: 'dev-check (QA)', displayTitle: 'dev-check (QA)', state: 'urgent', ctxPct: 79, ctxWindowSize: 258400, callsIn: 57, callsOut: 46 }),
+    makeAgent('dev-coder3@core-platform', { shortName: 'dev-coder3', displayTitle: 'dev-coder3', state: 'waiting', isAnomaly: true, assignedWorkCount: 2, callsIn: 10, callsOut: 12 })
+  ];
+  const demoEdges = [
+    { from: 'dev-owner@core-platform', to: 'dev-coder@core-platform', queueStatus: 'live', liveActive: true, slice: 'elb-001' },
+    { from: 'dev-owner@core-platform', to: 'dev-coder4@core-platform', queueStatus: 'live', liveActive: true, slice: 'tts-strict-chunked' },
+    { from: 'dev-coder4@core-platform', to: 'dev-check@core-platform', queueStatus: 'live', liveActive: true, slice: 'tts-strict-chunked' },
+    { from: 'dev-check@core-platform', to: 'dev-owner@core-platform', queueStatus: 'live', liveActive: true, slice: 'all' }
+  ];
+
+  // Center canvas at 1280x720 with sidebars open (~705px wide, ~460px tall after collapsing demo quest dock)
+  for (const [cw, ch] of [[705, 460], [705, 400]]) {
+    const res = computeTopologyLayout({ agents: demoVisible, edges: demoEdges, mode: 'dynamic', canvasWidth: cw, canvasHeight: ch, detailed: false });
+    assertNoRectOverlaps(demoVisible, res, cw, ch, false);
+
+    const activeRects = demoVisible
+      .filter(a => res.tiers[a.id] === 'active')
+      .map(a => getBoxRect(a, res.positions[a.id], 'active', cw, ch, false));
+    for (let i = 0; i < activeRects.length; i++) {
+      for (let j = i + 1; j < activeRects.length; j++) {
+        const a = activeRects[i], b = activeRects[j];
+        const vertOverlap = a.top < b.bottom + 8 && a.bottom + 8 > b.top;
+        if (vertOverlap) {
+          const horizGap = Math.max(b.left - a.right, a.left - b.right);
+          assert.ok(horizGap >= 20, `1280x720 (${cw}x${ch}) horizontal gap between ${a.id} and ${b.id} must be >= 20px, got ${horizGap.toFixed(1)}px`);
+        }
+      }
+    }
+
+    // Spline for tts-strict-chunked (dev-coder4 -> dev-check) anchors strictly outside both card borders
+    const c4 = activeRects.find(r => r.id === 'dev-coder4@core-platform');
+    const qa = activeRects.find(r => r.id === 'dev-check@core-platform');
+    const obstacles = activeRects.filter(r => r.id !== c4.id && r.id !== qa.id).map(r => ({ cx: r.cx, cy: r.cy, hw: r.width / 2, hh: r.height / 2 }));
+    const edgePath = computeAdaptiveEdgePath({
+      cx1: c4.cx, cy1: c4.cy, sz1: { hw: c4.width / 2, hh: c4.height / 2 },
+      cx2: qa.cx, cy2: qa.cy, sz2: { hw: qa.width / 2, hh: qa.height / 2 },
+      obstacles,
+      padStart: 6,
+      padEnd: 8
+    });
+    const p1OutsideC4 = Math.abs(edgePath.p1.x - c4.cx) >= c4.width / 2 + 5 || Math.abs(edgePath.p1.y - c4.cy) >= c4.height / 2 + 5;
+    const p2OutsideQa = Math.abs(edgePath.p2.x - qa.cx) >= qa.width / 2 + 7 || Math.abs(edgePath.p2.y - qa.cy) >= qa.height / 2 + 7;
+    assert.ok(p1OutsideC4, `Spline start p1 must clear dev-coder4 outer border by >= 5px`);
+    assert.ok(p2OutsideQa, `Spline end p2 must clear dev-check outer border by >= 7px`);
+  }
+});

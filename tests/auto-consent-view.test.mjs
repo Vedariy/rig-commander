@@ -1205,3 +1205,33 @@ test('v3.8.1 #42 P2/P3 regression: DOM cooldown ticks patch only cooling control
 
   ctrl.destroy();
 });
+
+test('v3.9.0 UX: +60m Session renders muted when global Auto-Consent is OFF, #autoConsentInspectorRoot sits below #nodeInspector, and #btnAutoConsentTop stays outside collapsed tools menu', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'openrig/index.html'), 'utf8');
+
+  // 1. #autoConsentInspectorRoot is placed BELOW #nodeInspector so identity & P0 HITL appear first
+  const nodeIdx = indexHtml.indexOf('<div id="nodeInspector"></div>');
+  const acIdx = indexHtml.indexOf('<div id="autoConsentInspectorRoot"></div>');
+  assert.ok(nodeIdx > 0 && acIdx > nodeIdx, '#autoConsentInspectorRoot must sit below #nodeInspector');
+
+  // 2. initCompactTriageTools preserves #btnAutoConsentTop directly in top bar
+  assert.match(indexHtml, /keepDirect\s*=\s*new Set\([^)]*'btnAutoConsentTop'/);
+
+  // 3. +60m Session button uses muted secondary class when global Auto-Consent is OFF, and drops muted class when ON
+  const seat = { id: 'dev-check@core-platform' };
+  const offState = { config: { ...DEFAULT_AUTO_CONSENT_CONFIG, enabled: false }, sessionGrants: [] };
+  const onState = { config: { ...DEFAULT_AUTO_CONSENT_CONFIG, enabled: true, mode: 'armed' }, sessionGrants: [] };
+  for (const lang of ['en', 'ru']) {
+    const td = tdFor(lang);
+    const offHtml = renderSeatAutoConsentPickerHtml({ seat, state: offState, td, lang, nowMs: NOW });
+    assert.match(offHtml, /class="action-pill ac-insp-btn ac-insp-btn-muted"[^>]*data-auto-consent-action="grant-session"/);
+
+    const onHtml = renderSeatAutoConsentPickerHtml({ seat, state: onState, td, lang, nowMs: NOW });
+    assert.match(onHtml, /class="action-pill ac-insp-btn"[^>]*data-auto-consent-action="grant-session"/);
+    assert.doesNotMatch(onHtml, /ac-insp-btn-muted/);
+  }
+});
