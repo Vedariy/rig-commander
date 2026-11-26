@@ -116,6 +116,7 @@
     </div>
 
     <div class="hud-controls" id="hudControlsBar">
+      <div id="autoConsentHudRoot" class="ac-hud-mount"></div>
       <!-- CLUSTER 1: SENSORY & ALARM HYGIENE -->
       <div class="hud-cluster hud-cluster-sensory">
         <button class="cyber-btn calm-toggle" id="btnCalmMode" onclick="toggleCalmMode()" data-i18n="hud.calmOff" title="Calm Focus: приглушает спокойные узлы">
@@ -177,6 +178,7 @@
     </div>
   </header>
 
+  <div id="autoConsentDemoBarRoot"></div>
   <div id="resilienceRoot"></div>
   <div id="resilienceModalRoot" hidden></div>
 
@@ -351,6 +353,7 @@
         </span>
       </div>
       <div class="panel-body" id="inspectorPanelBody">
+        <div id="autoConsentInspectorRoot"></div>
         <div id="nodeInspector"></div>
 
         <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
@@ -374,6 +377,7 @@
 
   <div class="sa-tour-card" id="saTourCard" role="dialog" aria-label="SA-DSS & Cognitive Ergonomics Tour"></div>
   <div class="widget-hint-popover" id="widgetHintPopover" role="tooltip"></div>
+  <div id="autoConsentToastRoot" class="ac-pending-toast-root" aria-live="assertive"></div>
   <div class="toast" id="copyToast">Copied!</div>
 
   <div class="modal-overlay" id="terminalModal" onclick="if (event.target === this) closeTerminalModal()">
@@ -429,12 +433,13 @@
           <span class="triage-badge" id="modalGuardStatusBadge" style="margin:0; font-size:10.5px;"></span>
           <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:7px; padding:2px; gap:2px;" role="tablist">
             <button type="button" id="btnGuardTabMain" class="hud-segment-btn active" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('guardrails')">🛡️ Авто-тормоз / TG</button>
+            <button type="button" id="btnGuardTabAutoConsent" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('auto-consent')">⚡ Авто-согласие</button>
             <button type="button" id="btnGuardTabPlaybooks" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('playbooks')">🤖 Плейбуки</button>
             <button type="button" id="btnGuardTabEval" class="hud-segment-btn" style="padding:3px 9px; font-size:11px;" onclick="setGuardrailsTab('evaluator')">🧠 AI Оценщик</button>
           </div>
         </div>
-        <span style="display:flex; gap:8px;">
-          <button class="action-pill" onclick="closeGuardrailsModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
+        <span style="display:flex; gap:8px; flex-shrink:0;">
+          <button class="action-pill" style="white-space:nowrap;" onclick="closeGuardrailsModal()" data-i18n="modal.close">✕ Закрыть (Esc)</button>
         </span>
       </div>
       <div class="modal-fleet-body" id="guardrailsModalBody"></div>
@@ -1123,6 +1128,7 @@
     };
     let IS_LIVE = false;
     let resilienceUi = null;
+    let autoConsentUi = null;
     const IS_OFFLINE_DEMO = /^\/demo(?:\/|$)/.test(location.pathname);
 
     function deckFetch(resource, options) {
@@ -1180,6 +1186,107 @@
       });
       resilienceUi.refresh();
       document.getElementById('btnRefresh')?.addEventListener('click', () => resilienceUi.refresh());
+    }
+
+    function initAutoConsentUi() {
+      if (typeof AutoConsentView === 'undefined' || !AutoConsentView?.createAutoConsentController) return;
+      if (autoConsentUi) return;
+      const isAutoConsentTrack = IS_OFFLINE_DEMO && ['auto-consent', 'autoconsent', 'auto_consent'].includes(
+        (new URLSearchParams(location.search).get('track') || '').toLowerCase().trim()
+      );
+      autoConsentUi = AutoConsentView.createAutoConsentController({
+        hudRoot: document.getElementById('autoConsentHudRoot'),
+        toastRoot: document.getElementById('autoConsentToastRoot'),
+        inspectorRoot: document.getElementById('autoConsentInspectorRoot'),
+        demoBarRoot: document.getElementById('autoConsentDemoBarRoot'),
+        guardrailsBodyRoot: document.getElementById('guardrailsModalBody'),
+        hitlRoots: [
+          document.getElementById('nodeInspector'),
+          document.getElementById('modalTerminalCtrlMount')
+        ].filter(Boolean),
+        td,
+        lang: () => deckLang,
+        demo: IS_OFFLINE_DEMO,
+        demoTrack: isAutoConsentTrack,
+        isLive: () => !IS_OFFLINE_DEMO && Boolean(IS_LIVE || getDeckToken()),
+        getAgents: () => AGENTS,
+        getRigs: () => {
+          if (window.ONTOLOGY_SNAPSHOT && Array.isArray(window.ONTOLOGY_SNAPSHOT.rigs) && window.ONTOLOGY_SNAPSHOT.rigs.length > 0) {
+            return window.ONTOLOGY_SNAPSHOT.rigs;
+          }
+          return [...new Set(AGENTS.map(a => String(a?.id || '').split('@')[1]).filter(Boolean))];
+        },
+        getSelectedSeat: () => AGENTS.find(a => a.id === selectedAgentId) || AGENTS[0] || null,
+        getJson: async (endpoint) => {
+          const res = await deckFetch(endpoint, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        },
+        postJson: async (endpoint, payload) => {
+          const { res, data } = await deckPostJson(endpoint, payload, { skipEndpointGuard: true });
+          if (!res.ok || data?.ok === false) {
+            throw new Error(data?.error || `HTTP ${res.status}`);
+          }
+          return data;
+        },
+        sendAllowOnce: (seatId, statusElId, controlEl) => {
+          sendTerminalKey(seatId, '1 Enter', statusElId || 'cmdSendStatus', 'answer_prompt_option', controlEl);
+        },
+        onOpenTab: () => openGuardrailsModal('auto-consent'),
+        onGuardrailsRerender: () => {
+          const gm = document.getElementById('guardrailsModal');
+          if (gm && gm.classList.contains('open') && activeGuardrailsTab === 'auto-consent') {
+            renderGuardrailsModal();
+          }
+        },
+        onDemoScreenUpdate: ({ seatId, screenText, seatState, reason, ctxPct }) => {
+          if (!seatId || IS_LIVE) return;
+          const a = AGENTS.find(x => x.id === seatId);
+          if (a) {
+            if (typeof ctxPct === 'number' && Number.isFinite(ctxPct)) {
+              a.ctxPct = ctxPct;
+              if (a.ctxWindowSize) a.ctxUsedTokens = Math.round(a.ctxWindowSize * (ctxPct / 100));
+            }
+            if (seatState === 'urgent') {
+              a.state = 'urgent';
+              a.needsInputCount = 1;
+              a.needsInputReason = reason || 'permission_prompt';
+              a.activityLabel = `🚨 ${td('demo.needsInput')}`;
+              a.isAnomaly = true;
+            } else if (seatState === 'working') {
+              a.state = 'working';
+              a.needsInputCount = 0;
+              a.needsInputReason = '';
+              a.activityLabel = `🟢 ${td('demo.working')}`;
+              a.reworkBadge = `✅ ${td('demo.hitlConfirmed')}`;
+              a.isAnomaly = false;
+            }
+          }
+          if (typeof screenText === 'string') {
+            lastScreenBySeat[seatId] = screenText;
+            if (selectedAgentId === seatId) liveScreenCapture = screenText;
+          }
+          rebuildDemoIntelligence();
+          renderTriageStrip();
+          renderWaitRadarAndDecisions();
+          renderTopology();
+          renderInspectorAndScorecards(false);
+          if (modalSeatId === seatId && typeof screenText === 'string') {
+            updateModalScreen(seatId, screenText);
+          }
+        },
+        onToastNotice: (msg) => {
+          if (!msg) return;
+          const t = document.getElementById('copyToast');
+          if (!t) return;
+          t.textContent = msg;
+          t.style.display = 'block';
+          setTimeout(() => { if (t.textContent === msg) t.style.display = 'none'; }, 2800);
+        }
+      });
+      if (!IS_OFFLINE_DEMO && IS_LIVE) {
+        autoConsentUi.refresh();
+      }
     }
     let autoFollow = true;
     let audioRadarOn = false;
@@ -2292,7 +2399,22 @@
     }
 
     function renderInteractivePromptOptionsHtml(seatId, screenText, statusElId = 'cmdSendStatus') {
-      return InspectorView.renderInteractivePromptOptionsHtml(getInspectorViewDeps(), seatId, screenText, statusElId);
+      const baseHtml = InspectorView.renderInteractivePromptOptionsHtml(getInspectorViewDeps(), seatId, screenText, statusElId);
+      if (!baseHtml || typeof AutoConsentView === 'undefined' || typeof AutoConsentView.renderHitlTrustSessionBtnHtml !== 'function') {
+        return baseHtml;
+      }
+      const trustBtn = AutoConsentView.renderHitlTrustSessionBtnHtml({
+        seatId,
+        screenText,
+        td,
+        statusElId,
+        disabled: Boolean(autoConsentUi && autoConsentUi.isBusy && autoConsentUi.isBusy())
+      });
+      if (!trustBtn) return baseHtml;
+      const closeIdx = baseHtml.lastIndexOf('</div>');
+      return closeIdx >= 0
+        ? `${baseHtml.slice(0, closeIdx)}${trustBtn}${baseHtml.slice(closeIdx)}`
+        : `${baseHtml}${trustBtn}`;
     }
 
     const COPY_CLIPBOARD_SVG = '<svg class="cmd-copy-ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.6"/><path d="M3 11H2.4A1.4 1.4 0 0 1 1 9.6V2.4A1.4 1.4 0 0 1 2.4 1h7.2A1.4 1.4 0 0 1 11 2.4V3"/></svg>';
@@ -2384,7 +2506,19 @@
     }
 
     function renderInspectorAndScorecards(flashHighlight = false) {
-      return InspectorView.renderInspectorAndScorecards(document, getInspectorViewDeps(), flashHighlight);
+      const res = InspectorView.renderInspectorAndScorecards(document, getInspectorViewDeps(), flashHighlight);
+      const agent = AGENTS.find(a => a.id === selectedAgentId) || AGENTS[0];
+      if (agent) {
+        const promptOptsBar = document.getElementById('inspectorPromptOptionsBar');
+        if (promptOptsBar) {
+          InspectorView.updateInspectorPromptOptions(
+            promptOptsBar,
+            renderInteractivePromptOptionsHtml(agent.id, lastScreenBySeat[agent.id] || '', 'cmdSendStatus')
+          );
+        }
+      }
+      autoConsentUi?.renderInspector(agent);
+      return res;
     }
 
     function escapeHtml(str) {
@@ -2580,7 +2714,7 @@
     }
 
     function connectTelemetryStream(forceReconnect = false) {
-      if (!IS_LIVE || typeof EventSource !== 'function') return;
+      if (IS_OFFLINE_DEMO || !IS_LIVE || typeof EventSource !== 'function') return;
       const targetRig = currentRigFilter || 'all';
       if (!forceReconnect && telemetrySseSource && telemetrySseRig === targetRig) return;
       disconnectTelemetryStream();
@@ -2610,6 +2744,18 @@
           try { if (JSON.parse(event.data || '{}').kind === 'resilience_wake') resilienceUi?.refresh(); } catch {}
           const dig = document.getElementById('shiftDigestModal');
           if (dig && dig.classList.contains('open')) refreshShiftDigestModal();
+        });
+        es.addEventListener('auto_consent_state', (event) => {
+          telemetrySseConnected = true;
+          try { autoConsentUi?.handleSseEvent('auto_consent_state', JSON.parse(event.data || '{}')); } catch {}
+        });
+        es.addEventListener('auto_consent_pending', (event) => {
+          telemetrySseConnected = true;
+          try { autoConsentUi?.handleSseEvent('auto_consent_pending', JSON.parse(event.data || '{}')); } catch {}
+        });
+        es.addEventListener('auto_consent_resolved', (event) => {
+          telemetrySseConnected = true;
+          try { autoConsentUi?.handleSseEvent('auto_consent_resolved', JSON.parse(event.data || '{}')); } catch {}
         });
         es.onerror = () => {
           telemetrySseConnected = false;
@@ -2697,6 +2843,7 @@
     window.addEventListener('beforeunload', () => {
       disconnectTelemetryStream();
       disconnectTmuxStream();
+      autoConsentUi?.destroy();
     });
 
     let telemetryFetchInFlight = false;
@@ -2776,6 +2923,9 @@
         }
         if (data.evaluator && typeof syncEvaluatorTelemetry === 'function') {
           syncEvaluatorTelemetry(data.evaluator);
+        }
+        if (data.autoConsent) {
+          autoConsentUi?.setState(data.autoConsent);
         }
         if (data.update && typeof syncAppUpdateState === 'function') {
           syncAppUpdateState(data.update);
@@ -5375,14 +5525,26 @@
       `;
     }
 
+    function normalizeGuardrailsTab(tab) {
+      if (tab === 'evaluator') return 'evaluator';
+      if (tab === 'playbooks') return 'playbooks';
+      if (tab === 'auto-consent' || tab === 'autoconsent' || tab === 'auto_consent') return 'auto-consent';
+      return 'guardrails';
+    }
+
     function setGuardrailsTab(tab) {
-      activeGuardrailsTab = tab === 'evaluator' ? 'evaluator' : (tab === 'playbooks' ? 'playbooks' : 'guardrails');
+      activeGuardrailsTab = normalizeGuardrailsTab(tab);
       const bMain = document.getElementById('btnGuardTabMain');
+      const bAc = document.getElementById('btnGuardTabAutoConsent');
       const bPb = document.getElementById('btnGuardTabPlaybooks');
       const bEval = document.getElementById('btnGuardTabEval');
       if (bMain) {
         bMain.classList.toggle('active', activeGuardrailsTab === 'guardrails');
         bMain.textContent = td('eval.guardTabMain');
+      }
+      if (bAc) {
+        bAc.classList.toggle('active', activeGuardrailsTab === 'auto-consent');
+        bAc.textContent = td('autoConsent.tabTitle');
       }
       if (bPb) {
         bPb.classList.toggle('active', activeGuardrailsTab === 'playbooks');
@@ -5398,7 +5560,12 @@
           ? td('eval.settingsTitle')
           : activeGuardrailsTab === 'playbooks'
             ? td('pb.modalTitle')
-            : td('guard.title');
+            : activeGuardrailsTab === 'auto-consent'
+              ? td('autoConsent.modalTitle')
+              : td('guard.title');
+      }
+      if (activeGuardrailsTab === 'auto-consent' && IS_LIVE && !IS_OFFLINE_DEMO) {
+        autoConsentUi?.refresh();
       }
       if (activeGuardrailsTab === 'evaluator' && IS_LIVE && !window.EVALUATOR_STATE.config) {
         deckFetch('/api/evaluator/status').then(r => r.json()).then(d => {
@@ -5428,8 +5595,7 @@
     function openGuardrailsModal(tab = 'guardrails') {
       const modal = document.getElementById('guardrailsModal');
       if (modal) modal.classList.add('open');
-      const normalized = tab === 'evaluator' ? 'evaluator' : (tab === 'playbooks' ? 'playbooks' : 'guardrails');
-      setGuardrailsTab(normalized);
+      setGuardrailsTab(normalizeGuardrailsTab(tab));
     }
 
     function getPlaybooksStateSafe() {
@@ -5878,6 +6044,17 @@
     function renderGuardrailsModal() {
       const body = document.getElementById('guardrailsModalBody');
       if (!body) return;
+      if (activeGuardrailsTab === 'auto-consent' && autoConsentUi && typeof AutoConsentView !== 'undefined') {
+        body.innerHTML = autoConsentUi.renderTabHtml();
+        const badge = document.getElementById('modalGuardStatusBadge');
+        if (badge) {
+          const b = AutoConsentView.getAutoConsentModalBadge(autoConsentUi.getState(), td);
+          badge.textContent = b.text;
+          badge.style.borderColor = b.borderColor;
+          badge.style.color = b.color;
+        }
+        return;
+      }
       const view = GuardrailsView.renderGuardrailsModal({
         activeGuardrailsTab, deckLang, td, escapeHtml, shortSeat,
         guardrails: window.GUARDRAILS_STATE,
@@ -8079,7 +8256,10 @@
       const adv = document.getElementById('fleetAdvisorModal');
       if (adv && adv.classList.contains('open')) renderFleetAdvisorModal();
       const grd = document.getElementById('guardrailsModal');
-      if (grd && grd.classList.contains('open')) renderGuardrailsModal();
+      if (grd && grd.classList.contains('open')) {
+        setGuardrailsTab(activeGuardrailsTab);
+      }
+      autoConsentUi?.renderAll();
       const dig = document.getElementById('shiftDigestModal');
       if (dig && dig.classList.contains('open')) refreshShiftDigestModal();
       const palEl = document.getElementById('commandPalette');
@@ -8247,6 +8427,9 @@
         showTrackToast(deckLang === 'en'
           ? '🤖 UX Track: Safe Playbook Automation (Dry-Run Preview + Hard Safety Vetoes)'
           : '🤖 UX-трек: Safe Playbook Automation (Dry-Run превью + Hard Safety Vetoes)');
+      } else if (track === 'auto-consent' || track === 'autoconsent' || track === 'auto_consent') {
+        selectAgent('dev-check@core-platform');
+        autoConsentUi?.startDemoTrack();
       } else if (track === 'share' || track === 'receipt' || track === 'card') {
         openShareCardModal();
         showTrackToast(deckLang === 'en'
@@ -8393,6 +8576,7 @@
       renderWaitRadarAndDecisions();
       renderTopology();
       renderSwimlanes();
+      initAutoConsentUi();
       renderInspectorAndScorecards();
       updateAlertsAndTitle();
       refreshTelemetryNow();
@@ -9223,7 +9407,9 @@
     import * as GanttView from '/assets/ui/gantt-view.js';
     import * as TopologyView from '/assets/ui/topology-view.js';
     import * as ResilienceView from '/assets/ui/resilience-view.js';
+    import * as AutoConsentView from '/assets/ui/auto-consent-view.js';
     window.ResilienceView = ResilienceView;
+    window.AutoConsentView = AutoConsentView;
     window.TopologyView = TopologyView;
     import * as InspectorView from '/assets/ui/inspector-view.js';
     window.InspectorView = InspectorView;
