@@ -482,8 +482,23 @@
       font-size: 11.5px;
       color: var(--dim);
     }
-    footer a { color: var(--cyan); text-decoration: none; }
-    .guarantees-table td a { color: #7dd3fc; text-decoration: underline; text-underline-offset: 2px; }
+    footer a {
+      display: inline-block;
+      padding: 4px 2px;
+      min-height: 28px;
+      line-height: 1.4;
+      color: var(--cyan);
+      text-decoration: none;
+    }
+    .guarantees-table td a {
+      display: inline-block;
+      padding: 4px 2px;
+      min-height: 28px;
+      line-height: 1.4;
+      color: #7dd3fc;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
     html[lang="ru"] [data-lang-block="en"] { display: none !important; }
     html[lang="en"] [data-lang-block="ru"] { display: none !important; }
   </style>
@@ -578,28 +593,28 @@
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Zero-Write Inspection Flag</span><span data-lang-block="ru">Безопасный режим без записи</span></b></td>
-              <td><span data-lang-block="en">Launch with <code>npx rig-commander@{{APP_VERSION}} --read-only</code> to inspect live sessions with every terminal write and mutation disabled.</span><span data-lang-block="ru">Запуск <code>npx rig-commander@{{APP_VERSION}} --read-only</code> позволяет осматривать живые сессии с полным запретом записи в терминал.</span></td>
+              <td><span data-lang-block="en">Launch with <code>npx rig-commander@{{APP_VERSION}} --read-only</code> for <strong>0</strong> terminal writes, <strong>0</strong> disk writes, and <strong>0</strong> outbound network calls — all mutating routes return <code>403</code>.</span><span data-lang-block="ru">Запуск <code>npx rig-commander@{{APP_VERSION}} --read-only</code> гарантирует <strong>0</strong> записей в терминал, <strong>0</strong> записей на диск и <strong>0</strong> исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.</span></td>
               <td><span class="badge-ok">--read-only</span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Local HTTP→TMUX CSRF &amp; DNS-Rebinding Protection</span><span data-lang-block="ru">Защита HTTP→TMUX от CSRF и DNS-rebinding</span></b></td>
-              <td><span data-lang-block="en">Strict <code>Host</code> and <code>Origin</code> checks, per-process session authentication, and allowlisted terminal keystrokes — a malicious browser tab cannot drive your local terminals.</span><span data-lang-block="ru">Строгие проверки <code>Host</code> и <code>Origin</code>, аутентификация сессии процесса и разрешённый список клавиш терминала — вредоносная вкладка браузера не сможет управлять вашими локальными терминалами.</span></td>
+              <td><span data-lang-block="en">Strict <code>Host</code> and <code>Origin</code> checks and per-process session authentication — a malicious browser tab cannot drive your local terminals. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>).</span><span data-lang-block="ru">Строгие проверки <code>Host</code> и <code>Origin</code> и аутентификация сессии процесса — вредоносная вкладка браузера не сможет управлять вашими локальными терминалами. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>).</span></td>
               <td><span class="badge-ok">ENFORCED</span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Verified Supply Chain &amp; 30-Second Audit</span><span data-lang-block="ru">Проверяемая цепочка поставки и аудит за 30 секунд</span></b></td>
-              <td><span data-lang-block="en">0 runtime npm dependencies and signed <strong>npm Sigstore Provenance</strong> (GitHub Actions OIDC). Inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a> and report problems via <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span><span data-lang-block="ru">0 внешних npm-зависимостей и подписанный <strong>провенанс npm (Sigstore)</strong> через GitHub Actions OIDC. Проверьте <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> и сообщайте о проблемах в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span></td>
+              <td><span data-lang-block="en">0 runtime npm dependencies and signed <strong>npm Sigstore Provenance</strong> (GitHub Actions OIDC). Verify locally with <code>npm audit signatures</code> or <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>, inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, and report problems via <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span><span data-lang-block="ru">0 внешних npm-зависимостей и подписанный <strong>провенанс npm (Sigstore)</strong> через GitHub Actions OIDC. Проверьте подпись командой <code>npm audit signatures</code> или <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>, изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> и сообщайте о проблемах в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span></td>
               <td><span class="badge-ok">SIGSTORE</span></td>
             </tr>
             <tr>
-              <td><b><span data-lang-block="en">Opt-In Integrations Only</span><span data-lang-block="ru">Внешние модули только opt-in</span></b></td>
-              <td><span data-lang-block="en">Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent, and optional AI Evaluator are strictly OFF by default until explicitly configured.</span><span data-lang-block="ru">Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛЮЧЕНЫ по умолчанию.</span></td>
+              <td><b><span data-lang-block="en">Opt-In Integrations &amp; TOCTOU Drift Guard</span><span data-lang-block="ru">Внешние модули opt-in и защита TOCTOU</span></b></td>
+              <td><span data-lang-block="en">Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent, and optional AI Evaluator are strictly OFF by default until explicitly configured. Before any optional Auto-Consent keypress fires after the 3s grace window, RigCommander re-captures the live terminal and verifies a SHA-256 prompt hash — if the prompt changed by a single character, dispatch aborts with zero writes.</span><span data-lang-block="ru">Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛЮЧЕНЫ по умолчанию. Перед срабатыванием любого опционального авто-подтверждения после 3-секундного окна отмены RigCommander повторно снимает живой экран терминала и сверяет SHA-256 хэш промпта — если запрос изменился хотя бы на один символ, отправка отменяется с нулём записей.</span></td>
               <td><span class="badge-sec">OFF / OPT-IN</span></td>
             </tr>
             <tr>
-              <td><b><span data-lang-block="en">Automatic Secret Redaction</span><span data-lang-block="ru">Автоматическая редакция секретов</span></b></td>
-              <td><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are masked before writing shift history or calling any optional evaluator.</span><span data-lang-block="ru">API-ключи, токены, PEM-блоки и локальные пути маскируются до записи истории смен и до вызова опциональных оценщиков.</span></td>
-              <td><span class="badge-ok">ACTIVE</span></td>
+              <td><b><span data-lang-block="en">Automatic Secret Redaction &amp; Automated Verification</span><span data-lang-block="ru">Автоматическая редакция секретов и автотесты</span></b></td>
+              <td><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are masked before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.</span><span data-lang-block="ru">API-ключи, токены, PEM-блоки и локальные пути маскируются до записи истории смен, экспортов и вызовов опциональных оценщиков. Набор открытых автотестов (<code>npm test</code>) проверяет нулевую запись <code>--read-only</code>, редакцию секретов, защиту CSRF/Origin и отмену при дрейфе TOCTOU.</span></td>
+              <td><span class="badge-ok">TESTED</span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Honest Local Storage</span><span data-lang-block="ru">Прозрачное локальное хранение</span></b></td>
@@ -659,7 +674,7 @@
           <!-- Downstream write-back -->
           <rect x="530" y="148" width="396" height="44" rx="8" fill="rgba(255,42,109,0.08)" stroke="#ff2a6d" stroke-width="1.3"/>
           <text x="728" y="168" text-anchor="middle" fill="#fecdd3" class="svg-mono" font-size="11.2" font-weight="700" data-i18n="svg.writeback">🖥️ Guarded Terminal Write-Back &amp; Circuit-Breaker</text>
-          <text x="728" y="183" text-anchor="middle" fill="#e2e8f0" class="svg-mono" font-size="9.5" data-i18n="svg.writebackSub">Allowlisted Keys • Double-Send Guard • Postcondition Audit</text>
+          <text x="728" y="183" text-anchor="middle" fill="#e2e8f0" class="svg-mono" font-size="9.5" data-i18n="svg.writebackSub">Quick-Action Allowlist • Manual Confirm • TOCTOU Audit</text>
 
           <!-- Vercel Cloud -->
           <rect x="225" y="224" width="718" height="48" rx="10" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.45)"/>
@@ -813,13 +828,18 @@
             <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
-            <td><b><span data-lang-block="ru">Безопасность терминала и вето</span><span data-lang-block="en">Terminal Allowlist &amp; Safety Vetoes</span></b></td>
-            <td><span data-lang-block="ru">Строгий белый список управляющих клавиш <code>tmux</code> (защита от инъекции флагов) и неперебиваемые правила безопасности для опасных команд</span><span data-lang-block="en">Strict terminal key allowlisting (blocks flag injection) plus non-overridable safety vetoes for destructive commands</span></td>
+            <td><b><span data-lang-block="ru">Безопасность терминала, ручной ввод и вето</span><span data-lang-block="en">Terminal Controls, Manual Confirm &amp; Vetoes</span></b></td>
+            <td><span data-lang-block="ru">Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>)</span><span data-lang-block="en">Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>)</span></td>
+            <td><span class="badge-ok">TESTED</span></td>
+          </tr>
+          <tr>
+            <td><b><span data-lang-block="ru">Защита TOCTOU от дрейфа промпта</span><span data-lang-block="en">TOCTOU Prompt-Drift Protection</span></b></td>
+            <td><span data-lang-block="ru">Перед срабатыванием опционального авто-подтверждения после 3-секундного окна отмены экран терминала снимается повторно со сверкой SHA-256 хэша промпта — при изменении хотя бы на один символ отправка отменяется с нулём записей</span><span data-lang-block="en">Before any optional Auto-Consent keypress fires after the 3s grace window, RigCommander re-captures the live terminal and verifies a SHA-256 prompt hash — if the prompt changed by a single character, dispatch aborts with zero writes</span></td>
             <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
             <td><b><span data-lang-block="ru">Приватность и редакция секретов</span><span data-lang-block="en">Privacy &amp; Secret Redaction</span></b></td>
-            <td><span data-lang-block="ru">Ключи, токены, приватные сертификаты и локальные пути автоматически маскируются до записи истории смен и до любых опциональных вызовов AI-оценщика</span><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are redacted before persisting shift history or invoking any optional AI Evaluator</span></td>
+            <td><span data-lang-block="ru">Ключи, токены, приватные сертификаты и локальные пути автоматически маскируются до записи истории смен, экспортов и любых опциональных вызовов AI-оценщика; проверено автотестами (<code>npm test</code>)</span><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are redacted before shift-history writes, exports, or optional evaluator calls; verified by the open-source automated test suite (<code>npm test</code>)</span></td>
             <td><span class="badge-ok">TESTED</span></td>
           </tr>
           <tr>
@@ -848,8 +868,8 @@
             <td><span class="badge-ok">PASS</span></td>
           </tr>
           <tr>
-            <td><b><span data-lang-block="ru">Безопасность, Remote PWA и Идемпотентность</span><span data-lang-block="en">Security, Remote PWA &amp; Idempotency</span></b></td>
-            <td><span data-lang-block="ru">QR + PIN спаривание, блокировка перебора, отзыв сессий, защита от двойного клика, allowlist клавиш <code>tmux</code>, защита статики и безопасное самообновление</span><span data-lang-block="en">QR + PIN pairing, brute-force lockout, revocation, double-send protection, terminal key allowlist, path-traversal guard, and safe self-update</span></td>
+            <td><b><span data-lang-block="ru">Безопасность, --read-only, TOCTOU и Идемпотентность</span><span data-lang-block="en">Security, --read-only, TOCTOU &amp; Idempotency</span></b></td>
+            <td><span data-lang-block="ru">Нулевая запись <code>--read-only</code> (<code>403</code>), редакция секретов, защита CSRF/Origin, отмена при дрейфе TOCTOU (SHA-256), QR + PIN спаривание, блокировка перебора, защита от двойного клика и allowlist быстрых клавиш</span><span data-lang-block="en"><code>--read-only</code> zero-write (<code>403</code>), secret redaction, CSRF/Origin guards, TOCTOU SHA-256 prompt-drift aborts, QR + PIN pairing, brute-force lockout, double-send protection, and quick-action key allowlist</span></td>
             <td><span class="badge-ok">PASS</span></td>
           </tr>
           <tr>
@@ -935,7 +955,7 @@
         'svg.logsSub': 'Только локальное чтение',
         'svg.classifier': '🔧 Телеметрия CLI и классификатор экранов (Read-Only)',
         'svg.writeback': '🖥️ Защищённая запись в терминал и авто-тормоз',
-        'svg.writebackSub': 'Белый список клавиш • Антидубль • Сверка результата',
+        'svg.writebackSub': 'Быстрые клавиши • Ручной ввод с подтверждением • TOCTOU',
         'svg.static': '🌐 Статический сайт — Главная (/), Гайд (/guide), Паспорт (/passport), Офлайн-демо (/demo)',
         's2.title': '2. Архитектурные слои и инженерные принципы (C4 Level 2)',
         'r1.t': '1. Чистая доменная логика',
@@ -1013,7 +1033,7 @@
         'svg.logsSub': 'Incremental local read-only',
         'svg.classifier': '🔧 CLI Telemetry & Live Terminal State Classifier (Read-Only)',
         'svg.writeback': '🖥️ Guarded Terminal Write-Back & Circuit-Breaker',
-        'svg.writebackSub': 'Allowlisted Keys • Double-Send Guard • Postcondition Audit',
+        'svg.writebackSub': 'Quick-Action Allowlist • Manual Confirm • TOCTOU Audit',
         'svg.static': '🌐 Static Showcase — Landing (/), Guide (/guide), Passport (/passport), Offline Demo (/demo)',
         's2.title': '2. Architectural Layers & Engineering Principles (C4 Level 2)',
         'r1.t': '1. Pure domain logic',

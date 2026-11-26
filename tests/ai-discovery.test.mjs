@@ -154,7 +154,11 @@ test('public pages ship zero external Google Fonts, current version parity, cons
     const txt = read(name);
     assert.ok(txt.includes(`npx rig-commander@${version} --read-only`), `${name}: must lead with pinned --read-only`);
     assert.match(txt, /Sigstore/i, `${name}: must document npm Sigstore provenance`);
+    assert.ok(txt.includes('npm audit signatures'), `${name}: must include npm audit signatures command`);
+    assert.match(txt, /SHA-256/i, `${name}: must explain SHA-256 TOCTOU prompt-drift protection`);
+    assert.ok(txt.includes('403'), `${name}: must state --read-only returns 403 on terminal writes`);
     assert.match(txt, /CSRF[\s\S]*DNS-rebinding/i, `${name}: must document CSRF and DNS-rebinding protection`);
+    assert.doesNotMatch(txt, /sends only allowlisted|отправляет только разрешённые/i, `${name}: must not contradict optional manual input`);
   }
 
   const landingHtml = read('public/index.html');
@@ -164,15 +168,23 @@ test('public pages ship zero external Google Fonts, current version parity, cons
   assert.doesNotMatch(landingHtml, /\.ambient-bg\s*\{[^}]*position:\s*fixed;/, 'ambient-bg must not use position: fixed');
   assert.match(landingHtml, /\.navbar-wrapper\s*\{[^}]*position:\s*sticky;/, 'navbar-wrapper must use full-width sticky header');
   assert.ok(landingHtml.includes('LOCAL-FIRST AI AGENT MISSION CONTROL'), 'landing hero must use sober engineering eyebrow');
-  assert.ok(landingHtml.includes(`COMMAND DECK v${version}`), 'landing preview badge must use COMMAND DECK');
+  assert.ok(!landingHtml.includes('sim-window-dots'), 'landing preview must not render fake macOS traffic light dots');
+  assert.ok(!landingHtml.includes('sim-pool-strip'), 'landing preview must not render mismatched 4-provider bar');
   assert.ok(!landingHtml.includes('NEURAL DECK'), 'landing must not use NEURAL DECK hype badge');
   assert.ok(!landingHtml.includes('AUTONOMOUS AI SWARMS'), 'landing hero must not use AI SWARMS hype eyebrow');
+  assert.ok(landingHtml.includes('tmux / Universal') && landingHtml.includes('1 P0') && landingHtml.includes('$5.42') && landingHtml.includes('CTX 78%'), 'landing preview mini-bar must mirror real /demo header');
+  assert.match(landingHtml, /\.sim-terminal-screen\s*\{[^}]*text-align:\s*left;/, 'landing terminal preview must be left-aligned');
+  assert.ok(landingHtml.includes('class="sim-mobile-hitl"'), 'landing must include native mobile P0 HITL preview card');
   assert.ok(landingHtml.includes('id="security-guarantees"'));
   assert.ok(landingHtml.includes('Raw tmux') && landingHtml.includes('LangSmith') && landingHtml.includes('Langfuse'));
   assert.ok(!landingHtml.includes('watchDemoVideo('), 'landing should not duplicate Watch 20s Demo hero CTA');
   assert.ok(landingHtml.includes(`npx rig-commander@${version} --read-only`));
   assert.match(landingHtml, /Sigstore/i, 'landing must mention npm Sigstore provenance');
+  assert.ok(landingHtml.includes('npm audit signatures'), 'landing must include npm audit signatures command');
+  assert.match(landingHtml, /SHA-256/i, 'landing must explain SHA-256 TOCTOU prompt-drift protection');
+  assert.ok(landingHtml.includes('403'), 'landing must state --read-only returns 403');
   assert.match(landingHtml, /CSRF[\s\S]*DNS-rebinding/i, 'landing must mention CSRF and DNS-rebinding protection');
+  assert.doesNotMatch(landingHtml, /sends only allowlisted|отправляет только разрешённые/i, 'landing must honestly document quick-action allowlist vs optional manual input');
   assert.ok(landingHtml.includes(`github.com/Vedariy/rig-commander/releases/tag/v${version}`), 'landing must link to versioned source tag');
   assert.ok(landingHtml.includes('github.com/Vedariy/rig-commander/issues'), 'landing must link to GitHub issues');
 
@@ -182,7 +194,9 @@ test('public pages ship zero external Google Fonts, current version parity, cons
   assert.ok(quickstartIdx !== -1 && resilienceIdx !== -1 && quickstartIdx < resilienceIdx, 'guide #quickstart must precede #resilience');
   assert.ok(!guideHtml.includes('class="hero-pills"'), 'guide must not render ambiguous dark capsule pills under the hero lead');
   assert.ok(guideHtml.includes(`npx rig-commander@${version} --read-only`), 'guide must lead with pinned --read-only');
-  assert.ok(guideHtml.includes('SAFE START') && guideHtml.includes('БЕЗОПАСНЫЙ СТАРТ'), 'guide must highlight safe-start badge');
+  assert.ok(guideHtml.includes('READ-ONLY INSPECTION (ZERO TERMINAL WRITES)') && guideHtml.includes('ОСМОТР БЕЗ ЗАПИСИ В ТЕРМИНАЛ'), 'guide must use explicit read-only zero-write badge');
+  assert.ok(guideHtml.includes('dist.attestations') && guideHtml.includes('npm audit signatures'), 'guide quickstart must include 30s npm attestation & signature verification');
+  assert.ok(guideHtml.includes('copy-btn-primary') && guideHtml.includes('copy-btn-secondary'), 'guide quickstart must visually differentiate primary vs secondary copy buttons');
   assert.ok(guideHtml.includes('>Copy<') && guideHtml.includes('>Копировать<'), 'guide copy buttons must use explicit Copy / Копировать labels');
   assert.doesNotMatch(guideHtml, /class="copy-btn"[^>]*>Cmd ⧉<\/button>/, 'guide must not use cryptic Cmd ⧉ on copy buttons');
 
@@ -192,7 +206,11 @@ test('public pages ship zero external Google Fonts, current version parity, cons
   assert.ok(passportHtml.includes('id="securityGuarantees"'), 'passport must surface Security Guarantees table');
   assert.ok(passportHtml.includes(`npx rig-commander@${version} --read-only`), 'passport must lead with pinned --read-only');
   assert.match(passportHtml, /Sigstore/i, 'passport must mention npm Sigstore provenance');
+  assert.ok(passportHtml.includes('npm audit signatures'), 'passport must include npm audit signatures command');
+  assert.match(passportHtml, /SHA-256/i, 'passport must explain SHA-256 TOCTOU prompt-drift protection');
+  assert.ok(passportHtml.includes('403'), 'passport must state --read-only returns 403');
   assert.match(passportHtml, /CSRF[\s\S]*DNS-rebinding/i, 'passport must mention CSRF and DNS-rebinding protection');
+  assert.doesNotMatch(passportHtml, /sends only allowlisted|отправляет только разрешённые/i, 'passport must honestly document quick-action allowlist vs optional manual input');
   assert.ok(passportHtml.includes(`github.com/Vedariy/rig-commander/releases/tag/v${version}`), 'passport must link to versioned source tag');
   assert.ok(passportHtml.includes('github.com/Vedariy/rig-commander/issues'), 'passport must link to GitHub issues');
 
