@@ -7,6 +7,7 @@ Public trust model and non-overridable safety guarantees for operating RigComman
 - **Loopback default:** The local bridge binds strictly to `127.0.0.1` by default — unreachable from LAN or external networks.
 - **No cloud dependency:** Live fleet observation requires no cloud account and performs no default external telemetry uploads.
 - **Observation without writes:** Reading topology, Gantt timelines, worktree status, FinOps, and Fleet Advisor recommendations never writes to agent terminals.
+- **Strict `--read-only` inspection mode:** Starting RigCommander with `--read-only` enforces a server-wide write block across all mutating control endpoints, forces Auto-Consent disabled, and prevents automated terminal interrupts while keeping read-only telemetry, diffs, and live screen inspection fully functional.
 - **Guarded write-back:** Control requests require per-process session authentication, strict `Origin` checks, duplicate-send protection, and allowlisted `tmux` keystrokes (preventing flag injection and double-sends).
 
 ## Remote Mobile PWA & Telegram Boundaries
