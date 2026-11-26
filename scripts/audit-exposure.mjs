@@ -88,6 +88,36 @@ function checkPublicShowcase() {
   }
 }
 
+const PUBLIC_SKILLS_FORBIDDEN = [
+  ...PUBLIC_FORBIDDEN,
+  /\b(?:assets\/(?:domain|ontology|ui)|lib|tests)\//,
+  /\.private-docs\b/,
+  /\bDESTRUCTIVE_VETO_PATTERNS\b/,
+  /\bseatSessionEpoch\b/,
+  /\bpromptHash\b/,
+  /\bctxPauseThresholdPct\b/,
+  /\bauto-consent-model\b/,
+  /\bauto-consent-engine\b/,
+  /\b(?:409|413)\b/
+];
+
+function checkPublicSkills() {
+  const skillFiles = walkFiles('skills');
+  if (skillFiles.length === 0) {
+    violations.push('Public skills directory is missing or has no auditable text files under skills/');
+    return;
+  }
+  for (const rel of skillFiles) {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    for (const rx of PUBLIC_SKILLS_FORBIDDEN) {
+      const m = text.match(rx);
+      if (m) {
+        violations.push(`Public skill exposure in ${rel}: matched ${rx} (${m[0]})`);
+      }
+    }
+  }
+}
+
 const SECRET_AND_PATH_PATTERNS = [
   { name: 'macOS home path', rx: /\/Users\/[a-zA-Z0-9._-]+/ },
   { name: 'Linux home path', rx: /\/home\/[a-zA-Z0-9._-]+/ },
@@ -97,7 +127,7 @@ const SECRET_AND_PATH_PATTERNS = [
   { name: 'Private lab path', rx: /~\/openrig-lab\/|~\/www\/EnterpriseCore/ }
 ];
 
-const SCAN_DIRS = ['openrig', 'landing', 'docs', 'scripts', 'bin'];
+const SCAN_DIRS = ['openrig', 'landing', 'docs', 'scripts', 'bin', 'skills'];
 const SCAN_FILES = ['README.md', 'CHANGELOG.md', 'AGENTS.md', 'package.json'];
 const TEXT_EXTS = new Set(['.md', '.html', '.js', '.mjs', '.css', '.json', '.webmanifest', '.yml', '.yaml', '.txt', '.xml']);
 
@@ -170,6 +200,7 @@ checkGitignore();
 checkPackageFiles();
 checkNoPrivateRdDocsInPublicRepo();
 checkPublicShowcase();
+checkPublicSkills();
 checkLeaks();
 
 if (violations.length > 0) {

@@ -24,7 +24,7 @@ RigCommander is a **zero-dependency, local-first DSS SA (L1–L3)** command deck
   - Tracks live token usage, prompt cache hit %, and subscription ROI across exclusive model pools; enforces spend/rework caps and supports phone approvals via Telegram or paired Mobile PWA.
 - **OpenRig L3 Playbook Built In:**
   - Full bilingual operational guide to OpenRig (`@openrig/cli`) — honest recovery, queue patterns, 10 advanced flows (`discover/adopt`, `set-runtime`, `fork`, `ask --wake`, `crash-cart`), and Top 7 anti-patterns.
-- **Hardened Local-First Security:** `0 npm dependencies`, loopback-only `127.0.0.1`, per-process session auth, strict `Origin` checks, allowlisted `tmux` keystrokes, paired QR+PIN Mobile PWA, and `125 / 125` automated unit tests.
+- **Hardened Local-First Security:** `0 npm dependencies`, loopback-only `127.0.0.1`, per-process session auth, strict `Origin` checks, allowlisted `tmux` keystrokes, paired QR+PIN Mobile PWA, and `327 / 327` automated unit tests.
 
 ## 🚀 Quick Start
 
@@ -35,6 +35,13 @@ npm start
 ```
 
 Open `http://127.0.0.1:7440` (or `http://127.0.0.1:7440/guide` for the bilingual Operator User Guide & OpenRig Playbook, `http://127.0.0.1:7440/passport` for the Architecture & Security Passport).
+
+### Agent Skill (`SKILL.md`)
+Install the public [RigCommander Mission Control Skill](./skills/rig-commander-mission-control/SKILL.md) for **Claude Code**, **Codex CLI**, **Cursor**, **Copilot**, **Gemini CLI**, and **Agensi.io**:
+
+```bash
+npx skills add Vedariy/rig-commander
+```
 
 ### Live Desktop & Mobile PWA
 - **Mac Desktop PWA:** Open `http://127.0.0.1:7440` → Chrome/Edge **Install App** or Safari **File → Add to Dock…** (installs live Command Deck `/?source=pwa`).
@@ -54,7 +61,7 @@ Open `http://127.0.0.1:7440` (or `http://127.0.0.1:7440/guide` for the bilingual
 ## 🧪 Development & Verification
 
 ```bash
-npm test                 # Zero-dependency Node test runner (24 suites, 125 tests)
+npm test                 # Zero-dependency Node test runner (40 suites, 327 tests)
 npm run sync:public      # Sync openrig/ + landing/ -> public/ for static showcase hosting
 npm run audit:exposure   # Verify .private-docs/ isolation, clean public showcase & zero leaks
 ```
