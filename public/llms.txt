@@ -4,7 +4,7 @@
 > Локальный пульт под лицензией MIT для операторов ИИ-агентов. Наблюдайте за сессиями Claude Code, Codex CLI и Gemini CLI в tmux или за флотом OpenRig с его очередями и передачами задач.
 
 Quick facts / Кратко: v3.8.1 · MIT · macOS / Linux · Node.js >= 18 · 0 runtime npm dependencies / внешних npm-зависимостей.
-Start / Запуск: `npx rig-commander@latest`. Local deck / Локальный пульт: `http://127.0.0.1:7440`.
+Start / Запуск: `npx rig-commander@latest --read-only` (zero-write safe inspection / безопасный осмотр без записи в терминал) or `npx rig-commander@latest` (full interactive deck / полный интерактивный пульт). Local deck / Локальный пульт: `http://127.0.0.1:7440`.
 Idle CPU / Простой: 0% idle CPU target for telemetry polling with no active clients / целевой показатель для опроса телеметрии без активных клиентов.
 
 ## Docs & Surfaces
@@ -26,6 +26,6 @@ Idle CPU / Простой: 0% idle CPU target for telemetry polling with no acti
 
 ## Security Boundaries
 
-- The live bridge defaults to loopback. Remote phone access uses HTTPS and explicit pairing. / По умолчанию мост слушает локальный интерфейс. Удалённый доступ с телефона требует HTTPS и сопряжения.
-- Observation and fleet advice require no terminal writes. Fleet telemetry stays local by default. / Для наблюдения и рекомендаций запись в терминал не нужна. По умолчанию телеметрия флота остаётся на машине.
-- The local recovery vault stores plaintext with owner-only file permissions. Receipts may report partial, failed or unknown recovery. / Локальное хранилище восстановления записывает открытые данные в файлы, доступные только владельцу. Восстановление может быть частичным, неудачным или с неизвестным результатом.
+- The live bridge defaults to `127.0.0.1` loopback with 0 outbound network requests by default. Pass `--read-only` to disable all terminal writes and mutations for safe first evaluation. / По умолчанию мост слушает только `127.0.0.1` и делает 0 исходящих запросов. Флаг `--read-only` полностью отключает запись в терминал для безопасного первого осмотра.
+- Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent, and optional AI evaluators are strictly OFF by default (opt-in). Secrets are automatically redacted before writing shift history or calling optional evaluators. / Удалённый HTTPS-туннель/PWA, Telegram-мост, авто-подтверждение и опциональные AI-оценщики полностью выключены по умолчанию (opt-in). Секреты автоматически маскируются до записи истории смен и до вызова опциональных оценщиков.
+- The local recovery vault and shift files store unencrypted plaintext with owner-only file permissions — rely on OS full-disk encryption. Receipts may report partial, failed or unknown recovery. / Локальное хранилище восстановления и файлы смен хранят открытые данные с правами доступа только владельцу — полагайтесь на шифрование диска. Восстановление может быть частичным, неудачным или с неизвестным результатом.

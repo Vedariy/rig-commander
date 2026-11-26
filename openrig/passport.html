@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -49,9 +49,6 @@
   <meta name="twitter:title" content="RigCommander — Architecture & Security Passport">
   <meta name="twitter:description" content="Local-first trust boundaries, 0-dep architecture, Operational Twin, hardened security guarantees & 333 automated tests.">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #030712;
@@ -65,16 +62,18 @@
       --lavender: #a855f7;
       --coral: #ff2a6d;
       --text: #f1f5f9;
-      --muted: #94a3b8;
-      --dim: #64748b;
-      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --muted: #b0c2d8;
+      --dim: #9fb2c9;
+      --font-sans: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+    html { scroll-behavior: smooth; background: var(--bg); color: var(--text); font-family: var(--font-sans); overflow-x: clip; max-width: 100%; }
     body {
       min-height: 100vh;
+      max-width: 100%;
+      overflow-x: clip;
       background:
         radial-gradient(circle at 20% 0%, rgba(0, 240, 255, 0.08), transparent 48%),
         radial-gradient(circle at 85% 20%, rgba(168, 85, 247, 0.07), transparent 45%),
@@ -91,23 +90,24 @@
       top: 0;
       z-index: 50;
       backdrop-filter: blur(14px);
-      background: rgba(3, 7, 18, 0.86);
+      background: rgba(3, 7, 18, 0.9);
       border-bottom: 1px solid var(--border);
     }
     .topbar-inner {
-      max-width: 1180px;
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 12px 24px;
+      padding: 10px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     .brand {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 10px;
+      min-height: 32px;
       text-decoration: none;
       color: var(--text);
       font-family: var(--font-mono);
@@ -128,33 +128,43 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 2px;
       flex-wrap: wrap;
-      font-size: 13px;
+      font-size: 12px;
     }
     .nav-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 6px;
+      border-radius: 6px;
       color: var(--muted);
       text-decoration: none;
       font-weight: 600;
-      transition: color 0.15s;
+      white-space: nowrap;
+      transition: color 0.15s, background 0.15s;
     }
-    .nav-links a:hover { color: var(--cyan); }
+    .nav-links a:hover { color: var(--cyan); background: rgba(0, 240, 255, 0.08); }
     .nav-right { display: flex; align-items: center; gap: 10px; }
     .lang-switch {
       display: inline-flex;
       background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-bright);
       border-radius: 8px;
       padding: 2px;
     }
     .lang-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
       background: transparent;
       border: none;
       color: var(--muted);
       font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 700;
-      padding: 4px 9px;
+      padding: 0 9px;
       border-radius: 6px;
       cursor: pointer;
     }
@@ -163,15 +173,20 @@
       color: var(--cyan);
     }
     .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 34px;
       text-decoration: none;
       font-family: var(--font-mono);
       font-size: 11.5px;
       font-weight: 700;
-      padding: 7px 12px;
+      padding: 0 13px;
       border-radius: 8px;
       background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 255, 157, 0.16));
       border: 1px solid rgba(0, 240, 255, 0.45);
       color: #fff;
+      white-space: nowrap;
     }
 
     .container {
@@ -223,8 +238,9 @@
     }
     .kpi-label {
       font-family: var(--font-mono);
-      font-size: 10.5px;
-      color: var(--dim);
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -234,9 +250,10 @@
       font-weight: 800;
       color: var(--text);
     }
-    .kpi-note { font-size: 12px; color: var(--muted); }
+    .kpi-note { font-size: 12px; color: #cbd5e1; }
 
     section {
+      scroll-margin-top: 84px;
       margin-bottom: 36px;
       background: var(--card);
       border: 1px solid var(--border);
@@ -316,6 +333,28 @@
       overflow-x: auto;
     }
     .diagram-box svg { width: 100%; min-width: 720px; height: auto; display: block; }
+    .diagram-box .svg-mono { font-family: var(--font-mono); }
+    .diagram-box .svg-sans { font-family: var(--font-sans); }
+
+    .guarantees-table {
+      margin-top: 0;
+      margin-bottom: 18px;
+      background: rgba(3, 7, 18, 0.72);
+      border: 1px solid rgba(0, 255, 157, 0.25);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .guarantees-table table { margin-top: 0; }
+    .guarantees-table th { color: #cbd5e1; }
+    .guarantees-table td { color: #e2e8f0; }
+
+    @media (max-width: 640px) {
+      .topbar { position: relative; }
+      .topbar-inner { padding: 8px 14px; gap: 8px; }
+      .container { padding: 20px 14px 0; }
+      section { padding: 16px 14px; }
+      table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
 
     table {
       width: 100%;
@@ -426,21 +465,21 @@
     <div class="topbar-inner">
       <a class="brand" href="/">
         <span>💠 RIGCOMMANDER</span>
-        <span class="pill-tag" data-i18n="badge">PASSPORT v3.8</span>
+        <span class="pill-tag" data-i18n="badge">PASSPORT v3.8.1</span>
       </a>
       <nav class="nav-links">
-        <a href="#context" data-i18n="nav.context">C4 Контекст</a>
-        <a href="#components" data-i18n="nav.components">Модули</a>
-        <a href="#ontology" data-i18n="nav.ontology">Онтология</a>
-        <a href="#security" data-i18n="nav.security">Безопасность</a>
-        <a href="#quality" data-i18n="nav.quality">Тесты</a>
-        <a href="/guide" data-i18n="nav.guide">Гайд</a>
-        <a href="/guide#openrig-playbook">OpenRig Playbook</a>
+        <a href="#context" data-i18n="nav.context">C4 Context</a>
+        <a href="#components" data-i18n="nav.components">Architecture</a>
+        <a href="#ontology" data-i18n="nav.ontology">Model</a>
+        <a href="#security" data-i18n="nav.security">Security</a>
+        <a href="#quality" data-i18n="nav.quality">Verification</a>
+        <a href="/guide" data-i18n="nav.guide">User Guide</a>
+        <a href="/guide#openrig-playbook">OpenRig</a>
       </nav>
       <div class="nav-right">
         <div class="lang-switch" role="group" aria-label="Language">
-          <button type="button" class="lang-btn active" data-lang="ru" onclick="setLang('ru')">RU</button>
-          <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+          <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+          <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
         </div>
         <a class="cta-btn" href="/demo" data-i18n="nav.demo">▶ Live Demo</a>
       </div>
@@ -491,11 +530,49 @@
       </div>
     </div>
 
-    <!-- SECTION 1: C4 CONTEXT -->
+    <!-- SECTION 1: C4 CONTEXT & SECURITY GUARANTEES AT A GLANCE -->
     <section id="context">
       <div class="sec-head">
-        <h2 data-i18n="s1.title">1. Контекст системы и границы доверия (C4 Level 1)</h2>
+        <h2 data-i18n="s1.title">1. System Context, Security Guarantees &amp; Trust Boundaries (C4 Level 1)</h2>
         <span class="sec-tag">TRUST BOUNDARIES</span>
+      </div>
+      <div class="guarantees-table" id="securityGuarantees">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="sg.c1">Guarantee</th>
+              <th data-i18n="sg.c2">Default Behavior &amp; Boundary</th>
+              <th data-i18n="sg.c3">Default</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b><span data-lang-block="en">Loopback &amp; Zero Telemetry</span><span data-lang-block="ru">Только 127.0.0.1 и 0 телеметрии</span></b></td>
+              <td><span data-lang-block="en">Binds strictly to <code>127.0.0.1</code> with 0 outbound network requests by default — no cloud account, no hidden telemetry upload.</span><span data-lang-block="ru">Слушает строго <code>127.0.0.1</code> и делает 0 исходящих сетевых запросов по умолчанию — без облачного аккаунта и скрытой телеметрии.</span></td>
+              <td><span class="badge-ok">127.0.0.1</span></td>
+            </tr>
+            <tr>
+              <td><b><span data-lang-block="en">Zero-Write Inspection Flag</span><span data-lang-block="ru">Безопасный режим без записи</span></b></td>
+              <td><span data-lang-block="en">Launch with <code>npx rig-commander@latest --read-only</code> to inspect live sessions with every terminal write and mutation disabled.</span><span data-lang-block="ru">Запуск <code>npx rig-commander@latest --read-only</code> позволяет осматривать живые сессии с полным запретом записи в терминал.</span></td>
+              <td><span class="badge-ok">--read-only</span></td>
+            </tr>
+            <tr>
+              <td><b><span data-lang-block="en">Opt-In Integrations Only</span><span data-lang-block="ru">Внешние модули только opt-in</span></b></td>
+              <td><span data-lang-block="en">Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent, and optional AI Evaluator are strictly OFF by default until explicitly configured.</span><span data-lang-block="ru">Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛЮЧЕНЫ по умолчанию.</span></td>
+              <td><span class="badge-sec">OFF / OPT-IN</span></td>
+            </tr>
+            <tr>
+              <td><b><span data-lang-block="en">Automatic Secret Redaction</span><span data-lang-block="ru">Автоматическая редакция секретов</span></b></td>
+              <td><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are masked before writing shift history or calling any optional evaluator.</span><span data-lang-block="ru">API-ключи, токены, PEM-блоки и локальные пути маскируются до записи истории смен и до вызова опциональных оценщиков.</span></td>
+              <td><span class="badge-ok">ACTIVE</span></td>
+            </tr>
+            <tr>
+              <td><b><span data-lang-block="en">Honest Local Storage</span><span data-lang-block="ru">Прозрачное локальное хранение</span></b></td>
+              <td><span data-lang-block="en">Local recovery and shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on OS disk encryption (FileVault / LUKS).</span><span data-lang-block="ru">Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска (FileVault / LUKS).</span></td>
+              <td><span class="badge-sec">OWNER-ONLY</span></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <div class="diagram-box">
         <svg viewBox="0 0 960 285" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="C4 Level 1 System Context">
@@ -513,45 +590,45 @@
 
           <!-- Operator -->
           <rect x="16" y="88" width="155" height="96" rx="10" fill="#0f172a" stroke="#00f0ff" stroke-width="1.6"/>
-          <text x="93" y="120" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="13" font-weight="800">👤 OPERATOR</text>
-          <text x="93" y="140" text-anchor="middle" fill="#94a3b8" font-family="Plus Jakarta Sans" font-size="11">Desktop / Phone PWA</text>
-          <text x="93" y="159" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.5">SSE Push • QR+PIN • TG</text>
+          <text x="93" y="120" text-anchor="middle" fill="#fff" class="svg-mono" font-size="13" font-weight="800" data-i18n="svg.op">👤 OPERATOR</text>
+          <text x="93" y="140" text-anchor="middle" fill="#cbd5e1" class="svg-sans" font-size="11" data-i18n="svg.opSub">Desktop / Phone PWA</text>
+          <text x="93" y="159" text-anchor="middle" fill="#7dd3fc" class="svg-mono" font-size="9.8" data-i18n="svg.opProto">SSE Push • QR+PIN • TG</text>
 
           <!-- Local Trust Boundary -->
           <rect x="225" y="14" width="718" height="196" rx="12" fill="rgba(15,23,42,0.55)" stroke="rgba(0,255,157,0.4)" stroke-dasharray="6 4" stroke-width="1.4"/>
-          <text x="242" y="34" fill="#00ff9d" font-family="JetBrains Mono" font-size="10.5" font-weight="700">LOCAL TRUST BOUNDARY (127.0.0.1 + PAIRED HTTPS TUNNEL)</text>
+          <text x="242" y="34" fill="#6ee7b7" class="svg-mono" font-size="10.5" font-weight="700" data-i18n="svg.boundary">LOCAL TRUST BOUNDARY (127.0.0.1 + OPT-IN HTTPS TUNNEL)</text>
 
           <!-- Local Bridge -->
           <rect x="246" y="54" width="210" height="70" rx="9" fill="#0b1325" stroke="#38bdf8" stroke-width="1.5"/>
-          <text x="351" y="78" text-anchor="middle" fill="#fff" font-family="JetBrains Mono" font-size="12" font-weight="800">💠 Local Bridge (:7440)</text>
-          <text x="351" y="96" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">SSE Push • Fleet Advisor • FinOps</text>
-          <text x="351" y="112" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9.2">0 npm deps • Out-of-band read</text>
+          <text x="351" y="78" text-anchor="middle" fill="#fff" class="svg-mono" font-size="12" font-weight="800" data-i18n="svg.bridge">💠 Local Bridge (:7440)</text>
+          <text x="351" y="96" text-anchor="middle" fill="#cbd5e1" class="svg-mono" font-size="9.8" data-i18n="svg.bridgeSub1">SSE Push • Advisor • FinOps</text>
+          <text x="351" y="113" text-anchor="middle" fill="#7dd3fc" class="svg-mono" font-size="9.8" data-i18n="svg.bridgeSub2">0 npm deps • --read-only safe</text>
 
           <!-- Security Gate -->
           <rect x="246" y="138" width="210" height="58" rx="9" fill="rgba(251,191,36,0.08)" stroke="#fbbf24" stroke-width="1.5"/>
-          <text x="351" y="159" text-anchor="middle" fill="#fde68a" font-family="JetBrains Mono" font-size="11" font-weight="800">🛡️ Security &amp; Idempotency</text>
-          <text x="351" y="177" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.2">Session Auth • Origin • Dedupe</text>
+          <text x="351" y="159" text-anchor="middle" fill="#fde68a" class="svg-mono" font-size="10.8" font-weight="800" data-i18n="svg.gate">🛡️ Security &amp; Idempotency</text>
+          <text x="351" y="177" text-anchor="middle" fill="#e2e8f0" class="svg-mono" font-size="9.5" data-i18n="svg.gateSub">Session Auth • Origin • Dedupe</text>
 
           <!-- Downstream read-only -->
           <rect x="530" y="46" width="190" height="44" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="625" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">🧠 OpenRig / tmux</text>
-          <text x="625" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Native + Universal Discovery</text>
+          <text x="625" y="65" text-anchor="middle" fill="#f1f5f9" class="svg-mono" font-size="11" font-weight="700" data-i18n="svg.tmux">🧠 OpenRig / tmux</text>
+          <text x="625" y="80" text-anchor="middle" fill="#cbd5e1" class="svg-mono" font-size="9.8" data-i18n="svg.tmuxSub">Native + Universal Discovery</text>
 
           <rect x="740" y="46" width="186" height="44" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="833" y="65" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="11" font-weight="700">📂 Logs &amp; Git Worktrees</text>
-          <text x="833" y="80" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9.5">Incremental local read-only</text>
+          <text x="833" y="65" text-anchor="middle" fill="#f1f5f9" class="svg-mono" font-size="11" font-weight="700" data-i18n="svg.logs">📂 Logs &amp; Git Worktrees</text>
+          <text x="833" y="80" text-anchor="middle" fill="#cbd5e1" class="svg-mono" font-size="9.8" data-i18n="svg.logsSub">Incremental local read-only</text>
 
           <rect x="530" y="100" width="396" height="36" rx="8" fill="#0f172a" stroke="rgba(148,163,184,0.35)"/>
-          <text x="728" y="122" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="10.8" font-weight="700">🔧 CLI Telemetry &amp; Live Terminal State Classifier (Read-Only)</text>
+          <text x="728" y="122" text-anchor="middle" fill="#f1f5f9" class="svg-mono" font-size="10.5" font-weight="700" data-i18n="svg.classifier">🔧 CLI Telemetry &amp; Live Terminal State Classifier (Read-Only)</text>
 
           <!-- Downstream write-back -->
           <rect x="530" y="148" width="396" height="44" rx="8" fill="rgba(255,42,109,0.08)" stroke="#ff2a6d" stroke-width="1.3"/>
-          <text x="728" y="168" text-anchor="middle" fill="#fda4af" font-family="JetBrains Mono" font-size="11.5" font-weight="700">🖥️ Guarded Terminal Write-Back &amp; Circuit-Breaker</text>
-          <text x="728" y="183" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="9.5">Allowlisted Keys • Double-Send Guard • Postcondition Audit</text>
+          <text x="728" y="168" text-anchor="middle" fill="#fecdd3" class="svg-mono" font-size="11.2" font-weight="700" data-i18n="svg.writeback">🖥️ Guarded Terminal Write-Back &amp; Circuit-Breaker</text>
+          <text x="728" y="183" text-anchor="middle" fill="#e2e8f0" class="svg-mono" font-size="9.5" data-i18n="svg.writebackSub">Allowlisted Keys • Double-Send Guard • Postcondition Audit</text>
 
           <!-- Vercel Cloud -->
           <rect x="225" y="224" width="718" height="48" rx="10" fill="rgba(168,85,247,0.08)" stroke="rgba(168,85,247,0.45)"/>
-          <text x="584" y="253" text-anchor="middle" fill="#e9d5ff" font-family="JetBrains Mono" font-size="11.2" font-weight="700">🌐 Static Showcase — Landing (/), Guide (/guide), Passport (/passport), Offline Demo (/demo)</text>
+          <text x="584" y="253" text-anchor="middle" fill="#e9d5ff" class="svg-mono" font-size="10.8" font-weight="700" data-i18n="svg.static">🌐 Static Showcase — Landing (/), Guide (/guide), Passport (/passport), Offline Demo (/demo)</text>
 
           <!-- Arrows -->
           <line x1="171" y1="110" x2="244" y2="88" stroke="#38bdf8" stroke-width="1.6" marker-end="url(#arrC)"/>
@@ -676,6 +753,11 @@
         </thead>
         <tbody>
           <tr>
+            <td><b><span data-lang-block="ru">Режим --read-only (без записи)</span><span data-lang-block="en">--read-only Zero-Write Flag</span></b></td>
+            <td><span data-lang-block="ru">Флаг <code>--read-only</code> блокирует все мутирующие вызовы и отправку клавиш в <code>tmux</code> для безопасного первого осмотра живого флота</span><span data-lang-block="en">Passing <code>--read-only</code> rejects all mutation endpoints and terminal writes so you can safely evaluate live fleets with zero side effects</span></td>
+            <td><span class="badge-ok">ACTIVE</span></td>
+          </tr>
+          <tr>
             <td><b><span data-lang-block="ru">Изоляция на localhost</span><span data-lang-block="en">Loopback Isolation</span></b></td>
             <td><span data-lang-block="ru">По умолчанию сервер слушает только <code>127.0.0.1</code> и недоступен из локальной сети или интернета</span><span data-lang-block="en">Binds strictly to <code>127.0.0.1</code> by default — unreachable from LAN or external networks</span></td>
             <td><span class="badge-ok">ACTIVE</span></td>
@@ -759,31 +841,32 @@
       </table>
 
       <div class="cmd-strip">
-        <div class="cmd-box"><span data-i18n="cmd.npx">Мгновенный запуск без установки</span>npx rig-commander@latest</div>
-        <div class="cmd-box"><span data-i18n="cmd.start">Локальный запуск из репозитория (:7440)</span>npm start</div>
-        <div class="cmd-box"><span data-i18n="cmd.test">Прогон всех 333 автотестов (~1s)</span>npm test</div>
+        <div class="cmd-box"><span data-i18n="cmd.ro">Safe zero-write first launch</span>npx rig-commander@latest --read-only</div>
+        <div class="cmd-box"><span data-i18n="cmd.npx">Instant zero-install launch</span>npx rig-commander@latest</div>
+        <div class="cmd-box"><span data-i18n="cmd.start">Run locally from repository (:7440)</span>npm start</div>
+        <div class="cmd-box"><span data-i18n="cmd.test">Run all automated tests (~1s)</span>npm test</div>
       </div>
     </section>
   </main>
 
   <footer>
-    <span>💠 RigCommander // Operational &amp; Security Passport v3.8 (MIT Open Source)</span>
+    <span>💠 RigCommander // Operational &amp; Security Passport v3.8.1 (MIT Open Source)</span>
     <span>
-      <a href="/">Landing</a> · <a href="/guide">User Guide</a> · <a href="/guide#openrig-playbook">OpenRig Playbook</a> · <a href="/demo">Live Demo</a> · <a href="/demo?track=tour">SA-DSS Tour</a> · <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
+      <a href="/" data-i18n="footer.landing">Landing</a> · <a href="/guide" data-i18n="footer.guide">User Guide</a> · <a href="/guide#openrig-playbook">OpenRig Playbook</a> · <a href="/demo" data-i18n="footer.demo">Live Demo</a> · <a href="/demo?track=tour" data-i18n="footer.tour">SA-DSS Tour</a> · <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
     </span>
   </footer>
 
   <script>
     const I18N = {
       ru: {
-        badge: 'PASSPORT v3.8',
+        badge: 'PASSPORT v3.8.1',
         'nav.context': 'C4 Контекст',
         'nav.components': 'Архитектура',
         'nav.ontology': 'Модель',
         'nav.security': 'Безопасность',
         'nav.quality': 'Верификация',
         'nav.guide': 'Гайд',
-        'nav.demo': '▶ Live Demo',
+        'nav.demo': '▶ Живое демо',
         'hero.eyebrow': 'Архитектурный и операционный паспорт системы',
         'hero.title': 'RigCommander // Neural Command Deck',
         'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig и standalone tmux / JSONL). Объединяет адаптивную топологию, живой SSE-поток TMUX, операционный цифровой двойник, Гант и передачу задач, Git Worktree Radar, сводку смены, FinOps, защищённый Mobile PWA и идемпотентный HITL-контроль.',
@@ -798,7 +881,27 @@
         'kpi.tests.n': '40 тестовых наборов • ~1s локально',
         'kpi.sec.l': 'Граница доверия',
         'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
-        's1.title': '1. Контекст системы и границы доверия (C4 Level 1)',
+        's1.title': '1. Контекст системы, гарантии и границы доверия (C4 Level 1)',
+        'sg.c1': 'Гарантия',
+        'sg.c2': 'Поведение по умолчанию и границы',
+        'sg.c3': 'По умолчанию',
+        'svg.op': '👤 ОПЕРАТОР',
+        'svg.opSub': 'ПК / Телефон PWA',
+        'svg.opProto': 'SSE • QR+PIN • TG',
+        'svg.boundary': 'ЛОКАЛЬНАЯ ГРАНИЦА ДОВЕРИЯ (127.0.0.1 + OPT-IN HTTPS)',
+        'svg.bridge': '💠 Локальный мост (:7440)',
+        'svg.bridgeSub1': 'SSE • Советник • FinOps',
+        'svg.bridgeSub2': '0 npm deps • --read-only',
+        'svg.gate': '🛡️ Защита и идемпотентность',
+        'svg.gateSub': 'Сессия • Origin • Антидубль',
+        'svg.tmux': '🧠 OpenRig / tmux',
+        'svg.tmuxSub': 'OpenRig + поиск tmux',
+        'svg.logs': '📂 Логи и Git Worktrees',
+        'svg.logsSub': 'Только локальное чтение',
+        'svg.classifier': '🔧 Телеметрия CLI и классификатор экранов (Read-Only)',
+        'svg.writeback': '🖥️ Защищённая запись в терминал и авто-тормоз',
+        'svg.writebackSub': 'Белый список клавиш • Антидубль • Сверка результата',
+        'svg.static': '🌐 Статический сайт — Главная (/), Гайд (/guide), Паспорт (/passport), Офлайн-демо (/demo)',
         's2.title': '2. Архитектурные слои и инженерные принципы (C4 Level 2)',
         'r1.t': '1. Чистая доменная логика',
         'r1.d': 'Вся математика раскладки графа, Ганта, FinOps, онтологии и триажа отделена от DOM и покрыта автономными юнит-тестами.',
@@ -824,12 +927,17 @@
         's5.dom': 'Контур проверки',
         's5.cov': 'Что верифицируется автоматически',
         's5.st': 'Статус',
+        'cmd.ro': 'Безопасный первый запуск без записи',
         'cmd.npx': 'Мгновенный запуск без установки',
         'cmd.start': 'Локальный запуск из репозитория (:7440)',
-        'cmd.test': 'Прогон всех 333 автотестов (~1s)'
+        'cmd.test': 'Прогон всех автотестов (~1s)',
+        'footer.landing': 'Главная',
+        'footer.guide': 'Руководство',
+        'footer.demo': 'Живое демо',
+        'footer.tour': 'Тур SA-DSS'
       },
       en: {
-        badge: 'PASSPORT v3.8',
+        badge: 'PASSPORT v3.8.1',
         'nav.context': 'C4 Context',
         'nav.components': 'Architecture',
         'nav.ontology': 'Model',
@@ -851,7 +959,27 @@
         'kpi.tests.n': '40 test suites • ~1s locally',
         'kpi.sec.l': 'Trust Boundary',
         'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
-        's1.title': '1. System Context & Trust Boundaries (C4 Level 1)',
+        's1.title': '1. System Context, Security Guarantees & Trust Boundaries (C4 Level 1)',
+        'sg.c1': 'Guarantee',
+        'sg.c2': 'Default Behavior & Boundary',
+        'sg.c3': 'Default',
+        'svg.op': '👤 OPERATOR',
+        'svg.opSub': 'Desktop / Phone PWA',
+        'svg.opProto': 'SSE Push • QR+PIN • TG',
+        'svg.boundary': 'LOCAL TRUST BOUNDARY (127.0.0.1 + OPT-IN HTTPS TUNNEL)',
+        'svg.bridge': '💠 Local Bridge (:7440)',
+        'svg.bridgeSub1': 'SSE Push • Advisor • FinOps',
+        'svg.bridgeSub2': '0 npm deps • --read-only safe',
+        'svg.gate': '🛡️ Security & Idempotency',
+        'svg.gateSub': 'Session Auth • Origin • Dedupe',
+        'svg.tmux': '🧠 OpenRig / tmux',
+        'svg.tmuxSub': 'Native + Universal Discovery',
+        'svg.logs': '📂 Logs & Git Worktrees',
+        'svg.logsSub': 'Incremental local read-only',
+        'svg.classifier': '🔧 CLI Telemetry & Live Terminal State Classifier (Read-Only)',
+        'svg.writeback': '🖥️ Guarded Terminal Write-Back & Circuit-Breaker',
+        'svg.writebackSub': 'Allowlisted Keys • Double-Send Guard • Postcondition Audit',
+        'svg.static': '🌐 Static Showcase — Landing (/), Guide (/guide), Passport (/passport), Offline Demo (/demo)',
         's2.title': '2. Architectural Layers & Engineering Principles (C4 Level 2)',
         'r1.t': '1. Pure domain logic',
         'r1.d': 'Graph layout, Gantt packing, FinOps, ontology, and queue triage are cleanly decoupled from DOM state and verified by standalone unit tests.',
@@ -877,18 +1005,24 @@
         's5.dom': 'Verification Domain',
         's5.cov': 'Automatically Verified Guarantees',
         's5.st': 'Status',
+        'cmd.ro': 'Safe zero-write first launch',
         'cmd.npx': 'Instant zero-install launch',
         'cmd.start': 'Run locally from repository (:7440)',
-        'cmd.test': 'Run all 333 automated tests (~1s)'
+        'cmd.test': 'Run all automated tests (~1s)',
+        'footer.landing': 'Landing',
+        'footer.guide': 'User Guide',
+        'footer.demo': 'Live Demo',
+        'footer.tour': 'SA-DSS Tour'
       }
     };
 
     function setLang(lang) {
-      const dict = I18N[lang] || I18N.ru;
-      document.documentElement.lang = lang;
-      localStorage.setItem('rigcommander_lang', lang);
+      const next = lang === 'ru' ? 'ru' : 'en';
+      const dict = I18N[next] || I18N.en;
+      document.documentElement.lang = next;
+      try { localStorage.setItem('rigcommander_lang', next); } catch {}
       document.querySelectorAll('.lang-btn').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+        b.classList.toggle('active', b.getAttribute('data-lang') === next);
       });
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
@@ -896,8 +1030,21 @@
       });
     }
 
-    const savedLang = localStorage.getItem('rigcommander_lang');
-    setLang(savedLang === 'en' ? 'en' : 'ru');
+    (function initPassportLang() {
+      const params = new URLSearchParams(window.location.search || '');
+      const qLang = (params.get('lang') || '').toLowerCase();
+      let saved = '';
+      try { saved = localStorage.getItem('rigcommander_lang') || ''; } catch {}
+      let initial = 'en';
+      if (qLang === 'en' || qLang === 'ru') {
+        initial = qLang;
+      } else if (saved === 'en' || saved === 'ru') {
+        initial = saved;
+      } else if (navigator.language && navigator.language.toLowerCase().startsWith('ru')) {
+        initial = 'ru';
+      }
+      setLang(initial);
+    })();
   </script>
 </body>
 </html>

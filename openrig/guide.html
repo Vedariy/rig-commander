@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -72,9 +72,6 @@
   <meta name="twitter:title" content="RigCommander — Operator User Guide" />
   <meta name="twitter:description" content="Quick Start, SA-DSS L0–L3 reading guide, operational playbooks, FinOps, Telegram HITL, and Live PWA setup." />
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg: #030712;
@@ -88,16 +85,17 @@
       --lavender: #a855f7;
       --coral: #ff2a6d;
       --text: #f1f5f9;
-      --muted: #94a3b8;
-      --dim: #64748b;
-      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --muted: #b0c2d8;
+      --dim: #94a3b8;
+      --font-sans: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+    html { scroll-behavior: smooth; background: var(--bg); color: var(--text); font-family: var(--font-sans); overflow-x: clip; max-width: 100%; }
     body {
       min-height: 100vh;
+      max-width: 100%;
       background:
         radial-gradient(circle at 18% 0%, rgba(0, 240, 255, 0.08), transparent 46%),
         radial-gradient(circle at 86% 18%, rgba(0, 255, 157, 0.06), transparent 44%),
@@ -107,31 +105,32 @@
       background-size: 100% 100%, 100% 100%, 44px 44px, 44px 44px, 100% 100%;
       line-height: 1.62;
       padding-bottom: 72px;
-      overflow-x: hidden;
+      overflow-x: clip;
     }
 
     .topbar {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(3, 7, 18, 0.9);
+      background: rgba(3, 7, 18, 0.92);
       backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border);
     }
     .topbar-inner {
       max-width: 1220px;
       margin: 0 auto;
-      padding: 12px 20px;
+      padding: 10px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
+      gap: 12px;
       flex-wrap: wrap;
     }
     .brand {
       display: inline-flex;
       align-items: center;
       gap: 10px;
+      min-height: 32px;
       text-decoration: none;
       color: var(--text);
       font-family: var(--font-mono);
@@ -151,13 +150,23 @@
     }
     .nav-links {
       display: flex;
-      gap: 14px;
+      align-items: center;
+      gap: 4px;
       flex-wrap: wrap;
       font-family: var(--font-mono);
       font-size: 11.5px;
     }
-    .nav-links a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
-    .nav-links a:hover { color: var(--cyan); }
+    .nav-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 7px;
+      border-radius: 6px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-links a:hover { color: var(--cyan); background: rgba(0, 240, 255, 0.08); }
     .nav-right { display: flex; align-items: center; gap: 10px; }
     .lang-switch {
       display: inline-flex;
@@ -167,13 +176,17 @@
       padding: 2px;
     }
     .lang-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
       background: transparent;
       border: none;
       color: var(--muted);
       font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 700;
-      padding: 4px 8px;
+      padding: 0 9px;
       border-radius: 6px;
       cursor: pointer;
     }
@@ -182,13 +195,14 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      min-height: 34px;
       text-decoration: none;
       font-family: var(--font-mono);
       font-size: 11.5px;
       font-weight: 800;
       color: #030712;
       background: linear-gradient(135deg, var(--emerald), var(--cyan));
-      padding: 7px 14px;
+      padding: 0 14px;
       border-radius: 9px;
       box-shadow: 0 0 18px rgba(0, 240, 255, 0.28);
       white-space: nowrap;
@@ -276,31 +290,11 @@
       color: var(--muted);
       font-size: 14.5px;
       max-width: 780px;
-      margin-bottom: 16px;
+      margin-bottom: 0;
     }
-    .hero-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .hero-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      color: #cbd5e1;
-      text-decoration: none;
-    }
-    .hero-pill:hover { border-color: var(--cyan); color: #fff; }
 
     section.card {
-      scroll-margin-top: 78px;
+      scroll-margin-top: 84px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 16px;
@@ -557,8 +551,15 @@
       .layout { grid-template-columns: 1fr; padding-top: 18px; }
       .toc { position: static; flex-direction: row; flex-wrap: wrap; gap: 6px; padding: 10px; }
       .toc-title, .toc-sep { display: none; }
-      .toc a { border-left: none; border: 1px solid var(--border); font-size: 11.5px; padding: 5px 9px; }
+      .toc a { border-left: none; border: 1px solid var(--border); font-size: 11.5px; padding: 6px 9px; min-height: 32px; display: inline-flex; align-items: center; }
       .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .topbar { position: relative; }
+      .topbar-inner { padding: 8px 14px; gap: 8px; }
+      .layout { padding: 14px 14px 0; }
+      section.card { padding: 16px 14px; }
+      table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     }
   </style>
 </head>
@@ -567,7 +568,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/" id="guideBrandLink">
         <span>💠 RIGCOMMANDER</span>
-        <span class="pill-tag">USER GUIDE v3.8</span>
+        <span class="pill-tag">USER GUIDE v3.8.1</span>
       </a>
       <nav class="nav-links">
         <a href="#quickstart"><span data-lang-block="ru">Старт</span><span data-lang-block="en">Quick Start</span></a>
@@ -580,8 +581,8 @@
       </nav>
       <div class="nav-right">
         <div class="lang-switch" role="group" aria-label="Language">
-          <button type="button" class="lang-btn active" data-lang="ru" onclick="setLang('ru')">RU</button>
-          <button type="button" class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+          <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
+          <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
         </div>
         <a class="cta-btn" href="/demo" id="guidePrimaryCta">
           <span data-lang-block="ru">▶ Открыть демо</span>
@@ -627,38 +628,32 @@
           <span data-lang-block="ru">Практический гайд для инженеров, запускающих параллельные флоты AI-кодеров (Claude Code, Codex CLI, Gemini/Antigravity, Pi, OpenRig, tmux). За 5 минут вы освоите чтение графа и Ганта, снятие HITL-блокеров в 1 клик, контроль бюджета и установку живого пульта на Mac и телефон.</span>
           <span data-lang-block="en">A hands-on manual for engineers running parallel AI coding agents (Claude Code, Codex CLI, Gemini/Antigravity, Pi, OpenRig, tmux). Learn how to read the L0–L3 deck in 5 seconds, clear HITL prompts in 1 click, guard token spend, and install the live PWA on Mac and your phone.</span>
         </p>
-        <div class="hero-pills">
-          <a class="hero-pill" href="#quickstart">⚡ npx rig-commander@latest</a>
-          <a class="hero-pill" href="#playbooks"><span data-lang-block="ru">🎯 5 сценариев оператора</span><span data-lang-block="en">🎯 5 Operator Playbooks</span></a>
-          <a class="hero-pill" href="#openrig-playbook"><span data-lang-block="ru">🧭 OpenRig Playbook (L3)</span><span data-lang-block="en">🧭 OpenRig Playbook (L3)</span></a>
-          <a class="hero-pill" href="#pwa"><span data-lang-block="ru">📱 Live PWA (Mac + iOS/Android)</span><span data-lang-block="en">📱 Live PWA (Mac + iOS/Android)</span></a>
-          <a class="hero-pill" href="/demo?track=tour"><span data-lang-block="ru">🧭 6-шаговый тур в демо</span><span data-lang-block="en">🧭 6-Step Tour in Demo</span></a>
-        </div>
       </div>
 
       <!-- 1. QUICK START -->
-      <section class="card" id="resilience">
-        <h2><span data-lang-block="ru">Восстановление после отключения</span><span data-lang-block="en">Recovery after an outage</span></h2>
-        <p><span data-lang-block="ru">Если флот недоступен после сна или сбоя, пульт показывает доступные способы восстановления и возраст последнего снимка. Намеренно остановленные риги пропускаются при восстановлении всего флота.</span><span data-lang-block="en">When the fleet is unavailable after sleep or a crash, the Deck shows available recovery options and the age of the latest snapshot. Fleet recovery skips intentionally stopped rigs.</span></p>
-        <ol>
-          <li><span data-lang-block="ru">Выберите флот или отдельный риг и откройте план.</span><span data-lang-block="en">Choose the fleet or an individual rig and open its plan.</span></li>
-          <li><span data-lang-block="ru">Проверьте команду, список целей и предупреждения. Запуск требует отдельного подтверждения; закрытие плана ничего не запускает.</span><span data-lang-block="en">Review the command, targets and warnings. Starting requires a separate confirmation; closing the plan starts nothing.</span></li>
-          <li><span data-lang-block="ru">Прочитайте результат: восстановление может быть частичным или остаться неподтверждённым. Команду можно скопировать для ручной диагностики.</span><span data-lang-block="en">Read the result: recovery may be partial or remain unconfirmed. Copy the command for manual diagnosis when needed.</span></li>
-        </ol>
-        <p><span data-lang-block="ru">Локальное хранилище не зашифровано. Снимок не гарантирует сохранения всей истории диалога. Автоматического восстановления без вашего действия нет.</span><span data-lang-block="en">The local vault is unencrypted. A snapshot does not guarantee the entire conversation history is preserved. Recovery never starts without your action.</span></p>
-        <a class="cta-btn" href="/demo?track=resilience"><span data-lang-block="ru">Попробовать безопасную симуляцию</span><span data-lang-block="en">Try the safe simulation</span></a>
-      </section>
-
       <section class="card" id="quickstart">
         <div class="sec-head">
-          <h2>🚀 <span data-lang-block="ru">1. Быстрый старт и режимы работы</span><span data-lang-block="en">1. Quick Start & Discovery Modes</span></h2>
+          <h2>🚀 <span data-lang-block="ru">1. Быстрый старт и CLI</span><span data-lang-block="en">1. Quick Start &amp; CLI</span></h2>
           <span class="sec-tag">0 NPM DEPS • NODE &ge; 18</span>
         </div>
         <p class="lead">
-          <span data-lang-block="ru">RigCommander — локальный сервер без облачных аккаунтов и без внешних npm-зависимостей. Запускается одной командой и сразу открывает живой пульт на <code class="inline">http://127.0.0.1:7440</code>.</span>
-          <span data-lang-block="en">RigCommander is a zero-dependency, local-first server with no cloud login. One command starts the live bridge and opens <code class="inline">http://127.0.0.1:7440</code>.</span>
+          <span data-lang-block="ru">RigCommander — локальный сервер без облачных аккаунтов и без внешних npm-зависимостей. Начните с безопасного режима <code class="inline">--read-only</code> (ноль записи в терминал) или запустите полный интерактивный пульт на <code class="inline">http://127.0.0.1:7440</code>.</span>
+          <span data-lang-block="en">RigCommander is a zero-dependency, local-first server with no cloud login. Start in zero-write <code class="inline">--read-only</code> mode for safe first evaluation, or launch the full interactive deck on <code class="inline">http://127.0.0.1:7440</code>.</span>
         </p>
 
+        <div style="font-family:var(--font-mono); font-size:11.5px; color:var(--emerald); margin-top:4px;">
+          <span data-lang-block="ru">🔒 Безопасный первый запуск (read-only — запись в терминал и мутации отключены):</span>
+          <span data-lang-block="en">🔒 Safe first evaluation (read-only — all terminal writes and mutations disabled):</span>
+        </div>
+        <div class="cmd-row">
+          <code>npx rig-commander@latest --read-only</code>
+          <button type="button" class="copy-btn" data-copy="npx rig-commander@latest --read-only">Cmd ⧉</button>
+        </div>
+
+        <div style="font-family:var(--font-mono); font-size:11.5px; color:#7dd3fc; margin-top:8px;">
+          <span data-lang-block="ru">⚡ Полный интерактивный пульт (HITL-подтверждения, /compact и управление):</span>
+          <span data-lang-block="en">⚡ Full interactive command deck (1-click HITL approvals, /compact &amp; controls):</span>
+        </div>
         <div class="cmd-row">
           <code>npx rig-commander@latest</code>
           <button type="button" class="copy-btn" data-copy="npx rig-commander@latest">Cmd ⧉</button>
@@ -691,6 +686,10 @@
           </thead>
           <tbody>
             <tr>
+              <td><code class="inline">npx rig-commander@latest --read-only</code></td>
+              <td><span data-lang-block="ru">Безопасный режим осмотра: блокирует любые записи в <code class="inline">tmux</code>, перезапуски и мутации</span><span data-lang-block="en">Zero-write inspection mode: disables all <code class="inline">tmux</code> keystrokes, restarts, and mutations</span></td>
+            </tr>
+            <tr>
               <td><code class="inline">npx rig-commander -p 7450</code></td>
               <td><span data-lang-block="ru">Запустить на другом порту (по умолчанию <code class="inline">7440</code>)</span><span data-lang-block="en">Use a custom port (default <code class="inline">7440</code>)</span></td>
             </tr>
@@ -700,7 +699,7 @@
             </tr>
             <tr>
               <td><code class="inline">npx rig-commander --public-url https://mac.ts.net</code></td>
-              <td><span data-lang-block="ru">Сразу активировать защищённый Live Mobile PWA и QR-код для телефона</span><span data-lang-block="en">Pre-configure HTTPS origin for paired Live Mobile PWA & QR code</span></td>
+              <td><span data-lang-block="ru">Сразу активировать защищённый Live Mobile PWA и QR-код для телефона</span><span data-lang-block="en">Pre-configure HTTPS origin for paired Live Mobile PWA &amp; QR code</span></td>
             </tr>
             <tr>
               <td><code class="inline">npx rig-commander --no-open</code></td>
@@ -1003,7 +1002,7 @@
                 <tr><td><kbd>\</kbd></td><td><span data-lang-block="ru">Zen-режим (только центральный граф на весь экран)</span><span data-lang-block="en">Zen Canvas Mode (hide both sidebars)</span></td></tr>
                 <tr><td><kbd>D</kbd></td><td><span data-lang-block="ru">Плотность карточек узлов (Компакт / Детально)</span><span data-lang-block="en">Toggle Node Card Density (Compact / Detailed)</span></td></tr>
                 <tr><td><kbd>F</kbd></td><td><span data-lang-block="ru">Полноэкранный режим</span><span data-lang-block="en">Toggle Fullscreen</span></td></tr>
-                <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td><span data-lang-block="ru">Интерактивный 6-шаговый тур / Закрыть модалку</span><span data-lang-block="en">Interactive 6-Step Tour / Close active modal</span></td></tr>
+                <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td><span data-lang-block="ru">Интерактивный тур SA-DSS / Закрыть модалку</span><span data-lang-block="en">Interactive SA-DSS Tour / Close active modal</span></td></tr>
               </tbody>
             </table>
           </div>
@@ -1086,7 +1085,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td><code class="inline">L0 — Model</code></td><td>Claude, GPT-6.x, GLM, Gemini</td><td><span data-lang-block="ru">Безсостоятельный движок токенов</span><span data-lang-block="en">Stateless token engine</span></td></tr>
+            <tr><td><code class="inline">L0 — Model</code></td><td>Claude, GPT-5 / Codex, GLM, Gemini</td><td><span data-lang-block="ru">Безсостоятельный движок токенов</span><span data-lang-block="en">Stateless token engine</span></td></tr>
             <tr><td><code class="inline">L1 — Agent Core</code></td><td><span data-lang-block="ru">Цикл рассуждений</span><span data-lang-block="en">Reasoning loop</span></td><td><span data-lang-block="ru">Наблюдение → план → действие</span><span data-lang-block="en">Observe → plan → act</span></td></tr>
             <tr><td><code class="inline">L2 — Harness</code></td><td><code class="inline">claude</code>, <code class="inline">codex</code>, CLI</td><td><span data-lang-block="ru">Инструменты, память, права, сессия</span><span data-lang-block="en">Tools, memory, permissions, session</span></td></tr>
             <tr><td><code class="inline">L3 — OpenRig</code></td><td><span data-lang-block="ru">Демон (<code class="inline">:7437</code>) + SQLite + <code class="inline">tmux</code></span><span data-lang-block="en">Daemon (<code class="inline">:7437</code>) + SQLite + <code class="inline">tmux</code></span></td><td><span data-lang-block="ru">Топология команды, очереди, снапшоты, восстановление</span><span data-lang-block="en">Team topology, durable queues, snapshots, honest recovery</span></td></tr>
@@ -1197,11 +1196,33 @@
           <span data-lang-block="en"><strong>Top 7 OpenRig Anti-Patterns:</strong> (1) assigning work via <code class="inline">rig send</code> instead of <code class="inline">rig queue create</code>; (2) passing <code class="inline">--no-nudge</code> (leaves agents asleep) or expecting <code class="inline">--force</code> to bypass prompts; (3) running <code class="inline">rig broadcast</code> without <code class="inline">--rig</code>/<code class="inline">--pod</code> (broadcast storm); (4) putting multiline backtick text in <code class="inline">--body</code> instead of <code class="inline">--body-file</code>; (5) confusing <code class="inline">rig down --delete</code> with <code class="inline">rig archive</code>; (6) trusting <code class="inline">rig ps</code> projections over live <code class="inline">rig capture</code> &amp; <code class="inline">rig parked</code>; (7) starting <code class="inline">kernel</code> without <code class="inline">--existing</code> or hand-editing SQLite instead of <code class="inline">rig seat clear-attention</code>.</span>
         </div>
       </section>
+
+      <!-- 10. FLEET RECOVERY -->
+      <section class="card" id="resilience">
+        <div class="sec-head">
+          <h2>🚑 <span data-lang-block="ru">10. Восстановление после отключения</span><span data-lang-block="en">10. Recovery After an Outage</span></h2>
+          <span class="sec-tag">CRASH-CART • OPT-IN PLAN</span>
+        </div>
+        <p class="lead">
+          <span data-lang-block="ru">Если флот недоступен после сна или сбоя, пульт показывает доступные способы восстановления и возраст последнего снимка. Намеренно остановленные риги пропускаются при восстановлении всего флота.</span>
+          <span data-lang-block="en">When the fleet is unavailable after sleep or a crash, the Deck shows available recovery options and the age of the latest snapshot. Fleet recovery skips intentionally stopped rigs.</span>
+        </p>
+        <ol class="clean" style="padding-left:20px; color:#cbd5e1; font-size:13.5px; display:flex; flex-direction:column; gap:6px; margin-bottom:14px;">
+          <li><span data-lang-block="ru">Выберите флот или отдельный риг и откройте план.</span><span data-lang-block="en">Choose the fleet or an individual rig and open its plan.</span></li>
+          <li><span data-lang-block="ru">Проверьте команду, список целей и предупреждения. Запуск требует отдельного подтверждения; закрытие плана ничего не запускает.</span><span data-lang-block="en">Review the command, targets and warnings. Starting requires a separate confirmation; closing the plan starts nothing.</span></li>
+          <li><span data-lang-block="ru">Прочитайте результат: восстановление может быть частичным или остаться неподтверждённым. Команду можно скопировать для ручной диагностики.</span><span data-lang-block="en">Read the result: recovery may be partial or remain unconfirmed. Copy the command for manual diagnosis when needed.</span></li>
+        </ol>
+        <div class="callout warn" style="margin-bottom:14px;">
+          <span data-lang-block="ru">Локальное хранилище не зашифровано (открытый текст с правами доступа только владельца — полагайтесь на шифрование диска). Снимок не гарантирует сохранения всей истории диалога. Автоматического восстановления без вашего действия нет.</span>
+          <span data-lang-block="en">The local vault is unencrypted plaintext with owner-only OS permissions — rely on full-disk encryption. A snapshot does not guarantee the entire conversation history is preserved. Recovery never starts without your action.</span>
+        </div>
+        <a class="cta-btn" href="/demo?track=resilience"><span data-lang-block="ru">▶ Попробовать безопасную симуляцию</span><span data-lang-block="en">▶ Try the Safe Simulation</span></a>
+      </section>
     </main>
   </div>
 
   <footer>
-    <span>💠 RigCommander // Operator User Guide v3.8</span>
+    <span>💠 RigCommander // Operator User Guide v3.8.1</span>
     <span style="display:flex; gap:16px; flex-wrap:wrap;">
       <a href="/" id="footerHomeLink"><span data-lang-block="ru">Главная / Пульт</span><span data-lang-block="en">Home / Deck</span></a>
       <a href="/passport"><span data-lang-block="ru">Паспорт проекта</span><span data-lang-block="en">Project Passport</span></a>
@@ -1212,7 +1233,7 @@
 
   <script>
     function setLang(lang) {
-      const next = lang === 'en' ? 'en' : 'ru';
+      const next = lang === 'ru' ? 'ru' : 'en';
       document.documentElement.lang = next;
       try { localStorage.setItem('rigcommander_lang', next); } catch {}
       document.querySelectorAll('.lang-btn').forEach(b => {
@@ -1221,12 +1242,20 @@
     }
 
     (function initGuide() {
-      // Detect language from ?lang= query or saved preference
+      // Detect language from ?lang= query, saved preference, or browser locale
       const params = new URLSearchParams(window.location.search || '');
       const qLang = (params.get('lang') || '').toLowerCase();
       let saved = '';
       try { saved = localStorage.getItem('rigcommander_lang') || ''; } catch {}
-      setLang(qLang === 'en' || qLang === 'ru' ? qLang : (saved === 'en' ? 'en' : 'ru'));
+      let initial = 'en';
+      if (qLang === 'en' || qLang === 'ru') {
+        initial = qLang;
+      } else if (saved === 'en' || saved === 'ru') {
+        initial = saved;
+      } else if (navigator.language && navigator.language.toLowerCase().startsWith('ru')) {
+        initial = 'ru';
+      }
+      setLang(initial);
 
       // When opened from local live RigCommander (not static vercel marketing site),
       // point primary CTA directly back to the live deck "/" instead of "/demo".
