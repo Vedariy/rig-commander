@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import net from 'node:net';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { resolveReadOnlyMode, READ_ONLY_ERROR_BODY } from '../openrig/server.mjs';
+import { RemoteAccessGuard } from '../openrig/lib/remote-access.mjs';
+import { ShiftHistoryStore } from '../openrig/lib/shift-history.mjs';
 
 const execFileAsync = promisify(execFile);
 const serverPath = fileURLToPath(new URL('../openrig/server.mjs', import.meta.url));
@@ -330,4 +332,169 @@ test('bin/cli.mjs --read-only prints status line and forwards read-only enforcem
   });
   assert.equal(sendRes.status, 403);
   assert.equal((await sendRes.json()).code, 'READ_ONLY_MODE');
+});
+
+test('P1 regression: RemoteAccessGuard and /pair under READ_ONLY_MODE + --public-url never mutate state or write remote-sessions.json', async t => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'rigcmd-ro-pair-unit-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const stateFile = path.join(dir, 'remote-sessions.json');
+
+  // 1. Unit check: constructor with publicUrl + readOnly:true performs 0 disk writes and mints no pairing code
+  const guard = new RemoteAccessGuard({ port: 7440, stateFile, publicUrl: 'https://demo.ts.net', readOnly: true });
+  assert.equal(guard.getStatus().publicOrigin, 'https://demo.ts.net');
+  assert.equal(guard.getStatus().pairingPin, '');
+  assert.equal(guard.getStatus().pairingUrl, '');
+  assert.equal(guard.mintPairingCode(), null);
+  assert.equal(guard.consumePairingCode('ABCD-EFGH').code, 'READ_ONLY_MODE');
+  assert.equal(guard.setPublicUrl('https://other.ts.net').code, 'READ_ONLY_MODE');
+  await assert.rejects(() => stat(stateFile), { code: 'ENOENT' });
+
+  // 2. Live HTTP check with RIGCOMMANDER_PUBLIC_URL on fresh HOME -> 0 disk writes and 403 READ_ONLY_MODE on /pair
+  const { origin: freshOrigin } = await startReadOnlyServer(t, {
+    extraEnv: { RIGCOMMANDER_PUBLIC_URL: 'https://demo.ts.net' }
+  });
+  const getPair = await fetch(freshOrigin + '/pair?code=TESTCODE', { redirect: 'manual' });
+  assert.equal(getPair.status, 403);
+  assert.equal(getPair.headers.get('set-cookie'), null);
+  assert.deepEqual(await getPair.json(), READ_ONLY_ERROR_BODY);
+
+  const postPairJson = await fetch(freshOrigin + '/pair', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code: 'TESTCODE' }),
+    redirect: 'manual'
+  });
+  assert.equal(postPairJson.status, 403);
+  assert.equal(postPairJson.headers.get('set-cookie'), null);
+  assert.deepEqual(await postPairJson.json(), READ_ONLY_ERROR_BODY);
+
+  const postPairForm = await fetch(freshOrigin + '/pair', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: 'code=TESTCODE',
+    redirect: 'manual'
+  });
+  assert.equal(postPairForm.status, 403);
+  assert.equal(postPairForm.headers.get('set-cookie'), null);
+  assert.deepEqual(await postPairForm.json(), READ_ONLY_ERROR_BODY);
+
+  // 3. Live HTTP check with pre-seeded remote-sessions.json + --public-url -> disk file stays untouched
+  const seededHome = await mkdtemp(path.join(tmpdir(), 'rigcmd-ro-pair-seeded-'));
+  const cfgDir = path.join(seededHome, '.config', 'rig-commander');
+  await mkdir(cfgDir, { recursive: true, mode: 0o700 });
+  const seededPath = path.join(cfgDir, 'remote-sessions.json');
+  const seededBefore = JSON.stringify({
+    version: 1,
+    publicOrigin: 'https://existing.ts.net',
+    sessions: []
+  }, null, 2);
+  await writeFile(seededPath, seededBefore, { mode: 0o600 });
+
+  const preload = path.join(seededHome, 'offline.cjs');
+  await writeFile(preload, "globalThis.fetch = async () => { throw new Error('Offline test fixture'); };");
+  const child = spawn(process.execPath, ['--require', preload, serverPath, '--read-only'], {
+    cwd: seededHome,
+    env: {
+      HOME: seededHome,
+      PATH: `${seededHome}:/bin:/usr/bin`,
+      RIGCOMMANDER_PORT: '0',
+      RIGCOMMANDER_FORCE_UNIVERSAL: '1',
+      RIGCOMMANDER_PUBLIC_URL: 'https://override.ts.net'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const exited = once(child, 'exit');
+  t.after(async () => {
+    child.kill();
+    await exited;
+    await rm(seededHome, { recursive: true, force: true });
+  });
+  let seededOrigin = '';
+  const lines = createInterface({ input: child.stdout });
+  try {
+    for await (const line of lines) {
+      const m = line.match(/at (http:\/\/127\.0\.0\.1:[1-9]\d*)/);
+      if (m) { seededOrigin = m[1]; break; }
+    }
+  } finally {
+    lines.close();
+  }
+  assert.ok(seededOrigin);
+
+  const remoteStatus = await (await fetch(seededOrigin + '/api/remote/status')).json();
+  assert.equal(remoteStatus.pairingPin, '');
+  assert.equal(remoteStatus.pairingUrl, '');
+  assert.equal((await fetch(seededOrigin + '/pair?code=ANY')).status, 403);
+  assert.equal((await fetch(seededOrigin + '/pair', { method: 'POST', body: 'code=ANY' })).status, 403);
+  assert.equal(await readFile(seededPath, 'utf8'), seededBefore, 'remote-sessions.json must remain byte-for-byte untouched');
+});
+
+test('P2 regression: wake advisory triggers 0 outbound Telegram API requests in READ_ONLY_MODE', async t => {
+  const home = await mkdtemp(path.join(tmpdir(), 'rigcmd-ro-tg-'));
+  const fetchLog = path.join(home, 'fetch.log');
+  await writeFile(fetchLog, '');
+  const fixturePath = path.join(home, 'wake-fixture.mjs');
+  await writeFile(fixturePath, `
+    import { appendFileSync } from 'node:fs';
+    const logPath = ${JSON.stringify(fetchLog)};
+    globalThis.fetch = async (url) => {
+      appendFileSync(logPath, String(url) + '\\n');
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 });
+    };
+    const { resilience } = await import(${JSON.stringify(new URL('../openrig/server.mjs', import.meta.url).href)});
+    await resilience.notify({ kind: 'resilience_wake', at: new Date().toISOString(), tier: 'daemon_down' });
+    resilience.lastTick = Date.now() - 300_000;
+    resilience.getStatus = async () => ({
+      providers: [{ id: 'openrig', report: { tier: 'daemon_down' } }]
+    });
+    await resilience.checkWallClockJump(Date.now());
+  `);
+
+  const child = spawn(process.execPath, [fixturePath], {
+    cwd: home,
+    env: {
+      HOME: home,
+      PATH: `${home}:/bin:/usr/bin`,
+      RIGCOMMANDER_READ_ONLY: '1',
+      TELEGRAM_BOT_TOKEN: '123456:fake-telegram-token',
+      TELEGRAM_CHAT_ID: '987654321'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  let stderr = '';
+  child.stderr.setEncoding('utf8').on('data', d => { stderr += d; });
+  const [code] = await once(child, 'exit');
+  t.after(() => rm(home, { recursive: true, force: true }));
+  assert.equal(code, 0, 'Wake advisory fixture exited non-zero: ' + stderr);
+
+  const outboundUrls = (await readFile(fetchLog, 'utf8')).trim().split('\n').filter(Boolean);
+  assert.equal(
+    outboundUrls.filter(u => u.includes('telegram.org')).length,
+    0,
+    `Expected 0 outbound Telegram requests in READ_ONLY_MODE, got: ${outboundUrls.join(', ')}`
+  );
+});
+
+test('P2 regression: ShiftHistoryStore({ readOnly: true }) keeps writeQueue empty and writes 0 bytes to disk', async t => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'rigcmd-ro-sh-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const histFile = path.join(dir, 'shift-events.jsonl');
+
+  const store = new ShiftHistoryStore({ filePath: histFile, readOnly: true });
+  for (let i = 0; i < 60; i++) {
+    store.append({
+      kind: 'info',
+      severity: 'info',
+      rigId: 'sandbox',
+      seatId: 'dev-coder@sandbox',
+      key: `ev-${i}`,
+      title: `Event ${i}`,
+      detail: 'Read-only observation event'
+    });
+  }
+  await store.flush();
+
+  assert.equal(store.events.length, 60);
+  assert.equal(store.writeQueue.length, 0, 'writeQueue must stay bounded at 0 in read-only mode');
+  await assert.rejects(() => stat(histFile), { code: 'ENOENT' });
 });

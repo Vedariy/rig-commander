@@ -65,6 +65,7 @@ function sanitizeEvent(ev) {
 export class ShiftHistoryStore {
   constructor(options = {}) {
     this.filePath = options.filePath || resolveDefaultShiftHistoryPath();
+    this.readOnly = Boolean(options.readOnly);
     this.maxMemoryEvents = Math.max(100, Number(options.maxMemoryEvents) || DEFAULT_MAX_MEMORY_EVENTS);
     this.maxFileBytes = Math.max(64 * 1024, Number(options.maxFileBytes) || DEFAULT_MAX_FILE_BYTES);
     this.retentionMs = Math.max(1, Number(options.retentionDays) || DEFAULT_RETENTION_DAYS) * 24 * 3600 * 1000;
@@ -128,7 +129,9 @@ export class ShiftHistoryStore {
       const clean = sanitizeEvent(raw);
       if (!clean) continue;
       this.events.push(clean);
-      this.writeQueue.push(JSON.stringify(clean) + '\n');
+      if (!this.readOnly) {
+        this.writeQueue.push(JSON.stringify(clean) + '\n');
+      }
       added.push(clean);
     }
     if (this.events.length > this.maxMemoryEvents) {
@@ -136,7 +139,9 @@ export class ShiftHistoryStore {
     }
     if (added.length > 0) {
       this.rev += added.length;
-      this._scheduleFlush();
+      if (!this.readOnly) {
+        this._scheduleFlush();
+      }
     }
     return added;
   }
@@ -232,6 +237,7 @@ export class ShiftHistoryStore {
   }
 
   _scheduleFlush() {
+    if (this.readOnly) return Promise.resolve();
     if (this.flushing) return this.flushPromise;
     this.flushing = true;
     this.flushPromise = this._drainQueue().finally(() => {
@@ -244,6 +250,7 @@ export class ShiftHistoryStore {
   }
 
   async flush() {
+    if (this.readOnly) return;
     if (this.writeQueue.length > 0) {
       this._scheduleFlush();
     }
@@ -253,6 +260,10 @@ export class ShiftHistoryStore {
   }
 
   async _drainQueue() {
+    if (this.readOnly) {
+      this.writeQueue.length = 0;
+      return;
+    }
     while (this.writeQueue.length > 0) {
       const batch = this.writeQueue.splice(0, this.writeQueue.length).join('');
       try {

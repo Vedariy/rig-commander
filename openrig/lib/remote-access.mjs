@@ -200,6 +200,7 @@ export class RemoteAccessGuard {
   constructor(options = {}) {
     this.port = Number(options.port || 7440);
     this.stateFile = options.stateFile !== undefined ? options.stateFile : defaultRemoteStateFile();
+    this.readOnly = Boolean(options.readOnly);
     this.pairTtlMs = Number(options.pairTtlMs || DEFAULT_PAIR_TTL_MS);
     this.sessionTtlMs = Number(options.sessionTtlMs || DEFAULT_SESSION_TTL_MS);
     this.publicOrigin = '';
@@ -212,11 +213,13 @@ export class RemoteAccessGuard {
       const parsed = normalizePublicOrigin(options.publicUrl);
       if (parsed.ok && !parsed.isLoopback) {
         this.publicOrigin = parsed.origin;
-        this._persistState();
+        if (!this.readOnly) {
+          this._persistState();
+        }
       }
     }
 
-    if (this.publicOrigin) {
+    if (this.publicOrigin && !this.readOnly) {
       this.mintPairingCode();
     }
   }
@@ -247,7 +250,7 @@ export class RemoteAccessGuard {
   }
 
   _persistState() {
-    if (!this.stateFile) return;
+    if (!this.stateFile || this.readOnly) return;
     try {
       const dir = path.dirname(this.stateFile);
       fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -329,6 +332,9 @@ export class RemoteAccessGuard {
   }
 
   setPublicUrl(rawUrl) {
+    if (this.readOnly) {
+      return { ok: false, code: 'READ_ONLY_MODE', error: 'Remote pairing settings are disabled in --read-only mode' };
+    }
     const trimmed = String(rawUrl || '').trim();
     if (!trimmed) {
       this.publicOrigin = '';
@@ -353,6 +359,9 @@ export class RemoteAccessGuard {
   }
 
   mintPairingCode() {
+    if (this.readOnly) {
+      return null;
+    }
     const token = crypto.randomBytes(24).toString('hex'); // 192-bit QR token
     const pin = generatePairingPin(); // 40-bit single-use PIN for iOS standalone Home Screen PWA
     const now = Date.now();
@@ -374,6 +383,9 @@ export class RemoteAccessGuard {
   }
 
   consumePairingCode(rawInput, opts = {}) {
+    if (this.readOnly) {
+      return { ok: false, code: 'READ_ONLY_MODE', error: 'Device pairing is disabled in --read-only mode' };
+    }
     this._pruneExpiredPairing();
     if (!this.activePairing) {
       return { ok: false, error: 'No active pairing code. Generate a fresh QR in Phone QR on your Mac.' };
@@ -432,6 +444,9 @@ export class RemoteAccessGuard {
   }
 
   revokeAllSessions() {
+    if (this.readOnly) {
+      return this.getStatus();
+    }
     this.sessions = [];
     this.activePairing = null;
     this._persistState();

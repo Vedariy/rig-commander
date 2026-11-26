@@ -54,10 +54,7 @@ const READ_ONLY_ERROR_BODY = Object.freeze({
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 30, evalThrottleMs: 3000 });
-const shiftHistory = new ShiftHistoryStore();
-if (READ_ONLY_MODE) {
-  shiftHistory._scheduleFlush = () => Promise.resolve();
-}
+const shiftHistory = new ShiftHistoryStore({ readOnly: READ_ONLY_MODE });
 const actionAudit = new ActionAuditLog({
   maxRecords: 100,
   onRecordChange: (entry) => {
@@ -525,7 +522,7 @@ const playbookEngine = new SafePlaybookEngine({
     };
     shiftHistory.recordGuardrailEvent(ev);
     sseHub.publishShiftEvent(ev);
-    if (cand.notifyTelegram && telegramBridge.isConfigured()) {
+    if (!READ_ONLY_MODE && cand.notifyTelegram && telegramBridge.isConfigured()) {
       await telegramBridge.notifyCircuitBreakerTrip({
         rule: cand.ruleId,
         seatId: cand.seatId || 'fleet',
@@ -536,7 +533,10 @@ const playbookEngine = new SafePlaybookEngine({
         actionTaken: 'escalated'
       }).catch(() => {});
     }
-    return { ok: true, detail: 'Escalated to Shift History + SSE' + (cand.notifyTelegram && telegramBridge.isConfigured() ? ' + Telegram' : '') };
+    return {
+      ok: true,
+      detail: 'Escalated to Shift History + SSE' + (!READ_ONLY_MODE && cand.notifyTelegram && telegramBridge.isConfigured() ? ' + Telegram' : '')
+    };
   }
 });
 
@@ -555,7 +555,8 @@ const PORT = Number(process.env.PORT || process.env.RIGCOMMANDER_PORT || 7440);
 const BIND_HOST = process.env.RIGCOMMANDER_HOST || '127.0.0.1';
 const remoteAccess = new RemoteAccessGuard({
   port: PORT,
-  publicUrl: process.env.RIGCOMMANDER_PUBLIC_URL || ''
+  publicUrl: process.env.RIGCOMMANDER_PUBLIC_URL || '',
+  readOnly: READ_ONLY_MODE
 });
 const selfUpdater = new SelfUpdater({
   currentVersion: APP_VERSION,
@@ -2694,8 +2695,11 @@ const resilience = new FleetResilienceService({
   actionAudit, shiftHistory,
   notify: async advisory => {
     sseHub.publishShiftEvent(advisory);
-    if (telegramBridge.isConfigured()) await telegramBridge.sendText(
-      'Fleet status after wake / Состояние флота после пробуждения: ' + advisory.tier);
+    if (!READ_ONLY_MODE && telegramBridge.isConfigured()) {
+      await telegramBridge.sendText(
+        'Fleet status after wake / Состояние флота после пробуждения: ' + advisory.tier
+      );
+    }
   }
 });
 registerResilienceRoutes(registry, resilience);
@@ -2789,6 +2793,10 @@ const server = http.createServer(async (req, res) => {
 
   // 0.2 Public pairing endpoint: exchanges one-time QR token or 8-char PIN for HttpOnly session cookie
   if (url.pathname === '/pair') {
+    if (READ_ONLY_MODE) {
+      await sendJson(req, res, 403, READ_ONLY_ERROR_BODY);
+      return;
+    }
     if (req.method === 'GET') {
       const code = url.searchParams.get('code') || '';
       const result = remoteAccess.consumePairingCode(code, {
