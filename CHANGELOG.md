@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.8.1] - 2026-11-26
+
+### Added
+- **Public Tier-1 Agent Skill (`skills/rig-commander-mission-control/SKILL.md`, `references/{operator-runbook,safety-boundaries}.md`, `scripts/audit-exposure.mjs`, `tests/agent-skill.test.mjs`, `README.md`):**
+  - Published `agentskills.io` / `npx skills add Vedariy/rig-commander` standard skill package (excluded from npm CLI tarball) with verified CLI flags, L0–L3 triage loop, 2-step Crash-Cart recovery, fail-closed Auto-Consent guidance, and permanent Tier-1 exposure audit coverage in `scripts/audit-exposure.mjs`.
+
+### Fixed & Improved
+- **Auto-Consent Ergonomics, Safe Test-Log Redirects & Scoped Worktree Conflicts (`openrig/assets/domain/auto-consent-model.js`, `openrig/assets/ui/auto-consent-view.js`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`, `openrig/index.html`, `openrig/server.mjs`):**
+  - Replaced native modal checkboxes with accessible tactile pill toggle switches (`role="switch"`) featuring immediate apply, a 2.5s per-control cooldown updated in-place (preserving sibling focus/inputs and `0%` idle CPU), and an unblocked instant `⏸ PAUSE` kill-switch bypass.
+  - Added a direct top-bar `#btnAutoConsentTop` button with live localized status badge, localized Guardrails modal status badge, clickable Seat Inspector `Off → Enable` chip, inline master-OFF & Dry-Run CTAs, and uniform 2-row project policy cards.
+  - Allowed safe single trailing `.log`/`.txt`/`.out` redirection (with optional `2>&1`) on recognized read-only/test/lint/build commands strictly inside `trusted_dev` while keeping `safe_readonly` zero-metacharacter and blocking traversal/dotfile/system/secret paths.
+  - Fixed `hasWorktreeConflictForSeat` to scope against real `gitRadar.workspaces[].seatIds` & `unmergedWorkspaces`, ignore non-unmerged `AGENTS.md`/`CLAUDE.md` overlays, and permit single read-only/test commands on non-unmerged code overlaps while still escalating hard merge conflicts and mutating edits/commits.
+- **Test Verification:** Expanded automated test coverage to **`333 / 333 PASS` across `40` test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.8.0] - 2026-11-26
 
 ### Added
