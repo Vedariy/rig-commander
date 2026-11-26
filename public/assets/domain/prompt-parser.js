@@ -335,6 +335,33 @@ export function extractDetectedTerminalModel(screenText) {
 }
 
 /**
+ * Detects whether an idle agent prompt line (› / ❯ / >) currently holds unsent typed text
+ * (as opposed to an empty input or built-in placeholder like "Ask Codex to do anything").
+ */
+export function hasDirtyTerminalInputBox(screenText) {
+  if (!screenText || typeof screenText !== 'string') return false;
+  const nonEmpty = stripTerminalFormatting(screenText)
+    .split(/\r?\n/)
+    .map(l => l.trimEnd())
+    .filter(l => l.trim().length > 0);
+  const tail10 = nonEmpty.slice(-10);
+  for (let i = tail10.length - 1; i >= 0; i--) {
+    const line = tail10[i];
+    if (IDLE_FOOTER_MARKER_RE.test(line.trim())) continue;
+    const m = line.match(/^\s*[›❯>]\s*(.*)$/);
+    if (!m) continue;
+    if (IDLE_BARE_PROMPT_RE.test(line)) return false;
+    const content = m[1].trim();
+    if (!content) return false;
+    if (/^(?:ask\s+codex\b|ask\s+anything\b|type\s+your\s+message\b|send\s+a\s+message\b|try\s+"|\/help\b|accept-edits\b)/i.test(content)) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
  * High-precision detector for a terminal AI agent (Antigravity/agy, Claude Code, Codex, Gemini)
  * sitting idle at its empty input prompt — prevents OpenRig terminal-motion false 'working' states.
  * Never returns idle when a live HITL prompt or active spinner/working marker is visible.

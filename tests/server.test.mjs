@@ -503,6 +503,58 @@ test('dispatchRawCommand uses native rig send --raw for OpenRig seats and paced 
   assert.equal(shellBlocked.ok, false);
   assert.equal(shellBlocked.statusCode, 409);
   assert.match(shellBlocked.error, /bare OS shell/);
+
+  // 6) Stale OpenRig interactive-prompt refusal ("pane unrecognized") on clean idle Codex prompt -> paced tmux fallback succeeds
+  const staleOkCalls = [];
+  const staleOk = await dispatchRawCommand({
+    seat: 'dev-owner@rig-commander',
+    cleanText: '/compact',
+    universalTarget: null,
+    captureScreenFn: async () => '› Ask Codex to do anything\nGPT-6.1-Sol high · owner · Ready · Ask for\napproval · Context 64% used · provider: openai',
+    execFn: async (bin, args) => {
+      staleOkCalls.push({ bin, args });
+      if (bin === 'rig') {
+        return { ok: false, code: 1, output: "Refused: 'dev-owner@rig-commander' is at an interactive prompt (PermissionPromptConfirmed; latest hook, pane unrecognized)" };
+      }
+      return { ok: true, code: 0, output: '' };
+    },
+    waitFn: async () => {},
+    rigBin: 'rig',
+    tmuxBin: 'tmux'
+  });
+  assert.equal(staleOk.ok, true);
+  assert.equal(staleOk.via, 'tmux_verified_idle_fallback');
+  assert.equal(staleOkCalls[staleOkCalls.length - 1].bin, 'tmux');
+
+  // 7) Stale refusal when idle prompt has unsent user text ("› 1\n1") -> refuses 409 cleanly without wiping draft
+  const dirtyRefused = await dispatchRawCommand({
+    seat: 'dev-owner@rig-commander',
+    cleanText: '/compact',
+    universalTarget: null,
+    captureScreenFn: async () => '› 1\n  1\nGPT-6.1-Sol high · owner · Ready · Ask for\napproval · Context 64% used · provider: openai',
+    execFn: async () => ({ ok: false, code: 1, output: "Refused: 'dev-owner@rig-commander' is at an interactive prompt (PermissionPromptConfirmed; latest hook, pane unrecognized)" }),
+    waitFn: async () => {},
+    rigBin: 'rig',
+    tmuxBin: 'tmux'
+  });
+  assert.equal(dirtyRefused.ok, false);
+  assert.equal(dirtyRefused.statusCode, 409);
+  assert.match(dirtyRefused.error, /unsent text/);
+
+  // 8) Stale refusal when live screen actually shows a real HITL menu -> MUST still refuse 409
+  const realHitlRefused = await dispatchRawCommand({
+    seat: 'dev-owner@rig-commander',
+    cleanText: '/compact',
+    universalTarget: null,
+    captureScreenFn: async () => 'Would you like to run this command?\n› 1. Yes, allow once\n  2. No, cancel\n↑/↓ navigate',
+    execFn: async () => ({ ok: false, code: 1, output: "Refused: 'dev-owner@rig-commander' is at an interactive prompt (PermissionPromptConfirmed; latest hook, pane unrecognized)" }),
+    waitFn: async () => {},
+    rigBin: 'rig',
+    tmuxBin: 'tmux'
+  });
+  assert.equal(realHitlRefused.ok, false);
+  assert.equal(realHitlRefused.statusCode, 409);
+  assert.match(realHitlRefused.error, /active HITL permission prompt/);
 });
 
 test('fetchQueueItemContextDetail validates qitemId, loads full body, extracts artifacts and lineage', async () => {

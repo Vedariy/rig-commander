@@ -17,7 +17,7 @@ import { SelfUpdater, RESTART_FOR_UPDATE_EXIT_CODE, readInstalledVersion } from 
 import { AiEvaluatorService } from './lib/ai-evaluator/index.mjs';
 import { ServerIdempotencyCache, buildSeatSendKey } from './assets/domain/action-guard.js';
 import { isPiHarness } from './assets/ontology/actions.js';
-import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen } from './assets/domain/prompt-parser.js';
+import { detectLiveHitlPrompt, detectTerminalIdleAtPrompt, classifyTerminalScreen, hasDirtyTerminalInputBox } from './assets/domain/prompt-parser.js';
 import {
   extractItemContextMeta,
   extractContextArtifacts,
@@ -1427,6 +1427,7 @@ function sleepMs(ms) {
 }
 
 const WRAPPER_REFUSAL_RE = /behind a wrapper|could not verify its expected .* agent/i;
+const STALE_PROMPT_REFUSAL_RE = /is at an interactive prompt\b[^.\n]*(?:pane unrecognized|permission_request_unverified|PermissionPromptConfirmed|stale)/i;
 
 async function sendPacedTmuxRaw({ target, cleanText, execFn, waitFn, tmuxBin }) {
   // Paced TUI-safe sequence (prevents Codex/Claude slash autocomplete race & partial C-u truncation)
@@ -1480,6 +1481,28 @@ async function dispatchRawCommand({
       if (String(screen || '').trim() && !verdict.shellExited && !verdict.blocked) {
         const fb = await sendPacedTmuxRaw({ target: seat, cleanText, execFn, waitFn, tmuxBin });
         return { ...fb, via: 'tmux_wrapper_fallback' };
+      }
+      const guardReason = verdict.shellExited
+        ? 'Live screen shows a bare OS shell (agent exited) — refusing to send prompt.'
+        : verdict.blocked
+          ? 'Live screen shows an active HITL permission prompt — resolve it first.'
+          : res.output;
+      return { ok: false, statusCode: 409, output: res.output, error: guardReason || res.output };
+    }
+    if (STALE_PROMPT_REFUSAL_RE.test(res.output || '')) {
+      const screen = await Promise.resolve(captureScreenFn(seat)).catch(() => '');
+      const verdict = classifyTerminalScreen(screen || '');
+      if (String(screen || '').trim() && verdict.idleAtPrompt && !verdict.blocked && !verdict.shellExited && !verdict.working) {
+        if (hasDirtyTerminalInputBox(screen)) {
+          return {
+            ok: false,
+            statusCode: 409,
+            output: res.output,
+            error: `Input box on ${seat} already contains unsent text — clear it in tmux before sending ${cleanText}.`
+          };
+        }
+        const fb = await sendPacedTmuxRaw({ target: seat, cleanText, execFn, waitFn, tmuxBin });
+        return { ...fb, via: 'tmux_verified_idle_fallback' };
       }
       const guardReason = verdict.shellExited
         ? 'Live screen shows a bare OS shell (agent exited) — refusing to send prompt.'

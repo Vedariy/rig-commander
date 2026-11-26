@@ -5,6 +5,7 @@ export {
   extractHitlCommandPreview,
   extractDetectedTerminalModel,
   detectTerminalIdleAtPrompt,
+  hasDirtyTerminalInputBox,
   classifyTerminalScreen
 } from './prompt-parser.js';
 export {
