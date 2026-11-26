@@ -312,9 +312,12 @@ export class AutoConsentEngine {
 
     this.config = this._loadConfig(options.initialConfig);
     this.sessionGrants = new Map(); // RAM-only! Never persisted to disk.
-    this.pendingBySeat = new Map(); // seatId -> PendingApproval internal record
+    this.pendingBySeat = new Map(); // seatId -> PendingApproval internal record (timer armed)
+    this.inFlightPendingBySeat = new Map(); // seatId -> PendingApproval currently in TOCTOU capture/dispatch
     this.inFlightSeats = new Set(); // single-flight dispatch lock per seat
     this.observingSeats = new Set(); // single-flight observe lock per seat
+    this.reservedFleetDispatches = 0; // atomic synchronous reservation count during async dispatch
+    this.reservedByGrantId = new Map(); // grantId -> in-flight dispatch reservation count
     this.canceledPromptHashes = new Map(); // `${seatId}::${promptHash}` -> tsMs
     this.observedOutcomeKeys = new Map(); // dedup key for escalations / dry_run
     this.approvalHistory = []; // sliding 1h history of actual approved dispatches
@@ -402,7 +405,8 @@ export class AutoConsentEngine {
         : AUTO_CONSENT_LIMITS.MAX_SESSION_APPROVALS;
       const effMax = Math.min(Math.floor(Number(grant.maxApprovals) || 0), hardCap);
       const used = Math.floor(Number(grant.usedApprovals) || 0);
-      if (effMax <= 0 || used >= effMax) {
+      const reserved = this.reservedByGrantId.get(grantId) || 0;
+      if (effMax <= 0 || (used >= effMax && reserved === 0)) {
         this.sessionGrants.delete(grantId);
       }
     }
@@ -426,7 +430,8 @@ export class AutoConsentEngine {
       : AUTO_CONSENT_LIMITS.MAX_SESSION_APPROVALS;
     const effectiveMax = Math.min(Math.floor(Number(grant.maxApprovals) || 0), hardCap);
     const usedApprovals = Math.max(0, Math.floor(Number(grant.usedApprovals) || 0));
-    const remainingApprovals = Math.max(0, effectiveMax - usedApprovals);
+    const reserved = this.reservedByGrantId.get(grant.grantId) || 0;
+    const remainingApprovals = Math.max(0, effectiveMax - usedApprovals - reserved);
     const out = {
       grantId: grant.grantId,
       scope: grant.scope,
@@ -479,7 +484,7 @@ export class AutoConsentEngine {
     if (this.config.masterPaused || !this.config.enabled) return false;
     this._pruneSessionGrants(nowMs);
     const summary = summarizeActiveAutoConsentScopes(this.config, this.sessionGrants, nowMs);
-    return summary.hasActiveScopes || this.pendingBySeat.size > 0;
+    return summary.hasActiveScopes || this.pendingBySeat.size > 0 || this.inFlightPendingBySeat.size > 0;
   }
 
   getConfig() {
@@ -499,7 +504,7 @@ export class AutoConsentEngine {
       .map((p) => this._serializePending(p));
 
     const actionsLastHour = this.approvalHistory.length;
-    const remainingHourlyQuota = Math.max(0, this.config.maxActionsPerHour - actionsLastHour);
+    const remainingHourlyQuota = Math.max(0, this.config.maxActionsPerHour - (actionsLastHour + this.reservedFleetDispatches));
 
     let status;
     if (this.config.masterPaused) {
@@ -550,6 +555,9 @@ export class AutoConsentEngine {
     if (this.pendingBySeat.get(pending.seatId) === pending) {
       this.pendingBySeat.delete(pending.seatId);
     }
+    if (this.inFlightPendingBySeat.get(pending.seatId) === pending) {
+      this.inFlightPendingBySeat.delete(pending.seatId);
+    }
     if (recordCanceledHash && pending.seatId && pending.promptHash) {
       boundedSet(this.canceledPromptHashes, `${pending.seatId}::${pending.promptHash}`, nowMs, MAX_CANCELED_HASHES);
     }
@@ -585,7 +593,11 @@ export class AutoConsentEngine {
 
   _recheckPendingAgainstPolicy(nowMs = this.now()) {
     let aborted = 0;
-    for (const pending of Array.from(this.pendingBySeat.values())) {
+    const allActive = new Set([
+      ...this.pendingBySeat.values(),
+      ...this.inFlightPendingBySeat.values()
+    ]);
+    for (const pending of allActive) {
       if (this.config.masterPaused || !this.config.enabled || this.config.mode !== AUTO_CONSENT_MODES.ARMED) {
         const veto = this.config.masterPaused
           ? AUTO_CONSENT_VETO_CODES.MASTER_PAUSED
@@ -823,9 +835,12 @@ export class AutoConsentEngine {
 
     const recordOperatorCancel = body.recordOperatorCancel !== false;
     const matches = [];
-    for (const pending of this.pendingBySeat.values()) {
+    const seen = new Set();
+    for (const pending of [...this.pendingBySeat.values(), ...this.inFlightPendingBySeat.values()]) {
+      if (seen.has(pending)) continue;
       if (pendingId && pending.id !== pendingId) continue;
       if (seatId && pending.seatId !== seatId) continue;
+      seen.add(pending);
       matches.push(pending);
     }
 
@@ -856,7 +871,11 @@ export class AutoConsentEngine {
 
     let canceledCount = 0;
     if (paused) {
-      for (const pending of Array.from(this.pendingBySeat.values())) {
+      const allActive = new Set([
+        ...this.pendingBySeat.values(),
+        ...this.inFlightPendingBySeat.values()
+      ]);
+      for (const pending of allActive) {
         this._abortPendingInternal(pending, {
           status: 'canceled',
           vetoCode: AUTO_CONSENT_VETO_CODES.MASTER_PAUSED,
@@ -1208,6 +1227,7 @@ export class AutoConsentEngine {
     }
 
     this.inFlightSeats.add(pending.seatId);
+    this.inFlightPendingBySeat.set(pending.seatId, pending);
     try {
       this._pruneApprovalHistory(now);
       this._pruneSessionGrants(now);
@@ -1257,7 +1277,7 @@ export class AutoConsentEngine {
         return abortDrift('TOCTOU abort: fresh screen capture failed (0 tmux writes)');
       }
 
-      // Re-check abort/cancel/pause immediately after awaits (guards cancel mid-capture!)
+      // Re-check abort/cancel/pause immediately after awaits (guards cancel/pause mid-capture!)
       if (pending.aborted || this.canceledPromptHashes.has(`${pending.seatId}::${pending.promptHash}`)) {
         return { ok: false, aborted: true, vetoCode: AUTO_CONSENT_VETO_CODES.OPERATOR_CANCELED };
       }
@@ -1275,10 +1295,6 @@ export class AutoConsentEngine {
       }
 
       const freshOptions = getLiveHitlOptions(freshScreen);
-      const liveNow = this.now();
-      this._pruneApprovalHistory(liveNow);
-      this._pruneSessionGrants(liveNow);
-
       const liveSeat = liveCtx.seat || pending.observedSeat || { canonicalSessionName: pending.seatId, rigId: pending.rigId };
       let freshEpoch = '';
       if (liveCtx.seatSessionEpoch !== undefined) {
@@ -1290,6 +1306,15 @@ export class AutoConsentEngine {
       } else {
         freshEpoch = pending.expectedSeatSessionEpoch || '';
       }
+
+      // --- SYNCHRONOUS CRITICAL SECTION (zero awaits until quota reservation completes) ---
+      if (pending.aborted || this.canceledPromptHashes.has(`${pending.seatId}::${pending.promptHash}`)) {
+        return { ok: false, aborted: true, vetoCode: AUTO_CONSENT_VETO_CODES.OPERATOR_CANCELED };
+      }
+
+      const liveNow = this.now();
+      this._pruneApprovalHistory(liveNow);
+      this._pruneSessionGrants(liveNow);
 
       const freshPolicy = resolveEffectiveConsentPolicy(this.config, this.sessionGrants, {
         rigId: pending.rigId,
@@ -1323,60 +1348,116 @@ export class AutoConsentEngine {
         );
       }
 
-      // Final synchronous safety check right before tmux write
-      if (pending.aborted || this.config.masterPaused || !this.config.enabled || this.config.mode !== AUTO_CONSENT_MODES.ARMED) {
+      // Final synchronous safety check right before quota reservation & tmux write
+      if (pending.aborted || this.canceledPromptHashes.has(`${pending.seatId}::${pending.promptHash}`)) {
+        return { ok: false, aborted: true, vetoCode: AUTO_CONSENT_VETO_CODES.OPERATOR_CANCELED };
+      }
+      if (this.config.masterPaused || !this.config.enabled || this.config.mode !== AUTO_CONSENT_MODES.ARMED) {
         return abortDrift('TOCTOU abort: paused before tmux write (0 tmux writes)', AUTO_CONSENT_VETO_CODES.MASTER_PAUSED);
       }
 
-      // 4. Dispatch strictly `1 Enter` (Option 1 — NEVER Option 2/3 "Always allow")
       if (!this.dispatchOptionOne) {
         return abortDrift('No Option-1 dispatcher bound (0 tmux writes)');
       }
 
-      const safePreview = redactSafe(freshEval.commandPreview || pending.commandPreview || '', 180);
-      let dispatchRes;
-      try {
-        dispatchRes = await this.dispatchOptionOne({
-          seatId: pending.seatId,
-          rigId: pending.rigId,
-          keyStroke: '1 Enter',
-          actionId: 'answer_prompt_option',
-          evalId: `auto_consent:${freshPolicy.profile}:${freshPolicy.sourceScope}`,
-          pendingId: pending.id,
-          commandPreview: safePreview,
-          matchedProfile: freshPolicy.profile,
-          sourceScope: freshPolicy.sourceScope,
-          grantId: freshPolicy.grantId || null,
-          promptHash: freshHash
-        });
-      } catch (err) {
-        dispatchRes = { ok: false, error: err?.message || 'Dispatch error' };
+      // Atomically check & reserve fleet hourly quota + session grant maxApprovals BEFORE async dispatch
+      const fleetLimit = Number.isFinite(freshPolicy.maxActionsPerHour)
+        ? freshPolicy.maxActionsPerHour
+        : this.config.maxActionsPerHour;
+      if (this.approvalHistory.length + this.reservedFleetDispatches >= fleetLimit) {
+        return abortDrift(
+          `TOCTOU abort: fleet hourly auto-consent cap (${fleetLimit}/h) reached (0 tmux writes)`,
+          AUTO_CONSENT_VETO_CODES.RATE_CAP
+        );
       }
 
-      const execOk = Boolean(dispatchRes && dispatchRes.ok);
+      let reservedGrantId = null;
+      if (freshPolicy.sourceScope === 'session' && freshPolicy.grantId) {
+        const grant = this.sessionGrants.get(freshPolicy.grantId);
+        const grantCheck = isSessionGrantValid(grant, {
+          rigId: pending.rigId,
+          seatId: pending.seatId,
+          seatSessionEpoch: freshEpoch,
+          nowMs: liveNow
+        });
+        const inFlightForGrant = grant ? (this.reservedByGrantId.get(grant.grantId) || 0) : 0;
+        const availableForGrant = grantCheck.valid ? Math.max(0, grantCheck.remainingApprovals - inFlightForGrant) : 0;
+        if (!grant || !grantCheck.valid || availableForGrant <= 0) {
+          return abortDrift(
+            `TOCTOU abort: session grant unavailable (${grantCheck.reason || AUTO_CONSENT_VETO_CODES.SESSION_EXHAUSTED}) (0 tmux writes)`,
+            grantCheck.reason || AUTO_CONSENT_VETO_CODES.SESSION_EXHAUSTED
+          );
+        }
+        this.reservedByGrantId.set(grant.grantId, inFlightForGrant + 1);
+        reservedGrantId = grant.grantId;
+      }
+
+      this.reservedFleetDispatches += 1;
+      // --- END SYNCHRONOUS CRITICAL SECTION ---
+
+      // 4. Dispatch strictly `1 Enter` (Option 1 — NEVER Option 2/3 "Always allow")
+      const safePreview = redactSafe(freshEval.commandPreview || pending.commandPreview || '', 180);
+      let dispatchRes;
+      let execOk = false;
+      try {
+        try {
+          dispatchRes = await this.dispatchOptionOne({
+            seatId: pending.seatId,
+            rigId: pending.rigId,
+            keyStroke: '1 Enter',
+            actionId: 'answer_prompt_option',
+            evalId: `auto_consent:${freshPolicy.profile}:${freshPolicy.sourceScope}`,
+            pendingId: pending.id,
+            commandPreview: safePreview,
+            matchedProfile: freshPolicy.profile,
+            sourceScope: freshPolicy.sourceScope,
+            grantId: freshPolicy.grantId || null,
+            promptHash: freshHash
+          });
+        } catch (err) {
+          dispatchRes = { ok: false, error: err?.message || 'Dispatch error' };
+        }
+
+        execOk = Boolean(dispatchRes && dispatchRes.ok);
+        const finishedMs = this.now();
+
+        if (execOk) {
+          this.stats.approvedCount += 1;
+          this.approvalHistory.push({
+            timestampMs: finishedMs,
+            seatId: pending.seatId,
+            promptFingerprint: freshEval.promptFingerprint,
+            promptHash: freshHash,
+            normalizedCommand: freshEval.normalizedCommand,
+            commandPreview: safePreview,
+            cleared: false
+          });
+          if (reservedGrantId) {
+            const grant = this.sessionGrants.get(reservedGrantId);
+            if (grant) {
+              grant.usedApprovals = (Number(grant.usedApprovals) || 0) + 1;
+            }
+          }
+        }
+      } finally {
+        if (reservedGrantId) {
+          const nextRes = (this.reservedByGrantId.get(reservedGrantId) || 1) - 1;
+          if (nextRes <= 0) this.reservedByGrantId.delete(reservedGrantId);
+          else this.reservedByGrantId.set(reservedGrantId, nextRes);
+        }
+        this.reservedFleetDispatches = Math.max(0, this.reservedFleetDispatches - 1);
+        if (execOk && reservedGrantId) {
+          this._pruneSessionGrants(this.now());
+        }
+      }
+
       const finishedMs = this.now();
       let execId = dispatchRes?.execId || null;
 
-      if (execOk) {
-        this.stats.approvedCount += 1;
-        this.approvalHistory.push({
-          timestampMs: finishedMs,
-          seatId: pending.seatId,
-          promptFingerprint: freshEval.promptFingerprint,
-          promptHash: freshHash,
-          normalizedCommand: freshEval.normalizedCommand,
-          commandPreview: safePreview,
-          cleared: false
-        });
-
-        // Decrement remaining approvals on active session grant
-        if (freshPolicy.sourceScope === 'session' && freshPolicy.grantId) {
-          const grant = this.sessionGrants.get(freshPolicy.grantId);
-          if (grant) {
-            grant.usedApprovals = (Number(grant.usedApprovals) || 0) + 1;
-          }
-          this._pruneSessionGrants(finishedMs);
-        }
+      if (!execOk && dispatchRes?.deduplicated) {
+        return abortDrift(
+          `TOCTOU abort: ${redactSafe(dispatchRes.error || 'single-flight deduplicated', 160)} (0 tmux writes)`
+        );
       }
 
       // Record redacted audit entry if dispatcher did not already record one
@@ -1441,12 +1522,15 @@ export class AutoConsentEngine {
       this._emit('auto_consent_state', this.getState(finishedMs), 'all');
       return { ok: execOk, entry: runEntry };
     } finally {
+      if (this.inFlightPendingBySeat.get(pending.seatId) === pending) {
+        this.inFlightPendingBySeat.delete(pending.seatId);
+      }
       this.inFlightSeats.delete(pending.seatId);
     }
   }
 
   dispose() {
-    for (const pending of this.pendingBySeat.values()) {
+    for (const pending of [...this.pendingBySeat.values(), ...this.inFlightPendingBySeat.values()]) {
       pending.aborted = true;
       if (pending.timer) {
         this.clearTimeoutFn(pending.timer);
@@ -1454,5 +1538,6 @@ export class AutoConsentEngine {
       }
     }
     this.pendingBySeat.clear();
+    this.inFlightPendingBySeat.clear();
   }
 }

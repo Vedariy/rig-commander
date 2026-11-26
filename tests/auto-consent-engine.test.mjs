@@ -677,3 +677,184 @@ test('Hourly rate cap transitions status to capped, policy downgrade aborts pend
   assert.equal(engine.getState().status, 'armed');
   assert.equal(engine.getState().stats.remainingHourlyQuota, 2);
 });
+
+test('P1 #1 regression: mid-capture cancelPending({ pendingId | seatId }) aborts in-flight TOCTOU with 0 tmux writes and blocks re-arming', async () => {
+  for (const mode of ['byPendingId', 'bySeatId']) {
+    const clock = makeManualClock();
+    const dispatched = [];
+    let releaseCapture;
+    const engine = new AutoConsentEngine({
+      configPath: null,
+      now: clock.now,
+      setTimeoutFn: clock.setTimeoutFn,
+      clearTimeoutFn: clock.clearTimeoutFn,
+      captureSeatScreen: () => new Promise((resolve) => {
+        releaseCapture = () => resolve(SAFE_NPM_TEST_PROMPT);
+      }),
+      dispatchOptionOne: async (arg) => { dispatched.push(arg); return { ok: true }; }
+    });
+    engine.updatePolicy({ enabled: true, mode: 'armed', graceWindowMs: 3000, projects: { sandbox: { profile: 'trusted_dev' } } });
+    const seat = { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } };
+
+    const obs = await engine.observeSeat({ seat, screenText: SAFE_NPM_TEST_PROMPT });
+    assert.equal(obs.action, 'pending', mode);
+
+    // Fire 3s timer -> enters _onGraceTimerExpired and pauses inside await captureSeatScreen
+    const advancePromise = clock.advanceBy(3000);
+    await new Promise((r) => setImmediate(r));
+    assert.equal(typeof releaseCapture, 'function', `${mode}: captureSeatScreen must be in-flight`);
+
+    // Operator cancels mid-capture via cancelPending (NOT pauseAll)
+    const cancelRes = mode === 'byPendingId'
+      ? engine.cancelPending({ pendingId: obs.pending.id })
+      : engine.cancelPending({ seatId: 'dev-coder@sandbox' });
+    assert.equal(cancelRes.ok, true, mode);
+    assert.equal(cancelRes.canceledCount, 1, `${mode}: must match in-flight pending record`);
+
+    // Resolve fresh screen capture -> MUST abort with 0 tmux writes!
+    releaseCapture();
+    await advancePromise;
+    assert.equal(dispatched.length, 0, `${mode}: mid-capture cancelPending must execute 0 tmux writes`);
+
+    // Re-observing the same promptHash MUST stay canceled (never re-armed!)
+    const reObs = await engine.observeSeat({ seat, screenText: SAFE_NPM_TEST_PROMPT });
+    assert.equal(reObs.action, 'skipped_canceled', mode);
+    assert.equal(reObs.vetoCode, AUTO_CONSENT_VETO_CODES.OPERATOR_CANCELED, mode);
+    assert.equal(dispatched.length, 0, mode);
+  }
+});
+
+test('P1 #2 regression: concurrent Rig SessionGrant maxApprovals=1 and fleet maxActionsPerHour=1 dispatch strictly once, with rollback on failure', async () => {
+  // Part A: Two seats expiring concurrently under Rig SessionGrant maxApprovals=1
+  {
+    const clock = makeManualClock();
+    const dispatched = [];
+    const dispatchResolvers = [];
+    const engine = new AutoConsentEngine({
+      configPath: null,
+      now: clock.now,
+      setTimeoutFn: clock.setTimeoutFn,
+      clearTimeoutFn: clock.clearTimeoutFn,
+      captureSeatScreen: async (sid) => (sid === 'dev-coder@sandbox' ? SAFE_NPM_TEST_PROMPT : SAFE_LINT_PROMPT),
+      dispatchOptionOne: (arg) => new Promise((resolve) => {
+        dispatched.push(arg);
+        dispatchResolvers.push(() => resolve({ ok: true }));
+      })
+    });
+    engine.updatePolicy({ enabled: true, mode: 'armed', graceWindowMs: 3000, maxActionsPerHour: 20 });
+    const g = await engine.createSessionGrant({
+      scope: 'rig',
+      targetId: 'sandbox',
+      profile: 'trusted_dev',
+      ttlMin: 30,
+      maxApprovals: 1
+    });
+    assert.equal(g.ok, true);
+
+    const seatA = { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } };
+    const seatB = { canonicalSessionName: 'dev-check@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } };
+    assert.equal((await engine.observeSeat({ seat: seatA, screenText: SAFE_NPM_TEST_PROMPT })).action, 'pending');
+    assert.equal((await engine.observeSeat({ seat: seatB, screenText: SAFE_LINT_PROMPT })).action, 'pending');
+
+    // Both 3s timers fire at the exact same timestamp!
+    const adv = clock.advanceBy(3000);
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    assert.equal(dispatched.length, 1, 'Rig SessionGrant maxApprovals=1 must allow strictly 1 concurrent dispatch');
+    for (const r of dispatchResolvers) r();
+    await adv;
+
+    assert.equal(dispatched.length, 1);
+    assert.equal(engine.getState().sessionGrants.length, 0, 'Exhausted rig grant must be pruned');
+    assert.ok(
+      engine.getState().recentRuns.some((r) => r.status === 'drift_aborted' && r.subVetoCode === AUTO_CONSENT_VETO_CODES.SESSION_EXHAUSTED),
+      'Second seat must abort with VETO_SESSION_EXHAUSTED'
+    );
+  }
+
+  // Part B: Two seats expiring concurrently under fleet maxActionsPerHour=1
+  {
+    const clock = makeManualClock();
+    const dispatched = [];
+    const dispatchResolvers = [];
+    const engine = new AutoConsentEngine({
+      configPath: null,
+      now: clock.now,
+      setTimeoutFn: clock.setTimeoutFn,
+      clearTimeoutFn: clock.clearTimeoutFn,
+      captureSeatScreen: async (sid) => (sid === 'dev-coder@sandbox' ? SAFE_NPM_TEST_PROMPT : SAFE_LINT_PROMPT),
+      dispatchOptionOne: (arg) => new Promise((resolve) => {
+        dispatched.push(arg);
+        dispatchResolvers.push(() => resolve({ ok: true }));
+      })
+    });
+    engine.updatePolicy({
+      enabled: true,
+      mode: 'armed',
+      graceWindowMs: 3000,
+      maxActionsPerHour: 1,
+      projects: { sandbox: { profile: 'trusted_dev' } }
+    });
+
+    const seatA = { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } };
+    const seatB = { canonicalSessionName: 'dev-check@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } };
+    assert.equal((await engine.observeSeat({ seat: seatA, screenText: SAFE_NPM_TEST_PROMPT })).action, 'pending');
+    assert.equal((await engine.observeSeat({ seat: seatB, screenText: SAFE_LINT_PROMPT })).action, 'pending');
+
+    const adv = clock.advanceBy(3000);
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    assert.equal(dispatched.length, 1, 'Fleet maxActionsPerHour=1 must allow strictly 1 concurrent dispatch');
+    for (const r of dispatchResolvers) r();
+    await adv;
+
+    assert.equal(dispatched.length, 1);
+    assert.equal(engine.getState().status, 'capped');
+    assert.ok(
+      engine.getState().recentRuns.some((r) => r.status === 'drift_aborted' && r.subVetoCode === AUTO_CONSENT_VETO_CODES.RATE_CAP),
+      'Second seat must abort with VETO_RATE_CAP'
+    );
+  }
+
+  // Part C: Failed dispatch rolls back session grant & fleet quota reservation cleanly
+  {
+    const clock = makeManualClock();
+    let shouldFail = true;
+    let calls = 0;
+    const engine = new AutoConsentEngine({
+      configPath: null,
+      now: clock.now,
+      setTimeoutFn: clock.setTimeoutFn,
+      clearTimeoutFn: clock.clearTimeoutFn,
+      captureSeatScreen: async () => (calls === 0 ? SAFE_NPM_TEST_PROMPT : SAFE_LINT_PROMPT),
+      dispatchOptionOne: async () => {
+        calls += 1;
+        return shouldFail ? { ok: false, error: 'tmux busy' } : { ok: true };
+      }
+    });
+    engine.updatePolicy({ enabled: true, mode: 'armed', graceWindowMs: 3000, maxActionsPerHour: 1 });
+    const g = await engine.createSessionGrant({
+      scope: 'rig',
+      targetId: 'sandbox',
+      profile: 'trusted_dev',
+      ttlMin: 30,
+      maxApprovals: 1
+    });
+    assert.equal(g.ok, true);
+
+    const seat = { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } };
+    assert.equal((await engine.observeSeat({ seat, screenText: SAFE_NPM_TEST_PROMPT })).action, 'pending');
+    await clock.advanceBy(3000);
+    assert.equal(calls, 1);
+    assert.equal(engine.getState().sessionGrants.length, 1, 'Failed dispatch must roll back grant reservation');
+    assert.equal(engine.getState().sessionGrants[0].remainingApprovals, 1);
+    assert.equal(engine.getState().stats.remainingHourlyQuota, 1);
+
+    shouldFail = false;
+    assert.equal((await engine.observeSeat({ seat, screenText: SAFE_LINT_PROMPT })).action, 'pending');
+    await clock.advanceBy(3000);
+    assert.equal(calls, 2);
+    assert.equal(engine.getState().sessionGrants.length, 0);
+    assert.equal(engine.getState().stats.approvedCount, 1);
+  }
+});

@@ -113,6 +113,7 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '', evalId = n
   }
   const universalTarget = universalTmuxTargets.get(seatId);
   const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
+  autoConsent.cancelPending({ seatId, recordOperatorCancel: true });
   const output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
   terminalPromptProbeCache.delete(seatId);
   invalidateTelemetryCache();
@@ -2348,6 +2349,9 @@ async function sendToSeat({ req, json, body: payload }) {
     return;
   }
 
+  // Cancel any pending/in-flight auto-consent timer immediately before manual dispatch
+  autoConsent.cancelPending({ seatId: seat, recordOperatorCancel: true });
+
   const universalTarget = universalTmuxTargets.get(seat);
   const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seat;
 
@@ -2427,7 +2431,6 @@ async function sendToSeat({ req, json, body: payload }) {
     }
 
     const auditRec = actionAudit.record({ actionId, evalId, seatId: seat, type, payload: text, httpStatus: 200, ok: true, baseline });
-    autoConsent.cancelPending({ seatId: seat, recordOperatorCancel: true });
     aiEvaluator.invalidateSeat(seat);
     terminalPromptProbeCache.delete(seat);
     invalidateTelemetryCache();
@@ -2463,9 +2466,6 @@ async function resolveLiveSeatSessionEpoch(seatId, seatNode = null, { fresh = fa
   const node = seatNode || (latestFleetSnapshot?.nodes || []).find(
     n => n && (n.canonicalSessionName || n.seatId || n.id) === seatId
   ) || null;
-  if (node && (node.seatSessionEpoch || node.sessionEpoch || node.sessionId || node.tmuxPanePid || node.panePid)) {
-    return deriveSeatSessionEpoch(node);
-  }
   if (seatId && /^[a-zA-Z0-9._@-]+$/.test(seatId)) {
     const universalTarget = universalTmuxTargets.get(seatId);
     const hasLiveTarget = Boolean((universalTarget && isValidTmuxTarget(universalTarget)) || node);
@@ -2496,57 +2496,85 @@ async function executeAutoConsentOptionOne({
   if (!/^[a-zA-Z0-9._@-]+$/.test(String(seatId || ''))) {
     return { ok: false, error: 'Invalid seat identifier' };
   }
-  const baseline = latestSeatBaselines.get(seatId) || null;
-  const universalTarget = universalTmuxTargets.get(seatId);
-  const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
-  const sendRes = await execWithStatus(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '1', 'Enter'], 8000);
-  const ok = Boolean(sendRes && sendRes.ok);
-  const safePreview = stripAnsiAndRedact(String(commandPreview || ''), { redactPaths: true }).text
-    .replace(/[\r\n]+/g, ' ')
-    .trim()
-    .slice(0, 96);
-  const rec = actionAudit.record({
-    actionId: 'answer_prompt_option',
-    evalId: evalId || `auto_consent:${matchedProfile || 'policy'}:${sourceScope || 'scope'}`,
-    seatId,
-    type: 'auto_consent',
-    payload: `1 Enter${safePreview ? ` (${safePreview})` : ''}`,
-    httpStatus: ok ? 200 : 502,
-    ok,
-    baseline
-  });
-  shiftHistory.recordGuardrailEvent({
-    severity: ok ? 'info' : 'warn',
-    rigId: rigId || 'all',
-    seatId,
-    key: `auto_consent:${seatId}:${String(promptHash || '').slice(0, 18)}:${Date.now()}`,
-    title: `Auto-Consent (${matchedProfile || 'policy'}/${sourceScope || 'scope'}) → ${seatId}`,
-    detail: ok
-      ? `Dispatched 1 Enter${safePreview ? `: ${safePreview}` : ''}`
-      : `Dispatch failed: ${String(sendRes?.output || 'tmux error').slice(0, 140)}`,
-    meta: {
-      profile: matchedProfile || null,
-      sourceScope: sourceScope || null,
-      grantId: grantId || null,
-      promptHash: String(promptHash || '').slice(0, 23),
-      keyStroke: '1 Enter',
-      execId: rec.execId
-    }
-  });
-  if (ok) {
-    terminalPromptProbeCache.delete(seatId);
-    aiEvaluator.invalidateSeat(seatId);
-    invalidateTelemetryCache();
-    schedulePostActionSseRefresh(seatId, 'auto_consent');
+
+  // Share per-seat single-flight lock & 1.5s semantic dedupe with /api/send
+  const semanticKey = buildSeatSendKey(seatId, 'key', '1 Enter');
+  const idem = sendIdempotency.begin({ seatId, semanticKey });
+  if (idem.action !== 'proceed') {
+    return {
+      ok: false,
+      deduplicated: true,
+      auditRecorded: true,
+      shiftRecorded: true,
+      error: idem.reason || `Another command to ${seatId} is already in flight`
+    };
   }
-  return {
-    ok,
-    execId: rec.execId,
-    auditRecorded: true,
-    shiftRecorded: true,
-    output: (sendRes && sendRes.output) || '',
-    error: ok ? undefined : ((sendRes && sendRes.output) || 'tmux send-keys failed')
-  };
+
+  try {
+    const baseline = latestSeatBaselines.get(seatId) || null;
+    const universalTarget = universalTmuxTargets.get(seatId);
+    const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
+    const sendRes = await execWithStatus(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '1', 'Enter'], 8000);
+    const ok = Boolean(sendRes && sendRes.ok);
+    const safePreview = stripAnsiAndRedact(String(commandPreview || ''), { redactPaths: true }).text
+      .replace(/[\r\n]+/g, ' ')
+      .trim()
+      .slice(0, 96);
+    const safeErr = ok
+      ? ''
+      : stripAnsiAndRedact(String((sendRes && sendRes.output) || 'tmux send-keys failed'), { redactPaths: true }).text
+          .replace(/[\r\n]+/g, ' ')
+          .trim()
+          .slice(0, 140);
+    const rec = actionAudit.record({
+      actionId: 'answer_prompt_option',
+      evalId: evalId || `auto_consent:${matchedProfile || 'policy'}:${sourceScope || 'scope'}`,
+      seatId,
+      type: 'auto_consent',
+      payload: `1 Enter${safePreview ? ` (${safePreview})` : ''}`,
+      httpStatus: ok ? 200 : 502,
+      ok,
+      baseline
+    });
+    shiftHistory.recordGuardrailEvent({
+      severity: ok ? 'info' : 'warn',
+      rigId: rigId || 'all',
+      seatId,
+      key: `auto_consent:${seatId}:${String(promptHash || '').slice(0, 18)}:${Date.now()}`,
+      title: `Auto-Consent (${matchedProfile || 'policy'}/${sourceScope || 'scope'}) → ${seatId}`,
+      detail: ok
+        ? `Dispatched 1 Enter${safePreview ? `: ${safePreview}` : ''}`
+        : `Dispatch failed: ${safeErr || 'tmux error'}`,
+      meta: {
+        profile: matchedProfile || null,
+        sourceScope: sourceScope || null,
+        grantId: grantId || null,
+        promptHash: String(promptHash || '').slice(0, 23),
+        keyStroke: '1 Enter',
+        execId: rec.execId
+      }
+    });
+    if (ok) {
+      terminalPromptProbeCache.delete(seatId);
+      aiEvaluator.invalidateSeat(seatId);
+      invalidateTelemetryCache();
+      schedulePostActionSseRefresh(seatId, 'auto_consent');
+      idem.complete(200, { ok: true, execId: rec.execId });
+    } else {
+      idem.abort();
+    }
+    return {
+      ok,
+      execId: rec.execId,
+      auditRecorded: true,
+      shiftRecorded: true,
+      output: (sendRes && sendRes.output) || '',
+      error: ok ? undefined : (safeErr || 'tmux send-keys failed')
+    };
+  } catch (err) {
+    idem.abort();
+    throw err;
+  }
 }
 
 const autoConsent = new AutoConsentEngine({
@@ -2859,6 +2887,7 @@ function resolveSafeStaticPath(baseDir, pathname) {
 }
 
 server.on('listening', () => { remoteAccess.port = getPort(); });
+server.on('close', () => { autoConsent.dispose(); });
 
 export {
   server, resilience, autoConsent,

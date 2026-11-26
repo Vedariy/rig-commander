@@ -402,3 +402,112 @@ test('second provider uses the real authorized router, single-flight, replay and
   assert.equal(await effects(),'execute blue\nexecute red\nsnapshot\n');
   assert.deepEqual((await status()).history.map(r => r.status),['partial','failed']);
 });
+
+test('server manual /api/send cancels pending auto-consent before dispatch and shares sendIdempotency single-flight & dedupe', async t => {
+  const home = await mkdtemp(path.join(tmpdir(), 'rigcmd-ac-race-'));
+  const preload = path.join(home, 'offline.cjs');
+  await writeFile(preload, "globalThis.fetch = async () => { throw new Error('Offline test fixture'); };");
+
+  // Fake tmux stub recording every send-keys invocation with a brief delay on Escape so races are observable
+  const tmuxLog = path.join(home, 'tmux.log');
+  const fakeTmux = path.join(home, 'tmux');
+  await writeFile(tmuxLog, '');
+  await writeFile(fakeTmux, `#!/bin/sh
+echo "$@" >> ${JSON.stringify(tmuxLog)}
+exit 0
+`, { mode: 0o755 });
+
+  const fixturePath = path.join(home, 'ac-race-fixture.mjs');
+  await writeFile(fixturePath, `
+    import { server, autoConsent } from ${JSON.stringify(new URL('../openrig/server.mjs', import.meta.url).href)};
+    const SAFE_PROMPT = [
+      'Requesting permission for: run_command',
+      '$ npm test',
+      'Run this command?',
+      '› 1. Yes, allow once (y)',
+      '  2. Always allow in this workspace',
+      '  3. No, cancel (esc)',
+      '↑/↓ Navigate · Enter to confirm'
+    ].join('\\n');
+    autoConsent.captureSeatScreen = async () => SAFE_PROMPT;
+    autoConsent.updatePolicy({ enabled: true, mode: 'armed', graceWindowMs: 3000, projects: { sandbox: { profile: 'trusted_dev' } } });
+    // Arm a pending approval on dev-coder@sandbox
+    await autoConsent.observeSeat({
+      seat: { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 20 } },
+      screenText: SAFE_PROMPT
+    });
+    // Also execute one auto-consent Option-1 dispatch on dev-check@sandbox to prove shared sendIdempotency with /api/send
+    await autoConsent.dispatchOptionOne({
+      seatId: 'dev-check@sandbox',
+      rigId: 'sandbox',
+      keyStroke: '1 Enter',
+      commandPreview: 'npm test',
+      matchedProfile: 'trusted_dev',
+      sourceScope: 'project',
+      promptHash: 'sha256:test'
+    });
+    server.listen(0, '127.0.0.1', () => console.log('at http://127.0.0.1:' + server.address().port));
+  `);
+
+  const child = spawn(process.execPath, ['--require', preload, fixturePath], {
+    cwd: home,
+    env: { HOME: home, PATH: `${home}:/bin:/usr/bin`, TMUX_BIN: fakeTmux, RIGCOMMANDER_PORT: '0' },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const exited = once(child, 'exit');
+  t.after(async () => {
+    child.kill();
+    await exited;
+    await rm(home, { recursive: true, force: true });
+  });
+
+  let origin = '';
+  let stderr = '';
+  child.stderr.setEncoding('utf8').on('data', d => { stderr += d; });
+  const lines = createInterface({ input: child.stdout });
+  try {
+    for await (const line of lines) {
+      const m = line.match(/at (http:\/\/127\.0\.0\.1:[1-9]\d*)/);
+      if (m) { origin = m[1]; break; }
+    }
+  } finally {
+    lines.close();
+  }
+  assert.ok(origin, 'Fixture server failed to start: ' + stderr);
+
+  const html = await (await fetch(origin)).text();
+  const token = html.match(/<meta name="deck-token" content="([^"]+)">/)?.[1];
+  assert.ok(token);
+  const headers = { origin, 'content-type': 'application/json', 'x-deck-token': token };
+
+  // 1. Verify pending approval is armed
+  const before = await (await fetch(origin + '/api/auto-consent/state')).json();
+  assert.equal(before.state.pendingApprovals.length, 1);
+  assert.equal(before.state.pendingApprovals[0].seatId, 'dev-coder@sandbox');
+
+  // 2. Manual /api/send Escape cancels pending auto-consent immediately
+  const sendRes = await fetch(origin + '/api/send', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ seat: 'dev-coder@sandbox', type: 'key', text: 'Escape' })
+  });
+  assert.equal(sendRes.status, 200);
+  const after = await (await fetch(origin + '/api/auto-consent/state')).json();
+  assert.equal(after.state.pendingApprovals.length, 0, 'Manual /api/send must cancel pending auto-consent immediately');
+  assert.equal(after.state.stats.canceledCount, 1);
+
+  // 3. Shared sendIdempotency: auto-consent Option-1 dispatch on dev-check@sandbox blocks racing manual /api/send "1 Enter" within 1.5s!
+  const racingManual = await fetch(origin + '/api/send', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ seat: 'dev-check@sandbox', type: 'key', text: '1 Enter' })
+  });
+  assert.equal(racingManual.status, 409, 'Shared sendIdempotency must deduplicate manual 1 Enter right after auto-consent 1 Enter');
+  assert.equal((await racingManual.json()).deduplicated, true);
+
+  const logLines = (await readFile(tmuxLog, 'utf8')).trim().split('\n').filter(Boolean);
+  const sendKeysLines = logLines.filter(l => l.startsWith('send-keys'));
+  assert.equal(sendKeysLines.length, 2, 'Only 1 auto-consent 1 Enter on dev-check + 1 manual Escape on dev-coder should send-keys to tmux');
+  assert.match(sendKeysLines[0], /send-keys -t dev-check@sandbox 1 Enter/);
+  assert.match(sendKeysLines[1], /send-keys -t dev-coder@sandbox Escape/);
+});
