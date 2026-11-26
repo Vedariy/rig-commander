@@ -8,22 +8,13 @@
 import { classifyTerminalScreen, getLiveHitlOptions } from '../../assets/domain/prompt-parser.js';
 import { buildSeatRelaunchCommand, isPiHarness } from '../../assets/ontology/actions.js';
 import { EVAL_RISK_LEVELS, EVAL_TIERS } from '../../assets/domain/evaluator-model.js';
+import {
+  DESTRUCTIVE_VETO_PATTERNS,
+  isSafeReadOnlyCommand,
+  classifyDestructiveVetoes
+} from '../../assets/domain/auto-consent-model.js';
 
-const DESTRUCTIVE_VETO_PATTERNS = [
-  { id: 'rm_rf', re: /\brm\s+(-[a-z]*r[a-z]*f|-[a-z]*f[a-z]*r|-rf|-fr)\b/i, label: 'rm -rf (recursive deletion)' },
-  { id: 'git_force_push', re: /\bgit\s+push\b[^\n]*(\s--force\b|\s--force-with-lease\b|\s-f\b)/i, label: 'git push --force' },
-  { id: 'git_hard_reset', re: /\bgit\s+(reset\s+--hard|clean\s+-[a-z]*f)/i, label: 'git reset --hard / clean -f' },
-  { id: 'sql_ddl', re: /\b(DROP\s+(TABLE|DATABASE|SCHEMA|INDEX)|TRUNCATE\s+TABLE|ALTER\s+TABLE)\b/i, label: 'SQL DDL/destructive schema change' },
-  { id: 'chmod_777', re: /\bchmod\s+(-R\s+)?0?777\b/i, label: 'chmod 777' },
-  { id: 'curl_pipe_sh', re: /\b(curl|wget)\b[^\n]*\|\s*(sh|bash|zsh)\b/i, label: 'curl/wget piped to shell' },
-  { id: 'sudo_cmd', re: /(?:^|[\s$`(])sudo\s+/m, label: 'sudo privilege escalation' },
-  { id: 'secret_file_access', re: /(~\/\.ssh\b|id_rsa\b|\.env(\.local|\.prod|\.production)?\b)/i, label: 'Sensitive credential / .env / SSH access' },
-  { id: 'publish_prod', re: /\b(npm\s+publish|vercel\s+--prod|git\s+push\s+origin\s+(main|master|prod))\b/i, label: 'Production publish / push' }
-];
-
-const SHELL_METACHAR_RE = /[;|&`><]|\$\(/;
-
-const SAFE_READONLY_COMMAND_RE = /^(?:npm\s+test|npx\s+vitest(?:\s+[a-zA-Z0-9._/-]+)?|npx\s+playwright\s+test(?:\s+[a-zA-Z0-9._/-]+)?|pytest(?:\s+[a-zA-Z0-9._/-]+)?|git\s+(?:status|diff|log)(?:\s+[a-zA-Z0-9._/@~^-]+)*|ls(?:\s+-[a-zA-Z0-9]+)?(?:\s+[a-zA-Z0-9._/-]+)?|rg\s+[a-zA-Z0-9._"'/-]+|cat\s+[a-zA-Z0-9._/-]+)$/;
+export { DESTRUCTIVE_VETO_PATTERNS };
 
 function clamp01(val) {
   if (!Number.isFinite(val)) return 0;
@@ -32,7 +23,7 @@ function clamp01(val) {
 
 function extractPromptCommandRegion(screenText) {
   const lines = String(screenText || '').replace(/\x1B\[[0-9;?]*[a-zA-Z]/g, '').split(/\r?\n/);
-  const tail = lines.slice(-32);
+  const tail = lines.slice(-64);
   return tail.join('\n');
 }
 
@@ -52,13 +43,10 @@ function extractCandidateCommandLine(promptRegion) {
 export function evaluateHitlRiskRules(screenText = '', parsedOptions = null) {
   const region = extractPromptCommandRegion(screenText);
   const opts = Array.isArray(parsedOptions) ? parsedOptions : getLiveHitlOptions(screenText);
-  const hardVetoes = [];
-
-  for (const pat of DESTRUCTIVE_VETO_PATTERNS) {
-    if (pat.re.test(region)) {
-      hardVetoes.push({ ruleId: `E-VETO-${pat.id.toUpperCase()}`, reason: pat.label });
-    }
-  }
+  const hardVetoes = classifyDestructiveVetoes(region).map(v => ({
+    ruleId: v.ruleId,
+    reason: v.reason
+  }));
 
   if (hardVetoes.length > 0) {
     return {
@@ -72,11 +60,7 @@ export function evaluateHitlRiskRules(screenText = '', parsedOptions = null) {
   }
 
   const candidateCmd = extractCandidateCommandLine(region);
-  const isCleanReadOnly = Boolean(
-    candidateCmd &&
-    !SHELL_METACHAR_RE.test(candidateCmd) &&
-    SAFE_READONLY_COMMAND_RE.test(candidateCmd)
-  );
+  const isCleanReadOnly = isSafeReadOnlyCommand(candidateCmd);
 
   if (isCleanReadOnly && opts.length >= 2) {
     return {
