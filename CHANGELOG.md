@@ -10,6 +10,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.8.0] - 2026-11-26
+
+### Added
+- **Iteration 10 — Scoped Opt-In Auto-Consent Policy Engine (Pure Domain, `openrig/assets/domain/auto-consent-model.js`, `openrig/lib/ai-evaluator/expert-rules.mjs`, `openrig/assets/domain/i18n.js`):**
+  - Added a pure, zero-DOM Auto-Consent policy domain sharing destructive command vetoes and the read-only classifier with `expert-rules.mjs`, plus 61 matching EN/RU localization keys.
+  - Enforced fail-closed `OFF / dry_run` defaults, 4-level scope inheritance (`masterPaused > SessionGrant > Agent > Project > Global`) with `manual_only` deny-wins precedence, the Option-1-Only gate, the Permission-vs-Question gate, context-overheat auto-pause, and conservative `trusted_dev` escalation for package installs and external network access by default.
+- **Runtime Engine, TOCTOU Grace Window & Kill-Switch (`openrig/lib/auto-consent-engine.mjs`, `openrig/lib/routes/auto-consent.mjs`, `openrig/lib/telegram-bridge.mjs`, `openrig/server.mjs`):**
+  - Added the runtime Auto-Consent engine with a configurable 3s countdown grace window, live TMUX re-capture and `sha256` `promptHash` drift verification, live `tmux:%pane:pid` epoch binding, atomic synchronous quota/rate reservation, `0600` local policy persistence (with strictly RAM-only session grants), and `0%` idle CPU.
+  - Added SSE push events (`auto_consent_state`, `auto_consent_pending`, `auto_consent_resolved`), authenticated `/api/auto-consent/*` endpoints sharing single-flight send locking with manual `/api/send`, and the authorized Telegram `/pause_auto` kill-switch.
+- **Modular Deck UI, Offline `/demo?track=auto-consent` & Tier-1 Operator Guide (`openrig/assets/ui/auto-consent-view.js`, `openrig/assets/styles/deck.css`, `openrig/index.html`, `landing/guide.html`):**
+  - Added the active HUD Auto-Consent status pill with 1-click `⏸ PAUSE`, a 3s cancelable countdown toast, the Guardrails `⚡ Auto-Consent` settings & redacted audit tab, Seat Inspector policy picker, and HITL `⚡ Allow + Trust Session 60m` action.
+  - Added an interactive offline `/demo?track=auto-consent` tour firing `0` live `/api/*` requests and a bilingual EN/RU Tier-1 Auto-Consent operator guide section in `landing/guide.html`.
+- **Test Verification:** Expanded automated test coverage to **`322 / 322 PASS` across 39 test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.7.0] - 2026-11-26
 
 ### Added

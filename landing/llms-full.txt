@@ -21,9 +21,9 @@ Ten open terminals can hide a permission prompt, an exited shell or a session ru
 
 ## Terminal decisions and cost / Решения в терминале и расходы
 
-**Human-in-the-loop (HITL).** Read the terminal prompt and its command preview when available. Select an allowed tmux response and inspect the resulting state. A configured Telegram bridge also accepts decisions from authorized chats.
+**Human-in-the-loop (HITL).** Read the terminal prompt and its command preview when available. Select an allowed tmux response and inspect the resulting state. A configured Telegram bridge also accepts decisions from authorized chats. Optional scoped Auto-Consent is off by default and supports bounded single-use approvals with a visible cancel countdown, instant pause, and hard vetoes for destructive commands and operator questions.
 
-**Подтверждения человеком (HITL).** Прочитайте запрос терминала и команду, если она показана. Выберите разрешённый ответ tmux и проверьте состояние после отправки. Настроенный мост Telegram также принимает решения из разрешённых чатов.
+**Подтверждения человеком (HITL).** Прочитайте запрос терминала и команду, если она показана. Выберите разрешённый ответ tmux и проверьте состояние после отправки. Настроенный мост Telegram также принимает решения из разрешённых чатов. Опциональное авто-подтверждение по областям выключено по умолчанию и поддерживает ограниченные разовые подтверждения с видимым отсчётом отмены, мгновенной паузой и жёсткими вето на разрушительные команды и вопросы оператору.
 
 **Fleet Advisor and FinOps.** The advisor brings waiting tasks, hot context and review churn to the operator’s attention. Its recommendations are advisory. The spending view separates subscription usage (SUB) from a pay-as-you-go estimate (PAYG). Estimates help compare sessions; provider billing records remain the source for actual charges. The configurable circuit-breaker can flag or pause eligible work under the selected budget or review-loop policy.
 

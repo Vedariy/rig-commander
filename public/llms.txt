@@ -3,7 +3,7 @@
 > Local-first MIT command deck for operators of autonomous coding agents. Follow Claude Code, Codex CLI and Gemini CLI sessions in tmux, or inspect an OpenRig fleet with its queues and handoffs.
 > Локальный пульт под лицензией MIT для операторов ИИ-агентов. Наблюдайте за сессиями Claude Code, Codex CLI и Gemini CLI в tmux или за флотом OpenRig с его очередями и передачами задач.
 
-Quick facts / Кратко: v3.7.0 · MIT · macOS / Linux · Node.js >= 18 · 0 runtime npm dependencies / внешних npm-зависимостей.
+Quick facts / Кратко: v3.8.0 · MIT · macOS / Linux · Node.js >= 18 · 0 runtime npm dependencies / внешних npm-зависимостей.
 Start / Запуск: `npx rig-commander@latest`. Local deck / Локальный пульт: `http://127.0.0.1:7440`.
 Idle CPU / Простой: 0% idle CPU target for telemetry polling with no active clients / целевой показатель для опроса телеметрии без активных клиентов.
 
@@ -22,6 +22,7 @@ Idle CPU / Простой: 0% idle CPU target for telemetry polling with no acti
 - Trace a handoff from graph to Gantt to queue. / Проследите передачу задачи по графу, Ганту и очереди.
 - Read a terminal prompt before answering. Compare subscription and token costs. / Прочитайте запрос терминала перед ответом. Сопоставьте подписку и оплату за токены.
 - Preview fleet recovery, confirm the plan, then inspect results for each target. / Проверьте план восстановления флота, подтвердите его и прочитайте результат для каждого участника.
+- Optional scoped Auto-Consent (off by default) automates bounded single-use approvals with a visible cancel countdown, instant pause, and hard vetoes for destructive commands and operator questions. / Опциональное авто-подтверждение по областям (выключено по умолчанию) автоматизирует ограниченные разовые подтверждения с видимым отсчётом отмены, мгновенной паузой и жёсткими вето на разрушительные команды и вопросы оператору.
 
 ## Security Boundaries
 
