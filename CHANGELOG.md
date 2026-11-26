@@ -10,6 +10,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.5.1] - 2026-11-26
+
+### Fixed
+- **Cubic Bezier Arrowhead Alignment & Fixed-Scale Notched Markers (`openrig/assets/domain/topology-layout.js`, `openrig/assets/ui/topology-view.js`, `openrig/index.html`):**
+  - Added a collinear straight landing runway (`p2Lead → p2`, 11–16 px) to orthogonal S-curves and obstacle/parallel Bezier paths so incoming live streams align 100% with the arrowhead axis instead of entering at a sideways angle.
+  - Trimmed wide translucent `.edge-trunk` paths (`trunkPathD`) back into the arrow notch and capped live `trunkWidth <= 9 px` so thick trunks never protrude past arrowheads.
+  - Switched all SVG `<marker id="arr-*">` definitions to `markerUnits="userSpaceOnUse"` (`18×18` notched silhouette) so arrowheads stay crisp and proportional across all traffic volumes (`223 / 223 PASS`, `EXPOSURE_AUDIT_PASS`).
+
+---
+
 ## [3.5.0] - 2026-11-26
 
 ### Added
