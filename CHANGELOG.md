@@ -10,6 +10,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.9.0] - 2026-11-26
+
+### Added
+- **Strict `--read-only` Zero-Write Inspection Mode (`bin/cli.mjs`, `openrig/server.mjs`, `openrig/lib/remote-access.mjs`, `openrig/lib/shift-history.mjs`, `tests/read-only-mode.test.mjs`):**
+  - Added `--read-only` CLI flag (`RIGCOMMANDER_READ_ONLY=1`) enforcing a centralized `403 READ_ONLY_MODE` write-block gate across all mutating `/api/*` endpoints and `/pair` (including `GET /pair?code=`), preventing disk writes on `--public-url` startup, disabling Auto-Consent dispatches, Telegram wake egress, playbook mutations, and shift-history disk queues while keeping all live read-only observation & SSE endpoints 100% functional.
+  - Surfaced a dedicated `🔒 READ-ONLY` badge in the top HUD when `telemetry.readOnlyMode` is active and documented `--read-only` across the CLI, `/guide`, `/passport`, `llms*.txt`, and the Tier-1 Agent Skill (`skills/rig-commander-mission-control/`).
+- **Security Guarantees Strip, Universal Comparison Table & Inline HITL Preview (`landing/index.html`, `landing/passport.html`, `openrig/assets/ui/inspector-view.js`):**
+  - Added an at-a-glance bilingual Security & Privacy Guarantees table on both the landing page and `/passport`, plus a 3-column **Raw tmux vs Cloud Tracing (LangSmith/Langfuse) vs RigCommander** comparison table.
+  - Added inline parsed command previews and allowlisted Option 1/2/3 HITL actions directly inside the Seat Inspector diagnosis card above the fold for `NEEDS INPUT` nodes.
+
+### Fixed & Improved
+- **Mobile Landing (`390×844`), Laptop Header (`1280×720`), Zero-External-Font Load & Guide/Passport Parity (`landing/{index,guide,passport}.html`, `openrig/index.html`, `tests/ai-discovery.test.mjs`):**
+  - Removed all external `fonts.googleapis.com` / `fonts.gstatic.com` stylesheet links across landing, guide, passport, and deck (eliminating CORS errors and slow font stalls with local zero-network UI + mono font stacks).
+  - Eliminated `230px` mobile horizontal overflow on `/` (`0px` overflow at `390×844` across header, hero, and wrapped footer), hid the Phone QR CTA on mobile viewports, fixed single-row `1280×720` headers with `>= 32px` nav targets, synced `v{{APP_VERSION}}` badges across the hero & preview, simplified hero copy in plain EN/RU, standardized `EN | RU` toggle order across all surfaces, moved `/guide` Quickstart above the fold ahead of section #10 Recovery, and completed RU localization & contrast upgrades on `/passport`.
+- **Detailed-Card Vertical Overlap, `1280×720` Ergonomics & Dark Cockpit Calm (`openrig/assets/domain/topology-layout.js`, `openrig/assets/ui/{topology-view,auto-consent-view}.js`, `openrig/assets/styles/deck.css`, `openrig/index.html`):**
+  - Fixed vertical card overlap in `DETAILED` (`!compact`) mode across multi-rig clusters (accurate detailed card heights + `enforceHardClearance` post-pass) and eliminated `1280×720` node-border & spline-over-metric collisions.
+  - Collapsed the `/demo` Mini-Quest dock by default (still accessible via `🎯 10s Mission`), raised critical operational Fitts targets, fixed `1280×720` P2 triage card right-edge clipping and duplicate P1 ETA text, muted routine node neon glow and replaced decorative heart badges with calm status dots, kept `#btnAutoConsentTop` directly accessible, and moved `#autoConsentInspectorRoot` below the primary node header/diagnosis card.
+- **Test Verification:** Expanded automated test coverage to **`349 / 349 PASS` across `41` test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.8.1] - 2026-11-26
 
 ### Added

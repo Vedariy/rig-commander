@@ -1,6 +1,6 @@
 {
   "name": "rig-commander",
-  "version": "3.8.1",
+  "version": "3.9.0",
   "description": "Mission Control & Neural Command Deck for Autonomous AI Engineering Fleets",
   "type": "module",
   "main": "openrig/server.mjs",

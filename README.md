@@ -24,7 +24,7 @@ RigCommander is a **zero-dependency, local-first DSS SA (L1–L3)** command deck
   - Tracks live token usage, prompt cache hit %, and subscription ROI across exclusive model pools; enforces spend/rework caps and supports phone approvals via Telegram or paired Mobile PWA.
 - **OpenRig L3 Playbook Built In:**
   - Full bilingual operational guide to OpenRig (`@openrig/cli`) — honest recovery, queue patterns, 10 advanced flows (`discover/adopt`, `set-runtime`, `fork`, `ask --wake`, `crash-cart`), and Top 7 anti-patterns.
-- **Hardened Local-First Security:** `0 npm dependencies`, loopback-only `127.0.0.1`, per-process session auth, strict `Origin` checks, allowlisted `tmux` keystrokes, paired QR+PIN Mobile PWA, and `333 / 333` automated unit tests.
+- **Hardened Local-First Security:** `0 npm dependencies`, loopback-only `127.0.0.1`, `--read-only` zero-write inspection mode, per-process session auth, strict `Origin` checks, allowlisted `tmux` keystrokes, paired QR+PIN Mobile PWA, and `349 / 349` automated unit tests.
 
 ## 🚀 Quick Start
 
@@ -61,7 +61,7 @@ npx skills add Vedariy/rig-commander
 ## 🧪 Development & Verification
 
 ```bash
-npm test                 # Zero-dependency Node test runner (40 suites, 333 tests)
+npm test                 # Zero-dependency Node test runner (41 suites, 349 tests)
 npm run sync:public      # Sync openrig/ + landing/ -> public/ for static showcase hosting
 npm run audit:exposure   # Verify .private-docs/ isolation, clean public showcase & zero leaks
 ```

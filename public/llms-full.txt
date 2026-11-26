@@ -1,6 +1,6 @@
 # RigCommander — Operator reference / Справочник оператора
 
-> v3.8.1 · MIT · Node.js >= 18 · macOS / Linux · 0 runtime npm dependencies.
+> v3.9.0 · MIT · Node.js >= 18 · macOS / Linux · 0 runtime npm dependencies.
 > A local command deck for engineers responsible for several AI coding sessions. / Локальный пульт для инженера, который отвечает за несколько сессий ИИ-разработки.
 
 ## The ten-agent tipping point / Когда агентов уже десять
