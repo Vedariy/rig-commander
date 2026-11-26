@@ -96,7 +96,7 @@ for (const lang of ['en', 'ru']) {
     includes(renderStateIndicatorHtml(agent, d), 'heart-anim');
     includes(renderStateIndicatorHtml({ state: 'idle' }, d), 'zzz-anim');
     includes(renderStateIndicatorHtml({ state: 'waiting', shellExited: true }, d), 'SHELL');
-    includes(renderStateIndicatorHtml(agents[1], d), 'NEEDS INPUT');
+    includes(renderStateIndicatorHtml(agents[1], d), lang === 'en' ? 'NEEDS INPUT' : 'ЖДЁТ ВВОДА');
     assert.equal(renderDormantFlagHtml({ state: 'waiting', assignedWorkCount: 3 }), '🟠 3');
     const card = renderNodeCardHtml(agents[1], d);
     for (const value of ['pill-crit', 'data-agent-id="qa@rig"', 'data-thermal-tier="crit"', 'selected', 'role="button"', 'handleNodeLedMouseDown(event, this)',
