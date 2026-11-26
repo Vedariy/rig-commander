@@ -73,7 +73,7 @@
       </div>
     </div>
     <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
-      <button class="triage-refresh-btn triage-icon-btn" onclick="refreshTelemetryNow(true)" title="Обновить телеметрию">
+      <button class="triage-refresh-btn triage-icon-btn" id="btnRefresh" onclick="refreshTelemetryNow(true)" title="Обновить телеметрию">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       </button>
       <button class="triage-refresh-btn" onclick="copyCmd('rig status')" title="rig status">
@@ -175,6 +175,9 @@
       </div>
     </div>
   </header>
+
+  <div id="resilienceRoot"></div>
+  <div id="resilienceModalRoot" hidden></div>
 
   <main class="main-layout" id="mainLayout">
 
@@ -1115,6 +1118,33 @@
       ]
     };
     let IS_LIVE = false;
+    let resilienceUi = null;
+    const IS_OFFLINE_DEMO = /^\/demo(?:\/|$)/.test(location.pathname);
+
+    function initResilienceUi() {
+      const demo = IS_OFFLINE_DEMO && new URLSearchParams(location.search).get('track') === 'resilience';
+      resilienceUi = ResilienceView.createResilienceController({
+        root: document.getElementById('resilienceRoot'), modalRoot: document.getElementById('resilienceModalRoot'),
+        td, lang: () => deckLang, demo, isLive: () => !IS_OFFLINE_DEMO && Boolean(IS_LIVE || getDeckToken()),
+        copyCommand: text => navigator.clipboard.writeText(text),
+        getJson: async endpoint => {
+          const res = await fetch(endpoint, { cache: 'no-store' });
+          if (!res.ok) throw new Error(td('resilience.statusUnknown'));
+          return res.json();
+        },
+        postJson: async (endpoint, payload) => {
+          const { res, data } = await deckPostJson(endpoint, payload, { skipEndpointGuard: endpoint === '/api/resilience/plan' });
+          if (!res.ok) {
+            const error = new Error(data?.error || td('resilience.statusUnknown'));
+            error.receipt = data?.receipt;
+            throw error;
+          }
+          return data;
+        }
+      });
+      resilienceUi.refresh();
+      document.getElementById('btnRefresh')?.addEventListener('click', () => resilienceUi.refresh());
+    }
     let autoFollow = true;
     let audioRadarOn = false;
     let desktopNotificationsOn = false;
@@ -1160,6 +1190,7 @@
     }
 
     function onRigFilterChange(val) {
+      resilienceUi?.cancel();
       currentRigFilter = val;
       persistDeckPref({ rigFilter: val });
       if (typeof connectTelemetryStream === 'function' && IS_LIVE) connectTelemetryStream(true);
@@ -2524,8 +2555,9 @@
           telemetrySseConnected = true;
           scheduleSseTelemetryRefresh();
         });
-        es.addEventListener('shift_event', () => {
+        es.addEventListener('shift_event', (event) => {
           telemetrySseConnected = true;
+          try { if (JSON.parse(event.data || '{}').kind === 'resilience_wake') resilienceUi?.refresh(); } catch {}
           const dig = document.getElementById('shiftDigestModal');
           if (dig && dig.classList.contains('open')) refreshShiftDigestModal();
         });
@@ -2629,6 +2661,7 @@
     let hasDoneInitialCapture = false;
 
     async function refreshTelemetryNow(force = false) {
+      if (IS_OFFLINE_DEMO) return;
       if (telemetryFetchInFlight && !force) return;
       telemetryFetchInFlight = true;
       try {
@@ -7884,6 +7917,7 @@
 
     function setDeckLang(lang, skipRerender = false) {
       deckLang = lang === 'en' ? 'en' : 'ru';
+      resilienceUi?.render();
       document.documentElement.lang = deckLang;
       try { localStorage.setItem('rigcommander_lang', deckLang); } catch {}
 
@@ -8251,6 +8285,7 @@
       document.addEventListener('visibilitychange', () => {
         syncTmuxStream();
         if (document.visibilityState === 'visible') {
+          resilienceUi?.refresh();
           const now = Date.now();
           if (now - lastVisibleRefreshAt >= 1500) {
             lastVisibleRefreshAt = now;
@@ -8263,6 +8298,7 @@
       });
       setCenterView(centerViewMode, true);
       const activeTrack = applyDemoTrackFromUrl();
+      initResilienceUi();
       initDemoQuest(activeTrack);
       initPwaSupport();
       setMobileTab('map', true);
@@ -9057,6 +9093,8 @@
     import * as GuardrailsView from '/assets/ui/guardrails-view.js';
     import * as GanttView from '/assets/ui/gantt-view.js';
     import * as TopologyView from '/assets/ui/topology-view.js';
+    import * as ResilienceView from '/assets/ui/resilience-view.js';
+    window.ResilienceView = ResilienceView;
     window.TopologyView = TopologyView;
     import * as InspectorView from '/assets/ui/inspector-view.js';
     window.InspectorView = InspectorView;

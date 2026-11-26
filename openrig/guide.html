@@ -551,6 +551,7 @@
       <a href="#shortcuts"><span data-lang-block="ru">7. Горячие клавиши и Share Card</span><span data-lang-block="en">7. Shortcuts & Share Card</span></a>
       <a href="#faq"><span data-lang-block="ru">8. FAQ и диагностика</span><span data-lang-block="en">8. FAQ & Troubleshooting</span></a>
       <a href="#openrig-playbook"><span data-lang-block="ru">9. OpenRig Playbook (L3)</span><span data-lang-block="en">9. OpenRig Playbook (L3)</span></a>
+      <a href="#resilience"><span data-lang-block="ru">10. Восстановление флота</span><span data-lang-block="en">10. Fleet recovery</span></a>
       <div class="toc-sep"></div>
       <a class="toc-mini-link" href="/passport"><span data-lang-block="ru">📐 Инженерный паспорт (C4)</span><span data-lang-block="en">📐 Architecture Passport (C4)</span></a>
       <a class="toc-mini-link" href="https://github.com/Vedariy/rig-commander/blob/main/openrig/docs/openrig-playbook.md" target="_blank" rel="noopener">🧭 OpenRig Playbook (MD)</a>
@@ -583,6 +584,18 @@
       </div>
 
       <!-- 1. QUICK START -->
+      <section class="card" id="resilience">
+        <h2><span data-lang-block="ru">Восстановление после отключения</span><span data-lang-block="en">Recovery after an outage</span></h2>
+        <p><span data-lang-block="ru">Если флот недоступен после сна или сбоя, пульт показывает доступные способы восстановления и возраст последнего снимка. Намеренно остановленные риги пропускаются при восстановлении всего флота.</span><span data-lang-block="en">When the fleet is unavailable after sleep or a crash, the Deck shows available recovery options and the age of the latest snapshot. Fleet recovery skips intentionally stopped rigs.</span></p>
+        <ol>
+          <li><span data-lang-block="ru">Выберите флот или отдельный риг и откройте план.</span><span data-lang-block="en">Choose the fleet or an individual rig and open its plan.</span></li>
+          <li><span data-lang-block="ru">Проверьте команду, список целей и предупреждения. Запуск требует отдельного подтверждения; закрытие плана ничего не запускает.</span><span data-lang-block="en">Review the command, targets and warnings. Starting requires a separate confirmation; closing the plan starts nothing.</span></li>
+          <li><span data-lang-block="ru">Прочитайте результат: восстановление может быть частичным или остаться неподтверждённым. Команду можно скопировать для ручной диагностики.</span><span data-lang-block="en">Read the result: recovery may be partial or remain unconfirmed. Copy the command for manual diagnosis when needed.</span></li>
+        </ol>
+        <p><span data-lang-block="ru">Локальное хранилище не зашифровано. Снимок не гарантирует сохранения всей истории диалога. Автоматического восстановления без вашего действия нет.</span><span data-lang-block="en">The local vault is unencrypted. A snapshot does not guarantee the entire conversation history is preserved. Recovery never starts without your action.</span></p>
+        <a class="cta-btn" href="/demo?track=resilience"><span data-lang-block="ru">Попробовать безопасную симуляцию</span><span data-lang-block="en">Try the safe simulation</span></a>
+      </section>
+
       <section class="card" id="quickstart">
         <div class="sec-head">
           <h2>🚀 <span data-lang-block="ru">1. Быстрый старт и режимы работы</span><span data-lang-block="en">1. Quick Start & Discovery Modes</span></h2>

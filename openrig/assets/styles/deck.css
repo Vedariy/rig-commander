@@ -5019,3 +5019,37 @@
       gap: 10px;
     }
 
+
+/* Resilience stays silent while healthy; outage advice does not block the Deck. */
+#resilienceRoot { flex: 0 0 auto; max-height: 32vh; overflow: auto; }
+.resilience-banner { margin: 0 12px 6px; padding: 12px; border: 1px solid #fbbf2455; border-radius: 10px; background: #171a22; font-size: 12px; }
+.resilience-heading, .resilience-provider-head, .resilience-actions, .resilience-modal header, .resilience-modal footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.resilience-heading > div { flex: 1; min-width: 160px; }
+.resilience-banner p, .resilience-modal p { color: #cbd5e1; line-height: 1.5; }
+.resilience-vault, .resilience-snapshot { display: inline-block; border: 1px solid #64748b66; border-radius: 6px; padding: 3px 6px; font-size: 11px; }
+.resilience-provider { margin-top: 8px; border-top: 1px solid #64748b44; padding-top: 8px; }
+.resilience-rig { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-top: 8px; }
+.resilience-rig b { margin-right: 8px; overflow-wrap: anywhere; }
+.resilience-rig small { display: block; color: #94a3b8; margin-top: 4px; }
+.resilience-demo { color: #67e8f9 !important; border-left: 2px solid #67e8f9; padding-left: 8px; margin: 8px 0; }
+.resilience-backdrop { position: fixed; inset: 0; z-index: 20000; padding: 16px; display: grid; place-items: center; background: #020617d9; }
+.resilience-modal { width: min(620px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 20px; border: 1px solid #38bdf866; border-radius: 14px; background: #0b1220; box-shadow: 0 20px 80px #0009; overflow-wrap: anywhere; }
+.resilience-modal header { justify-content: space-between; margin-bottom: 12px; }
+.resilience-modal h2 { font-size: 18px; }
+.resilience-modal h3 { font-size: 12px; color: #94a3b8; margin: 14px 0 6px; }
+.resilience-modal ul { margin: 8px 0 8px 20px; font-size: 13px; }
+.resilience-command { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; border-radius: 8px; background: #020617; color: #67e8f9; user-select: all; }
+.resilience-modal footer { margin-top: 18px; }
+.resilience-result { margin-top: 12px; font-weight: 700; }
+.resilience-result.restored { color: #34d399; }
+.resilience-result.partial, .resilience-snapshot.aging, .resilience-snapshot.stale { color: #fbbf24; }
+.resilience-result.failed, .resilience-error { color: #fb7185 !important; }
+.resilience-copy-fallback { width: 100%; margin-top: 12px; min-height: 80px; color: #e2e8f0; background: #020617; }
+.resilience-modal button:focus-visible, .resilience-banner button:focus-visible { outline: 2px solid #67e8f9; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .resilience-banner { margin: 0 6px 4px; padding: 10px; }
+  .resilience-rig { display: block; }
+  .resilience-actions { margin-top: 6px; }
+  .resilience-modal { padding: 14px; }
+  .resilience-modal button, .resilience-banner button { min-height: 36px; }
+}

@@ -1,5 +1,7 @@
 export const DECK_I18N = {
   en: {
+    'resilience.demoNotice': 'Simulation · no live actions',
+    'resilience.snapshotSaved': 'Snapshot saved',
     'resilience.daemonDownTitle': 'OpenRig daemon is offline',
     'resilience.daemonDownDesc': 'Live fleet status is unavailable. Review the recovery plan before starting the fleet.',
     'resilience.rigDownTitle': 'Rig offline: {rig}',
@@ -580,6 +582,8 @@ export const DECK_I18N = {
     'pb.noRuns': 'No playbook runs yet — click "🧪 Dry-Run Preview" to simulate safely against the live fleet.'
   },
   ru: {
+    'resilience.demoNotice': 'Симуляция · без реальных действий',
+    'resilience.snapshotSaved': 'Снимок сохранён',
     'resilience.daemonDownTitle': 'Демон OpenRig недоступен',
     'resilience.daemonDownDesc': 'Текущее состояние флота недоступно. Перед запуском проверьте план восстановления.',
     'resilience.rigDownTitle': 'Риг недоступен: {rig}',

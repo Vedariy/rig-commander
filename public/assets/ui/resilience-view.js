@@ -1,0 +1,205 @@
+import { ActionFlightGuard } from '../domain/action-guard.js';
+import { buildDemoResilienceScenario, normalizeRestoreReceipt, validateResilienceTarget } from '../domain/resilience-model.js';
+
+const array = value => Array.isArray(value) ? value : [];
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const receiptKey = status => ({ restored: 'statusRestored', partial: 'statusPartial', failed: 'statusFailed' }[status] || 'statusUnknown');
+const providerReport = (status, provider) => provider.report || (array(status.providers).length === 1 ? status.report : {});
+const button = (action, label, attributes = '', disabled = false) => `<button type="button" class="cyber-btn" data-resilience-action="${action}" ${attributes}${disabled ? ' disabled' : ''}>${esc(label)}</button>`;
+const targetAttrs = request => `data-provider-id="${esc(request.providerId)}" data-scope="${esc(request.scope)}" data-target="${esc(request.target || '')}"`;
+const sameTarget = (a, b) => a && b && a.providerId === b.providerId && a.scope === b.scope && (a.target || null) === (b.target || null);
+
+export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = false, busy = false } = {}) {
+  if (!status || !(status.report?.tier === 'daemon_down' || array(status.report?.offlineRigs).length ||
+    array(status.providers).some(p => p.report?.tier === 'daemon_down' || array(p.report?.offlineRigs).length))) return '';
+  const content = array(status.providers).map(provider => {
+    const report = providerReport(status, provider), caps = provider.capabilities || {};
+    if (!(report?.tier === 'daemon_down' || array(report?.offlineRigs).length)) return '';
+    const fleet = { providerId: provider.id, scope: 'fleet', target: null };
+    return `<section class="resilience-provider"><div class="resilience-provider-head"><strong>${esc(provider.id)}</strong>
+      ${caps.fleetRecover === true && caps.planPreview === true ? button('plan', td('resilience.resurrectFleetBtn'), targetAttrs(fleet), busy) : ''}
+      ${button('copy', td('resilience.copyCommandBtn'), `data-command="${esc(provider.commandPreview || '')}"`, !provider.commandPreview)}</div>
+      ${array(report.rigReports).filter(r => r.recoverable && !r.intentionallyStopped).map(rig => {
+        const request = { providerId: provider.id, scope: 'rig', target: rig.rigId };
+        const freshness = ['fresh', 'aging', 'stale'].includes(rig.snapshot?.freshness) ? rig.snapshot.freshness : 'missing';
+        const label = { fresh: 'snapFresh', aging: 'snapAging', stale: 'snapStale', missing: 'snapMissing' }[freshness];
+        const minutes = Number.isFinite(rig.snapshot?.ageMs) ? Math.max(0, Math.round(rig.snapshot.ageMs / 60000)) : null;
+        const age = minutes == null ? '' : new Intl.RelativeTimeFormat(lang === 'ru' ? 'ru' : 'en', { style: 'short', numeric: 'always' }).format(-minutes, 'minute');
+        return `<div class="resilience-rig"><div><b>${esc(rig.rigId)}</b><span class="resilience-snapshot ${freshness}">${esc(td(`resilience.${label}`))}</span>
+          ${age ? `<small>${esc(td('resilience.snapshotAge', { age }))}</small>` : ''}</div><div class="resilience-actions">
+          ${caps.unitRecover === true && caps.planPreview === true ? button('plan', td('resilience.wakeupBtn', { rig: rig.rigId }), targetAttrs(request), busy) : ''}
+          ${caps.checkpoints === true ? button('snapshot', td('resilience.snapshotBtn'), targetAttrs(request), busy) : ''}
+          ${button('copy', td('resilience.copyCommandBtn'), `data-command="${esc(rig.commandPreview || '')}"`, !rig.commandPreview)}</div></div>`;
+      }).join('')}</section>`;
+  }).join('');
+  return `<aside class="resilience-banner" aria-live="polite"><div class="resilience-heading"><div><strong>${esc(td(status.report?.tier === 'daemon_down' ? 'resilience.daemonDownTitle' : 'resilience.rigDownTitle', { rig: array(status.report?.offlineRigs).join(', ') }))}</strong>
+    <p>${esc(td(status.report?.tier === 'daemon_down' ? 'resilience.daemonDownDesc' : 'resilience.rigDownDesc'))}</p></div>
+    <span class="resilience-vault">${esc(td(status.vault?.encrypted === true ? 'resilience.vaultEncrypted' : 'resilience.vaultLocal'))}</span>
+    ${button('refresh', td('triage.refresh'), '', busy)}</div>${demo ? `<p class="resilience-demo">${esc(td('resilience.demoNotice'))}</p>` : ''}${content}</aside>`;
+}
+
+export function renderResilienceModalHtml(state, { td, demo = false, now = Date.now() } = {}) {
+  if (!state || state.phase === 'closed') return '';
+  const response = state.planResponse, plan = response?.plan;
+  const receipt = state.receipt ? normalizeRestoreReceipt(state.receipt) : null;
+  const confirming = state.phase === 'preview';
+  const canConfirm = confirming && plan?.supported === true && (demo || (typeof response.planHash === 'string' && response.planHash.length > 0 && Date.parse(response.expiresAt) > now));
+  const list = (key, values) => array(values).length ? `<h3>${esc(td(key))}</h3><ul>${values.map(value => `<li>${esc(value)}</li>`).join('')}</ul>` : '';
+  return `<div class="resilience-backdrop"><section class="resilience-modal" role="dialog" aria-modal="true" aria-labelledby="resilienceModalTitle" tabindex="-1">
+    <header><h2 id="resilienceModalTitle">${esc(td(receipt || state.snapshotSaved ? 'resilience.receiptTitle' : 'resilience.previewTitle'))}</h2>
+    ${button('cancel', td('resilience.cancelBtn'))}</header>
+    ${demo ? `<p class="resilience-demo">${esc(td('resilience.demoNotice'))}</p>` : ''}
+    ${state.phase === 'loading' ? `<p role="status">${esc(td('modal.loading'))}</p>` : ''}
+    ${plan ? `<p>${esc(td('resilience.providerLabel'))}: <b>${esc(plan.providerId)}</b></p>
+      <h3>${esc(td('resilience.commandLabel'))}</h3><pre class="resilience-command">${esc(plan.commandPreview)}</pre>
+      ${list('resilience.targetRigs', plan.targetRigs)}${list('resilience.targetSeats', plan.targetSeats)}
+      ${array(plan.skippedRigs).length ? `<p>${esc(td('resilience.intentionalSkipNote'))}</p><ul>${plan.skippedRigs.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+      ${list('resilience.warnings', plan.warnings)}` : ''}
+    ${state.error ? `<p class="resilience-error" role="alert">${esc(td('resilience.statusUnknown'))}: ${esc(state.error)}</p>` : ''}
+    ${state.phase === 'executing' ? `<p role="status">${esc(td(state.operation === 'snapshot' ? 'modal.loading' : 'resilience.inProgress'))}</p>` : ''}
+    ${state.snapshotSaved ? `<p role="status">${esc(td('resilience.snapshotSaved'))}</p>` : ''}
+    ${receipt ? `<p class="resilience-result ${receipt.status}" role="status">${esc(td(`resilience.${receiptKey(receipt.status)}`))}</p>
+      <ul>${[...receipt.rigs, ...receipt.seats].map(item => `<li>${esc(item.target)} — ${esc(td(`resilience.${receiptKey(item.status)}`))}</li>`).join('')}</ul>` : ''}
+    <footer>${confirming || state.phase === 'executing' ? button('confirm', td('resilience.confirmBtn'), `data-plan-hash="${esc(response?.planHash || '')}"${demo ? ' data-simulated="true"' : ''}`, !canConfirm) : ''}
+    ${button('copy', td('resilience.copyCommandBtn'), `data-command="${esc(plan?.commandPreview || state.commandPreview || '')}"`, !(plan?.commandPreview || state.commandPreview))}</footer>
+    ${state.copyFallback ? `<textarea class="resilience-copy-fallback" readonly aria-label="${esc(td('resilience.copyCommandBtn'))}">${esc(state.copyFallback)}</textarea>` : ''}
+    </section></div>`;
+}
+
+/** Explicit event adapter. No polling, automatic recovery, or offline network access. */
+export function createResilienceController({ root, modalRoot, td, lang = () => 'en', isLive = () => false, demo = false,
+  getJson, postJson, copyCommand = () => Promise.reject(new Error('Clipboard unavailable')),
+  guard = new ActionFlightGuard(), now = Date.now } = {}) {
+  let status = null, state = { phase: 'closed' }, epoch = 0, refreshing = null, destroyed = false, focusReturn = null;
+  const lockScope = 'resilience:operator';
+  const busy = () => guard.isScopeInFlight(lockScope);
+  const deps = () => ({ td, lang: lang(), demo, now: now(), busy: busy() });
+  const revision = value => JSON.stringify(array(value?.providers).map(p => [p.id, p.capabilities, providerReport(value, p)?.offlineRigs,
+    array(providerReport(value, p)?.rigReports).map(r => [r.rigId, r.online, r.intentionallyStopped, r.snapshot?.id])]));
+  function render() {
+    if (destroyed) return;
+    root.innerHTML = renderCrashCartBannerHtml(status, deps());
+    modalRoot.innerHTML = renderResilienceModalHtml(state, deps());
+    modalRoot.hidden = state.phase === 'closed';
+  }
+  function cancel() {
+    epoch++; state = { phase: 'closed' }; render(); focusReturn?.focus?.();
+  }
+  function setStatus(next) {
+    if (['loading', 'preview'].includes(state.phase) && revision(next) !== revision(status)) cancel();
+    status = next; render();
+  }
+  function demoStatus(step) {
+    const next = buildDemoResilienceScenario(step), p = next.providers[0];
+    p.commandPreview = 'rig start --last --json';
+    p.report = { ...next.report, rigReports: next.report.rigReports.map(r => ({ ...r, commandPreview: `rig start --rigs ${r.rigId} --json` })) };
+    return next;
+  }
+  async function refresh() {
+    if (destroyed || (!demo && !isLive())) return;
+    if (demo) { if (!status) setStatus(demoStatus('blackout')); return; }
+    if (refreshing) return refreshing;
+    refreshing = (async () => {
+      try { setStatus(await getJson('/api/resilience/status')); }
+      catch (error) { if (state.phase === 'preview') cancel(); /* Keep last observed advisory, never invent a plan. */ }
+      finally { refreshing = null; }
+    })();
+    return refreshing;
+  }
+  function allowed(request, capability) {
+    if (!validateResilienceTarget(request)) return false;
+    const provider = array(status?.providers).find(p => p.id === request.providerId);
+    const caps = provider?.capabilities || {};
+    return caps[capability] === true && (capability === 'checkpoints' || caps.planPreview === true);
+  }
+  function fallbackCommand(request) {
+    const provider = array(status?.providers).find(p => p.id === request.providerId);
+    return request.scope === 'fleet' ? provider?.commandPreview || '' : array(providerReport(status || {}, provider || {}).rigReports).find(r => r.rigId === request.target)?.commandPreview || '';
+  }
+  async function preview(request) {
+    if (busy() || !allowed(request, request.scope === 'fleet' ? 'fleetRecover' : 'unitRecover') || (!demo && !isLive())) return;
+    const token = ++epoch;
+    state = { phase: 'loading', request, commandPreview: fallbackCommand(request) }; render();
+    try {
+      let response;
+      if (demo) {
+        const scenario = buildDemoResilienceScenario('preview');
+        response = { plan: { ...scenario.plan, ...request, targetRigs: request.scope === 'rig' ? [request.target] : scenario.plan.targetRigs,
+          commandPreview: request.scope === 'rig' ? `rig start --rigs ${request.target} --json` : scenario.plan.commandPreview }, planHash: null, expiresAt: null };
+      } else response = await postJson('/api/resilience/plan', request);
+      if (token !== epoch || destroyed) return;
+      if (!sameTarget(request, response?.plan) || typeof response.plan.commandPreview !== 'string' || !response.plan.commandPreview.trim() ||
+        (!demo && (typeof response.planHash !== 'string' || !response.planHash || !(Date.parse(response.expiresAt) > now())))) throw new Error(td('resilience.statusUnknown'));
+      state = { phase: 'preview', request, planResponse: response }; render();
+    } catch (error) { if (token === epoch && !destroyed) { state = { phase: 'receipt', commandPreview: fallbackCommand(request), error: String(error.message || error) }; render(); } }
+  }
+  async function mutate() {
+    const reviewed = state;
+    if (busy() || reviewed.phase !== 'preview' || (!demo && !isLive())) return;
+    const request = reviewed.request, response = reviewed.planResponse;
+    if (!allowed(request, request.scope === 'fleet' ? 'fleetRecover' : 'unitRecover') || response.plan.supported !== true ||
+      !sameTarget(request, response.plan) || (!demo && !(Date.parse(response.expiresAt) > now()))) { cancel(); return; }
+    const token = epoch;
+    await guard.runGuarded({ scopeKey: lockScope, fingerprint: JSON.stringify(request), cooldownMs: 0 }, async () => {
+      state = { ...reviewed, phase: 'executing' }; render();
+      try {
+        const result = demo ? { receipt: buildDemoResilienceScenario('recovered').receipt } : await postJson('/api/resilience/resurrect', { ...request, confirmed: true, planHash: response.planHash });
+        if (token !== epoch || destroyed) return;
+        state = { ...reviewed, phase: 'receipt', receipt: normalizeRestoreReceipt(result?.receipt) };
+        if (demo) status = demoStatus('recovered');
+      } catch (error) {
+        if (token === epoch && !destroyed) state = { ...reviewed, phase: 'receipt', error: String(error.message || error), receipt: normalizeRestoreReceipt(error.receipt) };
+      } finally { render(); }
+    });
+    render();
+  }
+  async function snapshot(request) {
+    if (request.scope !== 'rig' || busy() || !allowed(request, 'checkpoints') || (!demo && !isLive())) return;
+    const token = ++epoch;
+    await guard.runGuarded({ scopeKey: lockScope, fingerprint: `snapshot:${JSON.stringify(request)}`, cooldownMs: 0 }, async () => {
+      state = { phase: 'executing', operation: 'snapshot', commandPreview: fallbackCommand(request) }; render();
+      try {
+        const result = demo ? { checkpoint: { providerId: request.providerId, target: request.target, created: true } } : await postJson('/api/resilience/snapshot', request);
+        if (token !== epoch || destroyed) return;
+        const saved = result?.checkpoint?.created === true && result.checkpoint.providerId === request.providerId && result.checkpoint.target === request.target;
+        state = { phase: 'receipt', commandPreview: fallbackCommand(request), snapshotSaved: saved, receipt: saved ? null : normalizeRestoreReceipt(null) };
+      } catch (error) { if (token === epoch && !destroyed) state = { phase: 'receipt', commandPreview: fallbackCommand(request), error: String(error.message || error) }; }
+      finally { render(); }
+    });
+    render();
+  }
+  async function click(event) {
+    const el = event.target?.closest?.('[data-resilience-action]');
+    if (!el || el.disabled) return;
+    const action = el.dataset.resilienceAction;
+    const request = { providerId: el.dataset.providerId, scope: el.dataset.scope, target: el.dataset.target || null };
+    if (action === 'cancel') return cancel();
+    if (action === 'refresh') return refresh();
+    if (action === 'copy') {
+      try { await copyCommand(el.dataset.command || ''); }
+      catch { if (state.phase === 'closed') state = { phase: 'receipt', commandPreview: el.dataset.command }; state.copyFallback = el.dataset.command; render(); modalRoot.querySelector?.('textarea')?.select(); }
+      return;
+    }
+    focusReturn = el;
+    if (action === 'plan') { await preview(request); modalRoot.querySelector?.('[role="dialog"]')?.focus(); }
+    if (action === 'confirm') {
+      if (!demo && el.dataset.planHash !== state.planResponse?.planHash) return cancel();
+      await mutate();
+    }
+    if (action === 'snapshot') await snapshot(request);
+  }
+  function keydown(event) {
+    if (state.phase === 'closed') return;
+    if (event.key === 'Escape') { event.stopPropagation(); cancel(); }
+    if (event.key === 'Tab') {
+      const controls = [...(modalRoot.querySelectorAll?.('button:not([disabled]), textarea') || [])];
+      if (!controls.length) return;
+      const first = controls[0], last = controls.at(-1), active = modalRoot.ownerDocument?.activeElement;
+      if (event.shiftKey && (active === first || !controls.includes(active))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (active === last || !controls.includes(active))) { event.preventDefault(); first.focus(); }
+    }
+  }
+  root.addEventListener('click', click); modalRoot.addEventListener('click', click); modalRoot.addEventListener('keydown', keydown);
+  return { refresh, render, cancel, setStatus, getState: () => state,
+    destroy() { destroyed = true; epoch++; root.removeEventListener('click', click); modalRoot.removeEventListener('click', click); modalRoot.removeEventListener('keydown', keydown); } };
+}
