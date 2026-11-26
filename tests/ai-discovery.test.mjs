@@ -131,3 +131,44 @@ test('Vercel discovery headers preserve clean URLs and scope noindex to the deck
   }
   for (const source of ['/deck', '/deck/(.*)']) assert.equal(headers(source)['x-robots-tag'], 'noindex, follow');
 });
+
+test('public pages ship zero external Google Fonts, current version parity, consistent EN|RU toggle order and --read-only docs', () => {
+  for (const [, name, path] of docs) {
+    const srcHtml = read('landing/' + name + '.html');
+    const html = read(path);
+    assert.doesNotMatch(srcHtml, /fonts\.googleapis\.com|fonts\.gstatic\.com/i, `${name}: external Google Fonts link found`);
+    assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/i, `${path}: external Google Fonts link found`);
+    assert.doesNotMatch(srcHtml, /\bv3\.\d|gpt-6\.2-sol|GPT-6\.x/i, `${name}: hardcoded v3.x version or fictional model string found`);
+    assert.doesNotMatch(html, /\bv3\.2\b|\bv3\.8(?![.\d])|gpt-6\.2-sol|GPT-6\.x/i, `${path}: stale version or fictional model string found`);
+    assert.ok(html.includes(`v${version}`), `${path}: missing synced version v${version}`);
+    assert.ok(html.includes('--read-only'), `${path}: missing --read-only documentation`);
+
+    const langBlock = html.match(/<div class="lang-switch"[\s\S]*?<\/div>/);
+    assert.ok(langBlock, `${path}: missing lang-switch`);
+    const enIdx = langBlock[0].indexOf('data-lang="en"');
+    const ruIdx = langBlock[0].indexOf('data-lang="ru"');
+    assert.ok(enIdx !== -1 && ruIdx !== -1 && enIdx < ruIdx, `${path}: language toggle must be ordered EN | RU`);
+  }
+
+  for (const name of ['public/llms.txt', 'public/llms-full.txt']) {
+    assert.ok(read(name).includes('--read-only'), `${name}: must document --read-only`);
+  }
+
+  const landingHtml = read('public/index.html');
+  assert.match(landingHtml, /@media\s*\(max-width:\s*768px\)\s*\{[\s\S]*?\.hero-qr-btn\s*\{\s*display:\s*none;/);
+  assert.ok(landingHtml.includes('id="security-guarantees"'));
+  assert.ok(landingHtml.includes('Raw tmux') && landingHtml.includes('LangSmith') && landingHtml.includes('Langfuse'));
+  assert.ok(!landingHtml.includes('watchDemoVideo('), 'landing should not duplicate Watch 20s Demo hero CTA');
+  assert.ok(landingHtml.includes(`npx rig-commander@${version} --read-only`));
+
+  const guideHtml = read('public/guide/index.html');
+  const quickstartIdx = guideHtml.indexOf('id="quickstart"');
+  const resilienceIdx = guideHtml.indexOf('id="resilience"');
+  assert.ok(quickstartIdx !== -1 && resilienceIdx !== -1 && quickstartIdx < resilienceIdx, 'guide #quickstart must precede #resilience');
+  assert.ok(!guideHtml.includes('class="hero-pills"'), 'guide must not render ambiguous dark capsule pills under the hero lead');
+
+  const passportHtml = read('public/passport/index.html');
+  assert.ok(passportHtml.includes("'nav.demo': '▶ Живое демо'"), 'passport RU header demo CTA must be localized');
+  assert.ok(passportHtml.includes('data-i18n="svg.bridge"'), 'passport C4 diagram labels must be localized');
+  assert.ok(passportHtml.includes('id="securityGuarantees"'), 'passport must surface Security Guarantees table');
+});

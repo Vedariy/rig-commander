@@ -12,7 +12,7 @@
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <title>RigCommander // Mission Control for Autonomous AI Fleets</title>
-  <meta name="description" content="The real-time operational command deck for autonomous multi-agent coding swarms. Live neural topology, Shared Context Lineage, 3-Tier Advisory-Only AI Evaluator, 1-click tmux HITL, and FinOps token thermodynamics.">
+  <meta name="description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents. Works with or without OpenRig. Start safely with --read-only.">
   <link rel="canonical" href="https://rig-commander.vercel.app/">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <link rel="alternate" type="text/plain" href="/llms.txt" title="RigCommander LLM Summary">
@@ -157,20 +157,15 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta property="og:description" content="Zero-dependency local command deck for Claude Code, Codex CLI, tmux & OpenRig swarms. Live Graph ⇄ Task Gantt, Shared Context Lineage, 3-Tier AI Evaluator, 1-click TMUX & Telegram HITL, and SUB vs PAYG FinOps. Run: npx rig-commander@latest">
+  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@latest --read-only">
   <meta property="og:url" content="https://rig-commander.vercel.app/">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta name="twitter:description" content="0-dep local command deck for Claude Code, Codex, tmux & OpenRig swarms. 3-Tier AI Evaluator, Shared Context Lineage, 1-click HITL, Task Gantt & FinOps. npx rig-commander@latest">
+  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@latest --read-only">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
-  
-  <!-- Modern Font Stack: Inter Display & JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -179,6 +174,7 @@
       --bg-card-hover: rgba(14, 24, 46, 0.85);
       --border-subtle: rgba(255, 255, 255, 0.08);
       --border-bright: rgba(56, 189, 248, 0.28);
+      --text-muted: #94a3b8;
       --cyan: #00f0ff;
       --cyan-dim: rgba(0, 240, 255, 0.15);
       --emerald: #00ff9d;
@@ -187,9 +183,9 @@
       --amber-dim: rgba(251, 191, 36, 0.15);
       --lavender: #a855f7;
       --coral: #ff0055;
-      
-      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+
+      --font-sans: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
     }
 
     * {
@@ -203,12 +199,13 @@
       background-color: var(--bg-dark);
       color: #f1f5f9;
       font-family: var(--font-sans);
-      overflow-x: hidden;
+      overflow-x: clip;
+      max-width: 100%;
     }
 
     body {
       background-color: var(--bg-dark);
-      background-image: 
+      background-image:
         radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
         radial-gradient(circle at 85% 30%, rgba(168, 85, 247, 0.05) 0%, transparent 50%),
         radial-gradient(circle at 15% 70%, rgba(0, 255, 157, 0.05) 0%, transparent 50%),
@@ -216,10 +213,19 @@
         linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
       background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
       min-height: 100vh;
+      max-width: 100%;
+      overflow-x: clip;
       position: relative;
     }
 
-    /* Ambient glow elements */
+    /* Ambient glow elements clipped inside viewport so they never cause horizontal overflow */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
     .ambient-glow {
       position: absolute;
       width: 600px;
@@ -227,12 +233,15 @@
       border-radius: 50%;
       filter: blur(140px);
       pointer-events: none;
-      z-index: 0;
       opacity: 0.45;
     }
-    .glow-cyan { top: -100px; left: 50%; transform: translateX(-50%); background: rgba(0, 240, 255, 0.16); }
-    .glow-purple { top: 700px; right: 5%; background: rgba(168, 85, 247, 0.12); }
-    .glow-emerald { top: 1600px; left: 5%; background: rgba(0, 255, 157, 0.1); }
+    .glow-cyan { top: -120px; left: 50%; transform: translateX(-50%); background: rgba(0, 240, 255, 0.16); }
+    .glow-purple { top: 40%; right: -120px; background: rgba(168, 85, 247, 0.12); }
+    .glow-emerald { bottom: -120px; left: -120px; background: rgba(0, 255, 157, 0.1); }
+
+    section[id] {
+      scroll-margin-top: 88px;
+    }
 
     /* LAYOUT CONTAINERS */
     .container {
@@ -244,27 +253,30 @@
       z-index: 10;
     }
 
-    /* FLOATING PILL NAVBAR (2026 STANDARD) */
+    /* FLOATING PILL NAVBAR */
     .navbar-wrapper {
       position: fixed;
-      top: 18px;
+      top: 16px;
       left: 0;
       right: 0;
+      max-width: 100%;
+      overflow-x: clip;
       z-index: 1000;
       display: flex;
       justify-content: center;
       padding: 0 20px;
     }
     .navbar {
-      background: rgba(4, 10, 24, 0.82);
+      background: rgba(4, 10, 24, 0.88);
       border: 1px solid var(--border-subtle);
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 1px 1px rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(16px);
       border-radius: 9999px;
-      padding: 8px 18px 8px 22px;
+      padding: 6px 14px 6px 20px;
       display: flex;
       align-items: center;
-      gap: 32px;
+      gap: 24px;
+      max-width: 100%;
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .navbar:hover {
@@ -272,47 +284,72 @@
       box-shadow: 0 16px 44px rgba(0, 0, 0, 0.8), 0 0 24px rgba(0, 240, 255, 0.15);
     }
     .nav-brand {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
+      min-height: 32px;
       text-decoration: none;
       color: #fff;
       font-weight: 800;
       font-size: 14px;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .nav-brand-badge {
       font-family: var(--font-mono);
-      font-size: 9.5px;
+      font-size: 10px;
       background: rgba(0, 240, 255, 0.12);
       color: var(--cyan);
       border: 1px solid rgba(0, 240, 255, 0.35);
       border-radius: 9999px;
-      padding: 2px 7px;
+      padding: 2px 8px;
       font-weight: 700;
     }
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 24px;
+      gap: 6px;
       list-style: none;
     }
     .nav-links a {
-      color: #94a3b8;
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #cbd5e1;
       text-decoration: none;
       font-size: 13px;
       font-weight: 600;
-      transition: color 0.18s ease;
+      white-space: nowrap;
+      transition: color 0.18s ease, background 0.18s ease;
     }
     .nav-links a:hover {
       color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .nav-menu-btn {
+      display: none;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border-subtle);
+      color: #e2e8f0;
+      border-radius: 10px;
+      min-width: 34px;
+      min-height: 34px;
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
     }
     .nav-cta {
       background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
       color: #020617;
       font-size: 12.5px;
       font-weight: 800;
-      padding: 8px 18px;
+      min-height: 34px;
+      padding: 0 16px;
       border-radius: 9999px;
       text-decoration: none;
       transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
@@ -323,6 +360,7 @@
       gap: 7px;
       white-space: nowrap;
     }
+    .nav-cta-short { display: none; }
     .nav-cta:hover {
       box-shadow: 0 0 32px rgba(0, 255, 157, 0.72), 0 0 22px rgba(0, 240, 255, 0.65);
       transform: translateY(-1px) scale(1.03);
@@ -405,11 +443,68 @@
 
     .hero-actions {
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 42px;
+    }
+    .hero-primary-paths {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .hero-cli-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+    }
+    .hero-cli-note {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
+      text-align: center;
+    }
+    .hero-cli-note code {
+      color: #7dd3fc;
+      background: rgba(15, 23, 42, 0.85);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .hero-secondary-links {
+      display: flex;
       align-items: center;
       justify-content: center;
       gap: 14px;
       flex-wrap: wrap;
-      margin-bottom: 48px;
+    }
+    .hero-sec-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .hero-sec-link:hover {
+      border-color: var(--cyan);
+      color: #fff;
+      background: rgba(0, 240, 255, 0.1);
     }
     .btn-primary {
       background: linear-gradient(135deg, #00f0ff 0%, #0284c7 100%);
@@ -500,19 +595,26 @@
       100% { left: 135%; }
     }
     .cli-copy-box {
-      background: rgba(8, 16, 32, 0.9);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 8px 14px;
+      background: rgba(8, 16, 32, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 10px;
+      padding: 13px 16px;
+      min-height: 52px;
+      max-width: 100%;
       display: inline-flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-family: var(--font-mono);
       font-size: 13px;
-      color: #cbd5e1;
+      color: #e2e8f0;
       cursor: pointer;
       transition: all 0.2s ease;
       box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.6);
+    }
+    .cli-copy-box .cli-cmd-text {
+      overflow-x: auto;
+      white-space: nowrap;
+      min-width: 0;
     }
     .cli-copy-box:hover {
       border-color: var(--cyan);
@@ -749,9 +851,151 @@
       overflow: hidden;
     }
 
+    /* SECURITY & PRIVACY GUARANTEES STRIP */
+    .security-strip-section {
+      padding: 88px 0 48px;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(4, 10, 22, 0.55);
+    }
+    .sec-strip-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .sec-strip-head .section-eyebrow,
+    .sec-strip-head .section-title {
+      text-align: left;
+      margin-bottom: 6px;
+    }
+    .sec-strip-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 1100px) {
+      .sec-strip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .sec-strip-grid { grid-template-columns: 1fr; }
+    }
+    .sec-guarantee-card {
+      background: rgba(8, 14, 28, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 12px;
+      padding: 16px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .sec-guarantee-tag {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--emerald);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .sec-guarantee-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #f8fafc;
+      line-height: 1.3;
+    }
+    .sec-guarantee-desc {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+    .sec-guarantee-desc code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #7dd3fc;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    /* 3-COLUMN COMPARISON MATRIX */
+    .compare-matrix-wrap {
+      margin-top: 32px;
+      background: rgba(8, 14, 28, 0.72);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 22px 24px;
+    }
+    .compare-matrix-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .compare-matrix {
+      width: 100%;
+      min-width: 620px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .compare-matrix th,
+    .compare-matrix td {
+      text-align: left;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: top;
+      line-height: 1.48;
+    }
+    .compare-matrix th {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.75);
+    }
+    .compare-matrix th.col-rc {
+      color: var(--emerald);
+      background: rgba(0, 255, 157, 0.08);
+    }
+    .compare-matrix td {
+      color: #cbd5e1;
+    }
+    .compare-matrix td:first-child {
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+    }
+    .compare-matrix td.col-rc {
+      color: #ecfdf5;
+      background: rgba(0, 255, 157, 0.04);
+      font-weight: 500;
+    }
+    .compare-matrix code {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #7dd3fc;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
     /* THE PAIN STRIP / WHY NOW */
     .pain-section {
-      padding: 90px 0 60px;
+      padding: 96px 0 64px;
       border-bottom: 1px solid var(--border-subtle);
     }
     .section-eyebrow {
@@ -1062,6 +1306,8 @@
     .footer-status {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
+      max-width: 100%;
       gap: 8px;
       font-family: var(--font-mono);
       font-size: 11.5px;
@@ -1069,6 +1315,8 @@
     }
     .footer-keycaps {
       display: flex;
+      flex-wrap: wrap;
+      max-width: 100%;
       gap: 6px;
       align-items: center;
       font-family: var(--font-mono);
@@ -1102,13 +1350,17 @@
     }
 
     .lang-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
       background: transparent;
       border: none;
-      color: var(--text-muted);
+      color: #cbd5e1;
       font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 700;
-      padding: 5px 10px;
+      padding: 0 10px;
       border-radius: 999px;
       cursor: pointer;
       transition: all 0.2s;
@@ -1392,29 +1644,215 @@
       color: #fff;
       box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
     }
+    .sim-graph-view {
+      position: absolute;
+      inset: 0;
+    }
+    .bento-widget-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .bento-widget-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+    .operator-faq {
+      padding-top: 92px;
+      padding-bottom: 48px;
+    }
+
+    @media (max-width: 900px) {
+      .navbar-wrapper {
+        top: 10px;
+        padding: 0 12px;
+      }
+      .navbar {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 16px;
+        padding: 8px 12px;
+        gap: 8px 12px;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .nav-menu-btn {
+        display: inline-flex;
+      }
+      .nav-links {
+        display: none;
+        order: 10;
+        width: 100%;
+        padding-top: 8px;
+        margin-top: 2px;
+        border-top: 1px solid var(--border-subtle);
+        gap: 8px;
+      }
+      .navbar.nav-open .nav-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .navbar.nav-open .nav-links a {
+        justify-content: center;
+        min-height: 36px;
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero-qr-btn {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 0 16px;
+      }
+      .navbar-wrapper {
+        top: 8px;
+        padding: 0 10px;
+      }
+      .navbar {
+        padding: 6px 10px;
+        gap: 6px;
+      }
+      .nav-brand {
+        font-size: 12px;
+        letter-spacing: 0.2px;
+        gap: 6px;
+        min-width: 0;
+      }
+      .nav-brand-badge {
+        display: none;
+      }
+      .nav-actions-right {
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .lang-btn {
+        padding: 0 7px;
+        font-size: 10.5px;
+      }
+      .nav-cta {
+        padding: 0 10px;
+        font-size: 11.5px;
+        gap: 4px;
+      }
+      .nav-cta-dot,
+      .nav-cta-full {
+        display: none;
+      }
+      .nav-cta-short {
+        display: inline;
+      }
+      .hero {
+        padding-top: 90px;
+        padding-bottom: 44px;
+      }
+      .hero-eyebrow {
+        max-width: 100%;
+        font-size: 10px;
+        padding: 5px 12px;
+      }
+      .hero-title {
+        font-size: clamp(30px, 8.5vw, 52px);
+      }
+      .hero-primary-paths {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .btn-demo-hero {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 18px;
+        font-size: 14.5px;
+      }
+      .hero-cli-group {
+        width: 100%;
+      }
+      .cli-copy-box {
+        width: 100%;
+        justify-content: space-between;
+        font-size: 11.5px;
+        padding: 10px 12px;
+        min-height: 44px;
+      }
+      .sim-header {
+        padding: 10px 12px;
+      }
+      .sim-bar-controls {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .sim-body {
+        min-height: 0;
+      }
+      .sim-canvas {
+        padding: 12px;
+        display: block;
+      }
+      .sim-graph-view {
+        position: static;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      #simSvgLines {
+        display: none;
+      }
+      .sim-node {
+        position: static !important;
+        min-width: 0 !important;
+        width: 100%;
+        transform: none !important;
+      }
+      .sim-gantt-row {
+        grid-template-columns: 82px 1fr;
+        padding: 6px 8px;
+      }
+      .compare-card,
+      .compare-matrix-wrap,
+      .bento-tile,
+      .step-card,
+      .passport-callout {
+        padding: 20px 16px;
+        min-width: 0;
+      }
+      .bento-widget-grid-2,
+      .bento-widget-grid-3 {
+        grid-template-columns: 1fr;
+      }
+      .waitlist-card {
+        padding: 28px 18px;
+      }
+    }
   </style>
 </head>
 <body>
 
-  <div class="ambient-glow glow-cyan"></div>
-  <div class="ambient-glow glow-purple"></div>
-  <div class="ambient-glow glow-emerald"></div>
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="ambient-glow glow-cyan"></div>
+    <div class="ambient-glow glow-purple"></div>
+    <div class="ambient-glow glow-emerald"></div>
+  </div>
 
   <!-- FLOATING PILL NAVBAR -->
   <header class="navbar-wrapper">
-    <nav class="navbar">
+    <nav class="navbar" id="primaryNavbar">
       <a href="#" class="nav-brand">
         <span>💠 RIGCOMMANDER</span>
-        <span class="nav-brand-badge" id="navVersionBadge">v3.2 LIVE</span>
+        <span class="nav-brand-badge" id="navVersionBadge">v3.8.1</span>
       </a>
-      <ul class="nav-links">
-        <li><a href="#features" data-i18n="nav.features">Features</a></li>
-        <li><a href="#comparison" data-i18n="nav.why">Why RigCommander</a></li>
-        <li><a href="#architecture" data-i18n="nav.arch">Architecture</a></li>
+      <ul class="nav-links" id="primaryNavLinks">
+        <li><a href="#architecture" data-i18n="nav.arch" onclick="closeMobileNav()">Architecture</a></li>
         <li><a href="/guide" data-i18n="nav.guide">Guide</a></li>
         <li><a href="/passport" data-i18n="nav.passport">Passport</a></li>
         <li><a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a></li>
-        <li><a href="#waitlist" data-i18n="nav.waitlist">Early Access</a></li>
       </ul>
       <div class="nav-actions-right">
         <div id="landingReleaseNotice" style="display:none; align-items:center; gap:4px; background:rgba(0,255,157,0.12); border:1px solid rgba(0,255,157,0.55); color:#6ee7b7; font-family:var(--font-mono); font-size:11px; font-weight:700; padding:3px 6px 3px 10px; border-radius:999px; box-shadow:0 0 16px rgba(0,255,157,0.22); white-space:nowrap;">
@@ -1430,9 +1868,11 @@
         </div>
         <a href="/demo" class="nav-cta">
           <span class="nav-cta-dot"></span>
-          <span data-i18n="nav.cta">Live Demo</span>
+          <span class="nav-cta-full" data-i18n="nav.cta">Live Demo</span>
+          <span class="nav-cta-short" data-i18n="nav.ctaShort">Demo</span>
           <span>→</span>
         </a>
+        <button type="button" class="nav-menu-btn" id="navMenuBtn" aria-expanded="false" aria-controls="primaryNavLinks" aria-label="Toggle navigation" onclick="toggleMobileNav()">☰</button>
       </div>
     </nav>
   </header>
@@ -1452,29 +1892,34 @@
       </h1>
 
       <p class="hero-subtitle" data-i18n="hero.subtitle">
-        The real-time DSS SA command deck for autonomous multi-agent engineering teams.
-        Live Graph ⇄ Task Gantt timelines, Shared Context Lineage, 3-Tier Advisory-Only AI Evaluator, Operational Ontology v2.2 with postcondition audit, clickable tmux HITL prompts, and FinOps token tracking.
+        Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux agents — no cloud account, works with or without OpenRig.
       </p>
 
       <div class="hero-actions">
-        <a href="/demo" class="btn-demo-hero">
-          <span data-i18n="hero.demoCta">▶ Launch Interactive Demo</span>
-          <span class="btn-demo-tag" data-i18n="hero.demoTag">LIVE · 0 SETUP</span>
-          <span>→</span>
-        </a>
-        <button type="button" class="btn-secondary" style="cursor:pointer; border-color:rgba(168,85,247,0.55); color:#e9d5ff;" onclick="watchDemoVideo()">
-          <span data-i18n="hero.videoCta">🎬 Watch 20s Demo</span>
-        </button>
-        <button type="button" id="landingQrBtn" class="btn-secondary" style="cursor:pointer; border-color:rgba(0,255,157,0.45); color:#a7f3d0;" onclick="openLandingQrModal()">
-          <span data-i18n="hero.qrCta">📱 Phone QR</span>
-        </button>
-        <a href="/passport" class="btn-secondary">
-          <span data-i18n="hero.passportCta">📄 Project Passport</span>
-        </a>
-        <div class="cli-copy-box" onclick="copyCli('npx rig-commander@latest')" title="Click to copy CLI installer" data-i18n-title="hero.cliTitle">
-          <span class="cli-prompt">$</span>
-          <span>npx rig-commander@latest</span>
-          <span class="cli-icon">📋</span>
+        <div class="hero-primary-paths">
+          <a href="/demo" class="btn-demo-hero">
+            <span data-i18n="hero.demoCta">▶ Launch Interactive Demo</span>
+            <span class="btn-demo-tag" data-i18n="hero.demoTag">0 SETUP</span>
+            <span>→</span>
+          </a>
+          <div class="hero-cli-group">
+            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.8.1 --read-only')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.8.1 --read-only');}" title="Click to copy safe read-only CLI command" data-i18n-title="hero.cliTitle">
+              <span class="cli-prompt">$</span>
+              <span class="cli-cmd-text">npx rig-commander@3.8.1 --read-only</span>
+              <span class="cli-icon">📋</span>
+            </div>
+            <div class="hero-cli-note" data-i18n-html="hero.cliNote">
+              Zero-write inspection · or run <code>npx rig-commander@latest</code> for interactive HITL
+            </div>
+          </div>
+        </div>
+        <div class="hero-secondary-links">
+          <a href="/passport" class="hero-sec-link">
+            <span data-i18n="hero.passportCta">🛡️ Security Passport →</span>
+          </a>
+          <button type="button" id="landingQrBtn" class="hero-sec-link hero-qr-btn" onclick="openLandingQrModal()">
+            <span data-i18n="hero.qrCta">📱 Phone QR</span>
+          </button>
         </div>
       </div>
 
@@ -1492,10 +1937,10 @@
               <span class="sim-dot green"></span>
             </div>
 
-            <div style="font-family:var(--font-mono); font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px;">
-              <span style="color:#fff; font-weight:700;">NEURAL DECK v3.2</span>
+            <div style="font-family:var(--font-mono); font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span style="color:#fff; font-weight:700;">NEURAL DECK v3.8.1</span>
               <span>•</span>
-              <span style="color:var(--emerald);" data-i18n="sim.liveTelemetry">● ONTOLOGY v2.2</span>
+              <span style="color:var(--emerald);" data-i18n="sim.liveTelemetry">● LOCAL BRIDGE</span>
               <span>•</span>
               <span data-i18n="sim.agentsConnected">9 AGENTS • $6.63 SESSION</span>
             </div>
@@ -1566,7 +2011,7 @@
 
             <!-- Center Col: Interactive Topology Canvas + Toggleable Mini Gantt -->
             <div class="sim-canvas" id="simCanvas">
-              <div id="simGraphView" style="position:absolute; inset:0;">
+              <div id="simGraphView" class="sim-graph-view">
                 <!-- SVG Connection Lines -->
                 <svg style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;" id="simSvgLines">
                   <line x1="20%" y1="20%" x2="50%" y2="28%" stroke="rgba(0, 240, 255, 0.4)" stroke-width="2" stroke-dasharray="4,4" />
@@ -1578,12 +2023,12 @@
                 </svg>
 
                 <!-- Node 1: Kernel Operator -->
-                <div class="sim-node" style="top: 10%; left: 6%;" onclick="selectSimNode(this, 'kernel-operator', 'Operator', '14% CTX • ~$0.28 • 0 alerts', 'healthy')">
+                <div class="sim-node" style="top: 10%; left: 6%;" onclick="selectSimNode(this, 'kernel-operator', 'Operator', '14% CTX • gpt-5-codex • ~$0.28 • 0 alerts', 'healthy')">
                   <div class="sim-node-title">
                     <span>🛰️ kernel-op</span>
                     <span style="color:var(--emerald);">Zzz</span>
                   </div>
-                  <div class="sim-node-meta">CTX: 14% • gpt-6.2-sol</div>
+                  <div class="sim-node-meta">CTX: 14% • gpt-5-codex</div>
                   <div class="sim-node-meter"><div class="sim-node-fill" style="width:14%;"></div></div>
                 </div>
 
@@ -1618,12 +2063,12 @@
                 </div>
 
                 <!-- Node 5: Coder 4 -->
-                <div class="sim-node" style="top: 52%; right: 10%;" onclick="selectSimNode(this, 'dev-coder4', 'Parallel Worktree', '68% CTX • ~$2.26 • 78% cache', 'active')">
+                <div class="sim-node" style="top: 52%; right: 10%;" onclick="selectSimNode(this, 'dev-coder4', 'Parallel Worktree', '68% CTX • gpt-5-codex • ~$2.26 • 78% cache', 'active')">
                   <div class="sim-node-title">
                     <span>⚡ dev-coder4</span>
                     <span style="color:var(--emerald); font-weight:800;">WORK</span>
                   </div>
-                  <div class="sim-node-meta">CTX: 68% • gpt-6.2-sol</div>
+                  <div class="sim-node-meta">CTX: 68% • gpt-5-codex</div>
                   <div class="sim-node-meter"><div class="sim-node-fill" style="width:68%; background:var(--amber);"></div></div>
                 </div>
 
@@ -1682,10 +2127,10 @@
               </div>
             </div>
 
-            <!-- Right Col: DSS SA Inspector, Clickable HITL Prompt & Audit Trail -->
+            <!-- Right Col: Inspector, Clickable HITL Prompt & Audit Trail -->
             <div class="sim-right-col">
               <div class="sim-col-title">
-                <span data-i18n="sim.inspector">DSS INSPECTOR & HITL</span>
+                <span data-i18n="sim.inspector">INSPECTOR &amp; HITL</span>
                 <span style="color:var(--cyan);" id="simInspectorId">dev-check (QA)</span>
               </div>
               <div class="sim-terminal-screen" id="simTerminalScreen">[dev-check@core-platform]
@@ -1739,6 +2184,46 @@ Run negative control fault check?
       </div>
     </section>
 
+    <!-- SECURITY & PRIVACY GUARANTEES AT A GLANCE -->
+    <section class="security-strip-section" id="security-guarantees">
+      <div class="container">
+        <div class="sec-strip-head">
+          <div>
+            <div class="section-eyebrow" data-i18n="sec.eyebrow">SECURITY &amp; PRIVACY GUARANTEES AT A GLANCE</div>
+            <h2 class="section-title" data-i18n="sec.title">Local-First by Default. Zero Cloud Traps.</h2>
+          </div>
+          <a href="/passport" class="hero-sec-link" data-i18n="sec.passportLink">🛡️ Full Security Passport →</a>
+        </div>
+        <div class="sec-strip-grid">
+          <div class="sec-guarantee-card">
+            <span class="sec-guarantee-tag">127.0.0.1 LOOPBACK</span>
+            <div class="sec-guarantee-title" data-i18n="sec.g1.t">0 Outbound Requests by Default</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g1.d">Binds strictly to <code>127.0.0.1</code> with zero outbound network calls, no cloud account, and no telemetry upload.</div>
+          </div>
+          <div class="sec-guarantee-card">
+            <span class="sec-guarantee-tag">--READ-ONLY FLAG</span>
+            <div class="sec-guarantee-title" data-i18n="sec.g2.t">Zero-Write First Evaluation</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g2.d">Launch with <code>--read-only</code> to inspect live sessions safely with every terminal write and mutation disabled.</div>
+          </div>
+          <div class="sec-guarantee-card">
+            <span class="sec-guarantee-tag">STRICTLY OPT-IN</span>
+            <div class="sec-guarantee-title" data-i18n="sec.g3.t">External Modules OFF by Default</div>
+            <div class="sec-guarantee-desc" data-i18n="sec.g3.d">Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent &amp; optional AI Evaluator stay OFF until enabled.</div>
+          </div>
+          <div class="sec-guarantee-card">
+            <span class="sec-guarantee-tag">AUTO REDACTION</span>
+            <div class="sec-guarantee-title" data-i18n="sec.g4.t">Secrets Masked Automatically</div>
+            <div class="sec-guarantee-desc" data-i18n="sec.g4.d">API keys, tokens, private key blocks &amp; local paths are redacted before writing shift history or calling optional evaluators.</div>
+          </div>
+          <div class="sec-guarantee-card">
+            <span class="sec-guarantee-tag">OWNER-ONLY FILES</span>
+            <div class="sec-guarantee-title" data-i18n="sec.g5.t">Honest Local Storage Model</div>
+            <div class="sec-guarantee-desc" data-i18n="sec.g5.d">Local recovery &amp; shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- THE PAIN STRIP / WHY NOW -->
     <section class="pain-section" id="comparison">
       <div class="container">
@@ -1782,21 +2267,73 @@ Run negative control fault check?
             <ul class="compare-list">
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good1"><b>Dynamic Graph, Anchored X-Ray &amp; Sub-Lane Gantt:</b> Flip between adaptive topology (with anchored route X-Ray &amp; exponential thermal curve) and chain-colored Gantt + Handoff Flow (`G`).</span>
+                <span data-i18n-html="pain.good1"><b>One Live Map for Every Agent:</b> Auto-discover parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux sessions, then flip between live graph and task timeline (<code>G</code>) to spot waits and rework loops.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good2"><b>1-Click HITL, Safe Delivery &amp; Postcondition Audit:</b> Auto-parsed tmux options, safe `rig send --raw` delivery, per-seat audio alerts, and automatic postcondition verification (`✅ verified`).</span>
+                <span data-i18n-html="pain.good2"><b>1-Click Terminal HITL with Safety Guards:</b> Read the live <code>tmux</code> prompt and parsed approval options before clicking; every keystroke is allowlisted, deduplicated, and verified after send.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good3"><b>Ontology v2.2 &amp; 3-Tier AI Evaluator:</b> 8 canonical objects, 10 reason-driven actions, plus Advisory-Only `Heuristic + Expert Veto ➔ System 1 ➔ System 2` triage.</span>
+                <span data-i18n-html="pain.good3"><b>Proactive Context &amp; Spend Guardrails:</b> Catch overheating sessions (≥75% context) with 1-click <code>/compact</code>, flag repeating QA loops, and cap token burn with a local circuit-breaker.</span>
               </li>
               <li>
                 <span style="color:var(--emerald);">•</span>
-                <span data-i18n-html="pain.good4"><b>Shared Context Lineage &amp; Live FinOps:</b> Inspect `blockedOn` chains, full transferred specs, `body-context` drift, `RECAP.md`, and live SUB vs PAYG token spend.</span>
+                <span data-i18n-html="pain.good4"><b>Local-First Cost Clarity &amp; Zero-Write Start:</b> Compare subscription usage (<code>SUB</code>) vs estimated API spend (<code>PAYG</code>), evaluate safely with <code>--read-only</code>, and keep all logs on your machine.</span>
               </li>
             </ul>
+          </div>
+        </div>
+
+        <!-- 3-COLUMN COMPARISON MATRIX -->
+        <div class="compare-matrix-wrap">
+          <div class="compare-matrix-title">
+            <span data-i18n="cmp.title">Raw tmux vs Cloud Tracing vs RigCommander</span>
+            <span style="font-family:var(--font-mono); font-size:11px; color:#94a3b8; font-weight:700;" data-i18n="cmp.sub">DIFFERENT JOBS • COMPLEMENTARY STACK</span>
+          </div>
+          <div class="table-scroll">
+            <table class="compare-matrix">
+              <thead>
+                <tr>
+                  <th data-i18n="cmp.h0">Dimension</th>
+                  <th data-i18n="cmp.h1">Raw tmux</th>
+                  <th data-i18n="cmp.h2">Cloud Tracing (LangSmith / Langfuse)</th>
+                  <th class="col-rc" data-i18n="cmp.h3">RigCommander</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-i18n="cmp.r1.k">Primary job</td>
+                  <td data-i18n="cmp.r1.c1">Multiplex terminal panes &amp; raw scrollback</td>
+                  <td data-i18n="cmp.r1.c2">Post-hoc LLM API call traces, latency &amp; evals</td>
+                  <td class="col-rc" data-i18n="cmp.r1.c3">Live multi-agent fleet ops, HITL approvals &amp; handoffs</td>
+                </tr>
+                <tr>
+                  <td data-i18n="cmp.r2.k">Setup &amp; code changes</td>
+                  <td data-i18n="cmp.r2.c1">Manual attach &amp; pane-by-pane switching</td>
+                  <td data-i18n="cmp.r2.c2">SDK instrumentation, API keys &amp; cloud account</td>
+                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@latest --read-only</code> (0 code changes, 0 npm deps)</td>
+                </tr>
+                <tr>
+                  <td data-i18n="cmp.r3.k">Blocked prompts &amp; control</td>
+                  <td data-i18n="cmp.r3.c1">Manual scan across panes to find hangs</td>
+                  <td data-i18n="cmp.r3.c2">Read-only dashboards (no terminal write-back)</td>
+                  <td class="col-rc" data-i18n="cmp.r3.c3">Instant P0 alert, live screen preview &amp; allowlisted 1-click HITL</td>
+                </tr>
+                <tr>
+                  <td data-i18n="cmp.r4.k">Data residency</td>
+                  <td data-i18n="cmp.r4.c1">Local machine</td>
+                  <td data-i18n="cmp.r4.c2">Hosted cloud (or self-hosted database stack)</td>
+                  <td class="col-rc" data-i18n="cmp.r4.c3">100% local 127.0.0.1 loopback · 0 outbound calls by default</td>
+                </tr>
+                <tr>
+                  <td data-i18n="cmp.r5.k">Best used for</td>
+                  <td data-i18n="cmp.r5.c1">Reading raw output of 1–2 terminal panes</td>
+                  <td data-i18n="cmp.r5.c2">Debugging app-level LLM pipelines in production</td>
+                  <td class="col-rc" data-i18n="cmp.r5.c3">Operating 3–15+ parallel Claude Code / Codex / Gemini agents</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1844,10 +2381,10 @@ Run negative control fault check?
           <!-- Bento Tile 2 (1 col): Clickable HITL Prompts & 80-line TMUX -->
           <div class="bento-tile">
             <div>
-              <span class="bento-badge" data-i18n="bento.t2.badge">⚡ CLICKABLE HITL & TMUX</span>
-              <h3 class="bento-title" data-i18n="bento.t2.title">1-Click Prompts &amp; Safe Raw Delivery</h3>
+              <span class="bento-badge" data-i18n="bento.t2.badge">⚡ CLICKABLE HITL &amp; TMUX</span>
+              <h3 class="bento-title" data-i18n="bento.t2.title">1-Click Prompts &amp; Safe Delivery</h3>
               <p class="bento-desc" data-i18n="bento.t2.desc">
-                Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Slash commands &amp; nudges ship safely via rig send --raw + paced TUI guards.
+                Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Slash commands &amp; nudges ship safely via allowlisted tmux delivery + paced TUI guards.
               </p>
             </div>
             <div class="bento-widget" style="display:flex; flex-direction:column; gap:6px;">
@@ -1857,7 +2394,7 @@ Run negative control fault check?
                 <span style="padding:3px 7px; border-radius:4px; border:1px solid #38bdf8; color:#bae6fd;">🔹 2. Always</span>
                 <span style="padding:3px 7px; border-radius:4px; border:1px solid #ff0055; color:#fda4af;">❌ 3. Cancel</span>
               </div>
-              <div style="color:#64748b; font-size:10px;">rig send --raw • 409 Idempotency • Audio</div>
+              <div style="color:#94a3b8; font-size:10px;">Allowlisted Keys • Idempotent Delivery • Audio</div>
             </div>
             <a href="/demo?track=hitl" class="bento-cta" data-i18n="bento.t2.cta">⚡ Open Live HITL Screen →</a>
           </div>
@@ -1897,10 +2434,10 @@ Run negative control fault check?
               <span class="bento-badge" data-i18n="bento.t4.badge">🧬 OPERATIONAL ONTOLOGY v2.2</span>
               <h3 class="bento-title" data-i18n="bento.t4.title">Objects, Links, Reason-Driven Actions &amp; Postcondition Audit</h3>
               <p class="bento-desc" data-i18n="bento.t4.desc">
-                One canonical ontology snapshot drives every surface. Write-back buttons appear strictly from preconditions (0 buttons on healthy idle seats), and every command is logged in ActionAuditLog with automatic postcondition verification.
+                One canonical ontology snapshot drives every surface. Write-back buttons appear strictly from preconditions (0 buttons on healthy idle seats), and every command is logged in Action Audit with automatic postcondition verification.
               </p>
             </div>
-            <div class="bento-widget" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div class="bento-widget bento-widget-grid-2">
               <div style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.28); border-radius:6px; padding:8px;">
                 <div style="color:#d8b4fe; font-weight:800; margin-bottom:4px;" data-i18n="bento.t4.objTag">8 OBJECTS • 10 ACTIONS</div>
                 <div style="color:#94a3b8; font-size:10.5px; line-height:1.45;">Rig • Seat • OccupantSession • WorkChain • QueueObligation • Situation • ActionRecord • EvaluationRecord</div>
@@ -1922,7 +2459,7 @@ Run negative control fault check?
                 Out-of-band detectors score fleet health, QA bounce-back loops, burn-rate ETA, and model tier mismatches. Drill cleanly from L1 map status → L2 DSS Inspector &amp; Quality/Budget tabs → L3 live tmux with [ ] \ D F G hotkeys.
               </p>
             </div>
-            <div class="bento-widget" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center;">
+            <div class="bento-widget bento-widget-grid-3">
               <div style="background:rgba(0,240,255,0.08); border:1px solid rgba(0,240,255,0.25); border-radius:6px; padding:8px;">
                 <div style="color:var(--cyan); font-weight:800;">L1 · PERCEPTION</div>
                 <div style="color:#94a3b8; font-size:10.5px; margin-top:3px;" data-i18n="bento.t6.l1">Graph, Gantt &amp; Pools</div>
@@ -1970,7 +2507,7 @@ Run negative control fault check?
                 Zero-latency deterministic safety guardrails with non-overridable Hard Vetoes (destructive commands, force-push, SQL DDL, bare shell exits), an optional fast triage layer, and deep reasoning escalation — strictly Advisory-Only with automatic secret redaction.
               </p>
             </div>
-            <div class="bento-widget" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center;">
+            <div class="bento-widget bento-widget-grid-3">
               <div style="background:rgba(255,0,85,0.08); border:1px solid rgba(255,0,85,0.3); border-radius:6px; padding:8px;">
                 <div style="color:#fda4af; font-weight:800;">L0 · SAFETY VETO</div>
                 <div style="color:#94a3b8; font-size:10px; margin-top:3px;" data-i18n="bento.t7.l0">Deterministic Guardrails</div>
@@ -2032,7 +2569,7 @@ Run negative control fault check?
             <p class="step-desc" data-i18n="arch.s1.desc">
               Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.
             </p>
-            <div class="step-code">$ npx rig-commander@latest</div>
+            <div class="step-code">$ npx rig-commander@latest --read-only</div>
           </div>
 
           <div class="step-card">
@@ -2213,13 +2750,14 @@ Run negative control fault check?
         <span class="pulse-dot" style="background:var(--emerald); box-shadow:0 0 10px var(--emerald);"></span>
         <span data-i18n="footer.status">ALL SYSTEMS OPERATIONAL</span>
         <span>•</span>
-        <span>RigCommander v3.2</span>
+        <span>RigCommander v3.8.1</span>
         <span>•</span>
         <a href="/demo" style="color:var(--cyan); text-decoration:none;" data-i18n="nav.demo">Live Demo</a>
         <span>·</span>
         <a href="/demo?track=tour" style="color:#6ee7b7; text-decoration:none;" data-i18n="footer.tour">SA-DSS Tour</a>
         <span>·</span>
         <a href="/guide" style="color:#67e8f9; text-decoration:none;" data-i18n="nav.guide">Guide</a>
+        <span>·</span>
         <a href="/passport" style="color:#d8b4fe; text-decoration:none;" data-i18n="nav.passport">Passport</a>
         <span>·</span>
         <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener" style="color:#e2e8f0; text-decoration:none;">GitHub</a>
@@ -2287,22 +2825,23 @@ Run negative control fault check?
         'nav.guide': 'Guide',
         'nav.passport': 'Passport',
         'nav.waitlist': 'Waitlist',
-        'nav.cta': 'Open Demo',
+        'nav.cta': 'Live Demo',
+        'nav.ctaShort': 'Demo',
         'hero.eyebrow': 'MISSION CONTROL FOR AUTONOMOUS AI SWARMS',
         'hero.title': 'Stop Agent Chaos.<br><span class="accent-cyan">Command Your AI Fleets.</span>',
-        'hero.subtitle': 'The real-time DSS SA command deck for autonomous multi-agent engineering teams. Live Graph ⇄ Task Gantt timelines, Shared Context Lineage, 3-Tier Advisory-Only AI Evaluator, Operational Ontology v2.2 with postcondition audit, clickable tmux HITL prompts, and FinOps token tracking.',
+        'hero.subtitle': 'Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account, works with or without OpenRig.',
         'hero.demoCta': '▶ Launch Interactive Demo',
-        'hero.demoTag': 'LIVE · 0 SETUP',
-        'hero.videoCta': '🎬 Watch 20s Demo',
+        'hero.demoTag': '0 SETUP',
         'hero.qrCta': '📱 Phone QR',
+        'hero.cliNote': 'Zero-write inspection · or run <code>npx rig-commander@latest</code> for interactive HITL',
         'qr.title': '📱 Open RigCommander Mobile PWA',
         'qr.sub': 'Point your iPhone or Android camera at the QR code to launch the mobile Command Deck:',
         'qr.ios': 'iOS: Safari → Share ⬆ → "Add to Home Screen"',
         'qr.android': 'Android: Chrome → "Install app"',
         'qr.copy': '📋 Copy URL',
-        'hero.passportCta': '📄 Project Passport',
-        'hero.cliTitle': 'Click to copy CLI installer',
-        'sim.liveTelemetry': '● ONTOLOGY v2.2',
+        'hero.passportCta': '🛡️ Security Passport →',
+        'hero.cliTitle': 'Click to copy safe read-only CLI command',
+        'sim.liveTelemetry': '● LOCAL BRIDGE',
         'sim.agentsConnected': '9 AGENTS • $6.63 SESSION',
         'sim.viewGraph': '🕸️ GRAPH',
         'sim.viewGantt': '📊 GANTT',
@@ -2322,11 +2861,24 @@ Run negative control fault check?
         'sim.card2': 'slice:tts-strict-chunked passed 104/104 probes. CTX at 68% (preemptive /compact ready).',
         'sim.card3': 'Stopped at terminal permission_prompt: 3 parsed options ready for 1-click HITL.',
         'sim.ganttTitle': '📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)',
-        'sim.inspector': 'DSS INSPECTOR & HITL',
+        'sim.inspector': 'INSPECTOR & HITL',
         'sim.opt1': '✅ 1. Yes, allow once (y)',
         'sim.opt2': '🔹 2. Always allow in worktree',
         'sim.opt3': '❌ 3. No, cancel (esc)',
         'sim.auditTitle': '🧾 ACTION AUDIT (POSTCONDITION)',
+        'sec.eyebrow': 'SECURITY & PRIVACY GUARANTEES AT A GLANCE',
+        'sec.title': 'Local-First by Default. Zero Cloud Traps.',
+        'sec.passportLink': '🛡️ Full Security Passport →',
+        'sec.g1.t': '0 Outbound Requests by Default',
+        'sec.g1.d': 'Binds strictly to <code>127.0.0.1</code> with zero outbound network calls, no cloud account, and no telemetry upload.',
+        'sec.g2.t': 'Zero-Write First Evaluation',
+        'sec.g2.d': 'Launch with <code>--read-only</code> to inspect live sessions safely with every terminal write and mutation disabled.',
+        'sec.g3.t': 'External Modules OFF by Default',
+        'sec.g3.d': 'Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent & optional AI Evaluator stay OFF until enabled.',
+        'sec.g4.t': 'Secrets Masked Automatically',
+        'sec.g4.d': 'API keys, tokens, private key blocks & local paths are redacted before writing shift history or calling optional evaluators.',
+        'sec.g5.t': 'Honest Local Storage Model',
+        'sec.g5.d': 'Local recovery & shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.',
         'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
         'pain.title': 'Why Autonomous Swarms Break Down',
         'pain.desc': 'One AI agent in your editor feels like magic. Ten concurrent agents across separate worktrees create an unobservable, expensive black box.',
@@ -2336,10 +2888,36 @@ Run negative control fault check?
         'pain.bad3': '<b>Circular Rework Loops:</b> QA rejects coder\'s PR 5 times in a loop, burning 300,000 tokens without anyone noticing wait bottlenecks.',
         'pain.bad4': '<b>Blind Token Spend &amp; Unverified Commands:</b> No visibility into per-seat $ burn, cache-hit rates, or whether /compact actually reduced context.',
         'pain.goodTitle': 'With RigCommander: Deterministic Control',
-        'pain.good1': '<b>Dynamic Graph, Anchored X-Ray &amp; Sub-Lane Gantt:</b> Flip between adaptive topology (with anchored route X-Ray &amp; exponential thermal curve) and chain-colored Gantt + Handoff Flow (key G).',
-        'pain.good2': '<b>1-Click HITL, Safe Delivery &amp; Postcondition Audit:</b> Auto-parsed tmux options, safe rig send --raw delivery, per-seat audio alerts, and automatic postcondition verification (✅ verified).',
-        'pain.good3': '<b>Ontology v2.2 &amp; 3-Tier AI Evaluator:</b> 8 canonical objects, 10 reason-driven actions, plus Advisory-Only Heuristic + Expert Veto ➔ System 1 ➔ System 2 triage.',
-        'pain.good4': '<b>Shared Context Lineage &amp; Live FinOps:</b> Inspect blockedOn chains, full transferred specs, body-context drift, RECAP.md, and live SUB vs PAYG token spend.',
+        'pain.good1': '<b>One Live Map for Every Agent:</b> Auto-discover parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux sessions, then flip between live graph and task timeline (<code>G</code>) to spot waits and rework loops.',
+        'pain.good2': '<b>1-Click Terminal HITL with Safety Guards:</b> Read the live <code>tmux</code> prompt and parsed approval options before clicking; every keystroke is allowlisted, deduplicated, and verified after send.',
+        'pain.good3': '<b>Proactive Context &amp; Spend Guardrails:</b> Catch overheating sessions (≥75% context) with 1-click <code>/compact</code>, flag repeating QA loops, and cap token burn with a local circuit-breaker.',
+        'pain.good4': '<b>Local-First Cost Clarity &amp; Zero-Write Start:</b> Compare subscription usage (<code>SUB</code>) vs estimated API spend (<code>PAYG</code>), evaluate safely with <code>--read-only</code>, and keep all logs on your machine.',
+        'cmp.title': 'Raw tmux vs Cloud Tracing vs RigCommander',
+        'cmp.sub': 'DIFFERENT JOBS • COMPLEMENTARY STACK',
+        'cmp.h0': 'Dimension',
+        'cmp.h1': 'Raw tmux',
+        'cmp.h2': 'Cloud Tracing (LangSmith / Langfuse)',
+        'cmp.h3': 'RigCommander',
+        'cmp.r1.k': 'Primary job',
+        'cmp.r1.c1': 'Multiplex terminal panes & raw scrollback',
+        'cmp.r1.c2': 'Post-hoc LLM API call traces, latency & evals',
+        'cmp.r1.c3': 'Live multi-agent fleet ops, HITL approvals & handoffs',
+        'cmp.r2.k': 'Setup & code changes',
+        'cmp.r2.c1': 'Manual attach & pane-by-pane switching',
+        'cmp.r2.c2': 'SDK instrumentation, API keys & cloud account',
+        'cmp.r2.c3': '<code>npx rig-commander@latest --read-only</code> (0 code changes, 0 npm deps)',
+        'cmp.r3.k': 'Blocked prompts & control',
+        'cmp.r3.c1': 'Manual scan across panes to find hangs',
+        'cmp.r3.c2': 'Read-only dashboards (no terminal write-back)',
+        'cmp.r3.c3': 'Instant P0 alert, live screen preview & allowlisted 1-click HITL',
+        'cmp.r4.k': 'Data residency',
+        'cmp.r4.c1': 'Local machine',
+        'cmp.r4.c2': 'Hosted cloud (or self-hosted database stack)',
+        'cmp.r4.c3': '100% local 127.0.0.1 loopback · 0 outbound calls by default',
+        'cmp.r5.k': 'Best used for',
+        'cmp.r5.c1': 'Reading raw output of 1–2 terminal panes',
+        'cmp.r5.c2': 'Debugging app-level LLM pipelines in production',
+        'cmp.r5.c3': 'Operating 3–15+ parallel Claude Code / Codex / Gemini agents',
         'bento.eyebrow': 'ENGINEERING CAPABILITIES',
         'bento.title': 'Built for High-Reliability Fleets',
         'bento.desc': 'Architected on Endsley\'s Situation Awareness (SA-DSS L1–L3), ISO 11064 Dark Cockpit ergonomics, and Palantir-style Operational Ontology.',
@@ -2350,8 +2928,8 @@ Run negative control fault check?
         'bento.t1.zeroDrops': 'Hatched Wait • Anchored Route X-Ray',
         'bento.t1.cta': '📊 Try Gantt Timeline in Demo →',
         'bento.t2.badge': '⚡ CLICKABLE HITL & TMUX',
-        'bento.t2.title': '1-Click Prompts & Safe Raw Delivery',
-        'bento.t2.desc': 'Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Slash commands & nudges ship safely via rig send --raw + paced TUI guards.',
+        'bento.t2.title': '1-Click Prompts & Safe Delivery',
+        'bento.t2.desc': 'Click the red node badge to jump straight into parsed Codex/Claude approval buttons. Slash commands & nudges ship safely via allowlisted tmux delivery + paced TUI guards.',
         'bento.t2.cta': '⚡ Open Live HITL Screen →',
         'bento.t3.badge': '💰 FINOPS & THERMAL CURVE',
         'bento.t3.title': 'Token Spend & Exponential Context Physics',
@@ -2359,7 +2937,7 @@ Run negative control fault check?
         'bento.t3.cta': '💰 Open FinOps Budget →',
         'bento.t4.badge': '🧬 OPERATIONAL ONTOLOGY v2.2',
         'bento.t4.title': 'Objects, Links, Reason-Driven Actions & Postcondition Audit',
-        'bento.t4.desc': 'One canonical ontology snapshot drives every surface. Write-back buttons appear strictly from preconditions (0 buttons on healthy idle seats), and every command is logged in ActionAuditLog with automatic postcondition verification.',
+        'bento.t4.desc': 'One canonical ontology snapshot drives every surface. Write-back buttons appear strictly from preconditions (0 buttons on healthy idle seats), and every command is logged in Action Audit with automatic postcondition verification.',
         'bento.t4.objTag': '8 OBJECTS • 10 ACTIONS',
         'bento.t4.auditTag': 'POSTCONDITION AUDIT',
         'bento.t4.cta': '🧬 Inspect Actions & Audit →',
@@ -2442,22 +3020,23 @@ Run negative control fault check?
         'nav.guide': 'Гайд',
         'nav.passport': 'Паспорт',
         'nav.waitlist': 'Ранний доступ',
-        'nav.cta': 'Открыть демо',
+        'nav.cta': 'Живое демо',
+        'nav.ctaShort': 'Демо',
         'hero.eyebrow': 'ЦЕНТР УПРАВЛЕНИЯ АВТОНОМНЫМИ ИИ-РОЯМИ',
         'hero.title': 'Остановите хаос агентов.<br><span class="accent-cyan">Управляйте ИИ-флотом.</span>',
-        'hero.subtitle': 'Операционный DSS SA мостик для автономных ИИ-команд разработки. Переключение Граф ⇄ Гант задач, граф общего контекста и переданных спецификаций, 3-уровневый AI Evaluator (Advisory-Only), операционная онтология v2.2, кликабельные HITL-меню в tmux и FinOps-учёт токенов.',
+        'hero.subtitle': 'Локальный пульт под лицензией MIT без внешних npm-зависимостей для параллельных агентов Claude Code, Codex CLI, Gemini CLI и tmux — без облачного аккаунта, работает с OpenRig и без него.',
         'hero.demoCta': '▶ Открыть интерактивное демо',
-        'hero.demoTag': 'LIVE · БЕЗ УСТАНОВКИ',
-        'hero.videoCta': '🎬 Видео-демо (20 сек)',
+        'hero.demoTag': 'БЕЗ УСТАНОВКИ',
         'hero.qrCta': '📱 QR на телефон',
+        'hero.cliNote': 'Безопасный осмотр без записи · или <code>npx rig-commander@latest</code> для полного HITL',
         'qr.title': '📱 Открыть мобильную PWA-версию',
         'qr.sub': 'Наведи камеру iPhone или Android на QR-код — откроется мобильный Command Deck:',
         'qr.ios': 'iOS: Safari → «Поделиться» ⬆ → «На экран „Домой“»',
         'qr.android': 'Android: Chrome → «Установить приложение»',
         'qr.copy': '📋 Скопировать ссылку',
-        'hero.passportCta': '📄 Паспорт проекта',
-        'hero.cliTitle': 'Нажмите, чтобы скопировать команду установки',
-        'sim.liveTelemetry': '● ОНТОЛОГИЯ v2.2',
+        'hero.passportCta': '🛡️ Паспорт безопасности →',
+        'hero.cliTitle': 'Нажмите, чтобы скопировать команду безопасного read-only запуска',
+        'sim.liveTelemetry': '● ЛОКАЛЬНЫЙ МОСТ',
         'sim.agentsConnected': '9 АГЕНТОВ • ~$6.63 СЕССИЯ',
         'sim.viewGraph': '🕸️ ГРАФ',
         'sim.viewGantt': '📊 ГАНТ',
@@ -2477,11 +3056,24 @@ Run negative control fault check?
         'sim.card2': 'slice:tts-strict-chunked прошёл 104/104 проб. CTX 68% (готов превентивный /compact).',
         'sim.card3': 'Остановлен на permission_prompt: 3 варианта распарсены для HITL в 1 клик.',
         'sim.ganttTitle': '📊 ДИАГРАММА ГАНТА • ПОСЛЕДНИЕ 6Ч (ШТРИХОВКА = ОЖИДАНИЕ)',
-        'sim.inspector': 'DSS ИНСПЕКТОР & HITL',
+        'sim.inspector': 'ИНСПЕКТОР И HITL',
         'sim.opt1': '✅ 1. Да, разрешить один раз (y)',
         'sim.opt2': '🔹 2. Всегда разрешать в worktree',
         'sim.opt3': '❌ 3. Нет, отменить (esc)',
         'sim.auditTitle': '🧾 ЖУРНАЛ ДЕЙСТВИЙ (POSTCONDITION)',
+        'sec.eyebrow': 'ГАРАНТИИ БЕЗОПАСНОСТИ И ПРИВАТНОСТИ',
+        'sec.title': 'Локально по умолчанию. Без облачных ловушек.',
+        'sec.passportLink': '🛡️ Полный паспорт безопасности →',
+        'sec.g1.t': '0 исходящих запросов по умолчанию',
+        'sec.g1.d': 'Слушает строго <code>127.0.0.1</code> — ноль сетевых обращений наружу, без облачного аккаунта и скрытой телеметрии.',
+        'sec.g2.t': 'Первый осмотр без записи',
+        'sec.g2.d': 'Флаг <code>--read-only</code> позволяет безопасно осмотреть живые сессии с полным запретом записи в терминал.',
+        'sec.g3.t': 'Внешние модули выключены',
+        'sec.g3.d': 'Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛ, пока вы их не включите.',
+        'sec.g4.t': 'Автоматическая редакция секретов',
+        'sec.g4.d': 'API-ключи, токены, приватные ключи и локальные пути маскируются до записи истории смен и до вызова опциональных оценщиков.',
+        'sec.g5.t': 'Честное локальное хранение',
+        'sec.g5.d': 'Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска.',
         'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
         'pain.title': 'Почему автономные рои ломаются',
         'pain.desc': 'Один ИИ-агент в редакторе ощущается как магия. Десять параллельных агентов в отдельных worktree превращаются в неуправляемый и дорогой чёрный ящик.',
@@ -2491,10 +3083,36 @@ Run negative control fault check?
         'pain.bad3': '<b>Циклы переделок и простои:</b> QA возвращает PR 5 раз подряд, сжигая 300 000 токенов без видимости узких мест во времени.',
         'pain.bad4': '<b>Слепой расход и команды без сверки:</b> не видно расхода $ по сиденьям, % кэша и того, действительно ли /compact снизил контекст.',
         'pain.goodTitle': 'С RigCommander: детерминированный контроль',
-        'pain.good1': '<b>Адаптивный граф, X-Ray у курсора и поддорожечный Гант:</b> мгновенное переключение топологии (с экспоненциальной термошкалой и X-Ray) и Ганта + Handoff Flow (клавиша G).',
-        'pain.good2': '<b>HITL в 1 клик, безопасный rig send --raw и аудит эффекта:</b> кликабельный бейдж на узле, автопарсинг меню tmux и автоматическая сверка postcondition (✅ verified).',
-        'pain.good3': '<b>Онтология v2.2 и 3-уровневый AI Evaluator:</b> 8 объектов, 10 действий по предусловиям и Advisory-Only каскад Heuristic + Expert Veto ➔ System 1 ➔ System 2.',
-        'pain.good4': '<b>Граф общего контекста и живой FinOps:</b> зависимости blockedOn, полный текст переданного конверта, дрейф body-context, RECAP.md и учёт SUB vs PAYG.',
+        'pain.good1': '<b>Единая карта для всех агентов:</b> автообнаружение параллельных сессий Claude Code, Codex CLI, Gemini CLI и <code>tmux</code>, плюс переключение на Гант задач (<code>G</code>) для поиска простоев и циклов доработок.',
+        'pain.good2': '<b>HITL в терминале в 1 клик с защитой:</b> прочитайте живой промпт <code>tmux</code> и распарсенные варианты до клика — каждая команда проходит белый список клавиш, защиту от дублей и проверку результата.',
+        'pain.good3': '<b>Защита от перегрева контекста и петель:</b> замечайте агентов на ≥75% контекста с <code>/compact</code> в 1 клик, отлавливайте возвраты QA и задавайте локальный авто-тормоз бюджета.',
+        'pain.good4': '<b>Ясная экономика и старт без записи:</b> сравнивайте подписку (<code>SUB</code>) с оценкой API-токенов (<code>PAYG</code>), начните безопасно с <code>--read-only</code> и держите все логи строго на своей машине.',
+        'cmp.title': 'Обычный tmux vs Облачная трассировка vs RigCommander',
+        'cmp.sub': 'РАЗНЫЕ ЗАДАЧИ • ВЗАИМОДОПОЛНЯЮЩИЙ СТЕК',
+        'cmp.h0': 'Критерий',
+        'cmp.h1': 'Обычный tmux',
+        'cmp.h2': 'Облачная трассировка (LangSmith / Langfuse)',
+        'cmp.h3': 'RigCommander',
+        'cmp.r1.k': 'Главная задача',
+        'cmp.r1.c1': 'Мультиплексирование панелей и сырой вывод терминала',
+        'cmp.r1.c2': 'Постфактум-трейсы API-вызовов LLM, задержки и оценки',
+        'cmp.r1.c3': 'Живое управление флотом агентов, HITL-подтверждения и передачи задач',
+        'cmp.r2.k': 'Установка и правки кода',
+        'cmp.r2.c1': 'Ручной attach и переключение между панелями',
+        'cmp.r2.c2': 'Встраивание SDK, API-ключи и облачный аккаунт',
+        'cmp.r2.c3': '<code>npx rig-commander@latest --read-only</code> (0 правок кода, 0 npm-зависимостей)',
+        'cmp.r3.k': 'Зависшие промпты и управление',
+        'cmp.r3.c1': 'Ручной обход каждой панели в поисках зависания',
+        'cmp.r3.c2': 'Только дашборды чтения (нет ответа в терминал)',
+        'cmp.r3.c3': 'Мгновенный P0-алерт, экран терминала и безопасный HITL в 1 клик',
+        'cmp.r4.k': 'Где живут данные',
+        'cmp.r4.c1': 'Локальная машина',
+        'cmp.r4.c2': 'Облако (или свой стек с базой данных)',
+        'cmp.r4.c3': '100% локально 127.0.0.1 · 0 исходящих запросов по умолчанию',
+        'cmp.r5.k': 'Когда выбирать',
+        'cmp.r5.c1': 'Просмотр сырого вывода 1–2 панелей терминала',
+        'cmp.r5.c2': 'Отладка продуктовых LLM-пайплайнов приложения',
+        'cmp.r5.c3': 'Управление 3–15+ параллельными агентами Claude Code / Codex / Gemini',
         'bento.eyebrow': 'ИНЖЕНЕРНЫЕ ВОЗМОЖНОСТИ',
         'bento.title': 'Создан для надёжных ИИ-флотов',
         'bento.desc': 'Спроектирован по принципам ситуационной осведомлённости Endsley (SA-DSS L1–L3), эргономики Dark Cockpit ISO 11064 и операционной онтологии.',
@@ -2506,7 +3124,7 @@ Run negative control fault check?
         'bento.t1.cta': '📊 Открыть Гант в демо →',
         'bento.t2.badge': '⚡ КЛИКАБЕЛЬНЫЙ HITL & TMUX',
         'bento.t2.title': 'HITL в 1 клик и безопасная доставка команд',
-        'bento.t2.desc': 'Клик по красному бейджу на узле сразу открывает распарсенные кнопки Codex/Claude. Slash-команды и пинки уходят безопасно через rig send --raw + TUI-защиту.',
+        'bento.t2.desc': 'Клик по красному бейджу на узле сразу открывает распарсенные кнопки Codex/Claude. Slash-команды и пинки уходят через безопасную доставку в tmux с белым списком клавиш и TUI-защитой.',
         'bento.t2.cta': '⚡ Открыть экран HITL →',
         'bento.t3.badge': '💰 FINOPS И ТЕРМОКРИВАЯ',
         'bento.t3.title': 'Расход токенов и экспоненциальная шкала контекста',
@@ -2514,7 +3132,7 @@ Run negative control fault check?
         'bento.t3.cta': '💰 Открыть FinOps-бюджет →',
         'bento.t4.badge': '🧬 ОПЕРАЦИОННАЯ ОНТОЛОГИЯ v2.2',
         'bento.t4.title': 'Объекты, связи, действия по причине и аудит postcondition',
-        'bento.t4.desc': 'Единый снапшот онтологии питает все панели. Кнопки write-back появляются строго по предусловиям (0 кнопок у здорового idle-узла), а каждое действие автоматически проверяется по postcondition в ActionAuditLog.',
+        'bento.t4.desc': 'Единый снапшот онтологии питает все панели. Кнопки write-back появляются строго по предусловиям (0 кнопок у здорового idle-узла), а каждое действие автоматически проверяется по postcondition в журнале Action Audit.',
         'bento.t4.objTag': '8 ОБЪЕКТОВ • 10 ДЕЙСТВИЙ',
         'bento.t4.auditTag': 'АУДИТ POSTCONDITION',
         'bento.t4.cta': '🧬 Смотреть Аудит и Actions →',
@@ -2669,16 +3287,31 @@ Run negative control fault check?
         }
         if (videoStage) videoStage.style.display = 'none';
         if (bodyGrid) bodyGrid.style.display = '';
-        document.getElementById('simGraphView').style.display = simView === 'graph' ? 'block' : 'none';
+        document.getElementById('simGraphView').style.display = simView === 'graph' ? '' : 'none';
         document.getElementById('simGanttView').style.display = simView === 'gantt' ? 'flex' : 'none';
       }
       syncSimDeepLink();
     }
 
-    function watchDemoVideo() {
-      setSimView('video');
-      const wrap = document.querySelector('.hero-simulator-wrapper');
-      if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    function toggleMobileNav() {
+      const nav = document.getElementById('primaryNavbar');
+      const btn = document.getElementById('navMenuBtn');
+      if (!nav) return;
+      const open = nav.classList.toggle('nav-open');
+      if (btn) {
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? '✕' : '☰';
+      }
+    }
+    function closeMobileNav() {
+      const nav = document.getElementById('primaryNavbar');
+      const btn = document.getElementById('navMenuBtn');
+      if (!nav) return;
+      nav.classList.remove('nav-open');
+      if (btn) {
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '☰';
+      }
     }
 
     function seekDemoChapter(sec) {
@@ -2879,7 +3512,7 @@ Run negative control fault check?
 
     // Auto-Update Watcher on Website (checks npmjs.org/rig-commander/latest via CORS)
     let landingUpdateState = {
-      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.2.1').trim(),
+      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.8.1').trim(),
       latestVersion: '',
       updateAvailable: false,
       releaseUrl: 'https://www.npmjs.com/package/rig-commander'
