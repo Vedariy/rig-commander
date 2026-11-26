@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.11.0] - 2026-11-27
+
+### Added
+- **Default `tmux / Universal` `/demo` Mode & Native Mobile P0 Preview (`openrig/index.html`, `landing/index.html`):**
+  - Switched `/demo` default preset to **`tmux / Universal`** (4 standalone `tmux` sessions led by `codex-tests` P0 `npm test` in `~/projects/payments-api`, zero OpenRig jargon, `0` `/api/*` calls), while keeping `OpenRig Pod` 1 click away (`?preset=openrig` / switcher).
+  - Replaced desktop chrome frames on narrow mobile (`<= 640px`) on the landing hero with a crisp native mobile P0 HITL preview card and unified the landing hero preview bar with the real `/demo` cockpit (left-aligned monospace terminal log, synchronized mini-bar, zero fake macOS traffic dots or phantom toolbar buttons).
+- **Explicit Pre-Run Verification & TOCTOU / Redaction Disclosure (`landing/guide.html`, `landing/passport.html`, `landing/index.html`, `landing/llms*.txt`):**
+  - Updated `/guide` quickstart callout to **`✓ READ-ONLY INSPECTION (ZERO TERMINAL WRITES)`** / **`✓ ОСМОТР БЕЗ ЗАПИСИ В ТЕРМИНАЛ`** with an explicit 3-bullet Reads/Writes/30s `npm audit signatures` + `dist.attestations` verification block.
+  - Added accurate distinction between strictly allowlisted quick-action keys and explicit collapsed manual operator commands (hard-blocked under `--read-only`), plus factual SHA-256 TOCTOU prompt-drift abort & secret-redaction disclosures.
+
+### Fixed & Improved
+- **HITL Fat-Finger Safety & Anti-Misclick Guard (`openrig/assets/ui/inspector-view.js`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`, `tests/inspector-view.test.mjs`):**
+  - Rendered **`1. Yes, allow once (y)`** as the sole full-width emerald primary button above a `16px` safety gap, separating **`Cancel (esc)`** and **`Always in folder...`** below with a **4s 2-step inline confirmation guard** before Option `2` can dispatch.
+  - Added an explicit destination + scope mono header line above the command box, upgraded 80-line TMUX & AI Risk disclosures to pill affordances with `›` chevrons, removed the duplicate header `Screen` trigger, hid desktop `Copy attach` on mobile, and tucked manual command input inside a collapsed `<details>` disclosure.
+- **54px Single-Row Chrome, Strict `Red = P0 Only` Discipline & De-Noised Modal (`openrig/index.html`, `openrig/assets/ui/{auto-consent-view,topology-view}.js`, `tests/{auto-consent-view,topology-view}.test.mjs`):**
+  - Collapsed desktop/laptop `/demo` top chrome into one **`54px`** row (`<= 24` interactive targets above fold, `0` tiny targets; `50px` mobile bar), consolidated multi-signal agents into one Wait Radar card per agent, restricted crimson styling strictly to P0 HITL blockers (P1 context heat & non-P0 worktree overlap chips amber), raised `#acCtxThresholdInput` (`76×32px`) and OpenRig swimlane toggle (`32×32px`), removed redundant switch pills & `Session +60m` clutter when global Auto-Consent is OFF, and aligned the unified Guardrails modal header + sticky footer.
+- **Test Verification:** Expanded automated test coverage to **`355 / 355 PASS` across `41` test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.10.0] - 2026-11-27
 
 ### Added
