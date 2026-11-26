@@ -272,8 +272,13 @@ test('TOCTOU drift aborts with VETO_PROMPT_DRIFT and 0 tmux writes on screen mut
       expectedSubVeto: AUTO_CONSENT_VETO_CODES.BREAKER_TRIPPED
     },
     {
-      name: 'git worktree conflict appears during 3s grace window',
-      mutate: (ctx) => { ctx.gitConflicts = [{ file: 'src/app.js', seats: ['dev-coder@sandbox'] }]; },
+      name: 'hard unmerged git worktree conflict appears during 3s grace window',
+      mutate: (ctx) => {
+        ctx.gitConflicts = {
+          conflicts: [],
+          unmergedWorkspaces: [{ workspaceId: 'ws-1', seatIds: ['dev-coder@sandbox'], unmergedCount: 1 }]
+        };
+      },
       expectedSubVeto: AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT
     }
   ];
@@ -857,4 +862,96 @@ test('P1 #2 regression: concurrent Rig SessionGrant maxApprovals=1 and fleet max
     assert.equal(engine.getState().sessionGrants.length, 0);
     assert.equal(engine.getState().stats.approvedCount, 1);
   }
+});
+
+test('v3.8.1: AutoConsentEngine honors safe test log redirection and scoped gitRadar workspaces[].seatIds / unmergedWorkspaces during observeSeat + TOCTOU', async () => {
+  const clock = makeManualClock();
+  const dispatched = [];
+  const logRedirectPrompt = [
+    'Requesting permission for: run_command',
+    '$ npm test > /opt/work/.openrig/shared-docs/rigs/demo-rig/state/dev/iter9/repair/owner-test.log 2>&1',
+    'Run this command?',
+    '› 1. Yes, allow once (y)',
+    '  2. Always allow in this workspace',
+    '  3. No, cancel (esc)'
+  ].join('\n');
+  const commitPrompt = [
+    'Requesting permission for: run_command',
+    '$ git commit -m "wip"',
+    'Run this command?',
+    '› 1. Yes, allow once (y)',
+    '  2. No, cancel (esc)'
+  ].join('\n');
+
+  const ctx = {
+    screen: logRedirectPrompt,
+    gitConflicts: {
+      conflicts: [
+        {
+          filePath: 'src/core/engine.js',
+          workspaces: [
+            { workspaceId: 'ws-a', seatIds: ['dev-coder@sandbox'], unmerged: false },
+            { workspaceId: 'ws-b', seatIds: ['dev-other@sandbox'], unmerged: false }
+          ]
+        }
+      ],
+      unmergedWorkspaces: []
+    }
+  };
+
+  const engine = new AutoConsentEngine({
+    configPath: null,
+    now: clock.now,
+    setTimeoutFn: clock.setTimeoutFn,
+    clearTimeoutFn: clock.clearTimeoutFn,
+    captureSeatScreen: async () => ctx.screen,
+    getLiveContext: async () => ({
+      seat: { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 30 } },
+      breakerState: { status: 'ok', trippedSeats: [] },
+      gitConflicts: ctx.gitConflicts
+    }),
+    dispatchOptionOne: async (arg) => {
+      dispatched.push(arg);
+      return { ok: true };
+    }
+  });
+  engine.updatePolicy({ enabled: true, mode: 'armed', graceWindowMs: 3000, projects: { sandbox: { profile: 'trusted_dev' } } });
+
+  const seat = { canonicalSessionName: 'dev-coder@sandbox', rigId: 'sandbox', contextUsage: { usedPercentage: 30 } };
+
+  // 1. Safe test command with log redirection passes even with non-unmerged overlap on same seat
+  const obs1 = await engine.observeSeat({ seat, screenText: ctx.screen, gitConflicts: ctx.gitConflicts });
+  assert.equal(obs1.action, 'pending');
+  await clock.advanceBy(3000);
+  assert.equal(dispatched.length, 1);
+  assert.equal(dispatched[0].keyStroke, '1 Enter');
+
+  // 2. Mutating git commit starts clean, then non-unmerged overlap appears mid-grace -> TOCTOU aborts with VETO_WORKTREE_CONFLICT
+  ctx.screen = commitPrompt;
+  ctx.gitConflicts = { conflicts: [], unmergedWorkspaces: [] };
+  const obs2 = await engine.observeSeat({ seat, screenText: ctx.screen, gitConflicts: ctx.gitConflicts });
+  assert.equal(obs2.action, 'pending');
+  await clock.advanceBy(1500);
+  ctx.gitConflicts = {
+    conflicts: [
+      {
+        filePath: 'src/core/engine.js',
+        workspaces: [
+          { workspaceId: 'ws-a', seatIds: ['dev-coder@sandbox'], unmerged: false },
+          { workspaceId: 'ws-b', seatIds: ['dev-other@sandbox'], unmerged: false }
+        ]
+      }
+    ],
+    unmergedWorkspaces: []
+  };
+  await clock.advanceBy(1600);
+  assert.equal(dispatched.length, 1, 'Mutating commit MUST abort with 0 writes when code overlap appears');
+  assert.equal(engine.getState().recentRuns[0].status, 'drift_aborted');
+  assert.equal(engine.getState().recentRuns[0].subVetoCode, AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT);
+
+  // 3. Unrelated seat in another repo still approves git commit despite sandbox overlap
+  engine.updatePolicy({ scope: 'project', targetId: 'other-rig', profile: 'trusted_dev' });
+  const unrelatedSeat = { canonicalSessionName: 'dev-c@other-rig', rigId: 'other-rig', contextUsage: { usedPercentage: 20 } };
+  const obs3 = await engine.observeSeat({ seat: unrelatedSeat, screenText: commitPrompt, gitConflicts: ctx.gitConflicts });
+  assert.equal(obs3.action, 'pending');
 });

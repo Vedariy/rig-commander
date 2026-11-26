@@ -781,9 +781,9 @@ test('Operational & anti-loop vetoes: CTX 74% vs 75%, breaker, shellExited, work
   assert.equal(shellRes.decision, 'escalate');
   assert.equal(shellRes.vetoCode, AUTO_CONSENT_VETO_CODES.SHELL_EXITED);
 
-  // Git worktree conflict
+  // Git worktree conflict: mutating command escalates on code-file overlap; read-only/test passes unless unmerged
   const conflictRes = evaluateAutoConsentPrompt({
-    screenText: safeScreen,
+    screenText: makePrompt('git commit -m "wip"'),
     seat: { id: 'dev-coder@rig', ctxPct: 30 },
     effectivePolicy: policy,
     gitConflicts: [{ file: 'src/index.js', seats: ['dev-coder@rig', 'dev-qa@rig'] }],
@@ -791,6 +791,15 @@ test('Operational & anti-loop vetoes: CTX 74% vs 75%, breaker, shellExited, work
   });
   assert.equal(conflictRes.decision, 'escalate');
   assert.equal(conflictRes.vetoCode, AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT);
+
+  const overlapReadOnlyOk = evaluateAutoConsentPrompt({
+    screenText: safeScreen,
+    seat: { id: 'dev-coder@rig', ctxPct: 30 },
+    effectivePolicy: policy,
+    gitConflicts: [{ file: 'src/index.js', seats: ['dev-coder@rig', 'dev-qa@rig'] }],
+    nowMs: NOW
+  });
+  assert.equal(overlapReadOnlyOk.decision, 'approve_once');
 
   // Retry loop A: identical uncleared promptFingerprint
   const retrySameFp = evaluateAutoConsentPrompt({
@@ -1072,4 +1081,354 @@ test('Adversarial regression suite (P1-P3): anchored pkg install, stale scrollba
   );
   assert.equal(summaryInvalid.activeSessionCount, 0);
   assert.equal(summaryInvalid.hasActiveScopes, false);
+});
+
+test('v3.8.1: Safe test/check log redirection in trusted_dev only (positive + adversarial matrix)', () => {
+  const tdPol = makeArmedPolicy('trusted_dev');
+  const tdAllFlags = makeArmedPolicy('trusted_dev', { allowPackageInstall: true, allowReadOnlyNetwork: true });
+  const roPol = makeArmedPolicy('safe_readonly');
+  const realWorldLogPath = '/opt/work/.openrig/shared-docs/rigs/demo-rig/state/dev/iter9/repair/owner-test.log';
+
+  // 1. Positive real-world & recognized test/lint/typecheck/build commands with safe log redirection under trusted_dev
+  const allowedTrusted = [
+    `npm test > ${realWorldLogPath} 2>&1`,
+    `npm test >> ${realWorldLogPath}`,
+    `npm test 1> /tmp/unit.log 2>&1`,
+    `npm test 2> /tmp/unit.out`,
+    `npm test 2>&1 > /tmp/unit.txt`,
+    `npm test 2>&1`,
+    `git status > /tmp/status.log 2>&1`,
+    `npm run test:unit > /tmp/unit.log 2>&1`,
+    `pnpm run lint > /tmp/lint.txt 2>&1`,
+    `yarn run build >> /tmp/build.out`,
+    `npx vitest run tests/app.test.mjs > /tmp/vitest.log 2>&1`,
+    `npx playwright test > /tmp/pw.log 2>&1`,
+    `npx tsc --noEmit > /tmp/tsc.log 2>&1`,
+    `npx eslint openrig/ > /tmp/eslint.log 2>&1`,
+    `npx prettier --check openrig/ > /tmp/prettier.log 2>&1`,
+    `npx jest > /tmp/jest.log 2>&1`,
+    `npx mocha > /tmp/mocha.log 2>&1`,
+    `npx biome check . > /tmp/biome.log 2>&1`,
+    `npx stylelint openrig/ > /tmp/style.log 2>&1`,
+    `npx svelte-check > /tmp/svelte.log 2>&1`,
+    `npx vite build > /tmp/vite.log 2>&1`,
+    `node --test tests/auto-consent-model.test.mjs > /tmp/node-test.log 2>&1`,
+    `node --check openrig/server.mjs > /tmp/node-check.log 2>&1`,
+    `node tests/auto-consent-model.test.mjs > /tmp/node-file.log 2>&1`,
+    `cargo check > /tmp/cargo-check.log 2>&1`,
+    `cargo build > /tmp/cargo-build.log 2>&1`,
+    `cargo clippy > /tmp/cargo-clippy.log 2>&1`,
+    `cargo test > /tmp/cargo-test.log 2>&1`,
+    `go build ./... > /tmp/go-build.log 2>&1`,
+    `go vet ./... > /tmp/go-vet.log 2>&1`,
+    `go test ./... > /tmp/go-test.log 2>&1`,
+    `ruff check src/ > /tmp/ruff.log 2>&1`,
+    `mypy src/ > /tmp/mypy.log 2>&1`,
+    `flake8 src/ > /tmp/flake8.log 2>&1`,
+    `eslint openrig/ > /tmp/es.log 2>&1`,
+    `tsc --noEmit > /tmp/ts.log 2>&1`,
+    `make test > /tmp/make-test.log 2>&1`,
+    `make build > /tmp/make-build.log 2>&1`,
+    `make lint > /tmp/make-lint.log 2>&1`,
+    `make check > /tmp/make-check.log 2>&1`,
+    `npm run sync:public && npm test > ${realWorldLogPath} 2>&1`
+  ];
+  for (const cmd of allowedTrusted) {
+    const r = evaluateAutoConsentPrompt({
+      screenText: makePrompt(cmd),
+      seat: { id: 'dev-coder@rig', ctxPct: 30 },
+      effectivePolicy: tdPol,
+      nowMs: NOW
+    });
+    assert.equal(r.decision, 'approve_once', `trusted_dev must allow safe log redirect: "${cmd}" (got ${r.vetoCode}: ${r.reason})`);
+    assert.equal(r.keyStroke, '1 Enter');
+  }
+
+  // 2. safe_readonly MUST stay strictly zero shell metacharacters (unchanged)
+  for (const cmd of [
+    `npm test > ${realWorldLogPath} 2>&1`,
+    'npm test > /tmp/unit.log',
+    'npm test 2>&1'
+  ]) {
+    const r = evaluateAutoConsentPrompt({
+      screenText: makePrompt(cmd),
+      seat: { id: 'dev-check@rig', ctxPct: 30 },
+      effectivePolicy: roPol,
+      nowMs: NOW
+    });
+    assert.equal(r.decision, 'escalate', `safe_readonly must reject redirect: "${cmd}"`);
+    assert.equal(r.vetoCode, AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED);
+  }
+
+  // 3. Adversarial commands that MUST NEVER be allowed with log redirection under trusted_dev
+  const disallowedRedirects = [
+    // Disallowed base commands (git mutations, arbitrary scripts, forbidden npm scripts)
+    ['git add . > /tmp/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git commit -m "wip" > /tmp/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git checkout main > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git switch -c feat > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git restore src/a.js > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git mv a b > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git branch new-branch > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git stash > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['node scripts/sync-public.mjs > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npx tsx evil.ts > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm run deploy > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm run reset-db > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm run publish > /tmp/a.log', 'E-VETO-PUBLISH_PROD'],
+    // Package install & external network blocked even if flags are ON
+    ['npm install evil > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PACKAGE_INSTALL_POLICY],
+    ['curl -s https://example.com > /tmp/a.log', AUTO_CONSENT_VETO_CODES.NETWORK_POLICY],
+    // Disallowed log path extensions, dotfiles, traversal, OS system roots, sensitive dirs
+    ['npm test > /tmp/a.sh 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/a.js 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/.bashrc.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/.env.log 2>&1', 'E-VETO-SECRET_FILE_ACCESS'],
+    ['npm test > ../escape.log 2>&1', 'E-VETO-PATH_TRAVERSAL'],
+    ['npm test > ./local.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/./local.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /etc/cron.log 2>&1', 'E-VETO-SECRET_FILE_ACCESS'],
+    ['npm test > /usr/local/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /bin/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /sbin/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /System/Library/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /var/log/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /dev/null.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /proc/1/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /sys/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /opt/repo/.git/hooks/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /opt/repo/.ssh/a.log 2>&1', 'E-VETO-SECRET_FILE_ACCESS'],
+    ['npm test > /opt/repo/.gnupg/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /opt/repo/.aws/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /opt/repo/.kube/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /opt/repo/.env/a.log 2>&1', 'E-VETO-SECRET_FILE_ACCESS'],
+    // Disallowed shell operators, second redirect, globs, quotes, exec flags, destructive vetoes
+    ['npm test > /tmp/a.log > /tmp/b.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/a.log 2>&1 > /tmp/b.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test 2>&1 > /tmp/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test | tee /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/a.log; id', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/$(whoami).log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/`whoami`.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > ~/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/*.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > /tmp/a?.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test < /tmp/in.txt > /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test &> /tmp/a.log', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['npm test > "/tmp/a.log;id"', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['node --test -e "process.exit(0)" > /tmp/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['git -c core.pager=evil status > /tmp/a.log 2>&1', AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED],
+    ['rm -rf / > /tmp/a.log 2>&1', 'E-VETO-RM_RF']
+  ];
+  for (const [cmd, expectedCode] of disallowedRedirects) {
+    const r = evaluateAutoConsentPrompt({
+      screenText: makePrompt(cmd),
+      seat: { id: 'dev-coder@rig', ctxPct: 30 },
+      effectivePolicy: tdAllFlags,
+      nowMs: NOW
+    });
+    assert.equal(r.decision, 'escalate', `trusted_dev must reject disallowed redirect: "${cmd}"`);
+    assert.equal(r.keyStroke, null);
+    assert.equal(r.vetoCode, expectedCode, `Wrong veto code for "${cmd}": got ${r.vetoCode}`);
+  }
+});
+
+test('v3.8.1: hasWorktreeConflictForSeat scopes gitRadar workspaces[].seatIds, ignores AGENTS/CLAUDE overlays, allows read-only/test on overlaps, and hard-blocks unmerged conflicts', () => {
+  const tdPol = makeArmedPolicy('trusted_dev');
+  const sprintPol = makeArmedPolicy('sprint_all');
+  const realWorldLogPath = '/opt/work/.openrig/shared-docs/rigs/demo-rig/state/dev/iter9/repair/owner-test.log';
+
+  const radarCodeOverlap = {
+    conflicts: [
+      {
+        repoKey: 'repo-a',
+        filePath: 'src/core/engine.js',
+        severity: 'high',
+        workspaces: [
+          { workspaceId: 'ws-1', seatIds: ['dev-a@rig-a'], unmerged: false },
+          { workspaceId: 'ws-2', seatIds: ['dev-b@rig-a'], unmerged: false }
+        ]
+      }
+    ],
+    unmergedWorkspaces: []
+  };
+
+  // 1. Unrelated seat in another repo MUST NOT be poisoned even for mutating commands or edits!
+  const unrelatedCommit = evaluateAutoConsentPrompt({
+    screenText: makePrompt('git commit -m "unrelated repo"'),
+    seat: { id: 'dev-c@rig-b', ctxPct: 25 },
+    effectivePolicy: tdPol,
+    gitConflicts: radarCodeOverlap,
+    nowMs: NOW
+  });
+  assert.equal(unrelatedCommit.decision, 'approve_once');
+
+  // 2. Affected seat running strictly read-only/test command (including safe log redirect) is allowed on overlap-only conflicts
+  for (const cmd of [
+    'npm test',
+    `npm test > ${realWorldLogPath} 2>&1`,
+    'git status'
+  ]) {
+    const okRes = evaluateAutoConsentPrompt({
+      screenText: makePrompt(cmd),
+      seat: { id: 'dev-a@rig-a', ctxPct: 25 },
+      effectivePolicy: tdPol,
+      gitConflicts: radarCodeOverlap,
+      nowMs: NOW
+    });
+    assert.equal(okRes.decision, 'approve_once', `Expected read-only/test "${cmd}" allowed on non-unmerged overlap`);
+  }
+
+  // 3. Affected seat running mutating commands, && chains, workspace edits, or sprint_all scripts STILL escalates
+  for (const [cmd, pol] of [
+    ['git commit -m "wip"', tdPol],
+    ['git checkout -b feat', tdPol],
+    ['npm test && git commit -m "wip"', tdPol],
+    ['./scripts/mutate.sh', sprintPol]
+  ]) {
+    const blocked = evaluateAutoConsentPrompt({
+      screenText: makePrompt(cmd),
+      seat: { id: 'dev-a@rig-a', ctxPct: 25 },
+      effectivePolicy: pol,
+      gitConflicts: radarCodeOverlap,
+      nowMs: NOW
+    });
+    assert.equal(blocked.decision, 'escalate', `Expected "${cmd}" vetoed on code-file overlap`);
+    assert.equal(blocked.vetoCode, AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT);
+  }
+
+  const editScreen = [
+    'Do you want to make this edit to src/core/engine.js?',
+    '❯ 1. Yes',
+    '  2. No, cancel (esc)'
+  ].join('\n');
+  const editBlocked = evaluateAutoConsentPrompt({
+    screenText: editScreen,
+    seat: { id: 'dev-a@rig-a', ctxPct: 25 },
+    effectivePolicy: tdPol,
+    gitConflicts: radarCodeOverlap,
+    nowMs: NOW
+  });
+  assert.equal(editBlocked.decision, 'escalate');
+  assert.equal(editBlocked.vetoCode, AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT);
+
+  // 4. OpenRig overlay instruction files (AGENTS.md, docs/AGENTS.md, CLAUDE.md) ignored when unmerged !== true
+  const radarOverlayOnly = {
+    conflicts: [
+      {
+        filePath: 'AGENTS.md',
+        workspaces: [
+          { workspaceId: 'ws-1', seatIds: ['dev-a@rig-a'], unmerged: false },
+          { workspaceId: 'ws-2', seatIds: ['dev-b@rig-a'], unmerged: false }
+        ]
+      },
+      {
+        filePath: 'docs/AGENTS.md',
+        workspaces: [{ workspaceId: 'ws-1', seatIds: ['dev-a@rig-a'], unmerged: false }]
+      },
+      {
+        filePath: 'CLAUDE.md',
+        workspaces: [{ workspaceId: 'ws-1', seatIds: ['dev-a@rig-a'], unmerged: false }]
+      }
+    ],
+    unmergedWorkspaces: []
+  };
+  assert.equal(
+    evaluateAutoConsentPrompt({
+      screenText: makePrompt('git commit -m "feat"'),
+      seat: { id: 'dev-a@rig-a', ctxPct: 25 },
+      effectivePolicy: tdPol,
+      gitConflicts: radarOverlayOnly,
+      nowMs: NOW
+    }).decision,
+    'approve_once'
+  );
+  assert.equal(
+    evaluateAutoConsentPrompt({
+      screenText: editScreen,
+      seat: { id: 'dev-a@rig-a', ctxPct: 25 },
+      effectivePolicy: tdPol,
+      gitConflicts: radarOverlayOnly,
+      nowMs: NOW
+    }).decision,
+    'approve_once'
+  );
+
+  // 5. Hard unmerged conflicts ALWAYS escalate even for npm test and even for AGENTS.md
+  const radarUnmergedWs = {
+    conflicts: [],
+    unmergedWorkspaces: [{ workspaceId: 'ws-1', seatIds: ['dev-a@rig-a'], unmergedCount: 2 }]
+  };
+  const unmergedTestBlocked = evaluateAutoConsentPrompt({
+    screenText: makePrompt('npm test'),
+    seat: { id: 'dev-a@rig-a', ctxPct: 25 },
+    effectivePolicy: tdPol,
+    gitConflicts: radarUnmergedWs,
+    nowMs: NOW
+  });
+  assert.equal(unmergedTestBlocked.decision, 'escalate');
+  assert.equal(unmergedTestBlocked.vetoCode, AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT);
+
+  // Unrelated seat is STILL unaffected by another workspace's unmergedWorkspaces entry
+  assert.equal(
+    evaluateAutoConsentPrompt({
+      screenText: makePrompt('git commit -m "ok"'),
+      seat: { id: 'dev-c@rig-b', ctxPct: 25 },
+      effectivePolicy: tdPol,
+      gitConflicts: radarUnmergedWs,
+      nowMs: NOW
+    }).decision,
+    'approve_once'
+  );
+
+  // Conflict item with ws.unmerged === true escalates matching seat even on AGENTS.md + npm test
+  const radarUnmergedOverlay = {
+    conflicts: [
+      {
+        filePath: 'AGENTS.md',
+        workspaces: [
+          { workspaceId: 'ws-1', seatIds: ['dev-a@rig-a'], unmerged: true },
+          { workspaceId: 'ws-2', seatIds: ['dev-b@rig-a'], unmerged: false }
+        ]
+      }
+    ],
+    unmergedWorkspaces: []
+  };
+  assert.equal(
+    evaluateAutoConsentPrompt({
+      screenText: makePrompt('npm test'),
+      seat: { id: 'dev-a@rig-a', ctxPct: 25 },
+      effectivePolicy: tdPol,
+      gitConflicts: radarUnmergedOverlay,
+      nowMs: NOW
+    }).vetoCode,
+    AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT
+  );
+  assert.equal(
+    evaluateAutoConsentPrompt({
+      screenText: makePrompt('git commit -m "ok"'),
+      seat: { id: 'dev-b@rig-a', ctxPct: 25 },
+      effectivePolicy: tdPol,
+      gitConflicts: radarUnmergedOverlay,
+      nowMs: NOW
+    }).decision,
+    'approve_once'
+  );
+
+  // Seat-level flags & boolean true ALWAYS escalate even on npm test
+  for (const [seatObj, gc] of [
+    [{ id: 'dev-a@rig-a', ctxPct: 25, gitConflict: true }, null],
+    [{ id: 'dev-a@rig-a', ctxPct: 25, hasWorktreeConflict: true }, null],
+    [{ id: 'dev-a@rig-a', ctxPct: 25 }, true]
+  ]) {
+    const hardRes = evaluateAutoConsentPrompt({
+      screenText: makePrompt('npm test'),
+      seat: seatObj,
+      effectivePolicy: tdPol,
+      gitConflicts: gc,
+      nowMs: NOW
+    });
+    assert.equal(hardRes.decision, 'escalate');
+    assert.equal(hardRes.vetoCode, AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT);
+  }
 });

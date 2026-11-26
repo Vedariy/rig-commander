@@ -2178,7 +2178,12 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
     const autoConsentActive = hasActiveClient && autoConsent.isObservingActive();
     if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1() || autoConsentActive) {
       const liveBreaker = circuitBreaker.getState();
-      const liveConflicts = payload.gitRadar?.conflicts || null;
+      const liveConflicts = payload.gitRadar
+        ? {
+            conflicts: payload.gitRadar.conflicts || [],
+            unmergedWorkspaces: payload.gitRadar.unmergedWorkspaces || []
+          }
+        : null;
       if (autoConsentActive) {
         autoConsent.reconcileSeatStates(nodes);
       }
@@ -2588,7 +2593,12 @@ const autoConsent = new AutoConsentEngine({
     return {
       seat: node,
       breakerState: circuitBreaker.getState(),
-      gitConflicts: snap.gitRadar?.conflicts || null,
+      gitConflicts: snap.gitRadar
+        ? {
+            conflicts: snap.gitRadar.conflicts || [],
+            unmergedWorkspaces: snap.gitRadar.unmergedWorkspaces || []
+          }
+        : null,
       seatSessionEpoch: epoch
     };
   },

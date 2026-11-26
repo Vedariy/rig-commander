@@ -10,10 +10,12 @@ import {
   sanitizeAutoConsentConfig
 } from '../openrig/assets/domain/auto-consent-model.js';
 import {
+  AUTO_CONSENT_SWITCH_COOLDOWN_MS,
   buildDemoAutoConsentInitialState,
   createAutoConsentController,
   escapeHtml,
   getAutoConsentModalBadge,
+  getAutoConsentTopButtonState,
   readAutoConsentSettingsForm,
   renderAutoConsentDemoBarHtml,
   renderAutoConsentHudPillHtml,
@@ -181,7 +183,7 @@ for (const lang of ['en', 'ru']) {
     assert.doesNotMatch(html, /on(?:click|change|error)=/i);
 
     const badge = getAutoConsentModalBadge(active, td);
-    assert.equal(badge.text, 'ARMED • 12/30/h');
+    assert.equal(badge.text, lang === 'ru' ? 'БОЕВОЙ (ARMED) • 12/30/h' : 'ARMED • 12/30/h');
   });
 
   test(`Seat Inspector picker and HITL Allow + Trust Session 60m respect safety boundaries (${lang})`, () => {
@@ -717,5 +719,489 @@ test('P1 regression: live seat grants omit startedAt as seatSessionEpoch and Ins
   assert.ok(grantCall, 'Expected POST /api/auto-consent/session-grant');
   assert.equal(Object.prototype.hasOwnProperty.call(grantCall[1], 'seatSessionEpoch'), false, 'Must not send startedAt/sessionId as seatSessionEpoch');
   assert.match(inspectorRoot.innerHTML, /data-auto-consent-action="revoke-grant"/);
+  ctrl.destroy();
+});
+
+test('v3.8.1 UX: Top triage button badge, localized modal header badges, Inspector clickable status & CTAs, and Modal mode clarity + master-off warning (EN/RU)', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  const indexHtml = fs.readFileSync(path.join(rootDir, 'openrig/index.html'), 'utf8');
+
+  // 1. Direct top button right next to #btnGuardrails in openrig/index.html
+  assert.match(indexHtml, /id="btnGuardrails"[\s\S]{0,700}<\/button>\s*<button[^>]*id="btnAutoConsentTop"/);
+  assert.match(indexHtml, /id="btnAutoConsentTop"[^>]*onclick="openGuardrailsModal\('auto-consent'\)"/);
+  assert.match(indexHtml, /data-i18n="autoConsent\.topBtn"/);
+  assert.match(indexHtml, /id="btnAutoConsentStateBadge"/);
+
+  function makeClassList() {
+    const set = new Set();
+    return {
+      toggle(cls, force) {
+        if (force === undefined) {
+          if (set.has(cls)) set.delete(cls);
+          else set.add(cls);
+        } else if (force) {
+          set.add(cls);
+        } else {
+          set.delete(cls);
+        }
+      },
+      contains(cls) { return set.has(cls); }
+    };
+  }
+
+  for (const lang of ['en', 'ru']) {
+    const td = tdFor(lang);
+    const active = makeActiveState(NOW);
+
+    // 2. Top button state & modal badge localization across all 4+ states
+    const offState = { config: { ...DEFAULT_AUTO_CONSENT_CONFIG, enabled: false, mode: 'dry_run', masterPaused: false } };
+    const dryState = { ...active, config: { ...active.config, enabled: true, mode: 'dry_run', masterPaused: false } };
+    const armedState = { ...active, config: { ...active.config, enabled: true, mode: 'armed', masterPaused: false } };
+    const pausedState = { ...active, config: { ...active.config, masterPaused: true } };
+    const cappedState = { ...armedState, status: 'capped', stats: { ...armedState.stats, actionsLastHour: 30 } };
+
+    assert.equal(getAutoConsentTopButtonState(offState, { td }).text, lang === 'ru' ? 'ВЫКЛ' : 'OFF');
+    assert.equal(getAutoConsentTopButtonState(dryState, { td }).text, lang === 'ru' ? 'ТЕСТ' : 'DRY-RUN');
+    assert.equal(getAutoConsentTopButtonState(armedState, { td }).text, lang === 'ru' ? 'БОЕВОЙ' : 'ARMED');
+    assert.equal(getAutoConsentTopButtonState(pausedState, { td }).text, lang === 'ru' ? 'ПАУЗА' : 'PAUSED');
+
+    assert.equal(getAutoConsentModalBadge(offState, td).text, lang === 'ru' ? 'ВЫКЛ (БЕЗОПАСНО)' : 'DISABLED (SAFE)');
+    assert.equal(getAutoConsentModalBadge(dryState, td).text, lang === 'ru' ? 'ТЕСТ (DRY-RUN)' : 'DRY-RUN PREVIEW');
+    assert.equal(getAutoConsentModalBadge(armedState, td).text, lang === 'ru' ? 'БОЕВОЙ (ARMED) • 12/30/h' : 'ARMED • 12/30/h');
+    assert.equal(getAutoConsentModalBadge(cappedState, td).text, lang === 'ru' ? 'ЛИМИТ КВОТЫ • 30/30/h' : 'RATE-CAPPED • 30/30/h');
+    assert.equal(getAutoConsentModalBadge(pausedState, td).text, lang === 'ru' ? 'НА ПАУЗЕ' : 'PAUSED');
+
+    // 3. Inspector actionable chip + inline banners
+    const offWithProjectProfile = {
+      config: sanitizeAutoConsentConfig({
+        enabled: false,
+        mode: 'armed',
+        projects: { 'core-platform': { profile: 'trusted_dev' } }
+      }, DEFAULT_AUTO_CONSENT_CONFIG),
+      sessionGrants: []
+    };
+    const inspOffWithProfile = renderSeatAutoConsentPickerHtml({
+      seat: { id: 'dev-coder@core-platform' },
+      state: offWithProjectProfile,
+      td,
+      lang,
+      nowMs: NOW
+    });
+    assert.match(inspOffWithProfile, /<button type="button" class="ac-eff-chip ac-eff-chip-btn is-off" data-auto-consent-action="open-tab">/);
+    assert.ok(inspOffWithProfile.includes(escapeHtml(td('autoConsent.offEnableCta'))));
+    assert.match(inspOffWithProfile, /class="ac-inspector-cta is-warn" data-auto-consent-action="open-tab"/);
+    assert.ok(inspOffWithProfile.includes(escapeHtml(td('autoConsent.inspectorMasterOffBanner'))));
+    assert.doesNotMatch(inspOffWithProfile, /on(?:click|change|error)=/i);
+
+    // Master OFF with NO configured active profile -> shows Off -> Enable chip, NO warning banner
+    const inspOffUnconfigured = renderSeatAutoConsentPickerHtml({
+      seat: { id: 'dev-coder@unconfigured' },
+      state: offState,
+      td,
+      lang,
+      nowMs: NOW
+    });
+    assert.ok(inspOffUnconfigured.includes(escapeHtml(td('autoConsent.offEnableCta'))));
+    assert.doesNotMatch(inspOffUnconfigured, /ac-inspector-cta/);
+
+    // Dry-run with active effective policy -> shows dry-run inline CTA banner
+    const inspDryActive = renderSeatAutoConsentPickerHtml({
+      seat: { id: 'dev-coder@core-platform' },
+      state: dryState,
+      td,
+      lang,
+      nowMs: NOW
+    });
+    assert.match(inspDryActive, /class="ac-inspector-cta is-dry" data-auto-consent-action="open-tab"/);
+    assert.ok(inspDryActive.includes(escapeHtml(td('autoConsent.inspectorDryRunBanner'))));
+
+    // Armed & active -> no inline warning/dry-run banner
+    const inspArmedActive = renderSeatAutoConsentPickerHtml({
+      seat: { id: 'dev-coder@core-platform' },
+      state: armedState,
+      td,
+      lang,
+      nowMs: NOW
+    });
+    assert.doesNotMatch(inspArmedActive, /ac-inspector-cta/);
+
+    // 4. Guardrails Auto-Consent tab: mode label, RU option copy, tone classes, master-off configured scopes warning
+    const tabOffConfigured = renderAutoConsentTabHtml({
+      state: offWithProjectProfile,
+      rigs: ['core-platform'],
+      agents: [{ id: 'dev-coder@core-platform', shortName: 'dev-coder' }],
+      td,
+      deckLang: lang,
+      nowMs: NOW
+    });
+    assert.match(tabOffConfigured, /<label for="acModeSelect" class="ac-mode-label">/);
+    assert.ok(tabOffConfigured.includes(escapeHtml(td('autoConsent.modeLabel'))));
+    assert.match(tabOffConfigured, /id="acModeSelect" class="rig-select ac-mode-select is-armed"/);
+    assert.match(tabOffConfigured, /class="ac-master-off-warn" role="alert"/);
+    assert.ok(tabOffConfigured.includes(escapeHtml(td('autoConsent.masterOffConfiguredWarn', { n: 1 }))));
+    if (lang === 'ru') {
+      assert.ok(tabOffConfigured.includes('🧪 Тестовый (Dry-Run · 0 записей)'));
+      assert.ok(tabOffConfigured.includes('⚡ Боевой (Armed · Allow Once после паузы)'));
+    }
+
+    const tabDry = renderAutoConsentTabHtml({
+      state: dryState,
+      rigs: ['core-platform'],
+      agents: [{ id: 'dev-coder@core-platform', shortName: 'dev-coder' }],
+      td,
+      deckLang: lang,
+      nowMs: NOW
+    });
+    assert.match(tabDry, /id="acModeSelect" class="rig-select ac-mode-select is-dry"/);
+    assert.doesNotMatch(tabDry, /ac-master-off-warn/);
+
+    // 5. Live controller updates topBtn / topBadge automatically on state change & preview-mode-tone toggles without network calls
+    const topBtn = { classList: makeClassList() };
+    const topBadge = { textContent: '', classList: makeClassList() };
+    const inspectorRoot = makeSurface();
+    const guardrailsBodyRoot = makeSurface();
+    let openedTabCount = 0;
+    const ctrl = createAutoConsentController({
+      topBtn,
+      topBadge,
+      inspectorRoot,
+      guardrailsBodyRoot,
+      td,
+      lang: () => lang,
+      isLive: () => false,
+      demo: true,
+      getSelectedSeat: () => ({ id: 'dev-coder@core-platform' }),
+      onOpenTab: () => { openedTabCount += 1; },
+      postJson: () => assert.fail('preview-mode-tone must not issue POST'),
+      now: () => NOW
+    });
+
+    assert.equal(topBadge.textContent, lang === 'ru' ? 'ВЫКЛ' : 'OFF');
+    assert.equal(topBadge.classList.contains('is-off'), true);
+    assert.equal(topBtn.classList.contains('ac-top-is-off'), true);
+
+    ctrl.setState(dryState);
+    assert.equal(topBadge.textContent, lang === 'ru' ? 'ТЕСТ' : 'DRY-RUN');
+    assert.equal(topBadge.classList.contains('is-dry'), true);
+    assert.equal(topBtn.classList.contains('ac-top-is-dry'), true);
+
+    ctrl.setState(armedState);
+    assert.equal(topBadge.textContent, lang === 'ru' ? 'БОЕВОЙ' : 'ARMED');
+    assert.equal(topBadge.classList.contains('is-armed'), true);
+    assert.equal(topBtn.classList.contains('ac-top-is-armed'), true);
+
+    ctrl.setState(pausedState);
+    assert.equal(topBadge.textContent, lang === 'ru' ? 'ПАУЗА' : 'PAUSED');
+    assert.equal(topBadge.classList.contains('is-paused'), true);
+    assert.equal(topBtn.classList.contains('ac-top-is-paused'), true);
+
+    // Clicking open-tab on inspector chip/CTA invokes onOpenTab
+    await inspectorRoot.click('open-tab');
+    assert.equal(openedTabCount, 1);
+
+    ctrl.destroy();
+  }
+});
+
+test('v3.8.1 #39: Tactile role="switch" pill toggles, immediate apply, 2.5s cooldown lock + countdown + timer cleanup, and instant PAUSE bypass (EN/RU)', async () => {
+  assert.equal(AUTO_CONSENT_SWITCH_COOLDOWN_MS, 2500);
+
+  for (const lang of ['en', 'ru']) {
+    const td = tdFor(lang);
+    const html = renderAutoConsentTabHtml({
+      state: makeActiveState(NOW),
+      rigs: ['kernel', 'rig-commander'],
+      agents: [{ id: 'dev-coder@rig-commander', shortName: 'dev-coder' }],
+      td,
+      deckLang: lang,
+      nowMs: NOW
+    });
+
+    // 1. All 4 functional checkboxes render as role="switch" tactile pill toggles with exact preserved IDs
+    for (const id of ['acMasterEnable', 'acPauseCtxCheck', 'acAllowPkgCheck', 'acAllowNetCheck']) {
+      assert.match(html, new RegExp(`<input type="checkbox" role="switch" id="${id}" class="ac-switch-input" data-auto-consent-action="toggle-switch" data-switch-id="${id}"`));
+    }
+    assert.match(html, /class="ac-switch-track"/);
+    assert.match(html, /class="ac-switch-thumb"/);
+    assert.match(html, /class="ac-switch-state"/);
+    assert.ok(html.includes(lang === 'ru' ? 'ВКЛ' : 'ON'));
+    assert.ok(html.includes(lang === 'ru' ? 'ВЫКЛ' : 'OFF'));
+    assert.match(html, /id="acModeSelect"[^>]*data-auto-consent-action="change-mode"/);
+    assert.doesNotMatch(html, /on(?:click|change|error)=/i);
+
+    // 2. Cooldown state disables ONLY the cooling switch and renders live countdown chip, NEVER disables PAUSE
+    const coolingHtml = renderAutoConsentTabHtml({
+      state: makeActiveState(NOW),
+      rigs: ['rig-commander'],
+      td,
+      deckLang: lang,
+      nowMs: NOW,
+      controlCooldowns: { acMasterEnable: 2300, acModeSelect: 1400 }
+    });
+    assert.match(coolingHtml, /id="acMasterEnable"[^>]*disabled/);
+    assert.match(coolingHtml, /id="acModeSelect"[^>]*disabled/);
+    assert.doesNotMatch(coolingHtml, /id="acAllowPkgCheck"[^>]*disabled/);
+    assert.ok(coolingHtml.includes(lang === 'ru' ? '⏳ 3с' : '⏳ 3s'));
+    assert.ok(coolingHtml.includes(lang === 'ru' ? '⏳ 2с' : '⏳ 2s'));
+    assert.doesNotMatch(coolingHtml, /data-auto-consent-action="pause-all"[^>]*disabled/);
+  }
+
+  // 3. Live controller: immediate apply on switch toggle & mode change, 2.5s cooldown lock + release, zero leaked timers, instant PAUSE bypass
+  const hudRoot = makeSurface();
+  const calls = [];
+  const intervals = new Map();
+  let nextIntervalId = 1;
+  let clock = NOW;
+  let rerenderCount = 0;
+
+  let serverState = {
+    status: 'disabled',
+    config: sanitizeAutoConsentConfig({ enabled: false, mode: 'dry_run', masterPaused: false }, DEFAULT_AUTO_CONSENT_CONFIG),
+    sessionGrants: [],
+    pendingApprovals: [],
+    recentRuns: [],
+    stats: { approvedCount: 0, escalatedCount: 0, canceledCount: 0, actionsLastHour: 0 }
+  };
+
+  // Wire a change-capable surface that forwards full element props
+  const richBody = (() => {
+    let changeFn = null;
+    let clickFn = null;
+    return {
+      addEventListener(type, fn) {
+        if (type === 'change') changeFn = fn;
+        if (type === 'click') clickFn = fn;
+      },
+      removeEventListener(type) {
+        if (type === 'change') changeFn = null;
+        if (type === 'click') clickFn = null;
+      },
+      hasListener(type) {
+        return type === 'change' ? Boolean(changeFn) : Boolean(clickFn);
+      },
+      async triggerChange(el) {
+        return changeFn?.({ target: { closest: () => el } });
+      },
+      async triggerClick(el) {
+        return clickFn?.({ target: { closest: () => el } });
+      }
+    };
+  })();
+
+  const ctrl2 = createAutoConsentController({
+    hudRoot,
+    guardrailsBodyRoot: richBody,
+    td: tdFor('en'),
+    lang: () => 'en',
+    isLive: () => true,
+    demo: false,
+    onGuardrailsRerender: () => { rerenderCount += 1; },
+    postJson: async (endpoint, body) => {
+      calls.push([endpoint, body]);
+      if (endpoint === '/api/auto-consent/policy') {
+        serverState = {
+          ...serverState,
+          config: sanitizeAutoConsentConfig(body.patch || body, serverState.config)
+        };
+      } else if (endpoint === '/api/auto-consent/pause-all') {
+        serverState = {
+          ...serverState,
+          config: sanitizeAutoConsentConfig({ masterPaused: Boolean(body.paused) }, serverState.config)
+        };
+      }
+      return { ok: true, state: serverState };
+    },
+    now: () => clock,
+    setIntervalFn: (fn) => { const id = nextIntervalId++; intervals.set(id, fn); return id; },
+    clearIntervalFn: (id) => { intervals.delete(id); }
+  });
+
+  // A. Toggling #acMasterEnable applies IMMEDIATELY via POST /api/auto-consent/policy and starts 2.5s cooldown ticker
+  await richBody.triggerChange({
+    id: 'acMasterEnable',
+    checked: true,
+    disabled: false,
+    dataset: { autoConsentAction: 'toggle-switch', switchId: 'acMasterEnable' }
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], '/api/auto-consent/policy');
+  assert.equal(calls[0][1].enabled, true);
+  assert.equal(intervals.size, 1, 'cooldown ticker must run while cooling');
+  assert.match(ctrl2.renderTabHtml(), /id="acMasterEnable"[^>]*disabled/);
+  assert.match(ctrl2.renderTabHtml(), /⏳ 3s/);
+
+  // B. Repeated toggle within 2.5s cooldown is blocked (0 extra POST calls!)
+  clock += 1000;
+  await richBody.triggerChange({
+    id: 'acMasterEnable',
+    checked: false,
+    disabled: false,
+    dataset: { autoConsentAction: 'toggle-switch', switchId: 'acMasterEnable' }
+  });
+  assert.equal(calls.length, 1, 'switch toggle during 2.5s cooldown must be blocked');
+  assert.match(ctrl2.renderTabHtml(), /⏳ 2s/);
+
+  // C. CRITICAL SAFETY INVARIANT: Emergency PAUSE bypasses cooldown immediately!
+  await richBody.triggerClick({
+    disabled: false,
+    dataset: { autoConsentAction: 'pause-all' }
+  });
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1], ['/api/auto-consent/pause-all', { paused: true }]);
+  assert.equal(ctrl2.getState().config.masterPaused, true);
+
+  // D. Switching #acModeSelect applies immediately and gets its own 2.5s cooldown
+  await richBody.triggerChange({
+    id: 'acModeSelect',
+    value: 'armed',
+    disabled: false,
+    dataset: { autoConsentAction: 'change-mode' }
+  });
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2][0], '/api/auto-consent/policy');
+  assert.equal(calls[2][1].mode, 'armed');
+
+  // E. After 2.5s elapses and ticker ticks -> cooldown releases & interval stops (0% idle CPU!)
+  const prevRerenders = rerenderCount;
+  clock += 2500;
+  for (const fn of [...intervals.values()]) fn();
+  assert.equal(intervals.size, 0, 'cooldown ticker MUST stop completely once cooldown expires');
+  assert.ok(rerenderCount > prevRerenders);
+  assert.doesNotMatch(ctrl2.renderTabHtml(), /id="acMasterEnable"[^>]*disabled/);
+  assert.doesNotMatch(ctrl2.renderTabHtml(), /⏳/);
+
+  // F. Now #acMasterEnable can be toggled again cleanly
+  await richBody.triggerChange({
+    id: 'acMasterEnable',
+    checked: false,
+    disabled: false,
+    dataset: { autoConsentAction: 'toggle-switch', switchId: 'acMasterEnable' }
+  });
+  assert.equal(calls.length, 4);
+  assert.equal(calls[3][1].enabled, false);
+  assert.equal(intervals.size, 1);
+
+  // G. destroy() clears active cooldown timer cleanly (zero leaked timers!)
+  ctrl2.destroy();
+  assert.equal(intervals.size, 0, 'destroy() must clear active cooldown interval');
+  assert.equal(richBody.hasListener('change'), false);
+});
+
+test('v3.8.1 #42 P2/P3 regression: DOM cooldown ticks patch only cooling control in-place without modal innerHTML wipes, and master-OFF copy reflects immediate switch apply', async () => {
+  // P3: master-OFF banner copy must reflect immediate toggle switch apply (no stale Save Policy instruction)
+  const enWarn = tDeck('en', 'autoConsent.masterOffConfiguredWarn', { n: 2 });
+  const ruWarn = tDeck('ru', 'autoConsent.masterOffConfiguredWarn', { n: 2 });
+  assert.doesNotMatch(enWarn, /Save Policy/i);
+  assert.match(enWarn, /immediately/i);
+  assert.doesNotMatch(ruWarn, /Сохранить политику/i);
+  assert.match(ruWarn, /применяется сразу/i);
+
+  // P2: DOM-capable guardrailsBodyRoot patches cooldown chip & disabled state in-place with ZERO onGuardrailsRerender calls during ticks
+  function makeClassList(initial = []) {
+    const set = new Set(initial);
+    return {
+      add(c) { set.add(c); },
+      remove(c) { set.delete(c); },
+      toggle(c, force) {
+        if (force === undefined) {
+          if (set.has(c)) set.delete(c);
+          else set.add(c);
+        } else if (force) set.add(c);
+        else set.delete(c);
+      },
+      contains(c) { return set.has(c); }
+    };
+  }
+
+  let clock = NOW;
+  const intervals = new Map();
+  let nextIntervalId = 1;
+  let rerenderCount = 0;
+
+  let chipRemoved = false;
+  const chipEl = {
+    textContent: '⏳ 3s',
+    remove() { chipRemoved = true; }
+  };
+  const switchLabel = {
+    classList: makeClassList(['ac-switch', 'is-master', 'is-on', 'is-disabled', 'is-cooling'])
+  };
+  const masterInput = {
+    id: 'acMasterEnable',
+    checked: true,
+    disabled: true,
+    classList: makeClassList(['ac-switch-input']),
+    dataset: { autoConsentAction: 'toggle-switch', switchId: 'acMasterEnable' },
+    closest(sel) { return sel === '.ac-switch' ? switchLabel : null; }
+  };
+  const ctxInput = {
+    id: 'acCtxThresholdInput',
+    value: '88'
+  };
+
+  let changeFn = null;
+  const domBody = {
+    addEventListener(type, fn) { if (type === 'change') changeFn = fn; },
+    removeEventListener(type) { if (type === 'change') changeFn = null; },
+    querySelector(sel) {
+      if (sel === '#acMasterEnable') return masterInput;
+      if (sel === '.ac-cooldown-chip[data-cooldown-for="acMasterEnable"]') return chipRemoved ? null : chipEl;
+      if (sel === '#acModeSelect') return { value: 'dry_run' };
+      if (sel === '#acGraceWindowSelect') return { value: '3000' };
+      if (sel === '#acPauseCtxCheck') return { checked: true };
+      if (sel === '#acCtxThresholdInput') return ctxInput;
+      if (sel === '#acAllowPkgCheck') return { checked: false };
+      if (sel === '#acAllowNetCheck') return { checked: false };
+      return null;
+    }
+  };
+
+  const ctrl = createAutoConsentController({
+    guardrailsBodyRoot: domBody,
+    td: tdFor('en'),
+    lang: () => 'en',
+    isLive: () => false,
+    demo: true,
+    onGuardrailsRerender: () => { rerenderCount += 1; },
+    now: () => clock,
+    setIntervalFn: (fn) => { const id = nextIntervalId++; intervals.set(id, fn); return id; },
+    clearIntervalFn: (id) => { intervals.delete(id); }
+  });
+
+  // Initial toggle applies immediately (one renderAll from applyDemoPolicyPatch), then starts 2.5s cooldown ticker
+  await changeFn({ target: { closest: () => ({ ...masterInput, disabled: false }) } });
+  assert.equal(intervals.size, 1);
+  const rerendersAfterApply = rerenderCount;
+
+  // Tick at +250ms, +1000ms, +1800ms -> updates chip text in-place with ZERO modal innerHTML rerenders!
+  clock += 250;
+  for (const fn of [...intervals.values()]) fn();
+  assert.equal(rerenderCount, rerendersAfterApply, '250ms cooldown tick must NOT trigger full modal rerender');
+  assert.equal(chipEl.textContent, '⏳ 3s');
+  assert.equal(ctxInput.value, '88', 'sibling input must remain untouched');
+
+  clock += 750; // +1000ms total -> 1500ms left -> 2s
+  for (const fn of [...intervals.values()]) fn();
+  assert.equal(rerenderCount, rerendersAfterApply, '1000ms cooldown tick must NOT trigger full modal rerender');
+  assert.equal(chipEl.textContent, '⏳ 2s');
+
+  clock += 800; // +1800ms total -> 700ms left -> 1s
+  for (const fn of [...intervals.values()]) fn();
+  assert.equal(rerenderCount, rerendersAfterApply, '1800ms cooldown tick must NOT trigger full modal rerender');
+  assert.equal(chipEl.textContent, '⏳ 1s');
+
+  // Expiry at +2500ms -> removes chip, re-enables switch, clears classes, stops interval, still ZERO modal rerenders!
+  clock += 700;
+  for (const fn of [...intervals.values()]) fn();
+  assert.equal(rerenderCount, rerendersAfterApply, 'cooldown expiry must patch DOM in-place without full modal rerender');
+  assert.equal(chipRemoved, true, 'expired cooldown chip must be removed in-place');
+  assert.equal(masterInput.disabled, false, 'switch must be re-enabled in-place on cooldown expiry');
+  assert.equal(switchLabel.classList.contains('is-cooling'), false);
+  assert.equal(switchLabel.classList.contains('is-disabled'), false);
+  assert.equal(intervals.size, 0, 'cooldown interval must stop completely on expiry');
+
   ctrl.destroy();
 });

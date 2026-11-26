@@ -274,6 +274,103 @@ export function isSafeReadOnlyCommand(cmd = '') {
 const TRUSTED_DEV_NPM_SCRIPT_RE = /^(?:npm|pnpm|yarn)\s+run\s+([a-zA-Z0-9:._-]+)(?:\s+--)?/;
 const FORBIDDEN_NPM_SCRIPT_NAME_RE = /(?:publish|deploy|release|prod|production|destroy|drop|nuke|wipe|reset-db)/i;
 
+const SAFE_LOG_PATH_RE = /^(?:\/)?[a-zA-Z0-9._/-]+\.(?:log|txt|out)$/i;
+const SENSITIVE_ROOT_PATH_RE = /^\/?(?:etc|usr|bin|sbin|System|var|dev|proc|sys|private\/(?:etc|var))(?:\/|$)/i;
+const SENSITIVE_ANY_DEPTH_SEGMENT_RE = /(?:^|\/)(?:\.ssh|\.git|\.gnupg|\.aws|\.kube)(?:\/|$)/i;
+const SENSITIVE_ENV_PATH_RE = /(?:^|\/)\.env(?:\.|\/|$)/i;
+
+const TRAILING_REDIRECT_THEN_STDERR_RE = /^([\s\S]+?)\s+(?:>>|[12]?>)\s*(\S+)\s+2>&1$/;
+const TRAILING_STDERR_THEN_REDIRECT_RE = /^([\s\S]+?)\s+2>&1\s+(?:>>|[12]?>)\s*(\S+)$/;
+const TRAILING_REDIRECT_ONLY_RE = /^([\s\S]+?)\s+(?:>>|[12]?>)\s*(\S+)$/;
+const TRAILING_STDERR_ONLY_RE = /^([\s\S]+?)\s+2>&1$/;
+
+const SAFE_TEST_CHECK_BUILD_COMMAND_RE = new RegExp(
+  `^(?:` +
+  `(?:npm|pnpm|yarn)\\s+run\\s+[a-zA-Z0-9:._-]+${SAFE_ARGS_OPT}|` +
+  `npx\\s+(?:vitest|playwright|tsc|eslint|prettier|jest|mocha|biome|stylelint|svelte-check|vite)${SAFE_ARGS_OPT}|` +
+  `node\\s+(?:--test|--check|[a-zA-Z0-9._/-]+\\.test\\.m?js)${SAFE_ARGS_OPT}|` +
+  `(?:cargo\\s+(?:check|build|clippy|test)|go\\s+(?:build|vet|test)|ruff\\s+check|mypy|flake8|eslint|tsc|make\\s+(?:test|build|lint|check))${SAFE_ARGS_OPT}` +
+  `)$`
+);
+
+/**
+ * Validates that a trailing redirection target is strictly a safe log/txt/out file path.
+ * Rejects path traversal (.. / .), dotfile basenames, OS system roots, and sensitive hidden dirs.
+ */
+export function isSafeLogPath(filePath = '') {
+  const p = String(filePath || '').trim();
+  if (!p || p.length > 512) return false;
+  if (!SAFE_LOG_PATH_RE.test(p)) return false;
+  const trimmed = p.startsWith('/') ? p.slice(1) : p;
+  const segments = trimmed.split('/');
+  if (segments.length === 0 || segments.some((seg) => !seg || seg === '.' || seg === '..')) {
+    return false;
+  }
+  const basename = segments[segments.length - 1];
+  if (basename.startsWith('.')) return false;
+  if (SENSITIVE_ROOT_PATH_RE.test(p)) return false;
+  if (SENSITIVE_ANY_DEPTH_SEGMENT_RE.test(p)) return false;
+  if (SENSITIVE_ENV_PATH_RE.test(p)) return false;
+  return true;
+}
+
+function stripSafeTrailingLogRedirect(segment) {
+  const s = normalizeCommandText(segment);
+  if (!s) return { hasRedirect: false, valid: false, base: '', logPath: null };
+
+  let m = s.match(TRAILING_REDIRECT_THEN_STDERR_RE);
+  if (m) {
+    const base = m[1].trim();
+    const logPath = m[2].trim();
+    return { hasRedirect: true, valid: isSafeLogPath(logPath), base, logPath };
+  }
+  m = s.match(TRAILING_STDERR_THEN_REDIRECT_RE);
+  if (m) {
+    const base = m[1].trim();
+    const logPath = m[2].trim();
+    return { hasRedirect: true, valid: isSafeLogPath(logPath), base, logPath };
+  }
+  m = s.match(TRAILING_STDERR_ONLY_RE);
+  if (m) {
+    const base = m[1].trim();
+    return { hasRedirect: true, valid: true, base, logPath: null };
+  }
+  m = s.match(TRAILING_REDIRECT_ONLY_RE);
+  if (m) {
+    const base = m[1].trim();
+    const logPath = m[2].trim();
+    return { hasRedirect: true, valid: isSafeLogPath(logPath), base, logPath };
+  }
+  return { hasRedirect: false, valid: true, base: s, logPath: null };
+}
+
+function isSafeReadOnlyOrTestCommand(cmd = '') {
+  const s = normalizeCommandText(cmd);
+  if (!s) return false;
+  if (SHELL_METACHAR_RE.test(s)) return false;
+  if (hasForbiddenExecFlag(s)) return false;
+  if (classifyDestructiveVetoes(s).length > 0) return false;
+  if (classifyExternalNetwork(s)) return false;
+  if (classifyPackageInstall(s)) return false;
+  if (isSafeReadOnlyCommand(s)) return true;
+  const npmRunMatch = s.match(TRUSTED_DEV_NPM_SCRIPT_RE);
+  if (npmRunMatch && FORBIDDEN_NPM_SCRIPT_NAME_RE.test(npmRunMatch[1])) return false;
+  return SAFE_TEST_CHECK_BUILD_COMMAND_RE.test(s);
+}
+
+/**
+ * Checks whether a single (unchained) command is a recognized read-only/test/lint/typecheck/build
+ * command with optional single trailing log redirection to a validated safe log path.
+ */
+export function isSafeReadOnlyOrTestWithOptionalLogRedirect(cmd = '') {
+  const s = normalizeCommandText(cmd);
+  if (!s) return false;
+  if (classifyDestructiveVetoes(s).length > 0) return false;
+  const redir = stripSafeTrailingLogRedirect(s);
+  if (redir.hasRedirect && !redir.valid) return false;
+  return isSafeReadOnlyOrTestCommand(redir.base);
+}
+
 const TRUSTED_DEV_SINGLE_COMMAND_RE = new RegExp(
   `^(?:` +
   `(?:npm|pnpm|yarn)\\s+run\\s+[a-zA-Z0-9:._-]+${SAFE_ARGS_OPT}|` +
@@ -402,25 +499,100 @@ function isBreakerTrippedForSeat(breakerState, seatId) {
   });
 }
 
-function hasWorktreeConflictForSeat(gitConflicts, seat, seatId) {
+const OVERLAY_INSTRUCTION_BASENAME_RE = /^(?:AGENTS|CLAUDE)\.md$/i;
+
+function isOverlayInstructionFile(filePath = '') {
+  const clean = String(filePath || '').trim().replace(/\\/g, '/');
+  if (!clean) return false;
+  const base = clean.split('/').pop() || '';
+  return OVERLAY_INSTRUCTION_BASENAME_RE.test(base);
+}
+
+function entryMatchesSeat(entry, seatId) {
+  if (!entry || typeof entry !== 'object') return false;
+  if (Array.isArray(entry.seatIds)) {
+    return !seatId || entry.seatIds.includes(seatId);
+  }
+  if (Array.isArray(entry.seats)) {
+    return !seatId || entry.seats.includes(seatId);
+  }
+  if (typeof entry.seatId === 'string' && entry.seatId.trim()) {
+    return !seatId || entry.seatId.trim() === seatId;
+  }
+  return true;
+}
+
+export function hasWorktreeConflictForSeat(gitConflicts, seat, seatId, { isReadOnlyOrTestCmd = false } = {}) {
+  const effectiveSeatId = String(seatId || getSeatIdFromObj(seat) || '').trim();
+  // Hard unmerged git index conflicts ALWAYS escalate, even for read-only/test commands
   if (seat && (seat.gitConflict === true || seat.hasWorktreeConflict === true)) return true;
   if (!gitConflicts) return false;
   if (gitConflicts === true) return true;
+
+  const unmergedWorkspaces = !Array.isArray(gitConflicts) && Array.isArray(gitConflicts.unmergedWorkspaces)
+    ? gitConflicts.unmergedWorkspaces
+    : [];
+  for (const u of unmergedWorkspaces) {
+    if (!u) continue;
+    if (typeof u === 'string') {
+      if (u.trim()) return true;
+      continue;
+    }
+    if (entryMatchesSeat(u, effectiveSeatId)) return true;
+  }
+
   const list = Array.isArray(gitConflicts)
     ? gitConflicts
     : (Array.isArray(gitConflicts.conflicts) ? gitConflicts.conflicts : []);
   if (list.length === 0) return false;
-  return list.some((c) => {
-    if (!c) return false;
-    if (typeof c === 'string') return c.trim().length > 0;
-    if (Array.isArray(c.seats) && c.seats.length > 0) {
-      return !seatId || c.seats.includes(seatId);
+
+  for (const c of list) {
+    if (!c) continue;
+    if (typeof c === 'string') {
+      const trimmed = c.trim();
+      if (!trimmed) continue;
+      if (isOverlayInstructionFile(trimmed)) continue;
+      if (!isReadOnlyOrTestCmd) return true;
+      continue;
     }
-    if (typeof c.seatId === 'string' && c.seatId.trim()) {
-      return !seatId || c.seatId === seatId;
+    if (typeof c !== 'object') continue;
+
+    let matchesSeat = false;
+    let isHardUnmerged = c.unmerged === true;
+
+    if (Array.isArray(c.workspaces)) {
+      for (const ws of c.workspaces) {
+        if (!ws || typeof ws !== 'object') continue;
+        const wsMatches = Array.isArray(ws.seatIds)
+          ? (!effectiveSeatId || ws.seatIds.includes(effectiveSeatId))
+          : entryMatchesSeat(ws, effectiveSeatId);
+        if (wsMatches) {
+          matchesSeat = true;
+          if (ws.unmerged === true) isHardUnmerged = true;
+        }
+      }
+      if (!matchesSeat) continue;
+    } else if (Array.isArray(c.seats)) {
+      matchesSeat = !effectiveSeatId || c.seats.includes(effectiveSeatId);
+      if (!matchesSeat) continue;
+    } else if (typeof c.seatId === 'string' && c.seatId.trim()) {
+      matchesSeat = !effectiveSeatId || c.seatId.trim() === effectiveSeatId;
+      if (!matchesSeat) continue;
+    } else {
+      matchesSeat = true;
     }
+
+    if (isHardUnmerged) return true;
+
+    const filePath = c.filePath || c.file || c.path || '';
+    if (isOverlayInstructionFile(filePath)) continue;
+
+    if (isReadOnlyOrTestCmd) continue;
+
     return true;
-  });
+  }
+
+  return false;
 }
 
 /**
@@ -1224,7 +1396,62 @@ function isReadOnlyNetworkCommand(segment) {
 
 function matchesTrustedDevSegment(segment, effectiveFlags) {
   const s = normalizeCommandText(segment);
-  if (!s || SHELL_METACHAR_RE.test(s)) {
+  if (!s) {
+    return { ok: false, vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED, reason: 'Command contains disallowed shell operators' };
+  }
+
+  // Optional trailing log-file redirection is permitted ONLY on recognized read-only/test/lint/typecheck/build commands
+  if (SHELL_METACHAR_RE.test(s)) {
+    const redir = stripSafeTrailingLogRedirect(s);
+    if (redir.hasRedirect) {
+      if (!redir.valid) {
+        return {
+          ok: false,
+          vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED,
+          reason: 'Log redirection target path is disallowed (must be a safe .log/.txt/.out file)'
+        };
+      }
+      if (SHELL_METACHAR_RE.test(redir.base)) {
+        return {
+          ok: false,
+          vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED,
+          reason: 'Command contains disallowed shell operators'
+        };
+      }
+      if (hasForbiddenExecFlag(redir.base)) {
+        return {
+          ok: false,
+          vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED,
+          reason: 'Command contains disallowed code-execution or hook flag'
+        };
+      }
+      if (classifyExternalNetwork(redir.base)) {
+        return {
+          ok: false,
+          vetoCode: AUTO_CONSENT_VETO_CODES.NETWORK_POLICY,
+          reason: 'Log redirection is not permitted on external network commands'
+        };
+      }
+      if (classifyPackageInstall(redir.base)) {
+        return {
+          ok: false,
+          vetoCode: AUTO_CONSENT_VETO_CODES.PACKAGE_INSTALL_POLICY,
+          reason: 'Log redirection is not permitted on package installation commands'
+        };
+      }
+      if (isSafeReadOnlyOrTestCommand(redir.base)) {
+        return {
+          ok: true,
+          vetoCode: null,
+          reason: 'Matches trusted_dev test/check command with safe log redirection'
+        };
+      }
+      return {
+        ok: false,
+        vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED,
+        reason: 'Log redirection is only permitted on recognized read-only/test/lint/typecheck/build commands'
+      };
+    }
     return { ok: false, vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED, reason: 'Command contains disallowed shell operators' };
   }
 
@@ -1471,7 +1698,12 @@ export function evaluateAutoConsentPrompt({
   if (isBreakerTrippedForSeat(breakerState, seatId)) {
     return escalate(AUTO_CONSENT_VETO_CODES.BREAKER_TRIPPED, 'Budget/loop circuit-breaker is tripped');
   }
-  if (hasWorktreeConflictForSeat(gitConflicts, seat, seatId)) {
+  const isReadOnlyOrTestCmd = Boolean(
+    !promptCtx.isWorkspaceEditPrompt &&
+    promptCtx.normalizedCommand &&
+    isSafeReadOnlyOrTestWithOptionalLogRedirect(promptCtx.normalizedCommand)
+  );
+  if (hasWorktreeConflictForSeat(gitConflicts, seat, seatId, { isReadOnlyOrTestCmd })) {
     return escalate(AUTO_CONSENT_VETO_CODES.WORKTREE_CONFLICT, 'Active git worktree file overlap/conflict');
   }
   const ctxPct = getCtxPctFromSeat(seat);

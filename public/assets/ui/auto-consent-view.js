@@ -18,6 +18,8 @@ import {
   summarizeActiveAutoConsentScopes
 } from '../domain/auto-consent-model.js';
 
+export const AUTO_CONSENT_SWITCH_COOLDOWN_MS = 2500;
+
 const array = (value) => (Array.isArray(value) ? value : []);
 
 export function escapeHtml(value) {
@@ -184,23 +186,38 @@ function getActiveSessionGrants(sessionGrants, nowMs) {
   return out;
 }
 
+export function getAutoConsentTopButtonState(rawState, { td } = {}) {
+  const state = normalizeAutoConsentState(rawState);
+  const cfg = state.config;
+  if (cfg.masterPaused) {
+    return { stateKey: 'paused', toneClass: 'is-paused', text: td ? td('autoConsent.topStatePaused') : 'PAUSED' };
+  }
+  if (!cfg.enabled) {
+    return { stateKey: 'off', toneClass: 'is-off', text: td ? td('autoConsent.topStateOff') : 'OFF' };
+  }
+  if (cfg.mode === AUTO_CONSENT_MODES.ARMED) {
+    return { stateKey: 'armed', toneClass: 'is-armed', text: td ? td('autoConsent.topStateArmed') : 'ARMED' };
+  }
+  return { stateKey: 'dry_run', toneClass: 'is-dry', text: td ? td('autoConsent.topStateDryRun') : 'DRY-RUN' };
+}
+
 export function getAutoConsentModalBadge(rawState, td) {
   const state = normalizeAutoConsentState(rawState);
   const cfg = state.config;
   const quota = `${state.stats.actionsLastHour}/${cfg.maxActionsPerHour}/h`;
   if (cfg.masterPaused) {
-    return { text: td('autoConsent.hudPaused'), borderColor: '#ff0055', color: '#fda4af' };
+    return { text: td('autoConsent.modalBadgePaused'), borderColor: '#ff0055', color: '#fda4af' };
   }
   if (!cfg.enabled) {
-    return { text: 'DISABLED (SAFE)', borderColor: '#38bdf8', color: '#7dd3fc' };
+    return { text: td('autoConsent.modalBadgeDisabled'), borderColor: '#38bdf8', color: '#7dd3fc' };
   }
   if (state.status === 'capped') {
-    return { text: `RATE-CAPPED • ${quota}`, borderColor: '#ff0055', color: '#fda4af' };
+    return { text: td('autoConsent.modalBadgeCapped', { quota }), borderColor: '#ff0055', color: '#fda4af' };
   }
   if (cfg.mode === AUTO_CONSENT_MODES.ARMED) {
-    return { text: `ARMED • ${quota}`, borderColor: '#00ff9d', color: '#6ee7b7' };
+    return { text: td('autoConsent.modalBadgeArmed', { quota }), borderColor: '#00ff9d', color: '#6ee7b7' };
   }
-  return { text: 'DRY-RUN PREVIEW', borderColor: '#38bdf8', color: '#7dd3fc' };
+  return { text: td('autoConsent.modalBadgeDryRun'), borderColor: '#fbbf24', color: '#fde68a' };
 }
 
 /**
@@ -248,7 +265,7 @@ export function renderAutoConsentHudPillHtml(rawState, { td, lang = 'en', nowMs 
   const toneClass = isDryRun ? 'is-dry-run' : 'is-armed';
   return `<div class="ac-hud-pill ${toneClass}" role="status" aria-live="polite">` +
     `<button type="button" class="ac-hud-status-btn" data-auto-consent-action="open-tab">${escapeHtml(statusLabel)}</button>` +
-    `<button type="button" class="ac-hud-ctrl-btn is-pause" data-auto-consent-action="pause-all"${disabledAttr}>${escapeHtml(td('autoConsent.pauseAllBtn'))}</button>` +
+    `<button type="button" class="ac-hud-ctrl-btn is-pause" data-auto-consent-action="pause-all">${escapeHtml(td('autoConsent.pauseAllBtn'))}</button>` +
     `</div>`;
 }
 
@@ -355,11 +372,12 @@ export function renderAutoConsentTabHtml({
   nowMs = Date.now(),
   statusMessage = '',
   demoTrack = false,
-  busy = false
+  busy = false,
+  controlCooldowns = null
 } = {}) {
   const en = deckLang === 'en';
   const state = normalizeAutoConsentState(rawState, nowMs);
-  const { config: cfg, sessionGrants, recentRuns, stats } = state;
+  const { config: cfg, sessionGrants, recentRuns, stats, activeSummary } = state;
   const activeGrants = getActiveSessionGrants(sessionGrants, nowMs);
   const disabledAttr = busy ? ' disabled' : '';
 
@@ -523,6 +541,29 @@ export function renderAutoConsentTabHtml({
     { ms: 5000, label: en ? '5s (Cautious)' : '5с (Осторожно)' }
   ];
   const selectedGrace = graceOptions.some((g) => g.ms === cfg.graceWindowMs) ? cfg.graceWindowMs : 3000;
+  const modeToneClass = cfg.mode === AUTO_CONSENT_MODES.ARMED ? 'is-armed' : 'is-dry';
+  const masterOffWarnHtml = (!cfg.enabled && activeSummary.totalActiveScopes > 0)
+    ? `<div class="ac-master-off-warn" role="alert">${escapeHtml(td('autoConsent.masterOffConfiguredWarn', { n: activeSummary.totalActiveScopes }))}</div>`
+    : '';
+  const cooldownSecFor = (id) => {
+    const remMs = Number(controlCooldowns && controlCooldowns[id]) || 0;
+    return remMs > 0 ? Math.max(1, Math.ceil(remMs / 1000)) : 0;
+  };
+  const formatCooldown = (sec) => `⏳ ${en ? `${sec}s` : `${sec}с`}`;
+  const renderSwitch = ({ id, checked, label, isMaster = false }) => {
+    const coolSec = cooldownSecFor(id);
+    const isDisabled = busy || coolSec > 0;
+    const stateLabel = checked ? td('autoConsent.switchOn') : td('autoConsent.switchOff');
+    return `<label class="ac-switch${isMaster ? ' is-master' : ''}${checked ? ' is-on' : ' is-off'}${isDisabled ? ' is-disabled' : ''}${coolSec > 0 ? ' is-cooling' : ''}">` +
+      `<input type="checkbox" role="switch" id="${escapeHtml(id)}" class="ac-switch-input" data-auto-consent-action="toggle-switch" data-switch-id="${escapeHtml(id)}"${checked ? ' checked' : ''}${isDisabled ? ' disabled' : ''} />` +
+      `<span class="ac-switch-track" aria-hidden="true"><span class="ac-switch-thumb"></span></span>` +
+      `<span class="ac-switch-state">${escapeHtml(stateLabel)}</span>` +
+      `<span class="ac-switch-text">${escapeHtml(label)}</span>` +
+      `${coolSec > 0 ? `<span class="ac-cooldown-chip" data-cooldown-for="${escapeHtml(id)}" aria-live="polite">${escapeHtml(formatCooldown(coolSec))}</span>` : ''}` +
+    `</label>`;
+  };
+  const modeCoolSec = cooldownSecFor('acModeSelect');
+  const modeDisabledAttr = (busy || modeCoolSec > 0) ? ' disabled' : '';
 
   return `<div class="ac-tab-wrap">` +
     `${demoTrack ? `<div class="ac-demo-notice">${escapeHtml(td('autoConsent.demoTrackBanner'))}</div>` : ''}` +
@@ -532,18 +573,20 @@ export function renderAutoConsentTabHtml({
     `<div class="ac-top-grid">` +
       `<section class="ac-card">` +
         `<div class="ac-card-head">` +
-          `<label class="ac-check-label is-master">` +
-            `<input type="checkbox" id="acMasterEnable"${cfg.enabled ? ' checked' : ''}${disabledAttr} />` +
-            `<span>${escapeHtml(td('autoConsent.masterEnable'))}</span>` +
-          `</label>` +
+          `${renderSwitch({ id: 'acMasterEnable', checked: cfg.enabled, label: td('autoConsent.masterEnable'), isMaster: true })}` +
           `<span class="ac-quota-chip">${escapeHtml(en ? 'Quota' : 'Квота')}: <b>${escapeHtml(stats.actionsLastHour)} / ${escapeHtml(cfg.maxActionsPerHour)}/h</b></span>` +
         `</div>` +
-        `<div class="ac-inline-row">` +
-          `<select id="acModeSelect" class="rig-select ac-mode-select"${disabledAttr}>` +
+        `<div class="ac-mode-field">` +
+          `<div class="ac-mode-label-row">` +
+            `<label for="acModeSelect" class="ac-mode-label">${escapeHtml(td('autoConsent.modeLabel'))}</label>` +
+            `${modeCoolSec > 0 ? `<span class="ac-cooldown-chip" data-cooldown-for="acModeSelect" aria-live="polite">${escapeHtml(formatCooldown(modeCoolSec))}</span>` : ''}` +
+          `</div>` +
+          `<select id="acModeSelect" class="rig-select ac-mode-select ${modeToneClass}${modeCoolSec > 0 ? ' is-cooling' : ''}" data-auto-consent-action="change-mode"${modeDisabledAttr}>` +
             `<option value="dry_run"${cfg.mode === AUTO_CONSENT_MODES.DRY_RUN ? ' selected' : ''}>${escapeHtml(td('autoConsent.modeDryRun'))}</option>` +
             `<option value="armed"${cfg.mode === AUTO_CONSENT_MODES.ARMED ? ' selected' : ''}>${escapeHtml(td('autoConsent.modeArmed'))}</option>` +
           `</select>` +
         `</div>` +
+        `${masterOffWarnHtml}` +
         `<div class="ac-stats-strip">` +
           `<span>${escapeHtml(en ? 'Approved' : 'Одобрено')}: <b class="ac-stat-ok">${escapeHtml(stats.approvedCount)}</b></span>` +
           `<span>${escapeHtml(en ? 'Escalated' : 'Эскалаций')}: <b class="ac-stat-warn">${escapeHtml(stats.escalatedCount)}</b></span>` +
@@ -551,7 +594,7 @@ export function renderAutoConsentTabHtml({
         `</div>` +
         `<div class="ac-btn-row">` +
           `<button type="button" class="action-pill key-proceed" data-auto-consent-action="save-policy"${disabledAttr}>${escapeHtml(td('autoConsent.saveBtn'))}</button>` +
-          `<button type="button" class="action-pill ${cfg.masterPaused ? 'key-proceed' : 'key-cancel'}" data-auto-consent-action="${cfg.masterPaused ? 'resume-all' : 'pause-all'}"${disabledAttr}>${escapeHtml(cfg.masterPaused ? td('autoConsent.resumeAllBtn') : td('autoConsent.pauseAllBtn'))}</button>` +
+          `<button type="button" class="action-pill ${cfg.masterPaused ? 'key-proceed' : 'key-cancel'}" data-auto-consent-action="${cfg.masterPaused ? 'resume-all' : 'pause-all'}"${cfg.masterPaused ? disabledAttr : ''}>${escapeHtml(cfg.masterPaused ? td('autoConsent.resumeAllBtn') : td('autoConsent.pauseAllBtn'))}</button>` +
         `</div>` +
       `</section>` +
 
@@ -564,27 +607,18 @@ export function renderAutoConsentTabHtml({
           `</select>` +
         `</div>` +
         `<div class="ac-setting-row">` +
-          `<label class="ac-check-label">` +
-            `<input type="checkbox" id="acPauseCtxCheck"${cfg.defaults.pauseOnCtxOverheat ? ' checked' : ''}${disabledAttr} />` +
-            `<span>${escapeHtml(td('autoConsent.ctxOverheatToggle'))}</span>` +
-          `</label>` +
+          `${renderSwitch({ id: 'acPauseCtxCheck', checked: cfg.defaults.pauseOnCtxOverheat, label: td('autoConsent.ctxOverheatToggle') })}` +
           `<label class="ac-threshold-wrap">` +
             `<span>${escapeHtml(td('autoConsent.ctxThresholdLabel'))}</span>` +
             `<input id="acCtxThresholdInput" type="number" min="${AUTO_CONSENT_LIMITS.MIN_CTX_THRESHOLD_PCT}" max="${AUTO_CONSENT_LIMITS.MAX_CTX_THRESHOLD_PCT}" value="${escapeHtml(cfg.defaults.ctxPauseThresholdPct)}" class="ctrl-input ac-num-input"${disabledAttr} />` +
           `</label>` +
         `</div>` +
         `<div class="ac-setting-row">` +
-          `<label class="ac-check-label">` +
-            `<input type="checkbox" id="acAllowPkgCheck"${cfg.defaults.allowPackageInstall ? ' checked' : ''}${disabledAttr} />` +
-            `<span>${escapeHtml(td('autoConsent.allowPkgInstallLabel'))}</span>` +
-          `</label>` +
+          `${renderSwitch({ id: 'acAllowPkgCheck', checked: cfg.defaults.allowPackageInstall, label: td('autoConsent.allowPkgInstallLabel') })}` +
           `<span class="ac-default-off-chip">${escapeHtml(td('autoConsent.defaultOffHint'))}</span>` +
         `</div>` +
         `<div class="ac-setting-row">` +
-          `<label class="ac-check-label">` +
-            `<input type="checkbox" id="acAllowNetCheck"${cfg.defaults.allowReadOnlyNetwork ? ' checked' : ''}${disabledAttr} />` +
-            `<span>${escapeHtml(td('autoConsent.allowReadOnlyNetLabel'))}</span>` +
-          `</label>` +
+          `${renderSwitch({ id: 'acAllowNetCheck', checked: cfg.defaults.allowReadOnlyNetwork, label: td('autoConsent.allowReadOnlyNetLabel') })}` +
           `<span class="ac-default-off-chip">${escapeHtml(td('autoConsent.defaultOffHint'))}</span>` +
         `</div>` +
       `</section>` +
@@ -655,9 +689,25 @@ export function renderSeatAutoConsentPickerHtml({
 
   const effSummary = cfg.masterPaused
     ? td('autoConsent.hudPaused')
-    : (effective.active && effective.sourceScope === 'session' && activeSeatGrant
-      ? `${getProfileLabel(effective.profile, td)} (${formatTtlShort(activeSeatGrant.remainingMin, lang)})`
-      : `${getProfileLabel(effective.profile, td)}${effective.active ? ` · ${getScopeLabel(effective.sourceScope, td)}` : ''}`);
+    : (!cfg.enabled
+      ? td('autoConsent.offEnableCta')
+      : (effective.active && effective.sourceScope === 'session' && activeSeatGrant
+        ? `${getProfileLabel(effective.profile, td)} (${formatTtlShort(activeSeatGrant.remainingMin, lang)})`
+        : `${getProfileLabel(effective.profile, td)}${effective.active ? ` · ${getScopeLabel(effective.sourceScope, td)}` : ''}`));
+
+  const isActiveCapableProfile = (p) => (
+    p === AUTO_CONSENT_PROFILES.SAFE_READONLY || p === AUTO_CONSENT_PROFILES.TRUSTED_DEV
+  );
+  const hasConfiguredActiveProfile = isActiveCapableProfile(explicitProfile) ||
+    (explicitProfile === 'inherit' && isActiveCapableProfile(parentProfile)) ||
+    Boolean(activeSeatGrant);
+
+  let inspectorCtaBanner = '';
+  if (!cfg.masterPaused && !cfg.enabled && hasConfiguredActiveProfile) {
+    inspectorCtaBanner = `<button type="button" class="ac-inspector-cta is-warn" data-auto-consent-action="open-tab">${escapeHtml(td('autoConsent.inspectorMasterOffBanner'))}</button>`;
+  } else if (cfg.enabled && !cfg.masterPaused && cfg.mode === AUTO_CONSENT_MODES.DRY_RUN && effective.active) {
+    inspectorCtaBanner = `<button type="button" class="ac-inspector-cta is-dry" data-auto-consent-action="open-tab">${escapeHtml(td('autoConsent.inspectorDryRunBanner'))}</button>`;
+  }
 
   const options = [
     { val: 'inherit', label: td('autoConsent.inheritedLabel', { profile: getProfileLabel(parentProfile, td) }) },
@@ -676,7 +726,7 @@ export function renderSeatAutoConsentPickerHtml({
   return `<div class="ac-inspector-strip" data-seat="${escapeHtml(seatId)}">` +
     `<div class="ac-inspector-head">` +
       `<span class="ac-inspector-label">${escapeHtml(td('autoConsent.tabTitle'))}</span>` +
-      `<span class="ac-eff-chip ${effClass}">${escapeHtml(effSummary)}</span>` +
+      `<button type="button" class="ac-eff-chip ac-eff-chip-btn ${effClass}" data-auto-consent-action="open-tab">${escapeHtml(effSummary)}</button>` +
       `<button type="button" class="ac-insp-gear" data-auto-consent-action="open-tab" aria-label="${escapeHtml(td('autoConsent.modalTitle'))}" title="${escapeHtml(td('autoConsent.modalTitle'))}">⚙️</button>` +
     `</div>` +
     `<div class="ac-inspector-controls">` +
@@ -685,6 +735,7 @@ export function renderSeatAutoConsentPickerHtml({
       `</select>` +
       `${sessionControl}` +
     `</div>` +
+    `${inspectorCtaBanner}` +
   `</div>`;
 }
 
@@ -828,6 +879,8 @@ export function buildDemoAutoConsentInitialState({ active = false, nowMs = Date.
  */
 export function createAutoConsentController({
   hudRoot = null,
+  topBtn = null,
+  topBadge = null,
   toastRoot = null,
   inspectorRoot = null,
   demoBarRoot = null,
@@ -863,14 +916,126 @@ export function createAutoConsentController({
   let destroyed = false;
   let refreshing = null;
   let countdownInterval = null;
+  let cooldownInterval = null;
+  const controlCooldownUntil = new Map();
   const demoTimers = new Map();
   const lockScope = 'auto-consent:operator';
+  const pauseScope = 'auto-consent:pause';
   const busy = () => guard.isScopeInFlight(lockScope);
 
   function stopCountdownTicker() {
     if (countdownInterval !== null) {
       clearIntervalFn(countdownInterval);
       countdownInterval = null;
+    }
+  }
+
+  function stopCooldownTicker() {
+    if (cooldownInterval !== null) {
+      clearIntervalFn(cooldownInterval);
+      cooldownInterval = null;
+    }
+  }
+
+  function pruneExpiredCooldowns(nowMs = now()) {
+    const expired = [];
+    for (const [key, exp] of controlCooldownUntil.entries()) {
+      if (!Number.isFinite(exp) || exp <= nowMs) {
+        controlCooldownUntil.delete(key);
+        expired.push(key);
+      }
+    }
+    return expired;
+  }
+
+  function getControlCooldownRemainingMs(controlId, nowMs = now()) {
+    if (!controlId) return 0;
+    const exp = controlCooldownUntil.get(controlId) || 0;
+    return Math.max(0, exp - nowMs);
+  }
+
+  function getActiveCooldownMap(nowMs = now()) {
+    pruneExpiredCooldowns(nowMs);
+    const out = {};
+    for (const [key, exp] of controlCooldownUntil.entries()) {
+      const rem = Math.max(0, exp - nowMs);
+      if (rem > 0) out[key] = rem;
+    }
+    return out;
+  }
+
+  function patchCooldownDomInPlace(expiredIds = [], nowMs = now()) {
+    if (!guardrailsBodyRoot || typeof guardrailsBodyRoot.querySelector !== 'function') {
+      return false;
+    }
+    const idsToPatch = new Set([...controlCooldownUntil.keys(), ...array(expiredIds)]);
+    const isEn = lang() === 'en';
+    const isBusy = busy();
+    for (const controlId of idsToPatch) {
+      if (!controlId) continue;
+      const remMs = getControlCooldownRemainingMs(controlId, nowMs);
+      const sec = remMs > 0 ? Math.max(1, Math.ceil(remMs / 1000)) : 0;
+      const ctrlEl = guardrailsBodyRoot.querySelector(`#${controlId}`);
+      const chipEl = guardrailsBodyRoot.querySelector(`.ac-cooldown-chip[data-cooldown-for="${controlId}"]`);
+      const switchLabel = ctrlEl?.closest?.('.ac-switch') || null;
+      if (sec > 0) {
+        const nextText = `⏳ ${isEn ? `${sec}s` : `${sec}с`}`;
+        if (chipEl && chipEl.textContent !== nextText) {
+          chipEl.textContent = nextText;
+        }
+        if (ctrlEl) {
+          ctrlEl.disabled = true;
+          if (!switchLabel && ctrlEl.classList) ctrlEl.classList.add('is-cooling');
+        }
+        if (switchLabel && switchLabel.classList) {
+          switchLabel.classList.add('is-cooling');
+          switchLabel.classList.add('is-disabled');
+        }
+      } else {
+        if (chipEl) {
+          if (typeof chipEl.remove === 'function') chipEl.remove();
+          else if (chipEl.parentNode && typeof chipEl.parentNode.removeChild === 'function') {
+            chipEl.parentNode.removeChild(chipEl);
+          }
+        }
+        if (ctrlEl) {
+          if (!isBusy) ctrlEl.disabled = false;
+          if (ctrlEl.classList) ctrlEl.classList.remove('is-cooling');
+        }
+        if (switchLabel && switchLabel.classList) {
+          switchLabel.classList.remove('is-cooling');
+          if (!isBusy) switchLabel.classList.remove('is-disabled');
+        }
+      }
+    }
+    return true;
+  }
+
+  function syncCooldownTicker() {
+    if (destroyed) {
+      stopCooldownTicker();
+      return;
+    }
+    pruneExpiredCooldowns(now());
+    if (controlCooldownUntil.size > 0) {
+      if (cooldownInterval === null) {
+        cooldownInterval = setIntervalFn(() => {
+          if (destroyed) {
+            stopCooldownTicker();
+            return;
+          }
+          const ts = now();
+          const expiredIds = pruneExpiredCooldowns(ts);
+          if (controlCooldownUntil.size === 0) {
+            stopCooldownTicker();
+          }
+          if (!patchCooldownDomInPlace(expiredIds, ts)) {
+            onGuardrailsRerender();
+          }
+        }, 250);
+      }
+    } else {
+      stopCooldownTicker();
     }
   }
 
@@ -909,6 +1074,22 @@ export function createAutoConsentController({
       nowMs: now(),
       busy: busy()
     });
+  }
+
+  function renderTopButton() {
+    if (destroyed) return;
+    if (!topBtn && !topBadge) return;
+    const info = getAutoConsentTopButtonState(state, { td });
+    const tones = ['is-off', 'is-dry', 'is-armed', 'is-paused'];
+    if (topBadge) {
+      topBadge.textContent = info.text;
+      if (topBadge.classList) {
+        for (const t of tones) topBadge.classList.toggle(t, t === info.toneClass);
+      }
+    }
+    if (topBtn && topBtn.classList) {
+      for (const t of tones) topBtn.classList.toggle(`ac-top-${t}`, t === info.toneClass);
+    }
   }
 
   function renderToast() {
@@ -950,6 +1131,7 @@ export function createAutoConsentController({
   }
 
   function renderTabHtml() {
+    const ts = now();
     return renderAutoConsentTabHtml({
       state,
       rigs: getRigs(),
@@ -960,10 +1142,11 @@ export function createAutoConsentController({
         const a = array(getAgents()).find((x) => x && x.id === s);
         return a?.shortName || String(s || '').split('@')[0] || String(s || '');
       },
-      nowMs: now(),
+      nowMs: ts,
       statusMessage,
       demoTrack: isDemoTrack,
-      busy: busy()
+      busy: busy(),
+      controlCooldowns: getActiveCooldownMap(ts)
     });
   }
 
@@ -971,6 +1154,7 @@ export function createAutoConsentController({
     if (destroyed) return;
     syncCountdownTicker();
     renderHud();
+    renderTopButton();
     renderToast();
     renderInspector();
     renderDemoBar();
@@ -1380,10 +1564,10 @@ export function createAutoConsentController({
     triggerDemoRoutinePrompt();
   }
 
-  async function runLivePost(endpoint, payload, fingerprintSuffix = '') {
+  async function runLivePost(endpoint, payload, fingerprintSuffix = '', scopeKeyOverride = lockScope) {
     if (destroyed || demo || !isLive()) return null;
     const out = await guard.runGuarded(
-      { scopeKey: lockScope, fingerprint: `${endpoint}:${fingerprintSuffix}`, cooldownMs: 0 },
+      { scopeKey: scopeKeyOverride, fingerprint: `${endpoint}:${fingerprintSuffix}`, cooldownMs: 0 },
       async () => {
         renderAll();
         try {
@@ -1405,17 +1589,75 @@ export function createAutoConsentController({
     return out?.value || null;
   }
 
-  async function savePolicyFromRoot(formRoot) {
-    const formPatch = readAutoConsentSettingsForm(formRoot);
+  function buildPolicyPatchFromRoot(formRoot, immediateControl = null) {
+    const hasDomLookup = Boolean(
+      formRoot && (typeof formRoot.getElementById === 'function' || typeof formRoot.querySelector === 'function')
+    );
+    const hasMasterEl = hasDomLookup && Boolean(
+      (typeof formRoot.getElementById === 'function' && formRoot.getElementById('acMasterEnable')) ||
+      (typeof formRoot.querySelector === 'function' && formRoot.querySelector('#acMasterEnable'))
+    );
+    if (hasMasterEl) {
+      return readAutoConsentSettingsForm(formRoot);
+    }
+    if (immediateControl && immediateControl.id) {
+      const cfg = state.config;
+      const patch = {
+        enabled: cfg.enabled,
+        mode: cfg.mode,
+        graceWindowMs: cfg.graceWindowMs,
+        defaults: { ...cfg.defaults }
+      };
+      if (immediateControl.id === 'acMasterEnable') {
+        patch.enabled = Boolean(immediateControl.checked);
+      } else if (immediateControl.id === 'acModeSelect') {
+        patch.mode = immediateControl.value === AUTO_CONSENT_MODES.ARMED
+          ? AUTO_CONSENT_MODES.ARMED
+          : AUTO_CONSENT_MODES.DRY_RUN;
+      } else if (immediateControl.id === 'acPauseCtxCheck') {
+        patch.defaults.pauseOnCtxOverheat = Boolean(immediateControl.checked);
+      } else if (immediateControl.id === 'acAllowPkgCheck') {
+        patch.defaults.allowPackageInstall = Boolean(immediateControl.checked);
+      } else if (immediateControl.id === 'acAllowNetCheck') {
+        patch.defaults.allowReadOnlyNetwork = Boolean(immediateControl.checked);
+      }
+      return patch;
+    }
+    return readAutoConsentSettingsForm(formRoot);
+  }
+
+  async function savePolicyFromRoot(formRoot, immediateControl = null) {
+    const formPatch = buildPolicyPatchFromRoot(formRoot, immediateControl);
     if (demo || !isLive()) {
       applyDemoPolicyPatch(formPatch);
       return;
     }
-    const res = await runLivePost('/api/auto-consent/policy', { ...formPatch, patch: formPatch }, 'save');
+    const suffix = immediateControl?.id ? `switch:${immediateControl.id}` : 'save';
+    const res = await runLivePost('/api/auto-consent/policy', { ...formPatch, patch: formPatch }, suffix);
     if (res && res.ok !== false) {
       statusMessage = lang() === 'en' ? '✓ Auto-consent policy saved (0600).' : '✓ Политика авто-подтверждений сохранена (0600).';
       renderAll();
     }
+  }
+
+  async function applyImmediateControlChange(controlId, el) {
+    const nowTs = now();
+    pruneExpiredCooldowns(nowTs);
+    if (controlId && getControlCooldownRemainingMs(controlId, nowTs) > 0) {
+      if (!patchCooldownDomInPlace([], nowTs)) {
+        onGuardrailsRerender();
+      }
+      return;
+    }
+    if (controlId) {
+      controlCooldownUntil.set(controlId, nowTs + AUTO_CONSENT_SWITCH_COOLDOWN_MS);
+      syncCooldownTicker();
+    }
+    await savePolicyFromRoot(guardrailsBodyRoot || el.ownerDocument, {
+      id: controlId,
+      checked: el.checked,
+      value: el.value
+    });
   }
 
   async function setScopePolicy(scope, targetId, profile) {
@@ -1500,7 +1742,9 @@ export function createAutoConsentController({
       applyDemoPauseAll(paused);
       return;
     }
-    const res = await runLivePost('/api/auto-consent/pause-all', { paused: Boolean(paused) }, `pause:${paused}`);
+    // Emergency pause NEVER waits on operator switch lock or cooldown
+    const targetScope = paused ? pauseScope : lockScope;
+    const res = await runLivePost('/api/auto-consent/pause-all', { paused: Boolean(paused) }, `pause:${paused}`, targetScope);
     if (res && res.ok !== false) {
       statusMessage = paused ? td('autoConsent.pausedBanner') : (lang() === 'en' ? '▶ Resumed.' : '▶ Возобновлено.');
       renderAll();
@@ -1591,6 +1835,16 @@ export function createAutoConsentController({
       await setScopePolicy('project', el.dataset.target || '', el.value);
     } else if (action === 'set-seat-policy') {
       await setScopePolicy('seat', el.dataset.target || '', el.value);
+    } else if (action === 'toggle-switch') {
+      const switchId = el.dataset.switchId || el.id || '';
+      await applyImmediateControlChange(switchId, el);
+    } else if (action === 'change-mode') {
+      const isArmed = el.value === AUTO_CONSENT_MODES.ARMED;
+      if (el.classList) {
+        el.classList.toggle('is-armed', isArmed);
+        el.classList.toggle('is-dry', !isArmed);
+      }
+      await applyImmediateControlChange(el.id || 'acModeSelect', el);
     }
   }
 
@@ -1609,6 +1863,7 @@ export function createAutoConsentController({
     handleSseEvent,
     renderAll,
     renderHud,
+    renderTopButton,
     renderToast,
     renderInspector,
     renderDemoBar,
@@ -1619,6 +1874,8 @@ export function createAutoConsentController({
     destroy() {
       destroyed = true;
       stopCountdownTicker();
+      stopCooldownTicker();
+      controlCooldownUntil.clear();
       clearAllDemoTimers();
       for (const t of clickTargets) t.removeEventListener('click', handleClick);
       for (const t of changeTargets) t.removeEventListener('change', handleChange);
