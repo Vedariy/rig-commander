@@ -1,0 +1,58 @@
+User-agent: *
+Allow: /
+Disallow: /deck
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /deck
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /deck
+
+User-agent: GPTBot
+Allow: /
+Disallow: /deck
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /deck
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /deck
+
+User-agent: Claude-User
+Allow: /
+Disallow: /deck
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /deck
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /deck
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /deck
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /deck
+
+User-agent: Amazonbot
+Allow: /
+Disallow: /deck
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /deck
+
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /deck
+
+Sitemap: https://rig-commander.vercel.app/sitemap.xml
+# llms.txt: https://rig-commander.vercel.app/llms.txt

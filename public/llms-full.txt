@@ -1,0 +1,93 @@
+# RigCommander — Operator reference / Справочник оператора
+
+> v3.6.0 · MIT · Node.js >= 18 · macOS / Linux · 0 runtime npm dependencies.
+> A local command deck for engineers responsible for several AI coding sessions. / Локальный пульт для инженера, который отвечает за несколько сессий ИИ-разработки.
+
+## The ten-agent tipping point / Когда агентов уже десять
+
+Ten open terminals can hide a permission prompt, an exited shell or a session running out of context. The triage strip helps locate the seat holding up a handoff. Look for repeated review rounds when token use rises. After a restart, use the recorded fleet state to review which sessions should return.
+
+За десятью открытыми терминалами легко пропустить запрос разрешения, выход агента или исчерпание контекста. Верхняя панель помогает найти агента, который задерживает передачу задачи. При росте расхода токенов проверьте повторные циклы ревью. После перезагрузки сверьте список сессий с сохранённым состоянием флота.
+
+## From fleet to handoff / От флота до передачи задачи
+
+**Topology.** In All Rigs, each rig has its own area. Follow a connection to inspect who handed work to whom. The operator can distinguish a working destination from a parked seat or a transfer still waiting for activity. The health tooltip can break down findings across rigs so a low fleet score has an identifiable source.
+
+**Топология.** В режиме всех ригов у каждого рига своя область. По связи видно, кто кому передал работу. Можно различить работающего получателя, припаркованного агента и задачу, которая ещё ждёт активности. Когда замечания относятся к нескольким ригам, подсказка индекса здоровья показывает их оценки отдельно.
+
+**Graph and Task Gantt.** The graph answers “who depends on this seat now?” The timeline shows when a task appeared, waited, entered work and came back for review. Move between the graph, task chain and seat inspector to connect the same event across views. Handoff references lead to either a seat or a queue item. When available, an evidence reference or a blocker gives the operator a concrete place to resume an investigation.
+
+**Граф и диаграмма Ганта.** По графу видно, кто сейчас зависит от агента. На временной шкале видно, когда задача появилась, сколько ждала, когда пошла в работу и вернулась на проверку. Перейдите от связи к цепочке задач и карточке агента, чтобы увидеть одно событие с разных сторон. Ссылки передачи ведут к агенту или к записи очереди. Если в задаче указан результат проверки или блокирующая зависимость, расследование можно продолжить оттуда.
+
+## Terminal decisions and cost / Решения в терминале и расходы
+
+**Human-in-the-loop (HITL).** Read the terminal prompt and its command preview when available. Select an allowed tmux response and inspect the resulting state. A configured Telegram bridge also accepts decisions from authorized chats.
+
+**Подтверждения человеком (HITL).** Прочитайте запрос терминала и команду, если она показана. Выберите разрешённый ответ tmux и проверьте состояние после отправки. Настроенный мост Telegram также принимает решения из разрешённых чатов.
+
+**Fleet Advisor and FinOps.** The advisor brings waiting tasks, hot context and review churn to the operator’s attention. Its recommendations are advisory. The spending view separates subscription usage (SUB) from a pay-as-you-go estimate (PAYG). Estimates help compare sessions; provider billing records remain the source for actual charges. The configurable circuit-breaker can flag or pause eligible work under the selected budget or review-loop policy.
+
+**Советник флота и FinOps.** Советник обращает внимание на зависшие задачи, перегруженный контекст и повторные циклы проверки. Рекомендацию оценивает оператор. Панель расходов разделяет использование подписки (SUB) и оценку по тарифу за использование (PAYG). По оценке можно сопоставлять сессии, а фактические списания проверяют у провайдера. Настраиваемый автоматический ограничитель может предупредить оператора или приостановить работу согласно выбранной политике расходов и повторных проверок.
+
+## Recovery after sleep or restart / Восстановление после сна или перезапуска
+
+Crash-Cart brings an offline rig or unavailable daemon into view. Check the last observed state, snapshot freshness and the capabilities of the active recovery provider. Ask for a plan to see the affected rigs, seats and proposed command. Intentionally stopped targets are protected. Execution requires explicit confirmation of the reviewed plan and a policy check. Read the receipt for the affected targets: restored, partial, failed and unknown are distinct outcomes. The local manifest records observations and attempts; it does not recreate missing terminal history.
+
+Панель восстановления показывает недоступный риг или демон. Проверьте последнее известное состояние, давность снимка и возможности провайдера восстановления. Откройте план, чтобы увидеть затронутые риги, агентов и предлагаемую команду. Намеренно остановленные участники защищены от случайного запуска. Для выполнения требуются явное подтверждение просмотренного плана и проверка политики. В отчёте по участникам различаются полное и частичное восстановление, ошибка и неизвестный результат. Локальный манифест хранит наблюдения и попытки восстановления, но не воссоздаёт утраченную историю терминала.
+
+## Local discovery and trust / Локальное обнаружение и доверие
+
+OpenRig supplies named seats, rig membership and queue history. Universal discovery can find local tmux panes running tools such as Claude Code, Codex CLI, Gemini CLI or Aider. Available context and usage evidence varies by harness. Missing usage evidence is not zero usage.
+
+OpenRig предоставляет имена агентов, принадлежность к ригу и историю очереди. Универсальный режим находит локальные панели tmux с Claude Code, Codex CLI, Gemini CLI или Aider. Набор данных о контексте и расходе зависит от инструмента. Отсутствие данных о расходах не означает нулевой расход.
+
+The browser talks to a local bridge. The default address is loopback and fleet observation requires no cloud account or external telemetry upload. Read-only inspection is the starting point. Optional integrations, including Telegram and configured evaluators, have their own data flows. Remote access requires separate setup, HTTPS and pairing; an unpaired remote client cannot use the private live API. The local vault uses owner-only file permissions and stores plaintext. No third-party runtime npm packages are installed. With no active viewers, live telemetry polling is idle (0% idle CPU target).
+
+Браузер работает с локальным мостом. По умолчанию адрес доступен только на этой машине. Для наблюдения за флотом не нужен облачный аккаунт или передача телеметрии наружу. Начать можно в режиме просмотра. У опциональных интеграций, в том числе Telegram и настроенных оценщиков, есть собственный обмен данными. Для удалённого доступа нужны отдельная настройка, HTTPS и сопряжение: неподключённый клиент не получит приватные данные живого флота. Локальное хранилище записывает данные без шифрования в файлы, доступные только владельцу. Сторонние npm-пакеты во время работы не требуются. Без активных зрителей опрос телеметрии прекращается (целевой показатель простоя — 0% CPU).
+
+## Which view answers the question? / Какой инструмент отвечает на вопрос?
+
+| Surface / Средство | What to inspect / Что смотреть | Typical question / Пример вопроса |
+| --- | --- | --- |
+| RigCommander | Local seats, queue handoffs and terminal state / Локальные агенты, передача задач и состояние терминала | Who is waiting for me? / Кто ждёт моего решения? |
+| Raw tmux | Sessions, windows, panes and scrollback / Сессии, окна, панели и история вывода | What did this command print? / Что вывела эта команда? |
+| Cloud application tracing, e.g. LangSmith or Langfuse / Облачная трассировка приложений | Instrumented calls, latency and recorded inputs and outputs / Записанные вызовы, задержки, входные и выходные данные | Which step of this model call was slow? / Какой этап вызова модели занял больше времени? |
+| Single-agent IDE chat / Чат с одним агентом в IDE | The conversation, suggested edits and editor context / Переписка, предложенные правки и контекст редактора | What change does this agent propose? / Какую правку предлагает этот агент? |
+
+Comparison sources / Источники сравнения: [tmux](https://github.com/tmux/tmux/wiki), [LangSmith](https://docs.langchain.com/langsmith/observability), [Langfuse](https://langfuse.com/docs/observability/overview).
+
+## Operator FAQ / Вопросы оператора
+
+**How do I start the live deck?** Run npx rig-commander@latest with Node.js 18 or later, then open http://127.0.0.1:7440.
+
+**Как запустить живой пульт?** С Node.js версии 18 или новее выполните npx rig-commander@latest и откройте http://127.0.0.1:7440.
+
+**Can I try it without running agents?** Yes. The offline demo uses sample fleet data and makes no live fleet API calls.
+
+**Можно попробовать без запущенных агентов?** Да. В демо используются примеры данных без обращений к API живого флота.
+
+**Do I need OpenRig?** OpenRig provides fleet and queue context. Universal discovery also finds supported local tmux sessions.
+
+**Обязательно ли устанавливать OpenRig?** OpenRig предоставляет сведения о флоте и очереди. В универсальном режиме пульт также находит поддерживаемые локальные сессии tmux.
+
+**Where can I trace a handoff?** Select the task in the Gantt timeline to inspect its waiting time, destination and recorded handoff references.
+
+**Где посмотреть передачу задачи?** Выберите задачу на диаграмме Ганта: там видны время ожидания, получатель и ссылки на передачу.
+
+**Who approves terminal actions?** The operator reviews the prompt and chooses a response. The Fleet Advisor provides recommendations.
+
+**Кто подтверждает действия в терминале?** Оператор читает запрос и выбирает ответ. Советник флота даёт рекомендации.
+
+**Does recovery restart my fleet automatically?** Recovery requires a plan preview and explicit confirmation. Check the receipt for restored, partial, failed or unknown results.
+
+**Восстановление автоматически перезапускает флот?** Для запуска нужно просмотреть и подтвердить план. В отчёте указывается результат: полное или частичное восстановление, ошибка либо неизвестный исход.
+
+**Is the local recovery vault encrypted?** The local vault stores plaintext files with owner-only permissions.
+
+**Зашифровано ли локальное хранилище восстановления?** Данные в нём хранятся без шифрования в файлах, доступных только владельцу.
+
+**How is subscription usage compared with token charges?** FinOps shows subscription usage alongside an estimated pay-as-you-go cost.
+
+**Как сравнить подписку и оплату за токены?** FinOps показывает использование подписки и оценку расходов при оплате за использование.
+
+[Operator guide / Руководство](https://rig-commander.vercel.app/guide) · [Trust passport / Паспорт](https://rig-commander.vercel.app/passport) · [Offline demo / Демо](https://rig-commander.vercel.app/demo).

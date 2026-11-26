@@ -1,0 +1,30 @@
+# RigCommander
+
+> Local-first MIT command deck for operators of autonomous coding agents. Follow Claude Code, Codex CLI and Gemini CLI sessions in tmux, or inspect an OpenRig fleet with its queues and handoffs.
+> Локальный пульт под лицензией MIT для операторов ИИ-агентов. Наблюдайте за сессиями Claude Code, Codex CLI и Gemini CLI в tmux или за флотом OpenRig с его очередями и передачами задач.
+
+Quick facts / Кратко: v{{APP_VERSION}} · MIT · macOS / Linux · Node.js >= 18 · 0 runtime npm dependencies / внешних npm-зависимостей.
+Start / Запуск: `npx rig-commander@latest`. Local deck / Локальный пульт: `http://127.0.0.1:7440`.
+Idle CPU / Простой: 0% idle CPU target for telemetry polling with no active clients / целевой показатель для опроса телеметрии без активных клиентов.
+
+## Docs & Surfaces
+
+- [Product overview / Обзор](https://rig-commander.vercel.app/): Fleet simulator / Симулятор флота.
+- [Offline sandbox / Демонстрация](https://rig-commander.vercel.app/demo): Explore sample seats and tasks without live API calls / Пример агентов и задач без живых API.
+- [Operator guide / Руководство](https://rig-commander.vercel.app/guide): Quickstart, L0–L3 triage, playbooks, FinOps, Telegram approvals and mobile PWA / Запуск, уровни L0–L3, сценарии оператора, расходы, подтверждения в Telegram и мобильная PWA.
+- [Trust passport / Паспорт](https://rig-commander.vercel.app/passport): System context, trust boundaries and operator controls / Контекст системы, границы доверия и права оператора.
+- [Full reference / Полный справочник](https://rig-commander.vercel.app/llms-full.txt): Discovery, recovery, comparisons and questions / Обнаружение сессий, восстановление, сравнение и ответы.
+- [GitHub](https://github.com/Vedariy/rig-commander): MIT source / Исходный код MIT.
+- [npm](https://www.npmjs.com/package/rig-commander): CLI / Пакет CLI.
+
+## Core Capabilities
+
+- Trace a handoff from graph to Gantt to queue. / Проследите передачу задачи по графу, Ганту и очереди.
+- Read a terminal prompt before answering. Compare subscription and token costs. / Прочитайте запрос терминала перед ответом. Сопоставьте подписку и оплату за токены.
+- Preview fleet recovery, confirm the plan, then inspect results for each target. / Проверьте план восстановления флота, подтвердите его и прочитайте результат для каждого участника.
+
+## Security Boundaries
+
+- The live bridge defaults to loopback. Remote phone access uses HTTPS and explicit pairing. / По умолчанию мост слушает локальный интерфейс. Удалённый доступ с телефона требует HTTPS и сопряжения.
+- Observation and fleet advice require no terminal writes. Fleet telemetry stays local by default. / Для наблюдения и рекомендаций запись в терминал не нужна. По умолчанию телеметрия флота остаётся на машине.
+- The local recovery vault stores plaintext with owner-only file permissions. Receipts may report partial, failed or unknown recovery. / Локальное хранилище восстановления записывает открытые данные в файлы, доступные только владельцу. Восстановление может быть частичным, неудачным или с неизвестным результатом.

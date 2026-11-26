@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="3.2.1">
+  <meta name="app-version" content="{{APP_VERSION}}">
   <meta name="theme-color" content="#030712">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -13,6 +13,147 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
   <title>RigCommander // Mission Control for Autonomous AI Fleets</title>
   <meta name="description" content="The real-time operational command deck for autonomous multi-agent coding swarms. Live neural topology, Shared Context Lineage, 3-Tier Advisory-Only AI Evaluator, 1-click tmux HITL, and FinOps token thermodynamics.">
+  <link rel="canonical" href="https://rig-commander.vercel.app/">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="RigCommander LLM Summary">
+  <link rel="alternate" type="text/plain" href="/llms-full.txt" title="RigCommander Operator Reference">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": [
+        "SoftwareApplication",
+        "SoftwareSourceCode"
+      ],
+      "@id": "https://rig-commander.vercel.app/#app",
+      "name": "RigCommander",
+      "description": "Local command deck for observing AI coding fleets and reviewing terminal actions.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "macOS, Linux",
+      "softwareVersion": "{{APP_VERSION}}",
+      "license": "https://opensource.org/licenses/MIT",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "codeRepository": "https://github.com/Vedariy/rig-commander",
+      "downloadUrl": "https://www.npmjs.com/package/rig-commander",
+      "url": "https://rig-commander.vercel.app/",
+      "image": "https://rig-commander.vercel.app/media/og-card.png",
+      "featureList": [
+        "Live fleet topology",
+        "Task Gantt and queue handoffs",
+        "Terminal prompt review",
+        "Subscription and token cost estimates",
+        "Confirmed recovery plans and receipts"
+      ]
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://rig-commander.vercel.app/#quickstart",
+      "name": "Start the local RigCommander deck",
+      "version": "{{APP_VERSION}}",
+      "inLanguage": "en",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Check the runtime",
+          "text": "Use Node.js 18 or later on macOS or Linux."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Start RigCommander",
+          "text": "Run npx rig-commander@latest in a terminal."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Open the live deck",
+          "text": "Open http://127.0.0.1:7440 in your browser."
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://rig-commander.vercel.app/#faq",
+      "inLanguage": "en",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I start the live deck?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Run npx rig-commander@latest with Node.js 18 or later, then open http://127.0.0.1:7440."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I try it without running agents?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The offline demo uses sample fleet data and makes no live fleet API calls."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need OpenRig?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "OpenRig provides fleet and queue context. Universal discovery also finds supported local tmux sessions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Where can I trace a handoff?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Select the task in the Gantt timeline to inspect its waiting time, destination and recorded handoff references."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Who approves terminal actions?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The operator reviews the prompt and chooses a response. The Fleet Advisor provides recommendations."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does recovery restart my fleet automatically?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Recovery requires a plan preview and explicit confirmation. Check the receipt for restored, partial, failed or unknown results."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the local recovery vault encrypted?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The local vault stores plaintext files with owner-only permissions."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://rig-commander.vercel.app/#site",
+      "name": "RigCommander",
+      "url": "https://rig-commander.vercel.app/",
+      "inLanguage": [
+        "en",
+        "ru"
+      ]
+    }
+  ]
+}
+  </script>
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
@@ -380,6 +521,12 @@
     .cli-prompt { color: var(--cyan); font-weight: 700; user-select: none; }
     .cli-icon { opacity: 0.6; transition: opacity 0.2s; }
     .cli-copy-box:hover .cli-icon { opacity: 1; }
+
+    .operator-faq { padding-block: 3rem; }
+    .operator-faq details { padding-block: .8rem; border-bottom: 1px solid var(--border-subtle); }
+    .operator-faq summary { cursor: pointer; font-weight: 700; }
+    .operator-faq p { margin-top: .5rem; }
+    html[lang="en"] .operator-faq [lang="ru"], html[lang="ru"] .operator-faq [lang="en"] { display: none; }
 
     /* INTERACTIVE PRODUCT HERO SIMULATOR */
     .hero-simulator-wrapper {
@@ -1332,6 +1479,10 @@
       </div>
 
       <!-- INTERACTIVE PRODUCT HERO SIMULATOR -->
+      <noscript>
+        <p lang="en">The simulator follows a terminal approval through a fleet handoff. To inspect your own sessions, launch the local deck and follow the <a href="/guide#quickstart">operator guide</a>.</p>
+        <p lang="ru">Симулятор показывает подтверждение в терминале и передачу задачи. Для работы со своими сессиями запустите локальный пульт по <a href="/guide#quickstart">руководству оператора</a>.</p>
+      </noscript>
       <div class="hero-simulator-wrapper">
         <div class="hero-simulator">
           <div class="sim-header">
@@ -1939,6 +2090,45 @@ Run negative control fault check?
     </section>
 
     <!-- WAITLIST & LEAD QUALIFICATION -->
+    <section class="container operator-faq" id="faq">
+      <h2 class="section-title"><span lang="en">Operator FAQ</span><span lang="ru">Вопросы оператора</span></h2>
+      <details>
+        <summary><span lang="en">How do I start the live deck?</span><span lang="ru">Как запустить живой пульт?</span></summary>
+        <p lang="en">Run npx rig-commander@latest with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
+        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@latest и откройте http://127.0.0.1:7440.</p>
+      </details>
+      <details>
+        <summary><span lang="en">Can I try it without running agents?</span><span lang="ru">Можно попробовать без запущенных агентов?</span></summary>
+        <p lang="en">Yes. The offline demo uses sample fleet data and makes no live fleet API calls.</p>
+        <p lang="ru">Да. В демо используются примеры данных без обращений к API живого флота.</p>
+      </details>
+      <details>
+        <summary><span lang="en">Do I need OpenRig?</span><span lang="ru">Обязательно ли устанавливать OpenRig?</span></summary>
+        <p lang="en">OpenRig provides fleet and queue context. Universal discovery also finds supported local tmux sessions.</p>
+        <p lang="ru">OpenRig предоставляет сведения о флоте и очереди. В универсальном режиме пульт также находит поддерживаемые локальные сессии tmux.</p>
+      </details>
+      <details>
+        <summary><span lang="en">Where can I trace a handoff?</span><span lang="ru">Где посмотреть передачу задачи?</span></summary>
+        <p lang="en">Select the task in the Gantt timeline to inspect its waiting time, destination and recorded handoff references.</p>
+        <p lang="ru">Выберите задачу на диаграмме Ганта: там видны время ожидания, получатель и ссылки на передачу.</p>
+      </details>
+      <details>
+        <summary><span lang="en">Who approves terminal actions?</span><span lang="ru">Кто подтверждает действия в терминале?</span></summary>
+        <p lang="en">The operator reviews the prompt and chooses a response. The Fleet Advisor provides recommendations.</p>
+        <p lang="ru">Оператор читает запрос и выбирает ответ. Советник флота даёт рекомендации.</p>
+      </details>
+      <details>
+        <summary><span lang="en">Does recovery restart my fleet automatically?</span><span lang="ru">Восстановление автоматически перезапускает флот?</span></summary>
+        <p lang="en">Recovery requires a plan preview and explicit confirmation. Check the receipt for restored, partial, failed or unknown results.</p>
+        <p lang="ru">Для запуска нужно просмотреть и подтвердить план. В отчёте указывается результат: полное или частичное восстановление, ошибка либо неизвестный исход.</p>
+      </details>
+      <details>
+        <summary><span lang="en">Is the local recovery vault encrypted?</span><span lang="ru">Зашифровано ли локальное хранилище восстановления?</span></summary>
+        <p lang="en">The local vault stores plaintext files with owner-only permissions.</p>
+        <p lang="ru">Данные в нём хранятся без шифрования в файлах, доступных только владельцу.</p>
+      </details>
+    </section>
+
     <section class="waitlist-section" id="waitlist">
       <div class="container">
         <div class="waitlist-card">

@@ -65,7 +65,9 @@ function checkPublicShowcase() {
   const pages = [
     'public/index.html',
     'public/passport/index.html',
-    'public/guide/index.html'
+    'public/guide/index.html',
+    'public/llms.txt',
+    'public/llms-full.txt'
   ];
   for (const rel of pages) {
     const full = path.join(ROOT, rel);
@@ -74,7 +76,10 @@ function checkPublicShowcase() {
       continue;
     }
     const text = fs.readFileSync(full, 'utf8');
-    for (const rx of PUBLIC_FORBIDDEN) {
+    const rules = rel.endsWith('.txt')
+      ? [...PUBLIC_FORBIDDEN, /\b(?:assets\/(?:domain|ontology|ui)|lib|tests)\/[\w./*-]+/]
+      : PUBLIC_FORBIDDEN;
+    for (const rx of rules) {
       const m = text.match(rx);
       if (m) {
         violations.push(`Public showcase exposure in ${rel}: matched ${rx} (${m[0]})`);
@@ -94,7 +99,7 @@ const SECRET_AND_PATH_PATTERNS = [
 
 const SCAN_DIRS = ['openrig', 'landing', 'docs', 'scripts', 'bin'];
 const SCAN_FILES = ['README.md', 'CHANGELOG.md', 'AGENTS.md', 'package.json'];
-const TEXT_EXTS = new Set(['.md', '.html', '.js', '.mjs', '.css', '.json', '.webmanifest', '.yml', '.yaml']);
+const TEXT_EXTS = new Set(['.md', '.html', '.js', '.mjs', '.css', '.json', '.webmanifest', '.yml', '.yaml', '.txt', '.xml']);
 
 function walkFiles(dirRel) {
   const out = [];
@@ -118,7 +123,7 @@ function walkFiles(dirRel) {
 }
 
 function checkLeaks() {
-  const targets = [...SCAN_FILES];
+  const targets = [...SCAN_FILES, 'public/llms.txt', 'public/llms-full.txt', 'public/robots.txt', 'public/sitemap.xml'];
   for (const d of SCAN_DIRS) targets.push(...walkFiles(d));
   for (const rel of targets) {
     if (rel === 'scripts/audit-exposure.mjs') continue;

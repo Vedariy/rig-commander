@@ -5,13 +5,17 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
-const appVersion = String(pkg.version || '3.2.0');
+const appVersion = pkg.version;
 
 const COPIES = [
   ['openrig/index.html', 'public/demo/index.html'],
   ['openrig/index.html', 'public/deck/index.html'],
   ['openrig/manifest.webmanifest', 'public/manifest.webmanifest'],
   ['openrig/sw.js', 'public/sw.js'],
+  ['landing/llms.txt', 'public/llms.txt'],
+  ['landing/llms-full.txt', 'public/llms-full.txt'],
+  ['landing/robots.txt', 'public/robots.txt'],
+  ['landing/sitemap.xml', 'public/sitemap.xml'],
   ['landing/index.html', 'public/index.html'],
   ['landing/passport.html', 'public/passport/index.html'],
   ['landing/passport.html', 'openrig/passport.html'],
@@ -19,22 +23,21 @@ const COPIES = [
   ['landing/guide.html', 'openrig/guide.html']
 ];
 
-const STAMP_VERSION_TARGETS = new Set([
-  'public/demo/index.html',
-  'public/deck/index.html',
-  'public/index.html'
+const VERSIONED_SOURCES = new Set([
+  'openrig/index.html', 'landing/index.html', 'landing/guide.html', 'landing/passport.html',
+  'landing/llms.txt', 'landing/llms-full.txt'
 ]);
 
 for (const [srcRel, dstRel] of COPIES) {
   const src = path.join(root, srcRel);
   const dst = path.join(root, dstRel);
   await fs.mkdir(path.dirname(dst), { recursive: true });
-  if (STAMP_VERSION_TARGETS.has(dstRel)) {
-    const html = (await fs.readFile(src, 'utf8')).replace(
+  if (VERSIONED_SOURCES.has(srcRel)) {
+    const text = (await fs.readFile(src, 'utf8')).replaceAll('{{APP_VERSION}}', appVersion).replace(
       /(<meta\s+name="app-version"\s+content=")[^"]*(")/i,
       `$1${appVersion}$2`
     );
-    await fs.writeFile(dst, html, 'utf8');
+    await fs.writeFile(dst, text, 'utf8');
   } else {
     await fs.copyFile(src, dst);
   }

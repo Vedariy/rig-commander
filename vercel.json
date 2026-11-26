@@ -1,3 +1,98 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/llms.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=86400"
+        }
+      ]
+    },
+    {
+      "source": "/llms-full.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=86400"
+        }
+      ]
+    },
+    {
+      "source": "/robots.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, s-maxage=86400"
+        }
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/xml; charset=utf-8"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "<https://rig-commander.vercel.app/llms.txt>; rel=\"alternate\"; type=\"text/plain\""
+        }
+      ]
+    },
+    {
+      "source": "/guide",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "<https://rig-commander.vercel.app/llms.txt>; rel=\"alternate\"; type=\"text/plain\""
+        }
+      ]
+    },
+    {
+      "source": "/passport",
+      "headers": [
+        {
+          "key": "Link",
+          "value": "<https://rig-commander.vercel.app/llms.txt>; rel=\"alternate\"; type=\"text/plain\""
+        }
+      ]
+    },
+    {
+      "source": "/deck",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/deck/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    }
+  ]
 }
