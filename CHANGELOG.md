@@ -10,6 +10,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.7.0] - 2026-11-26
+
+### Added
+- **Offline `/demo` First-Impression Polish & Bilingual Sandbox Parity (`openrig/index.html`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`, `openrig/assets/ui/topology-view.js`):**
+  - Replaced alarmist offline indicators with a calm sandbox badge and direct Back-to-site link (`#demoBackLink`), non-overlapping Mini-Quest placement, collapsed swimlanes by default, default `dev-check` QA selection in Dynamic layout with hidden sleepers, and a compact triage tools drawer (including separated mobile triage controls).
+  - Upgraded offline fixtures with realistic multi-harness agent pairings, full EN/RU localization across live language round-trips (including sandbox send fallbacks and clipboard-only `Cmd` toasts), and strict client-side enforcement firing `0` live API or remote discovery calls.
+- **Landing AI-Bot / GEO Discovery & Structured Metadata (`landing/llms.txt`, `landing/llms-full.txt`, `landing/robots.txt`, `landing/sitemap.xml`, `landing/{index,guide,passport}.html`, `vercel.json`, `scripts/sync-public.mjs`, `scripts/audit-exposure.mjs`):**
+  - Published bilingual `llms.txt` and `llms-full.txt` operator references, an Open-All `robots.txt` excluding the duplicate `/deck` alias, and a canonical 6-URL `sitemap.xml`.
+  - Added `Schema.org` JSON-LD (`SoftwareApplication`/`SoftwareSourceCode`, `HowTo`, `FAQPage`, `TechArticle`, `WebSite`), canonical links, `<noscript>` quickstart fallback, and `vercel.json` discovery headers (`Link` alternate to `/llms.txt`, UTF-8 text/XML `Content-Type`, and `X-Robots-Tag: noindex, follow` scoped strictly to `/deck`).
+  - Added deterministic `{{APP_VERSION}}` version synchronization in `scripts/sync-public.mjs` and expanded Tier-1 `npm run audit:exposure` checks across `llms.txt` and `llms-full.txt`.
+- **CALM: ON Quiet-Cluster Auto-Minimization Dock & Multi-Rig HUD Top Clearance (`openrig/assets/domain/topology-layout.js`, `openrig/assets/ui/topology-view.js`, `openrig/assets/styles/deck.css`, `openrig/index.html`):**
+  - Added `classifyQuietRigClusters()` and the docked `#quietClustersPill` bar so quiet and parked-only rig clusters auto-minimize in `CALM: ON` multi-rig view with clickable per-rig expand chips and preserved parked work-count badges, while always keeping active, urgent, hot-context, shell-exited, and selected rigs visible and never blanking the canvas.
+  - Added multi-rig top-HUD clearance (`padTop = 36`) so top-row rig cluster headers never collide with floating HUD controls.
+
+### Fixed
+- **Guardrails Modal Input Width & Telegram Status Pill (`openrig/assets/styles/deck.css`, `openrig/assets/ui/guardrails-view.js`):**
+  - Fixed `.ctrl-input` width collapse inside Guardrails configuration rows and kept the Telegram bridge status pill cleanly on a single line.
+- **Live TMUX Verification of Daemon `needs-input` & Narrow Codex Ready Footer (`openrig/server.mjs`, `openrig/assets/domain/prompt-parser.js`):**
+  - Live-verified daemon-reported `needs-input` states against actual `tmux` pane capture so stale `permission_request_unverified` projections clear automatically when the agent is idle at prompt, and detected narrow-pane wrapped Codex `Ready` footers.
+- **Live-Verified Idle Fallback on Stale OpenRig Send Refusals (`openrig/server.mjs`, `openrig/assets/domain/prompt-parser.js`):**
+  - Added `hasDirtyTerminalInputBox()` unsent-draft protection and a live-screen-verified idle fallback when OpenRig refuses `rig send` due to a stale interactive-prompt projection, while strictly returning `409` whenever unsent draft text, a real HITL prompt, or a bare OS shell is detected.
+- **Test Verification:** Expanded automated test coverage to **`275 / 275 PASS` across 36 test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.6.0] - 2026-11-26
 
 ### Added
