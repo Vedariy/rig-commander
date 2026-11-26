@@ -78,6 +78,7 @@ export class TelegramHitlBridge {
     this.onExecuteAction = typeof options.onExecuteAction === 'function' ? options.onExecuteAction : null;
     this.getFleetSummary = typeof options.getFleetSummary === 'function' ? options.getFleetSummary : null;
     this.onBreakerModeToggle = typeof options.onBreakerModeToggle === 'function' ? options.onBreakerModeToggle : null;
+    this.onPauseAutoConsent = typeof options.onPauseAutoConsent === 'function' ? options.onPauseAutoConsent : null;
 
     this.pendingNonces = new Map(); // nonce -> { seatId, keyStroke, actionId, label, expiresAt }
     this.sentPromptKeys = new Map(); // seatId -> { hash, sentAt }
@@ -159,7 +160,7 @@ export class TelegramHitlBridge {
   async sendTestMessage() {
     if (!this.isConfigured()) throw new Error('Configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID first');
     return this.sendText(
-      '💠 *RigCommander Connected*\n\nCommands:\n• `/status` — fleet health & active seats\n• `/budget` — live token spend & circuit-breaker\n• `/stop <seat>` — emergency Ctrl+C\n• `/arm_breaker` / `/pause_breaker` — toggle auto-stop',
+      '💠 *RigCommander Connected*\n\nCommands:\n• `/status` — fleet health & active seats\n• `/budget` — live token spend & circuit-breaker\n• `/stop <seat>` — emergency Ctrl+C\n• `/arm_breaker` / `/pause_breaker` — toggle auto-stop\n• `/pause_auto` — emergency pause Auto-Consent & cancel pending timers',
       { parse_mode: 'Markdown' }
     );
   }
@@ -304,6 +305,20 @@ export class TelegramHitlBridge {
           { parse_mode: 'Markdown' }
         );
         return { handled: true, command: cmd, mode: nextMode };
+      }
+
+      if (cmd === '/pause_auto') {
+        if (!this.onPauseAutoConsent) {
+          await this.sendText('⚠️ Auto-Consent kill-switch is not available.', { parse_mode: 'Markdown' });
+          return { handled: true, command: cmd, ok: false };
+        }
+        const res = await this.onPauseAutoConsent();
+        const canceledCount = Number(res?.canceledCount ?? res?.canceled ?? 0) || 0;
+        await this.sendText(
+          `⏸ *Auto-Consent PAUSED (Master Kill-Switch)*\n• Canceled pending approvals: *${canceledCount}*\n• All scopes halted immediately.`,
+          { parse_mode: 'Markdown' }
+        );
+        return { handled: true, command: cmd, ok: true, canceledCount };
       }
     }
 

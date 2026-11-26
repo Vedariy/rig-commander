@@ -15,6 +15,7 @@ const mutations = [
   'guardrails/config', 'guardrails/reset', 'guardrails/telegram',
   'evaluator/config', 'evaluator/models', 'evaluator/run',
   'playbooks/config', 'playbooks/reset', 'playbooks/dry-run',
+  'auto-consent/policy', 'auto-consent/session-grant', 'auto-consent/cancel', 'auto-consent/pause-all',
   'remote/config', 'remote/pair', 'remote/revoke', 'update/check', 'update/apply', 'send',
   'resilience/plan', 'resilience/snapshot', 'resilience/resurrect'
 ];
@@ -164,7 +165,7 @@ test('Deck HTTP router with an isolated bridge on a kernel-assigned port', async
   await t.test('paired remote status is readable, remote settings and update actions are local only', async () => {
     const remote = { 'x-forwarded-proto': 'https', origin: publicUrl };
     const paired = { ...remote, cookie };
-    for (const route of ['telemetry', 'guardrails', 'playbooks', 'update/status', 'resilience/status']) {
+    for (const route of ['telemetry', 'guardrails', 'playbooks', 'auto-consent/state', 'update/status', 'resilience/status']) {
       assert.equal((await get('/api/' + route, remote)).status, 401, route);
     }
     const status = await get('/api/update/status', paired);
@@ -230,6 +231,133 @@ test('Deck HTTP router with an isolated bridge on a kernel-assigned port', async
     const preview = await post('playbooks/dry-run');
     assert.equal(preview.status, 200);
     assert.ok((await preview.json()).dryRun);
+  });
+
+  await t.test('auto-consent routes enforce validation, caps, pause-all, session grants, and expose telemetry.autoConsent', async () => {
+    const initialRes = await get('/api/auto-consent/state');
+    assert.equal(initialRes.status, 200);
+    const initial = await initialRes.json();
+    assert.equal(initial.ok, true);
+    assert.equal(initial.state.status, 'disabled');
+    assert.equal(initial.state.config.enabled, false);
+    assert.equal(initial.state.config.mode, 'dry_run');
+    assert.deepEqual(initial.state.sessionGrants, []);
+    assert.deepEqual(initial.state.pendingApprovals, []);
+
+    // Malformed JSON and invalid policy payloads -> 400
+    assert.equal((await post('auto-consent/policy', authorized, '{')).status, 400);
+    for (const badPolicy of [
+      { mode: 'turbo' },
+      { enabled: 'yes' },
+      { graceWindowMs: -10 },
+      { scope: 'invalid', targetId: 'sandbox', profile: 'trusted_dev' },
+      { scope: 'project', targetId: '../evil', profile: 'trusted_dev' },
+      { scope: 'project', targetId: 'sandbox', profile: 'sprint_all' },
+      { scope: 'seat', targetId: 'bad seat', profile: 'safe_readonly' }
+    ]) {
+      const r = await post('auto-consent/policy', authorized, JSON.stringify(badPolicy));
+      assert.equal(r.status, 400, JSON.stringify(badPolicy));
+      assert.equal((await r.json()).ok, false);
+    }
+
+    // Valid policy updates (direct patch + { patch } envelope + scoped convenience patch)
+    const p1 = await post('auto-consent/policy', authorized, JSON.stringify({ enabled: true, mode: 'armed', graceWindowMs: 3000 }));
+    assert.equal(p1.status, 200);
+    assert.equal((await p1.json()).state.status, 'armed');
+
+    const p2 = await post('auto-consent/policy', authorized, JSON.stringify({
+      scope: 'project', targetId: 'sandbox', profile: 'trusted_dev', overrides: { allowPackageInstall: false }
+    }));
+    assert.equal(p2.status, 200);
+    assert.equal((await p2.json()).state.config.projects.sandbox.profile, 'trusted_dev');
+
+    const p3 = await post('auto-consent/policy', authorized, JSON.stringify({
+      patch: { seats: { 'dev-owner@sandbox': { profile: 'manual_only' } } }
+    }));
+    assert.equal(p3.status, 200);
+    assert.equal((await p3.json()).state.config.seats['dev-owner@sandbox'].profile, 'manual_only');
+
+    // Invalid / over-cap session grants -> 400
+    for (const badGrant of [
+      { action: 'bogus' },
+      { scope: 'rig', targetId: 'sandbox', profile: 'trusted_dev', ttlMin: 180 },
+      { scope: 'rig', targetId: 'sandbox', profile: 'sprint_all', maxApprovals: 41 },
+      { scope: 'seat', targetId: 'dev-coder@sandbox', profile: 'trusted_dev', ttlMin: 30 },
+      { action: 'revoke' }
+    ]) {
+      const r = await post('auto-consent/session-grant', authorized, JSON.stringify(badGrant));
+      assert.equal(r.status, 400, JSON.stringify(badGrant));
+      assert.equal((await r.json()).ok, false);
+    }
+
+    // Create & revoke ephemeral session grant
+    const createdRes = await post('auto-consent/session-grant', authorized, JSON.stringify({
+      scope: 'seat', targetId: 'dev-coder@sandbox', profile: 'sprint_all', ttlMin: 45, maxApprovals: 20, seatSessionEpoch: 'ep-42'
+    }));
+    assert.equal(createdRes.status, 200);
+    const created = await createdRes.json();
+    assert.equal(created.ok, true);
+    assert.equal(created.grant.profile, 'sprint_all');
+    assert.equal(created.grant.remainingApprovals, 20);
+    assert.equal(created.state.sessionGrants.length, 1);
+
+    // Verify telemetry bundle exposes live payload.autoConsent
+    const tel = await (await get('/api/telemetry?rig=fixture&force=1')).json();
+    assert.ok(tel.autoConsent);
+    assert.equal(tel.autoConsent.status, 'armed');
+    assert.equal(tel.autoConsent.sessionGrants.length, 1);
+
+    // Revoke session grant
+    const revRes = await post('auto-consent/session-grant', authorized, JSON.stringify({
+      action: 'revoke', grantId: created.grant.grantId
+    }));
+    assert.equal(revRes.status, 200);
+    const rev = await revRes.json();
+    assert.equal(rev.ok, true);
+    assert.equal(rev.revoked, true);
+    assert.equal(rev.state.sessionGrants.length, 0);
+
+    // Cancel validation & idempotency
+    assert.equal((await post('auto-consent/cancel', authorized, JSON.stringify({ seatId: '../bad' }))).status, 400);
+    const cancelOk = await (await post('auto-consent/cancel', authorized, JSON.stringify({}))).json();
+    assert.equal(cancelOk.ok, true);
+    assert.equal(cancelOk.canceledCount, 0);
+
+    // Pause-all validation & toggle (default paused=true) + live SSE auto_consent_state broadcast
+    const sse = await get('/api/events?rig=fixture');
+    assert.equal(sse.status, 200);
+    const reader = sse.body.getReader();
+    try {
+      // Drain initial ready frame
+      let buf = '';
+      while (!buf.includes('event: ready')) {
+        const { value, done } = await reader.read();
+        assert.equal(done, false);
+        buf += Buffer.from(value).toString();
+      }
+
+      assert.equal((await post('auto-consent/pause-all', authorized, JSON.stringify({ paused: 'yes' }))).status, 400);
+      const paused = await (await post('auto-consent/pause-all', authorized, JSON.stringify({}))).json();
+      assert.equal(paused.ok, true);
+      assert.equal(paused.state.status, 'paused');
+      assert.equal(paused.state.config.masterPaused, true);
+
+      // Verify live SSE stream received auto_consent_state frame
+      while (!buf.includes('event: auto_consent_state')) {
+        const { value, done } = await reader.read();
+        assert.equal(done, false);
+        buf += Buffer.from(value).toString();
+      }
+      assert.match(buf, /event: auto_consent_state/);
+      assert.match(buf, /"status":"paused"/);
+
+      const resumed = await (await post('auto-consent/pause-all', authorized, JSON.stringify({ paused: false }))).json();
+      assert.equal(resumed.ok, true);
+      assert.equal(resumed.state.status, 'armed');
+      assert.equal(resumed.state.config.masterPaused, false);
+    } finally {
+      await reader.cancel();
+    }
   });
 });
 
