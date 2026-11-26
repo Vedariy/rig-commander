@@ -12,6 +12,7 @@ Every flag below matches `npx rig-commander --help` (`rig-commander` and `rig-cm
 | `--host <address>` | `127.0.0.1` | Bind host interface (keep loopback by default) |
 | `--public-url <https://>` | *(unset)* | Enable paired Live Mobile PWA via Tailscale Serve or Cloudflare Tunnel |
 | `--universal` | `false` | Force Universal Mode (Claude Code / Codex / tmux without OpenRig) |
+| `--read-only` | `false` | Read-only inspection mode (zero terminal writes or state mutations) |
 | `--no-open` | `false` | Do not automatically open browser on startup |
 | `-v, --version` | — | Print RigCommander version |
 | `-h, --help` | — | Print CLI usage and deck shortcuts |
@@ -76,7 +77,8 @@ Then pair your phone:
 Run these checks to confirm healthy operation:
 
 1. **CLI sanity:** `npx rig-commander --version` and `npx rig-commander --help`.
-2. **Bridge health:** Confirm `http://127.0.0.1:7440` renders the live deck (or `DEMO SANDBOX` when no live agents are running).
-3. **OpenRig fleet check (when using OpenRig):** Run `rig daemon status`, `rig ps`, and `rig parked` to verify daemon reachability and surface stuck obligations.
-4. **Post-action verification:** After answering a HITL prompt or sending `/compact`, inspect **Action Audit** in the Inspector to verify the seat transitioned cleanly instead of blindly re-sending input.
-5. **Recovery receipt check:** After Crash-Cart execution, review each target's explicit status (`restored`, `partial`, `failed`, or `unknown`) and copy the proposed command if manual follow-up is needed.
+2. **Read-only inspection check (optional):** Launch `npx rig-commander --read-only` on work or shared laptops to guarantee zero terminal writes and disabled control endpoints while keeping live observation active.
+3. **Bridge health:** Confirm `http://127.0.0.1:7440` renders the live deck (or `DEMO SANDBOX` when no live agents are running).
+4. **OpenRig fleet check (when using OpenRig):** Run `rig daemon status`, `rig ps`, and `rig parked` to verify daemon reachability and surface stuck obligations.
+5. **Post-action verification:** After answering a HITL prompt or sending `/compact`, inspect **Action Audit** in the Inspector to verify the seat transitioned cleanly instead of blindly re-sending input.
+6. **Recovery receipt check:** After Crash-Cart execution, review each target's explicit status (`restored`, `partial`, `failed`, or `unknown`) and copy the proposed command if manual follow-up is needed.

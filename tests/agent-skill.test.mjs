@@ -121,7 +121,7 @@ test('SKILL.md and progressive-disclosure references stay concise and resolve cl
 test('public skill files contain zero Tier-1 leakage patterns or undocumented CLI flags', () => {
   const cliSource = readRel('bin/cli.mjs');
   const verifiedFlags = new Set([
-    '-p', '--port', '--host', '--public-url', '--universal', '--no-open', '-v', '--version', '-h', '--help'
+    '-p', '--port', '--host', '--public-url', '--universal', '--read-only', '--no-open', '-v', '--version', '-h', '--help'
   ]);
   for (const flag of verifiedFlags) {
     assert.ok(cliSource.includes(flag), `Expected CLI flag ${flag} in bin/cli.mjs`);

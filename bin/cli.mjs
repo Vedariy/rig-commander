@@ -29,6 +29,7 @@ Options:
   --host <address>        Bind host interface (default: 127.0.0.1)
   --public-url <https://> Enable paired Live Mobile PWA via Tailscale Serve / Cloudflare Tunnel
   --universal             Force Universal Mode (Claude Code / Codex / tmux without OpenRig)
+  --read-only             Read-only inspection mode (0 terminal writes or state mutations)
   --no-open               Do not automatically open browser on startup
   -v, --version           Show version
   -h, --help              Show this help manual
@@ -71,13 +72,17 @@ if (pubIdx !== -1 && args[pubIdx + 1]) {
 
 const noOpen = args.includes('--no-open');
 const forceUniversal = args.includes('--universal');
+const readOnly =
+  args.includes('--read-only') ||
+  process.env.RIGCOMMANDER_READ_ONLY === '1' ||
+  String(process.env.RIGCOMMANDER_READ_ONLY || '').trim().toLowerCase() === 'true';
 const serverPath = path.resolve(__dirname, '../openrig/server.mjs');
 const url = `http://127.0.0.1:${port}`;
 
 console.log(`
 \x1b[36m  💠 RIGCOMMANDER // NEURAL COMMAND DECK v${APP_VERSION}\x1b[0m
   \x1b[90m==============================================================\x1b[0m
-  \x1b[32m●\x1b[0m Status:            \x1b[1m\x1b[32mLIVE TELEMETRY BRIDGE\x1b[0m
+  \x1b[32m●\x1b[0m Status:            \x1b[1m\x1b[32mLIVE TELEMETRY BRIDGE\x1b[0m${readOnly ? `\n  \x1b[33m🔒 Mode: READ-ONLY (0 terminal writes)\x1b[0m` : ''}
   \x1b[36m●\x1b[0m Command Deck:      \x1b[4m\x1b[36m${url}\x1b[0m${publicUrl ? `\n  \x1b[35m●\x1b[0m Live Mobile PWA:   \x1b[4m\x1b[35m${publicUrl}\x1b[0m \x1b[90m(QR paired)\x1b[0m` : ''}
   \x1b[33m●\x1b[0m Keyboard Control:  \x1b[90m[ [ ] Radar | [ ] ] Inspector | [ \\ ] Zen\x1b[0m
   \x1b[90m--------------------------------------------------------------\x1b[0m
@@ -90,7 +95,8 @@ const childEnv = {
   RIGCOMMANDER_HOST: host,
   RIGCOMMANDER_SUPERVISED: '1',
   ...(publicUrl ? { RIGCOMMANDER_PUBLIC_URL: publicUrl } : {}),
-  ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {})
+  ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {}),
+  ...(readOnly ? { RIGCOMMANDER_READ_ONLY: '1' } : {})
 };
 
 let serverProc = null;
@@ -102,9 +108,11 @@ function startServerChild(useNpxLatest = false) {
     const npxArgs = ['--yes', 'rig-commander@latest', '--no-open', '-p', String(port), '--host', host];
     if (publicUrl) npxArgs.push('--public-url', publicUrl);
     if (forceUniversal) npxArgs.push('--universal');
+    if (readOnly) npxArgs.push('--read-only');
     serverProc = spawn('npx', npxArgs, { env: childEnv, stdio: 'inherit' });
   } else {
-    serverProc = spawn(process.execPath, [serverPath], { env: childEnv, stdio: 'inherit' });
+    const serverArgs = readOnly ? [serverPath, '--read-only'] : [serverPath];
+    serverProc = spawn(process.execPath, serverArgs, { env: childEnv, stdio: 'inherit' });
   }
 
   serverProc.on('error', err => {

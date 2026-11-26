@@ -39,10 +39,25 @@ import { registerPlaybookRoutes } from './lib/routes/playbooks.mjs';
 import { registerAutoConsentRoutes } from './lib/routes/auto-consent.mjs';
 import { registerGitShiftRoutes } from './lib/routes/git-shift.mjs';
 
+function resolveReadOnlyMode(env = process.env, argv = process.argv) {
+  const rawEnv = String((env && env.RIGCOMMANDER_READ_ONLY) || '').trim().toLowerCase();
+  return rawEnv === '1' || rawEnv === 'true' || (Array.isArray(argv) && argv.includes('--read-only'));
+}
+
+const READ_ONLY_MODE = resolveReadOnlyMode();
+const READ_ONLY_ERROR_BODY = Object.freeze({
+  ok: false,
+  code: 'READ_ONLY_MODE',
+  error: 'RigCommander is running in --read-only mode (terminal writes and mutations are disabled)'
+});
+
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 30, evalThrottleMs: 3000 });
 const shiftHistory = new ShiftHistoryStore();
+if (READ_ONLY_MODE) {
+  shiftHistory._scheduleFlush = () => Promise.resolve();
+}
 const actionAudit = new ActionAuditLog({
   maxRecords: 100,
   onRecordChange: (entry) => {
@@ -102,6 +117,9 @@ function schedulePostActionSseRefresh(seatId, reason = 'send') {
 }
 
 async function executeSeatKeyAction(seatId, keyStroke, actionId = '', evalId = null) {
+  if (READ_ONLY_MODE) {
+    return { ok: false, code: 'READ_ONLY_MODE', error: READ_ONLY_ERROR_BODY.error };
+  }
   if (!/^[a-zA-Z0-9._@-]+$/.test(String(seatId || ''))) {
     return { ok: false, error: 'Invalid seat identifier' };
   }
@@ -395,15 +413,18 @@ function formatTelegramFleetSummary(kind = 'status') {
 }
 
 const telegramBridge = new TelegramHitlBridge({
-  onExecuteAction: ({ seatId, keyStroke, actionId }) => executeSeatKeyAction(seatId, keyStroke, actionId),
+  onExecuteAction: ({ seatId, keyStroke, actionId }) =>
+    READ_ONLY_MODE
+      ? Promise.resolve({ ok: false, code: 'READ_ONLY_MODE', error: READ_ONLY_ERROR_BODY.error })
+      : executeSeatKeyAction(seatId, keyStroke, actionId),
   getFleetSummary: (kind) => formatTelegramFleetSummary(kind),
-  onBreakerModeToggle: (mode) => circuitBreaker.updateConfig({ mode }),
-  onPauseAutoConsent: () => autoConsent.pauseAll(true)
+  onBreakerModeToggle: (mode) => (READ_ONLY_MODE ? circuitBreaker.getState() : circuitBreaker.updateConfig({ mode })),
+  onPauseAutoConsent: () => (READ_ONLY_MODE ? { ok: false, code: 'READ_ONLY_MODE' } : autoConsent.pauseAll(true))
 });
 
 const circuitBreaker = new BudgetCircuitBreaker(
   {
-    mode: process.env.RIG_BREAKER_MODE === 'auto_stop' ? 'auto_stop' : 'alert_only',
+    mode: (!READ_ONLY_MODE && process.env.RIG_BREAKER_MODE === 'auto_stop') ? 'auto_stop' : 'alert_only',
     maxSessionUsd: process.env.RIG_MAX_SESSION_USD ? Number(process.env.RIG_MAX_SESSION_USD) : undefined,
     maxSeatUsd: process.env.RIG_MAX_SEAT_USD ? Number(process.env.RIG_MAX_SEAT_USD) : undefined,
     maxUsdPerHour: process.env.RIG_MAX_USD_PER_HOUR ? Number(process.env.RIG_MAX_USD_PER_HOUR) : undefined,
@@ -411,16 +432,21 @@ const circuitBreaker = new BudgetCircuitBreaker(
   },
   {
     onAutoInterrupt: async (seatId) => {
+      if (READ_ONLY_MODE) return false;
       const res = await executeSeatKeyAction(seatId, 'C-c', 'circuit_breaker_interrupt');
       return Boolean(res && res.ok);
     },
     onTrip: async (trip) => {
+      if (READ_ONLY_MODE) return;
       await telegramBridge.notifyCircuitBreakerTrip(trip);
     }
   }
 );
 
 async function executePlaybookRawAction(cand) {
+  if (READ_ONLY_MODE) {
+    return { ok: false, code: 'READ_ONLY_MODE', detail: READ_ONLY_ERROR_BODY.error };
+  }
   const seat = String((cand && cand.seatId) || '').trim();
   const cleanText = String((cand && cand.payload) || '').replace(/[\r\n]+/g, ' ').trim();
   if (!/^[a-zA-Z0-9._@-]+$/.test(seat) || !cleanText) {
@@ -469,6 +495,7 @@ async function executePlaybookRawAction(cand) {
 }
 
 const playbookEngine = new SafePlaybookEngine({
+  ...(READ_ONLY_MODE ? { configPath: null, initialConfig: { enabled: false, mode: 'dry_run' } } : {}),
   onCompact: (cand) => executePlaybookRawAction(cand),
   onWake: async (cand) => {
     const res = await executeSeatKeyAction(cand.seatId, 'Enter', 'wake_parked_seat', `playbook:${cand.ruleId}`);
@@ -542,10 +569,14 @@ const selfUpdater = new SelfUpdater({
       try {
         if (installMode === 'npx-cache') {
           const npxArgs = ['--yes', 'rig-commander@latest', '--no-open', '-p', String(PORT), '--host', BIND_HOST];
+          if (READ_ONLY_MODE) npxArgs.push('--read-only');
           const child = spawn('npx', npxArgs, { detached: true, stdio: 'ignore', env: process.env });
           child.unref();
         } else {
-          const child = spawn(process.execPath, [fileURLToPath(import.meta.url)], {
+          const respawnArgs = READ_ONLY_MODE
+            ? [fileURLToPath(import.meta.url), '--read-only']
+            : [fileURLToPath(import.meta.url)];
+          const child = spawn(process.execPath, respawnArgs, {
             detached: true,
             stdio: 'ignore',
             env: process.env
@@ -1496,6 +1527,15 @@ async function dispatchRawCommand({
   rigBin = RIG_BIN,
   tmuxBin = TMUX_BIN
 }) {
+  if (READ_ONLY_MODE) {
+    return {
+      ok: false,
+      statusCode: 403,
+      code: 'READ_ONLY_MODE',
+      output: '',
+      error: READ_ONLY_ERROR_BODY.error
+    };
+  }
   if (!universalTarget) {
     const res = await execFn(rigBin, ['send', '--raw', seat, cleanText], 20000);
     if (res.ok) {
@@ -2091,6 +2131,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
     timestamp: new Date().toISOString(),
     requestedRig: rigKey,
     discoveryMode,
+    readOnlyMode: Boolean(READ_ONLY_MODE),
     historyRev: resolvedHistoryRev,
     guidanceRev,
     gitRadarRev: (gitRadarBundle && gitRadarBundle.rev) || EMPTY_GIT_RADAR.rev,
@@ -2129,7 +2170,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
   }
   payload.shiftHistoryMeta = shiftHistory.getSummaryMeta();
   latestFleetSnapshot = payload;
-  if (sseHub.hasActiveSubscribers() || Date.now() - lastTelemetryClientAt < 25000) {
+  if (!READ_ONLY_MODE && (sseHub.hasActiveSubscribers() || Date.now() - lastTelemetryClientAt < 25000)) {
     void resilience.observeTelemetry(payload).catch(err => console.warn('Resilience observation failed:', err.code || err.name));
   }
   sseHub.publishTelemetryBundle(rigKey, payload);
@@ -2162,21 +2203,24 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
     } catch {
       // non-blocking breaker error
     }
-    try {
-      await playbookEngine.evaluateAndRun({
-        nodes,
-        parkedSeats,
-        activeQueue,
-        gitRadar: payload.gitRadar,
-        actionAudit: actionAudit.list(40),
-        breakerState: circuitBreaker.getState()
-      });
-    } catch {
-      // non-blocking playbook error
+    if (!READ_ONLY_MODE) {
+      try {
+        await playbookEngine.evaluateAndRun({
+          nodes,
+          parkedSeats,
+          activeQueue,
+          gitRadar: payload.gitRadar,
+          actionAudit: actionAudit.list(40),
+          breakerState: circuitBreaker.getState()
+        });
+      } catch {
+        // non-blocking playbook error
+      }
     }
     const hasActiveClient = sseHub.hasActiveSubscribers() || Date.now() - lastTelemetryClientAt < 25000;
-    const autoConsentActive = hasActiveClient && autoConsent.isObservingActive();
-    if (telegramBridge.isConfigured() || aiEvaluator.canAutoRunLocalS1() || autoConsentActive) {
+    const autoConsentActive = !READ_ONLY_MODE && hasActiveClient && autoConsent.isObservingActive();
+    const allowTelegramNotify = !READ_ONLY_MODE && telegramBridge.isConfigured();
+    if (allowTelegramNotify || aiEvaluator.canAutoRunLocalS1() || autoConsentActive) {
       const liveBreaker = circuitBreaker.getState();
       const liveConflicts = payload.gitRadar
         ? {
@@ -2203,7 +2247,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
                 gitConflicts: liveConflicts
               });
             }
-            if (telegramBridge.isConfigured()) {
+            if (allowTelegramNotify) {
               await telegramBridge.notifyHitlPrompt(n.canonicalSessionName, scr);
             }
             if (aiEvaluator.canAutoRunLocalS1()) {
@@ -2329,6 +2373,10 @@ async function fetchQueueItemContextDetail(qitemId, { execFn = execWithStatus, r
 }
 
 async function sendToSeat({ req, json, body: payload }) {
+  if (READ_ONLY_MODE) {
+    await json(403, READ_ONLY_ERROR_BODY);
+    return;
+  }
   const seat = String(payload.seat || '').trim();
   const text = String(payload.text || '');
   const type = String(payload.type || 'msg').trim(); // 'msg' | 'raw' | 'key' | 'interact'
@@ -2495,6 +2543,9 @@ async function resolveLiveSeatSessionEpoch(seatId, seatNode = null, { fresh = fa
 async function executeAutoConsentOptionOne({
   seatId, rigId, keyStroke, evalId, commandPreview, matchedProfile, sourceScope, grantId, promptHash
 }) {
+  if (READ_ONLY_MODE) {
+    return { ok: false, code: 'READ_ONLY_MODE', error: READ_ONLY_ERROR_BODY.error };
+  }
   if (keyStroke !== '1 Enter') {
     return { ok: false, error: 'Auto-consent strictly permits Option 1 ("1 Enter") only' };
   }
@@ -2583,7 +2634,9 @@ async function executeAutoConsentOptionOne({
 }
 
 const autoConsent = new AutoConsentEngine({
-  stateDir: resolvedStateDir,
+  ...(READ_ONLY_MODE
+    ? { configPath: null, initialConfig: { enabled: false, mode: 'dry_run', masterPaused: false } }
+    : { stateDir: resolvedStateDir }),
   captureSeatScreen: (seatId, lines = 64) => captureSeatScreen(seatId, lines),
   getSeatSessionEpoch: (seatId, seatNode, opts) => resolveLiveSeatSessionEpoch(seatId, seatNode, opts),
   getLiveContext: async (seatId) => {
@@ -2610,6 +2663,30 @@ const autoConsent = new AutoConsentEngine({
     broadcastAutoConsentSse(eventName, data, rigId);
   }
 });
+
+if (READ_ONLY_MODE) {
+  const baseGetState = autoConsent.getState.bind(autoConsent);
+  autoConsent.isObservingActive = () => false;
+  autoConsent.observeSeat = async () => ({ decision: 'skipped', reason: 'read_only_mode' });
+  autoConsent.getState = (nowMs) => {
+    const st = baseGetState(nowMs);
+    return {
+      ...st,
+      status: 'disabled',
+      readOnlyMode: true,
+      config: { ...st.config, enabled: false, mode: 'dry_run' },
+      sessionGrants: [],
+      pendingApprovals: [],
+      activeSummary: {
+        ...(st.activeSummary || {}),
+        hasActiveScopes: false,
+        activeProjectCount: 0,
+        activeSeatCount: 0,
+        activeSessionGrantCount: 0
+      }
+    };
+  };
+}
 
 const resilience = new FleetResilienceService({
   stateDir: resolvedStateDir,
@@ -2640,6 +2717,10 @@ async function dispatchApi(req, res, url, isRemote) {
   const route = apiRoutes.get(url.pathname);
   const json = (code, data) => sendJson(req, res, code, data);
   const deny = (code, error) => json(code, { ok: false, error });
+  const method = String(req.method || 'GET').toUpperCase();
+  if (READ_ONLY_MODE && (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE')) {
+    return json(403, READ_ONLY_ERROR_BODY);
+  }
   const remoteSettings = url.pathname.startsWith('/api/remote/');
   if (isRemote && remoteSettings) {
     return deny(403, 'Remote pairing settings can only be managed locally on the host machine.');
@@ -2901,6 +2982,9 @@ server.on('close', () => { autoConsent.dispose(); });
 
 export {
   server, resilience, autoConsent,
+  READ_ONLY_MODE,
+  READ_ONLY_ERROR_BODY,
+  resolveReadOnlyMode,
   buildGanttItems,
   isGanttSystemNoise,
   computeHistoryStats,
@@ -2924,11 +3008,11 @@ export {
 const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMainModule) {
   shiftHistory.loadSync();
-  if (telegramBridge.isConfigured()) {
+  if (!READ_ONLY_MODE && telegramBridge.isConfigured()) {
     telegramBridge.startPolling();
   }
   server.listen(PORT, BIND_HOST, () => {
-    console.log(`💠 RigCommander // Neural Command Deck v${APP_VERSION} at http://${BIND_HOST}:${getPort()}`);
+    console.log(`💠 RigCommander // Neural Command Deck v${APP_VERSION} at http://${BIND_HOST}:${getPort()}${READ_ONLY_MODE ? ' [READ-ONLY]' : ''}`);
     // Warm the initial telemetry snapshot in background so first browser load is instant
     setTimeout(() => {
       void getTelemetryBundle('all', { forceRefresh: true }).catch(() => {});
@@ -2957,7 +3041,7 @@ if (isMainModule) {
     }, 30 * 60 * 1000).unref();
     if (remoteAccess.getStatus().enabled) {
       console.log(`📱 Live Mobile PWA pairing active: ${remoteAccess.getStatus().publicOrigin}`);
-    } else {
+    } else if (!READ_ONLY_MODE) {
       detectTailscaleServeUrl(getPort()).then(tsUrl => {
         if (tsUrl && !remoteAccess.getStatus().enabled) {
           const out = remoteAccess.setPublicUrl(tsUrl);
@@ -2967,7 +3051,7 @@ if (isMainModule) {
         }
       }).catch(() => {});
     }
-    if (telegramBridge.isConfigured()) {
+    if (!READ_ONLY_MODE && telegramBridge.isConfigured()) {
       console.log('📱 Telegram HITL bridge active (authorized chat polling)');
     }
   });

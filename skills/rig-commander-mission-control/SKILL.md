@@ -36,6 +36,9 @@ npx rig-commander@latest
 Common verified startup modes (use only documented CLI flags in [Operator Runbook](references/operator-runbook.md)):
 
 ```bash
+# Strictly read-only inspection mode (zero terminal writes or state mutations)
+npx rig-commander@latest --read-only
+
 # Force standalone tmux + local Claude/Codex transcript discovery without OpenRig
 npx rig-commander@latest --universal
 
@@ -87,7 +90,7 @@ Never auto-resurrect a sleeping, stopped, or crashed fleet without explicit huma
 
 ## Scoped Opt-In Auto-Consent
 
-Auto-Consent is **OFF / Dry-Run by default**. Never enable live auto-approvals without explicit operator intent.
+Auto-Consent is **OFF / Dry-Run by default** (and unconditionally disabled under `--read-only`). Never enable live auto-approvals without explicit operator intent.
 
 - **Scope hierarchy:** `Global → Project → Agent → Ephemeral Session`. Explicit Manual Only / Deny overrides always beat parent scopes.
 - **Bounded single-use approvals:** Dispatches only single-use Option-1 approvals (never "Always allow" or persistent harness permission changes). Ephemeral session grants stay strictly in RAM and invalidate automatically on seat or server restart.
