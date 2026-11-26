@@ -4,14 +4,12 @@
  * 100% escapeHtml + data-* delegation) + explicit event/timer controller.
  */
 import { ActionFlightGuard } from '../domain/action-guard.js';
-import { getHitlPromptPresentation } from '../domain/prompt-parser.js';
 import {
   AUTO_CONSENT_LIMITS,
   AUTO_CONSENT_MODES,
   AUTO_CONSENT_PROFILES,
   AUTO_CONSENT_VETO_CODES,
   DEFAULT_AUTO_CONSENT_CONFIG,
-  classifyDestructiveVetoes,
   createSessionGrant,
   evaluateAutoConsentPrompt,
   isSessionGrantValid,
@@ -21,8 +19,6 @@ import {
 } from '../domain/auto-consent-model.js';
 
 const array = (value) => (Array.isArray(value) ? value : []);
-
-const PERSISTENT_ALLOW_RE = /(?:always\s+allow|allow\s+always|allow\s+all|don'?t\s+ask\s+again|do\s+not\s+ask\s+again|persist\s+to\s+settings|settings\.json|remember\s+(?:this|my)\s+(?:choice|decision)|всегда\s+разрешать|запомнить\s+выбор|больше\s+не\s+спрашивать)/i;
 
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -148,7 +144,7 @@ export function normalizeAutoConsentState(rawState = null, nowMs = Date.now()) {
 
 function getSeatEpochForDisplay(seat, sessionGrants) {
   if (seat && typeof seat === 'object') {
-    const explicit = seat.seatSessionEpoch ?? seat.sessionEpoch ?? seat.sessionId ?? seat.startedAt;
+    const explicit = seat.seatSessionEpoch;
     if (explicit !== null && explicit !== undefined && String(explicit).trim()) {
       return String(explicit).trim();
     }
@@ -479,14 +475,28 @@ export function renderAutoConsentTabHtml({
   const runsHtml = recentRuns.length === 0
     ? `<div class="ac-empty-note">${escapeHtml(td('autoConsent.noRuns'))}</div>`
     : recentRuns.slice(0, 10).map((run) => {
-        const outcome = String(run.outcome || run.decision || run.status || 'escalate');
-        const isApproved = outcome === 'approved' || outcome === 'approve_once' || outcome === 'executed';
+        const outcome = String(run.outcome || run.status || run.decision || 'escalated');
+        const isFailed = outcome === 'failed';
+        const isDriftAborted = outcome === 'drift_aborted' || run.vetoCode === AUTO_CONSENT_VETO_CODES.PROMPT_DRIFT;
+        const isPausedCancel = run.vetoCode === AUTO_CONSENT_VETO_CODES.MASTER_PAUSED;
+        const isCanceled = outcome === 'canceled' || run.vetoCode === AUTO_CONSENT_VETO_CODES.OPERATOR_CANCELED || isPausedCancel;
         const isDry = outcome === 'dry_run';
-        const isCanceled = outcome === 'canceled' || run.vetoCode === AUTO_CONSENT_VETO_CODES.OPERATOR_CANCELED;
-        const toneClass = isApproved ? 'is-approved' : (isDry ? 'is-dry' : (isCanceled ? 'is-canceled' : 'is-escalated'));
+        const isApproved = !isFailed && !isDriftAborted && !isCanceled && !isDry &&
+          (outcome === 'approved' || outcome === 'executed' || (outcome === 'approve_once' && !run.status));
+        const toneClass = isApproved
+          ? 'is-approved'
+          : (isFailed ? 'is-failed' : (isDry ? 'is-dry' : ((isCanceled || isDriftAborted) ? 'is-canceled' : 'is-escalated')));
         const badgeText = isApproved
           ? td('autoConsent.decisionApprove')
-          : (isDry ? td('autoConsent.decisionDryRun') : (isCanceled ? td('autoConsent.toastCanceled') : td('autoConsent.decisionEscalate')));
+          : (isFailed
+            ? (en ? 'Dispatch Failed' : 'Ошибка отправки')
+            : (isDriftAborted
+              ? td('autoConsent.vetoPromptDrift')
+              : (isPausedCancel
+                ? td('autoConsent.hudPaused')
+                : (isCanceled
+                  ? td('autoConsent.toastCanceled')
+                  : (isDry ? td('autoConsent.decisionDryRun') : td('autoConsent.decisionEscalate'))))));
         const vetoDetail = run.vetoCode
           ? getVetoLabel(run.vetoCode, run.reason || '', { td, ctxPct: run.ctxPct })
           : (run.reason || '');
@@ -680,8 +690,9 @@ export function renderSeatAutoConsentPickerHtml({
 
 /**
  * HITL prompt quick action beside [1] Allow once:
- * Renders `⚡ Allow + Trust Session 60m` ONLY when Option 1 is a safe single-use Allow
- * and the visible command does NOT trigger a Hard Safety Veto.
+ * Delegates directly to the canonical domain classifier (`evaluateAutoConsentPrompt`)
+ * so Option-1-Only, `above fold`, Permission-vs-Question, and 64-line Hard Safety Vetoes
+ * share one single source of truth.
  */
 export function renderHitlTrustSessionBtnHtml({
   seatId = '',
@@ -692,13 +703,23 @@ export function renderHitlTrustSessionBtnHtml({
 } = {}) {
   const cleanSeat = String(seatId || '').trim();
   if (!cleanSeat || typeof screenText !== 'string' || !screenText.trim()) return '';
-  const { preview, fullCommand, options } = getHitlPromptPresentation(screenText);
-  if (!Array.isArray(options) || options.length < 2) return '';
-  const opt1 = options.find((o) => o && String(o.badge) === '1');
-  if (!opt1 || opt1.isCancel) return '';
-  const opt1Text = String(opt1.fullText || opt1.shortLabel || '');
-  if (PERSISTENT_ALLOW_RE.test(opt1Text)) return '';
-  if (classifyDestructiveVetoes(fullCommand || preview || '').length > 0) return '';
+  const evalRes = evaluateAutoConsentPrompt({
+    screenText,
+    seat: { id: cleanSeat },
+    effectivePolicy: {
+      active: true,
+      sourceScope: 'session',
+      profile: AUTO_CONSENT_PROFILES.SPRINT_ALL,
+      mode: AUTO_CONSENT_MODES.ARMED,
+      effectiveFlags: {
+        pauseOnCtxOverheat: false,
+        ctxPauseThresholdPct: AUTO_CONSENT_LIMITS.DEFAULT_CTX_THRESHOLD_PCT,
+        allowPackageInstall: false,
+        allowReadOnlyNetwork: false
+      }
+    }
+  });
+  if (evalRes.decision !== 'approve_once') return '';
 
   return `<button type="button" class="action-pill key-pill ac-hitl-trust-btn" data-auto-consent-action="hitl-trust-session" data-seat="${escapeHtml(cleanSeat)}" data-status="${escapeHtml(statusElId)}"${disabled ? ' disabled' : ''}>${escapeHtml(td('autoConsent.hitlTrustSessionBtn'))}</button>`;
 }
@@ -986,16 +1007,22 @@ export function createAutoConsentController({
       return;
     }
     if (eventType === 'auto_consent_resolved') {
-      const pendingId = payload.pendingId || payload.id || payload.run?.pendingId || '';
-      const seatId = payload.seatId || payload.run?.seatId || '';
-      const outcome = String(payload.outcome || payload.decision || payload.run?.outcome || '');
+      const flatRun = (payload.id && (payload.status || payload.decision || payload.outcome)) ? payload : null;
+      const run = payload.run || flatRun;
+      const pendingId = payload.pendingId || run?.pendingId || (payload.run ? payload.id : '') || '';
+      const seatId = payload.seatId || run?.seatId || '';
+      const outcome = String(payload.outcome || payload.status || run?.outcome || run?.status || payload.decision || '');
+      const hasExplicitStatus = Boolean(payload.outcome || payload.status || run?.outcome || run?.status);
+
       if (payload.state) {
         setState(payload.state);
       } else {
         const remaining = state.pendingApprovals.filter(
-          (p) => (pendingId ? p.id !== pendingId : true) && (seatId ? p.seatId !== seatId : true)
+          (p) => (pendingId ? p.id !== pendingId : true) && (!pendingId && seatId ? p.seatId !== seatId : true)
         );
-        const nextRuns = payload.run ? [payload.run, ...state.recentRuns].slice(0, 40) : state.recentRuns;
+        const nextRuns = run
+          ? [run, ...state.recentRuns.filter((r) => !run.id || r.id !== run.id)].slice(0, 40)
+          : state.recentRuns;
         state = normalizeAutoConsentState({
           ...state,
           pendingApprovals: remaining,
@@ -1003,10 +1030,17 @@ export function createAutoConsentController({
         }, now());
         renderAll();
       }
-      if (outcome === 'approved' || outcome === 'approve_once') {
-        onToastNotice(td('autoConsent.toastApproved', { seat: seatId.split('@')[0] || seatId }));
+      const seatShort = seatId.split('@')[0] || seatId;
+      if (outcome === 'approved' || (!hasExplicitStatus && outcome === 'approve_once')) {
+        onToastNotice(td('autoConsent.toastApproved', { seat: seatShort }));
       } else if (outcome === 'canceled') {
         onToastNotice(td('autoConsent.toastCanceled'));
+      } else if (outcome === 'drift_aborted') {
+        onToastNotice(td('autoConsent.vetoPromptDrift'));
+      } else if (outcome === 'failed') {
+        onToastNotice(lang() === 'en'
+          ? `Auto-consent dispatch failed on ${seatShort}`
+          : `Ошибка авто-отправки на ${seatShort}`);
       }
     }
   }
@@ -1400,12 +1434,13 @@ export function createAutoConsentController({
   async function grantSession({ scope, targetId, profile = AUTO_CONSENT_PROFILES.TRUSTED_DEV, ttlMin = 60, maxApprovals = 25, autoArm = false }) {
     if (!targetId) return;
     const seatObj = scope === 'seat' ? array(getAgents()).find((a) => a && a.id === targetId) : null;
-    const seatSessionEpoch = scope === 'seat'
-      ? (getSeatEpochForDisplay(seatObj || targetId, state.sessionGrants) || (demo ? `demo-epoch-${targetId}` : undefined))
+    const explicitSeatEpoch = (seatObj && typeof seatObj.seatSessionEpoch === 'string' && seatObj.seatSessionEpoch.trim())
+      ? seatObj.seatSessionEpoch.trim()
       : undefined;
 
     if (demo || !isLive()) {
-      applyDemoGrantCreate({ scope, targetId, profile, ttlMin, maxApprovals, seatSessionEpoch, autoArm });
+      const demoEpoch = scope === 'seat' ? (explicitSeatEpoch || `demo-epoch-${targetId}`) : null;
+      applyDemoGrantCreate({ scope, targetId, profile, ttlMin, maxApprovals, seatSessionEpoch: demoEpoch, autoArm });
       return;
     }
 
@@ -1417,7 +1452,9 @@ export function createAutoConsentController({
       ttlMin,
       maxApprovals
     };
-    if (seatSessionEpoch) payload.seatSessionEpoch = seatSessionEpoch;
+    // Only send seatSessionEpoch if explicitly provided by server telemetry;
+    // otherwise omit so server.mjs binds the authoritative live tmux pane epoch.
+    if (scope === 'seat' && explicitSeatEpoch) payload.seatSessionEpoch = explicitSeatEpoch;
     const res = await runLivePost('/api/auto-consent/session-grant', payload, `grant:${scope}:${targetId}`);
     if (res && res.ok !== false) {
       if (!state.config.enabled && !state.config.masterPaused) {

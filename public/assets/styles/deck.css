@@ -5622,12 +5622,14 @@ body.demo-mode .triage-card-title, body.demo-mode .triage-card-desc { white-spac
 .ac-run-row.is-approved { border-left-color: #00ff9d; }
 .ac-run-row.is-escalated { border-left-color: #fbbf24; }
 .ac-run-row.is-canceled { border-left-color: #ff0055; }
+.ac-run-row.is-failed { border-left-color: #ef4444; background: rgba(69, 10, 10, 0.42); }
 .ac-run-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
 .ac-run-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: #f8fafc; }
 .ac-run-status { font-weight: 800; color: #7dd3fc; }
 .ac-run-row.is-approved .ac-run-status { color: #6ee7b7; }
 .ac-run-row.is-escalated .ac-run-status { color: #fde68a; }
 .ac-run-row.is-canceled .ac-run-status { color: #fda4af; }
+.ac-run-row.is-failed .ac-run-status { color: #fca5a5; }
 .ac-run-cmd { color: #a5f3fc; font-size: 10px; overflow-wrap: anywhere; }
 .ac-run-detail { color: #94a3b8; font-size: 10px; line-height: 1.35; }
 .ac-run-clock { color: #64748b; white-space: nowrap; font-size: 10px; }

@@ -505,3 +505,217 @@ test('non-live non-demo controller stays completely idle with zero network calls
   assert.equal(buildDemoAutoConsentInitialState({ active: false }).config.enabled, false);
   ctrl.destroy();
 });
+
+test('P1 regression: renderHitlTrustSessionBtnHtml delegates to evaluateAutoConsentPrompt (rejects product questions, above-fold scrolled options, and 16-line wrapped rm -rf)', () => {
+  const td = tdFor('en');
+
+  // 1. Product/architectural choice question
+  const productChoice = 'Which caching backend should we use?\n› 1. Use Redis\n  2. Use SQLite';
+  assert.equal(renderHitlTrustSessionBtnHtml({ seatId: 'dev-check@core-platform', screenText: productChoice, td }), '');
+
+  // 2. Narrow-pane scrolled menu where option 1 is synthesized as "above fold"
+  const scrolledAboveFold = [
+    'Requesting permission for:',
+    '  $ npm test',
+    'Run this command?',
+    '  3. Yes, always allow',
+    '  4. No, cancel',
+    '↑/↓ Navigate'
+  ].join('\n');
+  assert.equal(renderHitlTrustSessionBtnHtml({ seatId: 'dev-check@core-platform', screenText: scrolledAboveFold, td }), '');
+
+  // 3. 16-line wrapped command starting with rm -rf beyond 12-line prompt-parser window
+  const wrappedRmRf = [
+    '$ rm -rf /tmp/x && \\',
+    ...Array.from({ length: 15 }, (_, i) => `  echo step-${i} && \\`),
+    '  echo done',
+    'Run this command?',
+    '› 1. Yes, allow once',
+    '  2. No, cancel'
+  ].join('\n');
+  assert.equal(renderHitlTrustSessionBtnHtml({ seatId: 'dev-check@core-platform', screenText: wrappedRmRf, td }), '');
+
+  // 4. Legitimate single-use permission prompt still renders the button (EN and RU)
+  const validEn = 'Requesting permission for:\n  $ npm test\nRun this command?\n› 1. Yes, allow once (y)\n  2. Yes, always allow\n  3. No, cancel (esc)';
+  assert.match(
+    renderHitlTrustSessionBtnHtml({ seatId: 'dev-check@core-platform', screenText: validEn, td }),
+    /data-auto-consent-action="hitl-trust-session"/
+  );
+  const validRu = 'Requesting permission for:\n  $ npm test\nRun this command?\n› 1. Да, разрешить один раз (y)\n  2. Да, всегда разрешать\n  3. Нет, отменить (esc)';
+  assert.match(
+    renderHitlTrustSessionBtnHtml({ seatId: 'dev-check@core-platform', screenText: validRu, td: tdFor('ru') }),
+    /data-auto-consent-action="hitl-trust-session"/
+  );
+});
+
+test('P1 regression: Slice 10.2 flat auto_consent_resolved runEntry honors status over decision (failed, canceled, drift_aborted never report approved)', () => {
+  const hudRoot = makeSurface();
+  const toastRoot = makeSurface();
+  const guardrailsBodyRoot = makeSurface();
+  const notices = [];
+  const td = tdFor('en');
+
+  const ctrl = createAutoConsentController({
+    hudRoot,
+    toastRoot,
+    guardrailsBodyRoot,
+    td,
+    lang: () => 'en',
+    isLive: () => true,
+    demo: false,
+    onToastNotice: (msg) => notices.push(msg),
+    now: () => NOW,
+    setIntervalFn: () => 1,
+    clearIntervalFn: () => {}
+  });
+
+  // 1. Failed dispatch with status='failed' & decision='approve_once' MUST NOT fire toastApproved or render is-approved
+  ctrl.handleSseEvent('auto_consent_pending', {
+    id: 'pend-fail',
+    seatId: 'dev-check@core-platform',
+    commandPreview: 'npm test',
+    fireAtMs: NOW + 3000,
+    graceWindowMs: 3000
+  });
+  ctrl.handleSseEvent('auto_consent_resolved', {
+    id: 'run-fail-1',
+    pendingId: 'pend-fail',
+    seatId: 'dev-check@core-platform',
+    status: 'failed',
+    decision: 'approve_once',
+    commandPreview: 'npm test',
+    reason: 'tmux exited',
+    at: new Date(NOW).toISOString()
+  });
+  assert.equal(ctrl.getState().pendingApprovals.length, 0);
+  assert.equal(ctrl.getState().recentRuns[0].id, 'run-fail-1');
+  assert.ok(!notices.at(-1).includes('Approved Option 1'), `Unexpected approved toast: ${notices.at(-1)}`);
+  assert.match(notices.at(-1), /failed/i);
+
+  // 2. Flat canceled runEntry with status='canceled' & decision='escalate' fires toastCanceled and prepends to recentRuns
+  ctrl.handleSseEvent('auto_consent_resolved', {
+    id: 'run-cancel-1',
+    pendingId: 'pend-cancel',
+    seatId: 'dev-check@core-platform',
+    status: 'canceled',
+    decision: 'escalate',
+    vetoCode: AUTO_CONSENT_VETO_CODES.OPERATOR_CANCELED,
+    commandPreview: 'npm test',
+    reason: 'Operator canceled',
+    at: new Date(NOW + 1000).toISOString()
+  });
+  assert.equal(notices.at(-1), td('autoConsent.toastCanceled'));
+  assert.equal(ctrl.getState().recentRuns[0].id, 'run-cancel-1');
+
+  // 3. Flat drift_aborted runEntry fires vetoPromptDrift and never renders as approved
+  ctrl.handleSseEvent('auto_consent_resolved', {
+    id: 'run-drift-1',
+    pendingId: 'pend-drift',
+    seatId: 'dev-check@core-platform',
+    status: 'drift_aborted',
+    decision: 'approve_once',
+    vetoCode: AUTO_CONSENT_VETO_CODES.PROMPT_DRIFT,
+    commandPreview: 'npm test',
+    reason: 'Prompt drifted',
+    at: new Date(NOW + 2000).toISOString()
+  });
+  assert.equal(notices.at(-1), td('autoConsent.vetoPromptDrift'));
+
+  // 4. Paused-canceled run renders as canceled/paused, not escalated, and failed renders is-failed (never is-approved)
+  const tabHtml = renderAutoConsentTabHtml({
+    state: {
+      ...ctrl.getState(),
+      recentRuns: [
+        ...ctrl.getState().recentRuns,
+        {
+          id: 'run-paused-1',
+          seatId: 'dev-check@core-platform',
+          status: 'canceled',
+          decision: 'escalate',
+          vetoCode: AUTO_CONSENT_VETO_CODES.MASTER_PAUSED,
+          commandPreview: 'npm test',
+          at: new Date(NOW + 3000).toISOString()
+        }
+      ]
+    },
+    td,
+    deckLang: 'en',
+    nowMs: NOW
+  });
+  assert.match(tabHtml, /ac-run-row is-failed/);
+  assert.match(tabHtml, /Dispatch Failed/);
+  assert.doesNotMatch(tabHtml, /ac-run-row is-approved/);
+  assert.ok(tabHtml.includes(td('autoConsent.hudPaused')));
+  ctrl.destroy();
+});
+
+test('P1 regression: live seat grants omit startedAt as seatSessionEpoch and Inspector Revoke matches server tmux epoch', async () => {
+  const inspectorRoot = makeSurface();
+  const td = tdFor('en');
+  const postCalls = [];
+
+  const liveSeatWithStartedAt = {
+    id: 'dev-check@core-platform',
+    shortName: 'dev-check',
+    startedAt: '2026-11-26T10:00:00Z',
+    sessionId: 'openrig-sess-99'
+  };
+
+  const serverTmuxGrant = {
+    grantId: 'grant-live-1',
+    scope: 'seat',
+    targetId: 'dev-check@core-platform',
+    profile: AUTO_CONSENT_PROFILES.TRUSTED_DEV,
+    createdAtMs: NOW,
+    expiresAtMs: NOW + 3_600_000,
+    maxApprovals: 25,
+    usedApprovals: 1,
+    seatSessionEpoch: 'tmux:%12:48123'
+  };
+
+  // 1. Inspector picker MUST match server tmux grant and render Revoke even when seat has startedAt/sessionId
+  const pickerHtml = renderSeatAutoConsentPickerHtml({
+    seat: liveSeatWithStartedAt,
+    state: {
+      status: 'armed',
+      config: { enabled: true, mode: 'armed', masterPaused: false },
+      sessionGrants: [serverTmuxGrant]
+    },
+    td,
+    lang: 'en',
+    nowMs: NOW
+  });
+  assert.match(pickerHtml, /data-auto-consent-action="revoke-grant"/);
+  assert.match(pickerHtml, /data-grant-id="grant-live-1"/);
+
+  // 2. Live POST /api/auto-consent/session-grant MUST omit seatSessionEpoch when seat only has startedAt/sessionId
+  const ctrl = createAutoConsentController({
+    inspectorRoot,
+    td,
+    lang: () => 'en',
+    isLive: () => true,
+    demo: false,
+    getAgents: () => [liveSeatWithStartedAt],
+    getSelectedSeat: () => liveSeatWithStartedAt,
+    postJson: async (endpoint, body) => {
+      postCalls.push([endpoint, body]);
+      return {
+        ok: true,
+        grant: serverTmuxGrant,
+        state: {
+          status: 'armed',
+          config: { enabled: true, mode: 'armed', masterPaused: false },
+          sessionGrants: [serverTmuxGrant]
+        }
+      };
+    },
+    now: () => NOW
+  });
+
+  await inspectorRoot.click('grant-session', { scope: 'seat', target: 'dev-check@core-platform', profile: 'trusted_dev', ttlMin: '60' });
+  const grantCall = postCalls.find(([ep]) => ep === '/api/auto-consent/session-grant');
+  assert.ok(grantCall, 'Expected POST /api/auto-consent/session-grant');
+  assert.equal(Object.prototype.hasOwnProperty.call(grantCall[1], 'seatSessionEpoch'), false, 'Must not send startedAt/sessionId as seatSessionEpoch');
+  assert.match(inspectorRoot.innerHTML, /data-auto-consent-action="revoke-grant"/);
+  ctrl.destroy();
+});
