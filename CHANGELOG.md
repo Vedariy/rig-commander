@@ -10,6 +10,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.10.0] - 2026-11-27
+
+### Added
+- **Universal `tmux` Demo Preset (`openrig/index.html`, `openrig/assets/domain/i18n.js`):**
+  - Added an explicit **`tmux / Universal` | `OpenRig Pod`** preset toggle inside the offline `/demo` header. Switching to `tmux / Universal` renders 4 standalone `tmux` sessions (`claude-api`, `codex-tests` HITL `npm test`, `gemini-docs`, `claude-refactor` CTX `78%`) with zero OpenRig jargon and `0` live `/api/*` requests.
+- **Triage-First Mobile `/demo` (`390×844`, `openrig/assets/styles/deck.css`, `openrig/index.html`):**
+  - Mobile `/demo` now opens directly onto the active P0 HITL triage card (`dev-check (QA)`) beneath a single `50px` top bar (`Brand + P0/P1 badge + Tools + EN|RU`) with thumb-friendly `44px` Option 1/2/3 HITL buttons above the fold, `0px` horizontal overflow, and a 3-tab bottom bar (`Triage`, `Map`, `Inspector`).
+- **Trust & Supply-Chain Transparency (`landing/index.html`, `landing/passport.html`, `landing/guide.html`, `landing/llms*.txt`):**
+  - Unified pinned `npx rig-commander@{{APP_VERSION}} --read-only` as the primary first-run command across `/`, `/guide`, `/passport`, and `llms*.txt`, added an explicit **Local HTTP→TMUX CSRF & DNS-Rebinding Protection** row and **Verified Supply Chain & 30-Second Audit** (npm Sigstore provenance via GitHub Actions OIDC, `0` runtime dependencies, pinned source tags) to `/` and `/passport`.
+
+### Fixed & Improved
+- **Collapsed Desktop/Laptop `/demo` Chrome (`216px → 85px`) & Inline HITL Above Fold (`openrig/index.html`, `openrig/assets/styles/deck.css`, `openrig/assets/ui/inspector-view.js`, `tests/inspector-view.test.mjs`):**
+  - Replaced the bulky 3-card FinOps header strip with a compact inline FinOps & Peak CTX popover pill (`⚡ $6.63 · CTX 79% ▾`), harmonized P0/P1 counts across top bar, Wait Radar, and mobile tabs, replaced scattered `16×16px` `?` badges with a single `28×28` `?` shortcuts popover, and cut above-the-fold controls with `0` tiny targets.
+  - All 3 inline HITL Option 1/2/3 buttons finish cleanly above the `1280×720` fold (`582px <= 720px`) with the redundant red `🚨 Resolve HITL prompt` CTA replaced by a muted `📺 Open 80-line TMUX screen` link.
+- **Dark Cockpit Topology Calm & Auto-Consent Modal Isolation (`openrig/assets/ui/{topology-view,auto-consent-view}.js`, `tests/{topology-view,auto-consent-view}.test.mjs`):**
+  - Placed node context thermal sparklines into a dedicated in-flow row cleanly below `↓57 ↑46` metrics (`0` overlap), recolored routine `Active` / `В работе` edges to calm cyan while reserving crimson strictly for P0 HITL edges.
+  - Polished the Auto-Consent modal: fixed RU heading (`Политики агентов`), added a 3-column **Allowed vs Hard-Vetoed Commands** summary strip (EN & RU), separated the `💾 Save Policy` footer from `⏸ PAUSE` (hidden when OFF, emergency style when ARMED), added a `max-height: 240px` scrollable agents list, switched Dry-Run mode styling to calm cyan, and enforced `inert` + `aria-hidden="true"` on background panels while the modal is open.
+- **Unified `56px` Sticky Site Header & `1280×720` Hero (`landing/{index,guide,passport}.html`, `tests/ai-discovery.test.mjs`):**
+  - Replaced the floating pill navbar on `/` with a unified `56px` sticky header matching `/guide` and `/passport` (`0` `fixedOverlayOverlaps`, `0px` horizontal overflow across `1440×900`, `1280×720`, `390×844` in EN & RU), tightened hero spacing so interactive simulator cards render above the `1280×720` fold, raised `.lang-btn` touch targets to `>= 36×36px`, and replaced `Cmd ⧉` on `/guide` with explicit `Copy` / `Копировать` labels.
+- **Test Verification:** Expanded automated test coverage to **`353 / 353 PASS` across `41` test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.9.0] - 2026-11-26
 
 ### Added
