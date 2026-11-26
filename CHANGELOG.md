@@ -10,6 +10,36 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.5.0] - 2026-11-26
+
+### Added
+- **Zero-Build UI & BFF Modularization — Phase 2 (`openrig/assets/ui/topology-view.js`, `openrig/assets/ui/inspector-view.js`, `openrig/lib/routes/{telemetry,guardrails,playbooks,git-shift}.mjs`):**
+  - Completed full extraction of Topology / Swimlanes / Route X-Ray and Seat Inspector / Diagnosis / Live TMUX modal renderers out of `openrig/index.html` (~2,700 lines extracted across Iteration 6) into zero-dependency native ES modules with dedicated unit test suites.
+  - Extracted BFF API routes into four focused route registries (`telemetry`, `guardrails`, `playbooks`, `git-shift`) with real loopback HTTP integration tests and safe HTTP keep-alive drain handling after `413` oversized bodies.
+- **Multi-Rig Spatial Clustering, Variable-Width Shelf Packing & Adaptive Cubic Bezier Highways (`openrig/assets/domain/topology-layout.js`, `openrig/assets/ui/topology-view.js`):**
+  - Partitioned active multi-rig fleets into labeled spatial cluster zones (`@<rig> · N`) stripping redundant `@<rig>` suffixes from both card titles and role subtitles inside zones while preserving full seat IDs in tooltips.
+  - Added **Variable-Width Shelf Packing** with per-row optimal heights and a sub-millisecond deterministic readability scorer (`evaluateClusterReadability`) that automatically wraps wide/dense pods onto full-width rows with zero horizontal overflow or card-border escapes.
+  - Added **Adaptive Cubic Bezier Edge Routing (`computeAdaptiveEdgePath`)**: strict straight lines on clean axes and unobstructed ghost links, smooth 90°-port orthogonal S-curves on active diagonals, normal-vector detour around obstacle cards, symmetric dual-lane separation for bidirectional `A ↔ B` pairs, and exact on-curve `B(0.5)` badge anchors.
+  - Added Dynamic `[1, 3, 1]` upward middle-apex arch preservation and scroll-aware Route X-Ray viewport clamping.
+- **Zero-Blind-Click HITL Command Preview & Modal Scroll Fidelity (`openrig/assets/domain/prompt-parser.js`, `openrig/assets/ui/inspector-view.js`, `openrig/index.html`):**
+  - Surfaced exact redacted command previews on HITL confirmation buttons (Antigravity, Codex, Claude, `[Y/n]`), forced bottom-scroll alignment on modal open while preserving user scrollback/drafts/focus during live SSE refreshes, and verified desktop/mobile modal flows.
+- **Honest Highway Semantics, Shell-Exit Triage Priority, Per-Rig Health & Stale-Tab Pill (`openrig/assets/domain/edge-state.js`, `openrig/assets/ontology/actions.js`, `openrig/lib/fleet-intelligence/advisory.mjs`):**
+  - Eliminated fake green animated arrows between idle/parked seats; resting high-volume pairs render thin static trunks while live work streams honestly.
+  - Prioritized bare-shell exits (`⚠ SHELL`) ahead of moderate context warnings in the Top-3 Triage Strip, exposed per-rig health score breakdowns (`rigHealthById`), and added a 1-click reload pill when a browser tab falls behind a restarted bridge version.
+- **Compact & Collapsible Slice Swimlanes (`openrig/assets/ui/topology-view.js`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/preferences.js`):**
+  - Compacted desktop swimlane rows (~41 px single-line stages with EN/RU labels) and added a persistent 1-click collapse toggle (`swimlanesCollapsed`) turning the section into a 33 px inline-chip summary strip (`● slice · 5/6`) that reclaims ~180 px of vertical canvas height.
+
+### Fixed
+- **Runtime-Driven Pi Guard & Real OpenRig CLI Relaunch Command (`openrig/assets/ontology/actions.js`, `openrig/server.mjs`, `openrig/lib/fleet-intelligence/detectors/context-entropy.mjs`):**
+  - Removed legacy `coder3` seat-name hardcodes across UI actions, `/api/send` `/compact` guard, and `ContextEntropyDetector` so Codex/Claude seats named `dev-coder3` get native `⚡ /compact` while genuine `runtime: 'pi'` seats remain protected.
+  - Replaced non-existent `rig restart <seat>` clipboard payloads everywhere with the verified OpenRig CLI command `rig seat launch <seat> --fresh --stop --reason "..."`.
+- **Docked Idle-Collapsed Bar & Live SSE Reconnect Debounce (`openrig/index.html`, `openrig/assets/styles/deck.css`):**
+  - Docked `#idleCollapsedPill` cleanly below the topology canvas so hidden-sleeper summaries never overlap bottom cards or scrolled clusters.
+  - Debounced transient `/api/telemetry` fetch blips while `LIVE SSE` is connected so the header no longer flashes a false `SNAPSHOT MODE` banner.
+- **Test Verification:** Expanded automated test coverage to **`223 / 223 PASS` across 31 test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.4.0] - 2026-11-25
 
 ### Added
