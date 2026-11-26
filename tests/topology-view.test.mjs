@@ -8,7 +8,7 @@ import {
   intersectNodeBorder, computeEdgeFallbackAnchor, positionEdgeXrayDrawer,
   getNodeThermalFillGrad, getNodeCtxValText, getNodeCtxValClass, renderDormantFlagHtml,
   renderStateIndicatorHtml, renderNodeMetaRowHtml, renderNodeSpecMetaHtml, renderNodeCardHtml,
-  renderTopologyEdgesHtml, renderSwimlanes, renderSwimlanesSummaryChips, renderEdgeXray, renderRigClustersHtml
+  renderTopologyEdgesHtml, renderSwimlanes, renderSwimlanesSummaryChips, renderQuietClustersPillHtml, renderEdgeXray, renderRigClustersHtml
 } from '../openrig/assets/ui/topology-view.js';
 
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -253,4 +253,19 @@ test('renderSwimlanesSummaryChips builds escaped clickable inline progress chips
   includes(html, 'data-slice="all"');
   assert.ok(!html.includes('<script>'));
   assert.ok(!html.includes('<img'));
+});
+
+test('renderQuietClustersPillHtml renders escaped parked/idle chips and expand-all action in EN & RU', () => {
+  for (const lang of ['en', 'ru']) {
+    const td = (key, vars) => tDeck(lang, key, vars);
+    const html = renderQuietClustersPillHtml([
+      { rigId: 'kernel', count: 5, dormantCount: 4, parkedCount: 1, parkedWorkCount: 389 },
+      { rigId: 'bad"><img src=x>', count: 1, dormantCount: 1, parkedCount: 0, parkedWorkCount: 0 }
+    ], { td, escapeHtml });
+    includes(html, 'data-quiet-rig="kernel"');
+    includes(html, '🟠 389');
+    includes(html, 'onclick="expandAllQuietRigs()"');
+    assert.ok(!html.includes('<img'));
+  }
+  assert.equal(renderQuietClustersPillHtml([], { td: k => k, escapeHtml }), '');
 });

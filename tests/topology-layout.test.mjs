@@ -5,6 +5,7 @@ import {
   classifyNodeActivityTier,
   estimateNodeBox,
   evaluateClusterReadability,
+  classifyQuietRigClusters,
   computeAdaptiveEdgePath,
   computeTopologyLayout,
   computeAnchoredPopoverRect
@@ -22,6 +23,7 @@ function makeAgent(id, opts = {}) {
     callsIn: opts.callsIn ?? 0,
     callsOut: opts.callsOut ?? 0,
     assignedWorkCount: opts.assignedWorkCount ?? 0,
+    isAnomaly: Boolean(opts.isAnomaly),
     shellExited: Boolean(opts.shellExited)
   };
 }
@@ -635,4 +637,59 @@ test('computeAdaptiveEdgePath stays straight on clean axes, uses orthogonal S-cu
   assert.equal(fwd.kind, 'parallel');
   assert.equal(rev.kind, 'parallel');
   assert.ok(Math.abs(fwd.my - rev.my) >= 40, `bidirectional badges must separate vertically, got ${fwd.my} vs ${rev.my}`);
+});
+
+test('classifyQuietRigClusters folds quiet & parked-only rigs in CALM: ON while protecting active/urgent/hot/shell/selected rigs and never blanking canvas', () => {
+  const fleet = [
+    makeAgent('dev-owner@rig-a', { state: 'working', ctxPct: 45 }),
+    makeAgent('dev-coder@rig-a', { state: 'idle', ctxPct: 30 }),
+    makeAgent('main-lead@stand-qwen', { state: 'idle', ctxPct: 12 }),
+    makeAgent('operator-agent@kernel', { state: 'waiting', isAnomaly: true, assignedWorkCount: 389, ctxPct: 41 }),
+    makeAgent('dev-hot@rig-hot', { state: 'idle', ctxPct: 78 }),
+    makeAgent('dev-shell@rig-shell', { state: 'waiting', shellExited: true, assignedWorkCount: 1 })
+  ];
+  const edges = [{ from: 'dev-owner@rig-a', to: 'dev-coder@rig-a', queueStatus: 'live', liveActive: true }];
+
+  // CALM: OFF -> zero minimization
+  const off = classifyQuietRigClusters(fleet, edges, { calmMode: false });
+  assert.equal(off.minimizedClusters.length, 0);
+  assert.equal(off.visibleAgents.length, fleet.length);
+
+  // CALM: ON (default includeParked: true) -> folds stand-qwen & kernel, preserves rig-a (working), rig-hot (ctx>=75%), rig-shell (shellExited)
+  const on = classifyQuietRigClusters(fleet, edges, { calmMode: true });
+  assert.deepEqual(on.minimizedClusters.map(c => c.rigId), ['kernel', 'stand-qwen']);
+  const kChip = on.minimizedClusters.find(c => c.rigId === 'kernel');
+  assert.equal(kChip.parkedCount, 1);
+  assert.equal(kChip.parkedWorkCount, 389);
+  assert.equal(on.minimizedAgentIds.has('operator-agent@kernel'), true);
+  assert.equal(on.minimizedAgentIds.has('main-lead@stand-qwen'), true);
+  assert.equal(on.visibleAgents.some(a => a.id === 'dev-hot@rig-hot'), true);
+  assert.equal(on.visibleAgents.some(a => a.id === 'dev-shell@rig-shell'), true);
+
+  // includeParked: false keeps kernel visible while folding pure-idle stand-qwen
+  const keepParked = classifyQuietRigClusters(fleet, edges, { calmMode: true, includeParked: false });
+  assert.deepEqual(keepParked.minimizedClusters.map(c => c.rigId), ['stand-qwen']);
+
+  // selectedAgentId or expandedQuietRigs protects/expands a quiet rig
+  const withSel = classifyQuietRigClusters(fleet, edges, { calmMode: true, selectedAgentId: 'main-lead@stand-qwen' });
+  assert.deepEqual(withSel.minimizedClusters.map(c => c.rigId), ['kernel']);
+  const withExp = classifyQuietRigClusters(fleet, edges, { calmMode: true, expandedQuietRigs: new Set(['kernel']) });
+  assert.deepEqual(withExp.minimizedClusters.map(c => c.rigId), ['stand-qwen']);
+
+  // 100% quiet fleet -> NEVER collapses into an empty canvas
+  const allIdle = [makeAgent('a@r1', { state: 'idle' }), makeAgent('b@r2', { state: 'idle' })];
+  const allQuiet = classifyQuietRigClusters(allIdle, [], { calmMode: true });
+  assert.equal(allQuiet.minimizedClusters.length, 0);
+  assert.equal(allQuiet.visibleAgents.length, 2);
+
+  // Multi-rig top row clears the top-left HUD label (y >= 36px)
+  const multi = computeTopologyLayout({
+    agents: [makeAgent('dev-owner@rig-a', { state: 'working' }), makeAgent('dev-owner@rig-b', { state: 'working' })],
+    edges: [],
+    mode: 'dynamic',
+    canvasWidth: 960,
+    canvasHeight: 500
+  });
+  const topPx = Math.min(...multi.rigClusters.map(c => (c.yPct * multi.canvasHeight) / 100));
+  assert.ok(topPx >= 35.5, `Top multi-rig row (${topPx.toFixed(1)}px) must clear top HUD label (>= 36px)`);
 });

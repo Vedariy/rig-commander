@@ -1,5 +1,5 @@
 /** Topology views: explicit state/browser adapters plus pure geometry and markup builders. */
-import { computeTopologyLayout, computeAnchoredPopoverRect, computeAdaptiveEdgePath } from '../domain/topology-layout.js';
+import { computeTopologyLayout, computeAnchoredPopoverRect, computeAdaptiveEdgePath, classifyQuietRigClusters } from '../domain/topology-layout.js';
 
 export function renderStateIndicatorHtml(agent, { escapeHtml, deckLang = 'en', td }) {
   if (agent.state === 'working') {
@@ -321,11 +321,24 @@ export function renderRigClustersHtml(clusters, { cw, ch, escapeHtml }) {
   }).join('');
 }
 
+export function renderQuietClustersPillHtml(minimizedClusters = [], { td, escapeHtml }) {
+  const clusters = Array.isArray(minimizedClusters) ? minimizedClusters : [];
+  if (clusters.length === 0) return '';
+  const chips = clusters.map(c => {
+    const parkedBadge = c.parkedCount > 0
+      ? `<span class="quiet-parked-badge">🟠 ${escapeHtml(c.parkedWorkCount > 0 ? c.parkedWorkCount : c.parkedCount)}</span>`
+      : `<span>${escapeHtml(c.count)}</span>`;
+    return `<button type="button" class="quiet-cluster-chip" data-quiet-rig="${escapeHtml(c.rigId)}" title="${escapeHtml(td('graph.expandQuietTip', { rig: c.rigId }))}" onclick="toggleQuietRigCluster(this.dataset.quietRig)">@${escapeHtml(c.rigId)} · ${parkedBadge}</button>`;
+  }).join('');
+  return `<span class="quiet-clusters-label">${escapeHtml(td('graph.quietClustersLabel', { count: clusters.length }))}</span>${chips}<button type="button" class="quiet-expand-btn" onclick="expandAllQuietRigs()">${escapeHtml(td('graph.expandAllQuiet'))}</button>`;
+}
+
 export function renderTopology(deps) {
   const { doc, browser, viewState, agents: AGENTS, edges: EDGES, isEdgeInSlice,
     hoveredAgentId, currentSliceFilter, currentRigFilter, hideIdleNodes, selectedAgentId,
     getNodeDisplayTitle, escapeHtml, td, nodeLastActiveAt, nowMs, TOPOLOGY_STAGE_COOLDOWN_MS,
-    graphLayoutMode, getContextThermal, computeBurn, deckLang } = deps;
+    graphLayoutMode, getContextThermal, computeBurn, deckLang,
+    calmMode = false, expandedQuietRigs = null } = deps;
   const nodesLayer = doc.getElementById('nodesLayer');
   const svgGroup = doc.getElementById('svgEdgesGroup');
   const nodeMap = Object.fromEntries(AGENTS.map(a => [a.id, a]));
@@ -382,14 +395,14 @@ export function renderTopology(deps) {
   let cw = Math.max(wrapEl?.clientWidth || nodesLayer.clientWidth || 1000, minWidth);
   let ch = wrapEl?.clientHeight || nodesLayer.clientHeight || 510;
   const isDetailed = doc.body.classList.contains('density-detailed');
-  const visibleAgents = AGENTS.filter(a => {
+  const baseVisibleAgents = AGENTS.filter(a => {
     const isRigMatch = currentRigFilter === 'all' || a.id.endsWith('@' + currentRigFilter);
     return isRigMatch && !collapsedIdleIds.has(a.id);
   });
 
   const recentActiveIds = new Set();
   if (viewState.hasInitialLayout) {
-    for (const a of visibleAgents) {
+    for (const a of baseVisibleAgents) {
       if (a.state === 'working' || a.state === 'urgent' || activeEndpointIds.has(a.id)) {
         nodeLastActiveAt.set(a.id, nowMs);
       }
@@ -398,6 +411,31 @@ export function renderTopology(deps) {
         recentActiveIds.add(a.id);
       }
     }
+  }
+
+  const quietRes = (currentRigFilter === 'all' && calmMode)
+    ? classifyQuietRigClusters(baseVisibleAgents, EDGES, {
+        recentActiveIds,
+        useHysteresis: graphLayoutMode === 'dynamic',
+        selectedAgentId,
+        expandedQuietRigs,
+        calmMode: true,
+        includeParked: true
+      })
+    : { visibleAgents: baseVisibleAgents, minimizedClusters: [], minimizedAgentIds: new Set() };
+
+  const visibleAgents = quietRes.visibleAgents;
+  const hiddenNodeIds = new Set(collapsedIdleIds);
+  for (const id of quietRes.minimizedAgentIds) hiddenNodeIds.add(id);
+
+  const quietPill = doc.getElementById('quietClustersPill');
+  if (quietPill) {
+    const qHtml = renderQuietClustersPillHtml(quietRes.minimizedClusters, { td, escapeHtml });
+    if (quietPill.__lastHtml !== qHtml) {
+      quietPill.innerHTML = qHtml;
+      quietPill.__lastHtml = qHtml;
+    }
+    quietPill.classList.toggle('visible', quietRes.minimizedClusters.length > 0);
   }
 
   const activeRigIds = new Set();
@@ -537,7 +575,7 @@ export function renderTopology(deps) {
       const el = nodesLayer.querySelector(`.agent-node[data-agent-id="${agent.id}"]`);
       if (!el) return;
       const isRigMatch = currentRigFilter === 'all' || agent.id.endsWith('@' + currentRigFilter);
-      const isHidden = collapsedIdleIds.has(agent.id) || !isRigMatch;
+      const isHidden = hiddenNodeIds.has(agent.id) || !isRigMatch;
       el.style.display = isHidden ? 'none' : '';
       if (isHidden) return;
       const thermal = getContextThermal(agent.ctxPct, agent.ctxWindowSize);
@@ -644,7 +682,7 @@ export function renderTopology(deps) {
       }
     });
   } else {
-    nodesLayer.innerHTML = AGENTS.map(agent => renderNodeCardHtml(agent, { ...renderDeps, collapsedIdleIds, connectedNodeIds, layoutResult })).join('');
+    nodesLayer.innerHTML = AGENTS.map(agent => renderNodeCardHtml(agent, { ...renderDeps, collapsedIdleIds: hiddenNodeIds, connectedNodeIds, layoutResult })).join('');
   }
 
   // Sync SVG viewBox with actual pixel canvas dimensions so 1 SVG unit = 1px
@@ -665,7 +703,7 @@ export function renderTopology(deps) {
   });
 
   const drawTopologyEdgesNow = (boxSizes = cachedBoxSizes) => {
-    const nextEdgesHtml = renderTopologyEdgesHtml({ ...deps, nodeMap, collapsedIdleIds,
+    const nextEdgesHtml = renderTopologyEdgesHtml({ ...deps, nodeMap, collapsedIdleIds: hiddenNodeIds,
       cw, ch, boxSizes, layoutResult, hasSliceMatch });
     if (svgGroup.__lastHtml !== nextEdgesHtml) {
       svgGroup.innerHTML = nextEdgesHtml;

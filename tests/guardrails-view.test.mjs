@@ -40,6 +40,7 @@ for (const lang of ['en', 'ru']) {
       'triggerTelegramPreviewAction(', 'answer_prompt_option', 'cancel_prompt']) includes(view.html, hook);
     includes(view.html, 'Budget trip');
     includes(view.html, 'id="tgPreviewInlineBtns"');
+    includes(view.html, 'white-space:nowrap; flex-shrink:0;');
     assert.deepEqual(view.badge, { text: 'TRIPPED • AUTO-STOP', borderColor: '#ff0055', color: '#fda4af' });
   });
 

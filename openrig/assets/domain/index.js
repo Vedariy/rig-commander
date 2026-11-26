@@ -88,6 +88,7 @@ export {
   getRolePlacementInfo,
   estimateNodeBox,
   evaluateClusterReadability,
+  classifyQuietRigClusters,
   computeAdaptiveEdgePath,
   computeTopologyLayout,
   computeAnchoredPopoverRect

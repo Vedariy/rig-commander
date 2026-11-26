@@ -281,7 +281,10 @@
         <div class="nodes-layer" id="nodesLayer"></div>
         <div class="edge-xray-drawer" id="edgeXrayDrawer" onclick="event.stopPropagation()"></div>
       </div>
-      <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()"></div>
+      <div class="canvas-bottom-dock" id="canvasBottomDock">
+        <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()"></div>
+        <div class="quiet-clusters-pill" id="quietClustersPill"></div>
+      </div>
 
       <!-- GANTT VIEW: Operational Timeline (Sub-lane packed) & Chronological Handoff Flow -->
       <div class="gantt-wrap" id="ganttWrap" style="display:none;">
@@ -1190,6 +1193,7 @@
     let currentSliceFilter = 'all';
     let currentRigFilter = 'all';
     let calmMode = false;
+    const expandedQuietRigs = new Set();
     let hideIdleNodes = false;
     let budgetWindow = 'h24'; // 'h24' | 'd7' | 'session'
     let billingPlans = null;
@@ -2199,7 +2203,8 @@
         isEdgeInSlice, hoveredAgentId, currentSliceFilter,
         currentRigFilter, hideIdleNodes, selectedAgentId, getNodeDisplayTitle,
         escapeHtml, td, shortSeat, nodeLastActiveAt, nowMs: Date.now(), TOPOLOGY_STAGE_COOLDOWN_MS,
-        graphLayoutMode, getContextThermal, computeBurn, deckLang, buildThermalCurveSvgHtml
+        graphLayoutMode, getContextThermal, computeBurn, deckLang, buildThermalCurveSvgHtml,
+        calmMode, expandedQuietRigs
       });
     }
 
@@ -3610,6 +3615,7 @@
 
     function toggleCalmMode(skipPersist = false) {
       calmMode = !calmMode;
+      expandedQuietRigs.clear();
       document.body.classList.toggle('calm-mode', calmMode);
       if (!skipPersist) persistDeckPref({ calmMode });
       const b = document.getElementById('btnCalmMode');
@@ -3617,7 +3623,24 @@
         b.classList.toggle('active', calmMode);
         b.innerHTML = calmMode ? td('hud.calmOn') : td('hud.calmOff');
       }
+      renderTopology();
       if (typeof renderDemoQuest === 'function') renderDemoQuest();
+    }
+
+    function toggleQuietRigCluster(rigId) {
+      if (!rigId) return;
+      if (expandedQuietRigs.has(rigId)) expandedQuietRigs.delete(rigId);
+      else expandedQuietRigs.add(rigId);
+      renderTopology();
+    }
+
+    function expandAllQuietRigs() {
+      for (const a of AGENTS) {
+        const id = String(a && a.id || '');
+        const rid = id.includes('@') ? id.slice(id.lastIndexOf('@') + 1) : 'local';
+        expandedQuietRigs.add(rid);
+      }
+      renderTopology();
     }
 
     function toggleHideIdle() {

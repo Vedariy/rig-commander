@@ -471,7 +471,7 @@ export function renderGuardrailsSettingsHtml({
       <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(56,189,248,0.22); border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
           <span style="font-family:var(--font-mono); font-size:12px; font-weight:800; color:var(--cyan);">${td('guard.tgTitle')}</span>
-          <span class="action-pill" style="font-size:10px; border-color:${tg.configured ? '#00ff9d' : '#64748b'}; color:${tg.configured ? '#6ee7b7' : '#94a3b8'};">
+          <span class="action-pill" style="font-size:10px; white-space:nowrap; flex-shrink:0; border-color:${tg.configured ? '#00ff9d' : '#64748b'}; color:${tg.configured ? '#6ee7b7' : '#94a3b8'};">
             ${tg.configured ? `🟢 ONLINE (${escapeHtml(tg.chatId)})` : '⚪ STANDBY'}
           </span>
         </div>

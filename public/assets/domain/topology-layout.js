@@ -1141,7 +1141,7 @@ function packRigRows(rigs, rigMeta, availCanvasW, gap) {
   return rows;
 }
 
-function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed }) {
+function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, padTop = pad, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed }) {
   let width = cw;
   for (const rowRigs of rowSlices) {
     const rowMinTotal = pad * 2 + gap * Math.max(0, rowRigs.length - 1) +
@@ -1205,12 +1205,12 @@ function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, gap, insetX, ins
   const rows = rowSlices.length;
   const usableCh = Math.max(240, ch - bottomReservePx);
   const sumMinH = rowMinHeights.reduce((s, h) => s + h, 0);
-  const totalGapsH = pad * 2 + gap * Math.max(0, rows - 1);
+  const totalGapsH = padTop + pad + gap * Math.max(0, rows - 1);
   const spareH = Math.max(0, usableCh - totalGapsH - sumMinH);
   const rowHeights = rowMinHeights.map(h => h + (spareH * h) / (sumMinH || 1));
 
   const rowTops = [];
-  let cursorY = pad;
+  let cursorY = padTop;
   for (let rIdx = 0; rIdx < rows; rIdx++) {
     rowTops.push(cursorY);
     cursorY += rowHeights[rIdx] + gap;
@@ -1219,6 +1219,105 @@ function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, gap, insetX, ins
   const height = Math.max(ch, contentBottom + bottomReservePx);
 
   return { width, height, zoneRects, rowHeights, rowTops };
+}
+
+/**
+ * Classifies completely quiet rig clusters for minimization in CALM: ON multi-rig view.
+ * Safety invariants:
+ *   - Never hides a rig containing any active/urgent/working/hysteresis/active-edge seat,
+ *     anomaly, shell-exited seat, hot context (>=75%), or the currently selected seat.
+ *   - Never collapses all rigs into an empty canvas when 100% of the fleet is idle.
+ *   - When includeParked is true (default), parked-only rigs without alerts fold cleanly
+ *     into the dock while preserving their parkedWorkCount badge (e.g. @kernel · 🟠 389).
+ */
+export function classifyQuietRigClusters(agents = [], edges = [], {
+  tiers = null,
+  recentActiveIds = null,
+  useHysteresis = true,
+  selectedAgentId = null,
+  expandedQuietRigs = null,
+  calmMode = false,
+  includeParked = true
+} = {}) {
+  const list = Array.isArray(agents) ? agents.filter(Boolean) : [];
+  if (!calmMode || list.length === 0) {
+    return { visibleAgents: list, minimizedClusters: [], minimizedAgentIds: new Set() };
+  }
+
+  const groups = new Map();
+  for (const agent of list) {
+    const rid = rigIdOf(agent);
+    if (!groups.has(rid)) groups.set(rid, []);
+    groups.get(rid).push(agent);
+  }
+  if (groups.size < 2) {
+    return { visibleAgents: list, minimizedClusters: [], minimizedAgentIds: new Set() };
+  }
+
+  const tierMap = (tiers && typeof tiers === 'object')
+    ? tiers
+    : classifyNodeActivityTier(list, edges, { recentActiveIds, useHysteresis }).tiers;
+  const expandedSet = expandedQuietRigs instanceof Set
+    ? expandedQuietRigs
+    : new Set(Array.isArray(expandedQuietRigs) ? expandedQuietRigs : []);
+
+  const quietRigIds = [];
+  const allRigIds = [...groups.keys()].sort(naturalCompare);
+  let hasNonQuietRig = false;
+
+  for (const rid of allRigIds) {
+    const rigAgents = groups.get(rid);
+    const isQuietRig = rigAgents.every(agent => {
+      const state = String(agent.state || 'idle').toLowerCase();
+      if ((tierMap[agent.id] || 'dormant') !== 'dormant') return false;
+      if (agent.shellExited || state === 'urgent' || state === 'working') return false;
+      if (typeof agent.ctxPct === 'number' && Number.isFinite(agent.ctxPct) && agent.ctxPct >= 75) return false;
+      if (selectedAgentId && agent.id === selectedAgentId) return false;
+      if (!includeParked && state === 'waiting') return false;
+      if (agent.isAnomaly && !(includeParked && state === 'waiting')) return false;
+      return true;
+    });
+    if (!isQuietRig) {
+      hasNonQuietRig = true;
+    } else if (!expandedSet.has(rid)) {
+      quietRigIds.push(rid);
+    }
+  }
+
+  // Never collapse the entire fleet into a blank canvas if every rig is quiet
+  if (!hasNonQuietRig || quietRigIds.length === 0 || quietRigIds.length >= allRigIds.length) {
+    return { visibleAgents: list, minimizedClusters: [], minimizedAgentIds: new Set() };
+  }
+
+  const minimizedSet = new Set(quietRigIds);
+  const minimizedAgentIds = new Set();
+  const minimizedClusters = quietRigIds.map(rid => {
+    const rigAgents = groups.get(rid);
+    let parkedCount = 0;
+    let parkedWorkCount = 0;
+    let maxCtxPct = null;
+    for (const a of rigAgents) {
+      minimizedAgentIds.add(a.id);
+      if (String(a.state || '').toLowerCase() === 'waiting') {
+        parkedCount += 1;
+        parkedWorkCount += Number(a.assignedWorkCount || (a.parkedData && a.parkedData.openCount) || 0);
+      }
+      if (typeof a.ctxPct === 'number' && Number.isFinite(a.ctxPct)) {
+        maxCtxPct = maxCtxPct === null ? a.ctxPct : Math.max(maxCtxPct, a.ctxPct);
+      }
+    }
+    return {
+      rigId: rid,
+      count: rigAgents.length,
+      dormantCount: rigAgents.length - parkedCount,
+      parkedCount,
+      parkedWorkCount,
+      maxCtxPct
+    };
+  });
+
+  const visibleAgents = list.filter(a => !minimizedSet.has(rigIdOf(a)));
+  return { visibleAgents, minimizedClusters, minimizedAgentIds };
 }
 
 // Each rig uses the existing single-rig engine inside a disjoint, padded region.
@@ -1234,7 +1333,7 @@ function layoutRigClusters(list, edges, options, activity, cw, ch) {
   const rigs = [...groups.keys()].sort(naturalCompare);
   const { detailed, measuredBoxes, mode } = options;
   const bottomReservePx = Math.max(0, Number(options.bottomReservePx) || 0);
-  const pad = 12, gap = 20, insetX = 16, insetTop = 32, insetBottom = 16;
+  const pad = 12, padTop = 36, gap = 20, insetX = 16, insetTop = 32, insetBottom = 16;
 
   const rigMeta = new Map();
   for (const rigId of rigs) {
@@ -1248,7 +1347,7 @@ function layoutRigClusters(list, edges, options, activity, cw, ch) {
   let rowSlices = packRigRows(rigs, rigMeta, availRowW, gap);
 
   const runPass = (slices) => {
-    const geom = computeZoneGeometry(slices, rigMeta, cw, ch, { pad, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed });
+    const geom = computeZoneGeometry(slices, rigMeta, cw, ch, { pad, padTop, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed });
     const locals = new Map();
     const scores = new Map();
     for (const rigId of rigs) {
