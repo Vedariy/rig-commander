@@ -8,7 +8,7 @@ import {
   intersectNodeBorder, computeEdgeFallbackAnchor, positionEdgeXrayDrawer,
   getNodeThermalFillGrad, getNodeCtxValText, getNodeCtxValClass, renderDormantFlagHtml,
   renderStateIndicatorHtml, renderNodeMetaRowHtml, renderNodeSpecMetaHtml, renderNodeCardHtml,
-  renderTopologyEdgesHtml, renderSwimlanes, renderEdgeXray, renderRigClustersHtml
+  renderTopologyEdgesHtml, renderSwimlanes, renderSwimlanesSummaryChips, renderEdgeXray, renderRigClustersHtml
 } from '../openrig/assets/ui/topology-view.js';
 
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -235,4 +235,22 @@ test('Node cards inside multi-rig clusters strip @rig from both title and role w
   includes(html, '<div class="node-role">Кодер (dev-coder3)</div>');
   assert.ok(!html.includes('>dev-coder3@rig-commander<'));
   assert.ok(!html.includes('>Кодер (dev-coder3@rig-commander)<'));
+});
+
+test('renderSwimlanesSummaryChips builds escaped clickable inline progress chips for collapsed header bar', () => {
+  const html = renderSwimlanesSummaryChips({
+    visibleLanes: [
+      { id: 'iter7-2', name: '📁 iter7-2', color: '#00ff9d', currentStage: 4, turns: 7, qaRounds: 2 },
+      { id: 'xss"><img src=x>', name: '📁 bad<script>', color: '#38bdf8', currentStage: 2, turns: 3, qaRounds: 1 }
+    ],
+    stageNames: ['1. Spec', '2. Код', '3. QA', '4. Фикс', '5. Принят', '6. Push'],
+    currentSliceFilter: 'iter7-2',
+    escapeHtml
+  });
+  includes(html, 'class="swim-chip active"');
+  includes(html, '>iter7-2<');
+  includes(html, '>5/6<');
+  includes(html, 'data-slice="all"');
+  assert.ok(!html.includes('<script>'));
+  assert.ok(!html.includes('<img'));
 });

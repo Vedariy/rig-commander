@@ -33,6 +33,7 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
     density: 'detailed',
     sidebarLeftCollapsed: true,
     sidebarRightCollapsed: false,
+    swimlanesCollapsed: true,
     autoFollow: false,
     audioRadarOn: true,
     selectedAgentId: 'dev-owner@core-platform',
@@ -51,6 +52,7 @@ test('sanitizeDeckPrefs validates enums, booleans, numbers and rejects unsafe id
   assert.equal(clean.ganttHideNoise, false);
   assert.equal(clean.density, 'detailed');
   assert.equal(clean.sidebarLeftCollapsed, true);
+  assert.equal(clean.swimlanesCollapsed, true);
   assert.equal(clean.autoFollow, false);
   assert.equal(clean.audioRadarOn, true);
   assert.equal(clean.selectedAgentId, 'dev-owner@core-platform');

@@ -722,22 +722,35 @@ export function renderSwimlanes({ visibleLanes, stageNames: STAGE_NAMES, current
         cls = 'current';
         icon = '🟢 ';
       }
-      return `<div class="stage-cell ${cls}">${icon}${escapeHtml(stName)}</div>`;
+      return `<div class="stage-cell ${cls}" title="${escapeHtml(stName)}">${icon}${escapeHtml(stName)}</div>`;
     }).join('');
 
+    const metricsSummary = `${lane.coder} • ${lane.turns} выз • QA: ${lane.qaRounds} кр`;
     return `
       <div class="swimlane-row"
-           style="--lane-pad:${lane.padPx}; --lane-bar:${lane.barPx}; --lane-color:${lane.color}; ${isSelectedSlice ? 'border-color:var(--cyan); box-shadow:0 0 14px rgba(0,240,255,0.3);' : ''}"
+           style="--lane-pad:${lane.padPx}; --lane-bar:${lane.barPx}; --lane-color:${lane.color}; ${isSelectedSlice ? 'border-color:var(--cyan); box-shadow:0 0 12px rgba(0,240,255,0.28);' : ''}"
            data-slice="${escapeHtml(lane.id === currentSliceFilter ? 'all' : lane.id)}" onclick="setSliceFilter(this.getAttribute('data-slice'))">
         <div class="lane-info">
-          <div class="lane-name">${escapeHtml(lane.name)}</div>
-          <div class="lane-metrics">
+          <div class="lane-name" title="${escapeHtml(lane.name)}">${escapeHtml(lane.name)}</div>
+          <div class="lane-metrics" title="${escapeHtml(metricsSummary)}">
             ${escapeHtml(lane.coder)} • ⚡ <b>${lane.turns} выз</b> • 🪃 <b>QA: ${lane.qaRounds} кр</b>
           </div>
         </div>
         <div class="stages-track">${stagesHtml}</div>
       </div>
     `;
+  }).join('');
+}
+
+export function renderSwimlanesSummaryChips({ visibleLanes, stageNames: STAGE_NAMES, currentSliceFilter, escapeHtml }) {
+  const totalStages = Math.max(1, Array.isArray(STAGE_NAMES) ? STAGE_NAMES.length : 6);
+  return (Array.isArray(visibleLanes) ? visibleLanes : []).map(lane => {
+    const isSelected = currentSliceFilter === lane.id;
+    const stageIdx = Math.max(0, Math.min(totalStages - 1, Number(lane.currentStage) || 0));
+    const stageLabel = (Array.isArray(STAGE_NAMES) && STAGE_NAMES[stageIdx]) ? STAGE_NAMES[stageIdx] : `${stageIdx + 1}/${totalStages}`;
+    const cleanName = String(lane.name || lane.id || '').replace(/^[^\p{L}\p{N}]+/u, '').trim() || String(lane.id || '');
+    const tip = `${cleanName} — ${stageLabel} (${lane.turns || 0} / QA: ${lane.qaRounds || 0})`;
+    return `<button type="button" class="swim-chip${isSelected ? ' active' : ''}" style="--chip-color:${escapeHtml(lane.color || '#00f0ff')};" data-slice="${escapeHtml(lane.id === currentSliceFilter ? 'all' : lane.id)}" title="${escapeHtml(tip)}" onclick="event.stopPropagation(); setSliceFilter(this.getAttribute('data-slice'))"><span class="swim-chip-dot"></span><span class="swim-chip-name">${escapeHtml(cleanName)}</span><span class="swim-chip-step">${stageIdx + 1}/${totalStages}</span></button>`;
   }).join('');
 }
 

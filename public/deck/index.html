@@ -316,16 +316,20 @@
         <div class="gantt-tooltip" id="ganttTooltip" role="tooltip"></div>
       </div>
 
-      <!-- PROPORTIONAL SLICE SWIMLANES -->
-      <div class="swimlanes-section">
-        <div class="swimlanes-title">
-          <span data-i18n="swim.title">🛤️ ДОРОЖКИ СЛАЙСОВ (ШИРИНА ДОРОЖКИ = ЧИСЛО ВЫЗОВОВ И КРУГОВ ДОРАБОТКИ)</span>
-          <span style="display:flex; align-items:center; gap:6px;">
-            <span style="color:#94a3b8; font-weight:400;" data-i18n="swim.stages">Станции: Spec/Dev → Код → QA Границы → Сверка/Фикс → Приёмка → Push</span>
-            <button type="button" class="widget-hint" data-hint-key="hint.swimlanes" aria-label="Info">?</button>
+      <!-- COMPACT & COLLAPSIBLE SLICE SWIMLANES -->
+      <div class="swimlanes-section" id="swimlanesSection">
+        <div class="swimlanes-title" onclick="toggleSwimlanesCollapsed()">
+          <span class="swimlanes-title-left">
+            <span data-i18n="swim.title" style="flex-shrink:0;">ДОРОЖКИ СЛАЙСОВ</span>
+            <span class="swimlanes-count-badge" id="swimlanesCountBadge">0</span>
+            <span class="swimlanes-summary-chips" id="swimlanesSummaryChips"></span>
+          </span>
+          <span style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
+            <button type="button" class="widget-hint" data-hint-key="hint.swimlanes" aria-label="Info" onclick="event.stopPropagation()">?</button>
+            <button type="button" class="swimlanes-toggle-btn" id="btnToggleSwimlanes" aria-expanded="true" title="Свернуть дорожки слайсов" onclick="event.stopPropagation(); toggleSwimlanesCollapsed()">▾</button>
           </span>
         </div>
-        <div id="swimlanesContainer" style="display:flex; flex-direction:column; gap:7px;"></div>
+        <div id="swimlanesContainer" style="display:flex; flex-direction:column; gap:5px;"></div>
       </div>
     </section>
 
@@ -1066,14 +1070,25 @@
       }
     ];
 
-    const STAGE_NAMES = [
-      '1. Spec + Dev',
-      '2. Код + Тесты',
-      '3. QA Границы',
-      '4. Доработка / Сверка',
-      '5. Принят локально',
-      '6. Push & /clear'
+    const STAGE_NAMES_RU = [
+      '1. Spec',
+      '2. Код',
+      '3. QA',
+      '4. Фикс',
+      '5. Принят',
+      '6. Push'
     ];
+    const STAGE_NAMES_EN = [
+      '1. Spec',
+      '2. Code',
+      '3. QA',
+      '4. Fix',
+      '5. Accepted',
+      '6. Push'
+    ];
+    function getStageNames() {
+      return deckLang === 'en' ? STAGE_NAMES_EN : STAGE_NAMES_RU;
+    }
 
     let selectedAgentId = 'dev-check@core-platform';
     let hasPurgedSnapshotSeeds = false;
@@ -2124,15 +2139,48 @@
       });
     }
 
+    function applySwimlanesCollapsedUi(collapsed) {
+      const sec = document.getElementById('swimlanesSection');
+      const btn = document.getElementById('btnToggleSwimlanes');
+      const isCollapsed = Boolean(collapsed);
+      if (sec) sec.classList.toggle('collapsed', isCollapsed);
+      if (btn) {
+        btn.textContent = isCollapsed ? '▸' : '▾';
+        btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+        btn.title = isCollapsed ? td('swim.expandTip') : td('swim.collapseTip');
+      }
+    }
+
+    function toggleSwimlanesCollapsed() {
+      const sec = document.getElementById('swimlanesSection');
+      const next = sec ? !sec.classList.contains('collapsed') : false;
+      applySwimlanesCollapsedUi(next);
+      persistDeckPref({ swimlanesCollapsed: next });
+      window.requestAnimationFrame(() => renderTopology());
+    }
+
     function renderSwimlanes() {
       renderFilterButtons();
       const container = document.getElementById('swimlanesContainer');
-      const section = container ? container.closest('.swimlanes-section') : null;
+      const section = document.getElementById('swimlanesSection') || (container ? container.closest('.swimlanes-section') : null);
+      const countBadge = document.getElementById('swimlanesCountBadge');
+      const chipsEl = document.getElementById('swimlanesSummaryChips');
       const visibleLanes = getVisibleSliceLanes();
+      const stageNames = getStageNames();
       if (section) section.style.display = visibleLanes.length > 0 ? '' : 'none';
+      if (countBadge) countBadge.textContent = String(visibleLanes.length);
+      if (chipsEl) {
+        const nextChipsHtml = TopologyView.renderSwimlanesSummaryChips({
+          visibleLanes, stageNames, currentSliceFilter, escapeHtml
+        });
+        if (chipsEl.__lastHtml !== nextChipsHtml) {
+          chipsEl.innerHTML = nextChipsHtml;
+          chipsEl.__lastHtml = nextChipsHtml;
+        }
+      }
       if (!container) return;
       const nextSwimHtml = TopologyView.renderSwimlanes({
-        visibleLanes, stageNames: STAGE_NAMES, currentSliceFilter, escapeHtml
+        visibleLanes, stageNames, currentSliceFilter, escapeHtml
       });
       if (container.__lastHtml !== nextSwimHtml) {
         container.innerHTML = nextSwimHtml;
@@ -8161,6 +8209,7 @@
         layout.classList.toggle('left-collapsed', prefs.sidebarLeftCollapsed);
         layout.classList.toggle('right-collapsed', prefs.sidebarRightCollapsed);
       }
+      applySwimlanesCollapsedUi(prefs.swimlanesCollapsed);
       document.body.classList.toggle('density-detailed', prefs.density === 'detailed');
       updateGraphLayoutSwitchUi();
       syncGanttControlsUi();

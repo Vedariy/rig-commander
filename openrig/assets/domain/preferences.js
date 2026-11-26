@@ -22,6 +22,7 @@ export const DEFAULT_DECK_PREFS = Object.freeze({
   density: 'fit', // 'fit' | 'detailed'
   sidebarLeftCollapsed: false,
   sidebarRightCollapsed: false,
+  swimlanesCollapsed: false,
   autoFollow: true,
   audioRadarOn: false,
   desktopNotifications: false,
@@ -67,6 +68,7 @@ export function sanitizeDeckPrefs(raw = {}) {
     density: VALID_DENSITY.has(src.density) ? src.density : DEFAULT_DECK_PREFS.density,
     sidebarLeftCollapsed: typeof src.sidebarLeftCollapsed === 'boolean' ? src.sidebarLeftCollapsed : DEFAULT_DECK_PREFS.sidebarLeftCollapsed,
     sidebarRightCollapsed: typeof src.sidebarRightCollapsed === 'boolean' ? src.sidebarRightCollapsed : DEFAULT_DECK_PREFS.sidebarRightCollapsed,
+    swimlanesCollapsed: typeof src.swimlanesCollapsed === 'boolean' ? src.swimlanesCollapsed : DEFAULT_DECK_PREFS.swimlanesCollapsed,
     autoFollow: typeof src.autoFollow === 'boolean' ? src.autoFollow : DEFAULT_DECK_PREFS.autoFollow,
     audioRadarOn: typeof src.audioRadarOn === 'boolean' ? src.audioRadarOn : DEFAULT_DECK_PREFS.audioRadarOn,
     desktopNotifications: typeof src.desktopNotifications === 'boolean' ? src.desktopNotifications : DEFAULT_DECK_PREFS.desktopNotifications,
