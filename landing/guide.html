@@ -599,6 +599,7 @@
       <a href="#legend"><span data-lang-block="ru">3. Цвета, статусы и линии</span><span data-lang-block="en">3. Status & Highway Legend</span></a>
       <a href="#playbooks"><span data-lang-block="ru">4. Операционные плейбуки</span><span data-lang-block="en">4. Operational Playbooks</span></a>
       <a href="#guardrails"><span data-lang-block="ru">5. FinOps, Авто-тормоз и TG</span><span data-lang-block="en">5. FinOps, Guardrails & TG</span></a>
+      <a href="#auto-consent"><span data-lang-block="ru">5b. Политика авто-согласия</span><span data-lang-block="en">5b. Scoped Auto-Consent</span></a>
       <a href="#pwa"><span data-lang-block="ru">6. Live PWA (Mac + телефон)</span><span data-lang-block="en">6. Live PWA (Mac + Phone)</span></a>
       <a href="#shortcuts"><span data-lang-block="ru">7. Горячие клавиши и Share Card</span><span data-lang-block="en">7. Shortcuts & Share Card</span></a>
       <a href="#faq"><span data-lang-block="ru">8. FAQ и диагностика</span><span data-lang-block="en">8. FAQ & Troubleshooting</span></a>
@@ -877,6 +878,40 @@
           </div>
         </div>
         <a class="playbook-link" href="/demo?track=guardrails"><span data-lang-block="ru">▶ Посмотреть Авто-тормоз и Telegram в демо</span><span data-lang-block="en">▶ Preview Guardrails & Telegram in Demo</span> →</a>
+      </section>
+
+      <!-- 5b. SCOPED AUTO-CONSENT POLICY ENGINE -->
+      <section class="card" id="auto-consent">
+        <div class="sec-head">
+          <h2>⚡ <span data-lang-block="ru">5b. Политика авто-согласия по областям (Auto-Consent)</span><span data-lang-block="en">5b. Scoped Opt-In Auto-Consent Policy</span></h2>
+          <span class="sec-tag">OPT-IN • ALLOW ONCE • 3S CANCEL</span>
+        </div>
+        <p class="lead">
+          <span data-lang-block="ru">Для личных и тестовых проектов, где большинство HITL-остановок — это рутинные локальные тесты и сборки, RigCommander предлагает централизованную <strong>строго opt-in</strong> политику авто-подтверждений (по умолчанию полностью <strong>ВЫКЛ</strong> и в режиме <strong>Dry-Run</strong>). Политика работает по иерархии <strong>Глобально → Проект → Агент → Временная сессия</strong>.</span>
+          <span data-lang-block="en">For personal and sandboxed workspaces where most terminal prompts are routine local tests and checks, RigCommander offers a centralized, <strong>strictly opt-in</strong> Auto-Consent policy (completely <strong>OFF</strong> and <strong>Dry-Run</strong> by default). Policies inherit across four scopes: <strong>Global → Project → Agent → Ephemeral Session</strong>.</span>
+        </p>
+
+        <div class="grid-2">
+          <div class="subcard">
+            <div class="subcard-title">🎚️ <span data-lang-block="ru">4 профиля доверия и приоритет запрета</span><span data-lang-block="en">Trust Profiles &amp; Deny-Wins Inheritance</span></div>
+            <ul class="clean" style="margin-top:6px;">
+              <li><strong><span data-lang-block="ru">Выкл / Только вручную:</span><span data-lang-block="en">Off / Manual Only:</span></strong> <span data-lang-block="ru">ручной контроль по умолчанию; явный запрет на проекте или агенте не обходится родительской политикой.</span><span data-lang-block="en">manual approval by default; an explicit Manual Only override on a project or agent is never silently bypassed by a parent scope.</span></li>
+              <li><strong><span data-lang-block="ru">Безопасное чтение и тесты:</span><span data-lang-block="en">Safe Read-Only:</span></strong> <span data-lang-block="ru">только чистые read-only проверки и запуск тестов без shell-операторов записи.</span><span data-lang-block="en">strictly read-only inspection and local test commands with zero write or shell chaining operators.</span></li>
+              <li><strong><span data-lang-block="ru">Доверенный локальный Dev:</span><span data-lang-block="en">Trusted Dev:</span></strong> <span data-lang-block="ru">локальные сборки, тесты, коммиты и правки в воркспейсе; установка пакетов и внешние сетевые вызовы по умолчанию эскалируются человеку (включаются отдельными флагами в настройках).</span><span data-lang-block="en">workspace-local builds, tests, commits, and edits; package installations and external network calls stay escalated by default (configurable opt-in toggles in Settings).</span></li>
+              <li><strong><span data-lang-block="ru">Временная сессия (только в RAM):</span><span data-lang-block="en">Ephemeral Session Grant (RAM-only):</span></strong> <span data-lang-block="ru">кнопка <strong>⚡ Разрешить + Доверие на 60м</strong> рядом с п.1 создаёт ограниченную по времени (до 2 ч) и числу подтверждений сессию, которая автоматически аннулируется при перезапуске агента или сервера.</span><span data-lang-block="en">clicking <strong>⚡ Allow + Trust Session 60m</strong> beside Option 1 creates a time- and count-bounded grant (max 2h) that lives only in RAM and automatically invalidates if the seat restarts.</span></li>
+            </ul>
+          </div>
+          <div class="subcard">
+            <div class="subcard-title">🛡️ <span data-lang-block="ru">Неперебиваемые гарантии безопасности</span><span data-lang-block="en">Non-Overridable Safety Guarantees</span></div>
+            <ul class="clean" style="margin-top:6px;">
+              <li><strong><span data-lang-block="ru">Только п.1 (разово):</span><span data-lang-block="en">Allow Once Only:</span></strong> <span data-lang-block="ru">движок никогда не нажимает «Всегда разрешать» и не меняет постоянные настройки харнеса — авто-подтверждение отзывается мгновенно.</span><span data-lang-block="en">only single-use Option 1 approval is ever dispatched — never "Always allow" or persistent harness settings, keeping revocation instant.</span></li>
+              <li><strong><span data-lang-block="ru">Жёсткие запреты всегда эскалируются:</span><span data-lang-block="en">Hard Safety Vetoes Always Escalate:</span></strong> <span data-lang-block="ru">удаление файлов, публикация и отправка в удалённый репозиторий (<code class="inline">git push</code>), доступ к секретам, изменение схем БД, а также любые архитектурные и продуктовые вопросы всегда передаются человеку.</span><span data-lang-block="en">destructive operations, remote pushes and releases (<code class="inline">git push</code>), credential access, database schema changes, and architectural or product questions always wait for human review.</span></li>
+              <li><strong><span data-lang-block="ru">3-секундное окно отмены и перепроверка:</span><span data-lang-block="en">3-Second Cancel Toast &amp; Re-Verification:</span></strong> <span data-lang-block="ru">перед отправкой появляется таймер обратного отсчёта (1.5с / 3с / 5с) с кнопкой <strong>Отмена</strong>; прямо перед выполнением экран терминала проверяется повторно, и при любом изменении промпта действие отменяется.</span><span data-lang-block="en">every eligible prompt shows a live countdown toast (1.5s / 3s / 5s) with a prominent <strong>Cancel</strong> button and re-verifies the live terminal right before dispatch so changed prompts abort safely.</span></li>
+              <li><strong><span data-lang-block="ru">Защита от перегрева и мгновенная пауза:</span><span data-lang-block="en">Context Overheat Pause &amp; Panic Kill-Switch:</span></strong> <span data-lang-block="ru">при заполнении контекста агента (&ge; 75% по умолчанию) авто-подтверждение ставится на паузу; пока активна хотя бы одна область, в верхнем HUD горит индикатор с кнопкой <strong>⏸ ПАУЗА</strong> (а также команда <code class="inline">/pause_auto</code> в Telegram).</span><span data-lang-block="en">when a seat reaches the context threshold (75% by default), auto-consent pauses for that seat; whenever any scope is active, a visible top-HUD indicator exposes 1-click <strong>⏸ PAUSE</strong> (plus <code class="inline">/pause_auto</code> in Telegram).</span></li>
+            </ul>
+          </div>
+        </div>
+        <a class="playbook-link" href="/demo?track=auto-consent"><span data-lang-block="ru">▶ Попробовать симуляцию Auto-Consent в демо (0 сетевых запросов)</span><span data-lang-block="en">▶ Try the Auto-Consent Simulation in Demo (0 network calls)</span> →</a>
       </section>
 
       <!-- 6. LIVE PWA -->
