@@ -10,8 +10,7 @@ import { buildSeatRelaunchCommand, isPiHarness } from '../../assets/ontology/act
 import { EVAL_RISK_LEVELS, EVAL_TIERS } from '../../assets/domain/evaluator-model.js';
 import {
   DESTRUCTIVE_VETO_PATTERNS,
-  SHELL_METACHAR_RE,
-  SAFE_READONLY_COMMAND_RE,
+  isSafeReadOnlyCommand,
   classifyDestructiveVetoes
 } from '../../assets/domain/auto-consent-model.js';
 
@@ -24,7 +23,7 @@ function clamp01(val) {
 
 function extractPromptCommandRegion(screenText) {
   const lines = String(screenText || '').replace(/\x1B\[[0-9;?]*[a-zA-Z]/g, '').split(/\r?\n/);
-  const tail = lines.slice(-32);
+  const tail = lines.slice(-64);
   return tail.join('\n');
 }
 
@@ -61,11 +60,7 @@ export function evaluateHitlRiskRules(screenText = '', parsedOptions = null) {
   }
 
   const candidateCmd = extractCandidateCommandLine(region);
-  const isCleanReadOnly = Boolean(
-    candidateCmd &&
-    !SHELL_METACHAR_RE.test(candidateCmd) &&
-    SAFE_READONLY_COMMAND_RE.test(candidateCmd)
-  );
+  const isCleanReadOnly = isSafeReadOnlyCommand(candidateCmd);
 
   if (isCleanReadOnly && opts.length >= 2) {
     return {

@@ -103,6 +103,9 @@ const SEAT_PROFILES = new Set(['inherit', 'off', 'manual_only', 'safe_readonly',
 const SESSION_PROFILES = new Set(['safe_readonly', 'trusted_dev', 'sprint_all']);
 const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
+const GIT_OPT_ARG = `(?:"[^"\\n]+"|'[^'\\n]+'|[^\\s;|&\`]+)`;
+const GIT_GLOBAL_OPTS = `(?:(?:(?:-C|-c|--git-dir|--work-tree|--namespace|--config-env)\\s+${GIT_OPT_ARG}|--?[a-zA-Z0-9-]+(?:=${GIT_OPT_ARG})?)\\s+)*`;
+
 /**
  * Canonical Non-Overridable Hard Safety Veto Patterns (Single Source of Truth).
  * Shared directly with openrig/lib/ai-evaluator/expert-rules.mjs so Tier 0 Expert Rules
@@ -118,25 +121,25 @@ export const DESTRUCTIVE_VETO_PATTERNS = Object.freeze([
   Object.freeze({
     id: 'git_push',
     ruleId: 'E-VETO-GIT_PUSH',
-    re: /\bgit\s+(?:(?:(?:-C|-c|--git-dir|--work-tree|--namespace|--config-env)\s+\S+|--?[a-zA-Z0-9-]+(?:=\S+)?)\s+)*push\b/i,
+    re: new RegExp(`\\bgit\\s+${GIT_GLOBAL_OPTS}push\\b`, 'i'),
     label: 'git push (remote mutation)'
   }),
   Object.freeze({
     id: 'git_hard_reset',
     ruleId: 'E-VETO-GIT_HARD_RESET',
-    re: /\bgit\s+(?:(?:(?:-C|-c|--git-dir|--work-tree|--namespace|--config-env)\s+\S+|--?[a-zA-Z0-9-]+(?:=\S+)?)\s+)*(?:reset\s+[^\n;|&`]*--hard|clean\s+[^\n;|&`]*(?:-[a-z]*f[a-z]*|--force))\b/i,
+    re: new RegExp(`\\bgit\\s+${GIT_GLOBAL_OPTS}(?:reset\\s+[^\\n;|&\`]*--hard|clean\\s+[^\\n;|&\`]*(?:-[a-z]*f[a-z]*|--force))\\b`, 'i'),
     label: 'git reset --hard / clean -f'
   }),
   Object.freeze({
     id: 'sql_ddl',
     ruleId: 'E-VETO-SQL_DDL',
-    re: /\b(?:DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW|TRIGGER|FUNCTION)|TRUNCATE\s+TABLE|TRUNCATE\s+(?:ONLY\s+)?["'`]?[a-z_][a-z0-9_.]*["'`]?\s*(?:;|CASCADE|RESTART|CONTINUE)|ALTER\s+TABLE)\b/i,
+    re: /\b(?:DROP\s+(?:TABLE|DATABASE|SCHEMA|INDEX|VIEW|TRIGGER|FUNCTION)\b|TRUNCATE\s+TABLE\b|TRUNCATE\s+(?:ONLY\s+)?["'`]?[a-z_][a-z0-9_.]*["'`]?\s*(?:;|(?:CASCADE|RESTART|CONTINUE)\b)|ALTER\s+TABLE\b)/i,
     label: 'SQL DDL/destructive schema change'
   }),
   Object.freeze({
     id: 'chmod_777',
     ruleId: 'E-VETO-CHMOD_777',
-    re: /\bchmod\s+(?:-[a-zA-Z]+\s+)*(?:0?777|a\+rwx)\b/,
+    re: /\bchmod\s+(?:--?[a-zA-Z0-9-]+(?:=\S+)?\s+)*(?:0?777|a\+rwx|ugo\+rwx)\b/,
     label: 'chmod 777'
   }),
   Object.freeze({
@@ -148,7 +151,7 @@ export const DESTRUCTIVE_VETO_PATTERNS = Object.freeze([
   Object.freeze({
     id: 'curl_pipe_sh',
     ruleId: 'E-VETO-CURL_PIPE_SH',
-    re: /\b(?:(?:curl|wget)\b[^\n]*\|\s*(?:sudo\s+)?(?:env\s+)?(?:sh|bash|zsh|dash|ksh|python3?|node)\b|(?:sh|bash|zsh)\s+<\(\s*(?:curl|wget)\b)/i,
+    re: /\b(?:(?:curl|wget)\b[^\n]*\|\s*(?:(?:\/[\w./-]*\/)?sudo\s+)?(?:(?:\/[\w./-]*\/)?env\s+(?:-[a-zA-Z]+\s+)*)?(?:\/[\w./-]*\/)?(?:sh|bash|zsh|dash|ksh|python3?|node)\b|(?:\/[\w./-]*\/)?(?:sh|bash|zsh)\s+<\(\s*(?:\/[\w./-]*\/)?(?:curl|wget)\b)/i,
     label: 'curl/wget piped to shell/interpreter'
   }),
   Object.freeze({
@@ -160,7 +163,7 @@ export const DESTRUCTIVE_VETO_PATTERNS = Object.freeze([
   Object.freeze({
     id: 'secret_file_access',
     ruleId: 'E-VETO-SECRET_FILE_ACCESS',
-    re: /(?:(?:~|\$HOME)\/\.ssh\b|\/\.ssh\/|\bid_(?:rsa|ed25519|ecdsa|dsa)\b|(?:^|[\s"'`=/(:<>\[{])\.env(?:\.[a-zA-Z0-9._-]+)?(?=$|[^a-zA-Z0-9_-])|(?:^|[\s"'`=(:<>\[{])\/etc(?:\/[\w.-]*|\b))/im,
+    re: /(?:(?:~|\$HOME)\/\.ssh\b|(?:^|[\s"'`=/(:<>\[{])\.ssh(?:\/|\b)|\bid_(?:rsa|ed25519|ecdsa|dsa)\b|(?:^|[\s"'`=/(:<>\[{])\.env(?:\.[a-zA-Z0-9._-]+)?(?=$|[^a-zA-Z0-9_-])|(?:^|[\s"'`=(:<>\[{])\/etc(?:\/[\w.-]*|\b))/im,
     label: 'Sensitive credential / .env / SSH / /etc access'
   }),
   Object.freeze({
@@ -172,7 +175,7 @@ export const DESTRUCTIVE_VETO_PATTERNS = Object.freeze([
   Object.freeze({
     id: 'publish_prod',
     ruleId: 'E-VETO-PUBLISH_PROD',
-    re: /\b(?:(?:npm|pnpm|yarn)\s+publish|vercel\b[^\n;|&`]*--prod\b|gh\s+release\b)/i,
+    re: /\b(?:(?:npm|pnpm|yarn)\s+(?:[^\n;|&`]*\s)?publish\b|vercel\b[^\n;|&`]*--prod\b|gh\s+(?:[^\n;|&`]*\s)?release\b)/i,
     label: 'Production publish / release'
   })
 ]);
@@ -192,7 +195,7 @@ export const EXTERNAL_NETWORK_PATTERNS = Object.freeze([
   Object.freeze({ id: 'wget', re: /\bwget\b/i, label: 'wget external network call' }),
   Object.freeze({ id: 'ssh', re: /\b(?:ssh|scp|sftp)\b/i, label: 'ssh/scp remote connection' }),
   Object.freeze({ id: 'gh_cli', re: /\bgh\s+[a-z][a-z0-9-]*/i, label: 'GitHub CLI network call' }),
-  Object.freeze({ id: 'git_network', re: /\bgit\s+(?:(?:-C|-c|--git-dir|--work-tree)\s+\S+\s+)*(?:fetch|pull|clone|ls-remote)\b/i, label: 'git remote network call' }),
+  Object.freeze({ id: 'git_network', re: new RegExp(`\\bgit\\s+${GIT_GLOBAL_OPTS}(?:fetch|pull|clone|ls-remote)\\b`, 'i'), label: 'git remote network call' }),
   Object.freeze({ id: 'raw_net', re: /\b(?:nc|ncat|netcat|telnet|ftp|httpie)\b/i, label: 'Raw network client' })
 ]);
 
@@ -200,6 +203,42 @@ export const SHELL_METACHAR_RE = /[;|&`><\n\r]|\$\(/;
 
 const SAFE_ARG_TOKEN = `[a-zA-Z0-9._/@~^:,=+*-]+`;
 const SAFE_ARGS_OPT = `(?:\\s+(?:${SAFE_ARG_TOKEN}|"[^"\\n;|&\`><$]*"|'[^'\\n;|&\`><]*'))*`;
+
+const ANCHORED_PACKAGE_INSTALL_RE = new RegExp(
+  `^(?:` +
+  `npm\\s+(?:install|i|add|ci|update|upgrade)|` +
+  `pnpm\\s+(?:add|install|i|update|up|dlx)|` +
+  `yarn\\s+(?:add|install|upgrade|up|dlx)|` +
+  `bun\\s+(?:add|install|i)|` +
+  `(?:pip3?|uv\\s+pip)\\s+install|` +
+  `python3?\\s+-m\\s+pip\\s+install|` +
+  `(?:uv|poetry)\\s+(?:add|install)|` +
+  `brew\\s+(?:install|upgrade|reinstall)|` +
+  `cargo\\s+(?:install|add)|` +
+  `go\\s+(?:install|get)|` +
+  `apt(?:-get)?\\s+install|` +
+  `gem\\s+install|` +
+  `composer\\s+(?:require|install)` +
+  `)(?:${SAFE_ARGS_OPT})$`,
+  'i'
+);
+
+const NODE_EXEC_INJECTION_FLAG_RE = /(?:^|\s)(?:-(?!-)[a-zA-Z]*(?:e|p|r)[a-zA-Z]*|--(?:eval|print|require|import|loader|experimental-loader|input-type|inspect(?:-brk|-wait)?|run|test-reporter-destination))(?:=|\s|$)/;
+const RG_EXEC_INJECTION_FLAG_RE = /(?:^|\s)--pre(?:-glob)?(?:=|\s|$)/i;
+const GIT_EXEC_INJECTION_FLAG_RE = /(?:^|\s)(?:-c\b|--config-env\b|--ext-diff\b|--upload-pack\b|--exec\b)/i;
+
+/**
+ * Detects code-execution / hook-injection flags on otherwise read-only tools
+ * (e.g., `node --test -e`, `node --check --import`, `rg --pre`, `git -c`).
+ */
+export function hasForbiddenExecFlag(cmd = '') {
+  const s = normalizeCommandText(cmd);
+  if (!s) return false;
+  if (/^node\b/i.test(s) && NODE_EXEC_INJECTION_FLAG_RE.test(s)) return true;
+  if (/^rg\b/i.test(s) && RG_EXEC_INJECTION_FLAG_RE.test(s)) return true;
+  if (/^git\b/i.test(s) && GIT_EXEC_INJECTION_FLAG_RE.test(s)) return true;
+  return false;
+}
 
 /**
  * Strictly read-only & test commands (zero shell metacharacters).
@@ -219,6 +258,19 @@ export const SAFE_READONLY_COMMAND_RE = new RegExp(
   `)$`
 );
 
+/**
+ * Canonical check for a strictly read-only command: matches SAFE_READONLY_COMMAND_RE,
+ * has zero shell metacharacters, zero destructive patterns, and zero code-execution flags.
+ */
+export function isSafeReadOnlyCommand(cmd = '') {
+  const s = normalizeCommandText(cmd);
+  if (!s) return false;
+  if (SHELL_METACHAR_RE.test(s)) return false;
+  if (hasForbiddenExecFlag(s)) return false;
+  if (classifyDestructiveVetoes(s).length > 0) return false;
+  return SAFE_READONLY_COMMAND_RE.test(s);
+}
+
 const TRUSTED_DEV_NPM_SCRIPT_RE = /^(?:npm|pnpm|yarn)\s+run\s+([a-zA-Z0-9:._-]+)(?:\s+--)?/;
 const FORBIDDEN_NPM_SCRIPT_NAME_RE = /(?:publish|deploy|release|prod|production|destroy|drop|nuke|wipe|reset-db)/i;
 
@@ -237,14 +289,15 @@ const TRUSTED_DEV_SINGLE_COMMAND_RE = new RegExp(
 
 const TRUSTED_DEV_GIT_FORCE_MUTATION_RE = /\bgit\s+(?:branch\b[^\n]*\s(?:-D|--delete\s+--force|--force\s+--delete)|(?:checkout|switch)\b[^\n]*\s(?:-f|--force))\b/;
 
-const READONLY_CURL_MUTATING_RE = /(?:^|\s)(?:-(?:X|--request)\s*(?:POST|PUT|PATCH|DELETE)\b|-d\b|--data(?:-[a-z]+)?\b|-F\b|--form\b|-T\b|--upload-file\b|-o\b|--output\b|-O\b|--remote-name\b)/i;
+const READONLY_CURL_MUTATING_RE = /(?:^|\s)(?:-(?!-)[a-zA-Z]*[XdFToOKcD]|--(?:request|data(?:-[a-z-]+)?|json|form(?:-[a-z-]+)?|upload-file|output|remote-name(?:-all)?|config|next|cookie-jar|dump-header)\b)/;
 const READONLY_WGET_SAFE_RE = /^wget\s+(?:[^\n;|&`><]*\s)?(?:--spider|-qO-|-O\s*-)\b/i;
+const READONLY_WGET_MUTATING_RE = /(?:^|\s)--(?:post-data|post-file|method|body-data|body-file)\b/i;
 const READONLY_GH_SAFE_RE = /^gh\s+(?:status|pr\s+(?:list|view|status|checks|diff)|issue\s+(?:list|view|status)|run\s+(?:list|view)|repo\s+view|api\b)/i;
 const READONLY_GH_API_MUTATING_RE = /(?:^|\s)(?:-X\s*(?:POST|PUT|PATCH|DELETE)\b|--method\s*(?:POST|PUT|PATCH|DELETE)\b|-f\b|-F\b|--field\b|--raw-field\b|--input\b)/i;
 
-const PERMISSION_PROMPT_HEADER_RE = /(?:requesting\s+permission\s+for:|run\s+this\s+command\?|allow\s+this\s+(?:command|tool|action|edit|write)\?|allow\s+running\b|do\s+you\s+want\s+to\s+(?:proceed|run|allow|make\s+this\s+edit|create|edit|write|execute)\b|would\s+you\s+like\s+to\s+(?:run|allow|proceed|execute)\b|permission\s+(?:prompt|request|required)|approve\s+this\s+(?:command|tool|action)|waiting\s+for\s+(?:human|approval)|persist\s+to\s+settings\.json|approve\?\s*\(y\/n\)|\[y\/n\]|\(y\/n\)\s*$|(?:^|\n)\s*(?:[●⏺]\s*)?(?:Bash|Run|Command|Shell|Tool|Edit|Write)\s*[:(])/im;
+const PERMISSION_PROMPT_HEADER_RE = /(?:requesting\s+permission\s+for:|run\s+this\s+command\?|allow\s+this\s+(?:command|tool|action|edit|write)\?|allow\s+running\b|(?:^|\n)\s*do\s+you\s+want\s+to\s+proceed\??\s*(?:$|\n)|do\s+you\s+want\s+to\s+(?:run\s+(?:this|the\s+following)\s+command|allow\s+this\s+(?:command|tool|action)|make\s+this\s+edit|edit\s+this\s+file|create\s+this\s+file|write\s+to\b|execute\s+this\s+command)|would\s+you\s+like\s+to\s+(?:run\s+(?:this|the\s+following)\s+command|run\s+`?\$?|allow\s+this\s+(?:command|tool|action)|proceed\??\s*$)|permission\s+(?:prompt|request|required)|approve\s+this\s+(?:command|tool|action)|waiting\s+for\s+(?:human|approval)|persist\s+to\s+settings\.json|approve\?\s*\(y\/n\)|\[y\/n\]|\(y\/n\)\s*$|(?:^|\n)\s*(?:[●⏺]\s*)?(?:Bash|Run|Command|Shell|Tool|Edit|Write)\s*[:(])/im;
 
-const WORKSPACE_FILE_EDIT_HEADER_RE = /(?:do\s+you\s+want\s+to\s+(?:make\s+this\s+edit|edit|create|write)\b|allow\s+(?:this\s+edit|edit|write|file\s+edit)\b|requesting\s+permission\s+for:\s*(?:edit_file|write_file|write_to_file|create_file|replace_file_content|multi_replace_file_content|read_file|view_file|grep_search|find_by_name)\b|(?:^|\n)\s*(?:[●⏺]\s*)?(?:Edit|Write|Update)\s*\([^)]+\))/im;
+const WORKSPACE_FILE_EDIT_HEADER_RE = /(?:do\s+you\s+want\s+to\s+(?:make\s+this\s+edit|edit\s+this\s+file|create\s+this\s+file|write\s+to\b)|allow\s+(?:this\s+edit|file\s+edit|this\s+write)\b|requesting\s+permission\s+for:\s*(?:edit_file|write_file|write_to_file|create_file|replace_file_content|multi_replace_file_content|read_file|view_file|grep_search|find_by_name)\b|(?:^|\n)\s*(?:[●⏺]\s*)?(?:Edit|Write|Update)\s*\([^)]+\))/im;
 
 const FORBIDDEN_PERSISTENT_ALLOW_RE = /(?:always\s+allow|allow\s+always|allow\s+all|don'?t\s+ask\s+again|do\s+not\s+ask\s+again|persist\s+to\s+settings|settings\.json|remember\s+(?:this|my)\s+(?:choice|decision)|for\s+this\s+session|during\s+this\s+session|for\s+all\s+future|auto-?approve|always\s+approve|всегда\s+разрешать|запомнить\s+выбор|больше\s+не\s+спрашивать|above\s+fold)/i;
 
@@ -940,9 +993,16 @@ export function resolveEffectiveConsentPolicy(
   });
 }
 
+const PROMPT_STRUCTURAL_FOOTER_RE = /^(?:run\s+this\s+command\?|allow\s+this\s+(?:command|tool|action|edit|write)\?|do\s+you\s+want\s+to\s+proceed\??|would\s+you\s+like\s+to\s+proceed\??|approve\?\s*\(y\/n\)|justification:|reason:|working\s+directory:|cwd:|description:|[-─━═]{4,})$/i;
+const PROMPT_COMMAND_HEADER_RE = /^(?:requesting\s+permission\s+for:|would\s+you\s+like\s+to\s+run\b|run\s+this\s+command\?|allow\s+this\s+command\?|allow\s+running\b)/i;
+const PROMPT_COMMAND_PREFIX_RE = /^(?:\$|›\s*\$|Command:|Run:|Bash:|Shell:)\s*(.+)$/i;
+const PROMPT_BASH_TOOL_RE = /^(?:[●⏺]\s*)?Bash\((.+)\)$/i;
+const SHELL_CONTINUATION_END_RE = /(?:\\|&&|\|\||\|)\s*$/;
+const OUTPUT_OR_PROSE_BOUNDARY_RE = /^(?:[✓✔✖✗❌✅⚠]|all\s+\d+\s+tests?\b|\d+\s+(?:passed|failed|passing|failing)\b|(?:pass|fail|passed|failed|error|warn|info)\b[:\s]|tests?\s+\d+)/i;
+
 function extractActivePromptContext(screenText, explicitCommandPreview) {
   const cleanScreen = stripAnsiAndControls(screenText || '');
-  const lines = cleanScreen.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-48);
+  const lines = cleanScreen.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).slice(-64);
 
   // Locate where the active option menu starts
   let optStart = lines.findLastIndex((line) => NUMBERED_OPT_LINE_RE.exec(line)?.[1] === '1');
@@ -951,76 +1011,153 @@ function extractActivePromptContext(screenText, explicitCommandPreview) {
     if (optStart < 0) optStart = lines.length;
   }
 
-  // Walk back up to 14 lines to capture the prompt header + multi-line command block
-  const blockStart = Math.max(0, optStart - 14);
-  const preLines = lines.slice(blockStart, optStart);
-  const activePromptBlock = preLines.join('\n');
-
-  const hasPermissionHeader = PERMISSION_PROMPT_HEADER_RE.test(activePromptBlock) ||
-    PERMISSION_PROMPT_HEADER_RE.test(lines.slice(-16).join('\n'));
-  const isWorkspaceEditPrompt = WORKSPACE_FILE_EDIT_HEADER_RE.test(activePromptBlock);
-
-  // Extract raw (unredacted!) command for security classification
-  let rawExtractedCommand = '';
+  // Keep full pre-option buffer (up to 64 lines) so multi-line commands can never truncate out of safety inspection
+  const fullPreLines = lines.slice(0, optStart);
   const explicitRaw = normalizeCommandText(explicitCommandPreview || '');
 
-  // Check Bash(...) or explicit "$ ..." / "Command:" / "Run:" / "Shell:" inside preLines
-  for (let i = preLines.length - 1; i >= 0; i--) {
-    const line = preLines[i];
-    const bashMatch = line.match(/^(?:[●⏺]\s*)?Bash\((.+)\)$/i);
-    if (bashMatch && bashMatch[1]) {
-      rawExtractedCommand = bashMatch[1].trim();
-      break;
-    }
-    const prefixMatch = line.match(/^(?:\$|›\s*\$|Command:|Run:|Bash:|Shell:)\s*(.+)$/i);
-    if (prefixMatch && prefixMatch[1]) {
-      const cmdParts = [prefixMatch[1].trim()];
-      for (let j = i + 1; j < preLines.length; j++) {
-        const next = preLines[j];
-        if (/^(?:run this command\?|allow this|do you want to|would you like to|justification:|reason:|[-─━═]{4,})/i.test(next)) {
-          break;
+  // Check immediate non-separator line right above Option 1 for non-permission questions
+  let cursor = fullPreLines.length - 1;
+  while (cursor >= 0 && /^[-─━═]{4,}$/.test(fullPreLines[cursor])) {
+    cursor -= 1;
+  }
+
+  let hasStructuralPermissionFooter = false;
+  let immediateNonPermissionQuestion = false;
+  let isWorkspaceEditPrompt = false;
+  let hasPermissionHeader = false;
+  let rawExtractedCommand = '';
+  let activeStartIdx = Math.max(0, cursor);
+
+  if (cursor >= 0) {
+    const immediateLine = fullPreLines[cursor];
+    if (WORKSPACE_FILE_EDIT_HEADER_RE.test(immediateLine)) {
+      isWorkspaceEditPrompt = true;
+      hasPermissionHeader = true;
+      activeStartIdx = cursor;
+    } else if (
+      /\?\s*$/.test(immediateLine) &&
+      !PERMISSION_PROMPT_HEADER_RE.test(immediateLine) &&
+      !PROMPT_COMMAND_PREFIX_RE.test(immediateLine) &&
+      !PROMPT_BASH_TOOL_RE.test(immediateLine)
+    ) {
+      // Immediate line above Option 1 is a product/architectural question — NEVER steal a stale command from scrollback!
+      immediateNonPermissionQuestion = true;
+      activeStartIdx = cursor;
+    } else {
+      // Skip recognized structural permission footers right above Option 1 (e.g., "Run this command?", "Do you want to proceed?", "Justification: ...")
+      while (cursor >= 0 && PROMPT_STRUCTURAL_FOOTER_RE.test(fullPreLines[cursor])) {
+        if (/^(?:run\s+this\s+command\?|allow\s+this\s+|do\s+you\s+want\s+to\s+proceed|would\s+you\s+like\s+to\s+proceed|approve\?)/i.test(fullPreLines[cursor])) {
+          hasStructuralPermissionFooter = true;
+          hasPermissionHeader = true;
         }
-        cmdParts.push(next);
+        cursor -= 1;
       }
-      rawExtractedCommand = cmdParts.join(' ').trim();
-      break;
+
+      if (cursor >= 0) {
+        const anchorLine = fullPreLines[cursor];
+        if (WORKSPACE_FILE_EDIT_HEADER_RE.test(anchorLine)) {
+          isWorkspaceEditPrompt = true;
+          hasPermissionHeader = true;
+          activeStartIdx = cursor;
+        } else if (PROMPT_BASH_TOOL_RE.test(anchorLine)) {
+          rawExtractedCommand = anchorLine.match(PROMPT_BASH_TOOL_RE)[1].trim();
+          hasPermissionHeader = true;
+          activeStartIdx = cursor;
+        } else if (PROMPT_COMMAND_PREFIX_RE.test(anchorLine)) {
+          rawExtractedCommand = anchorLine.match(PROMPT_COMMAND_PREFIX_RE)[1].trim();
+          activeStartIdx = cursor;
+          if (cursor > 0 && PERMISSION_PROMPT_HEADER_RE.test(fullPreLines[cursor - 1])) {
+            hasPermissionHeader = true;
+            activeStartIdx = cursor - 1;
+          }
+        } else if (!OUTPUT_OR_PROSE_BOUNDARY_RE.test(anchorLine) && !/\?\s*$/.test(anchorLine)) {
+          // Walk backwards across contiguous multi-line command / permission body (up to 64 lines!)
+          // Stop on any numbered option, output/prose boundary, or non-permission question.
+          let foundStart = -1;
+          let foundHeaderIdx = -1;
+          for (let i = cursor; i >= 0; i--) {
+            const l = fullPreLines[i];
+            if (NUMBERED_OPT_LINE_RE.test(l) || INLINE_OPT_LINE_RE.test(l)) break;
+            if (PROMPT_BASH_TOOL_RE.test(l)) {
+              // ● Bash(...) is single-line; never cross non-continuation prose/output above it
+              break;
+            }
+            if (PROMPT_COMMAND_PREFIX_RE.test(l)) {
+              // Ensure intervening lines actually belong to a multi-line command (either wrapped inside a permission footer or shell continuation)
+              const sliceLines = fullPreLines.slice(i, cursor + 1);
+              const allContinuationOrWrapped = hasStructuralPermissionFooter ||
+                sliceLines.slice(0, -1).every((part) => SHELL_CONTINUATION_END_RE.test(part)) ||
+                (i > 0 && PROMPT_COMMAND_HEADER_RE.test(fullPreLines[i - 1]));
+              if (allContinuationOrWrapped) {
+                foundStart = i;
+                if (i > 0 && PERMISSION_PROMPT_HEADER_RE.test(fullPreLines[i - 1])) {
+                  foundHeaderIdx = i - 1;
+                }
+              }
+              break;
+            }
+            if (PROMPT_COMMAND_HEADER_RE.test(l)) {
+              foundHeaderIdx = i;
+              foundStart = i + 1;
+              break;
+            }
+            if (OUTPUT_OR_PROSE_BOUNDARY_RE.test(l)) break;
+            if (/\?\s*$/.test(l) && !PERMISSION_PROMPT_HEADER_RE.test(l)) break;
+          }
+
+          if (foundStart >= 0 && foundStart <= cursor) {
+            const parts = [];
+            for (let k = foundStart; k <= cursor; k++) {
+              const rawPart = fullPreLines[k];
+              if (/^[-─━═]{4,}$/.test(rawPart) || /^(?:justification:|reason:|working\s+directory:|cwd:)/i.test(rawPart)) continue;
+              const pm = rawPart.match(PROMPT_COMMAND_PREFIX_RE);
+              parts.push(pm ? pm[1].trim() : rawPart);
+            }
+            rawExtractedCommand = parts.join(' ').trim();
+            activeStartIdx = foundHeaderIdx >= 0 ? foundHeaderIdx : foundStart;
+            if (foundHeaderIdx >= 0) hasPermissionHeader = true;
+          }
+        }
+      }
     }
   }
 
-  // Fallback: lines directly after "Run this command?" / "Would you like to run..." / "Requesting permission for:"
-  if (!rawExtractedCommand) {
-    for (let i = preLines.length - 1; i >= 0; i--) {
-      const line = preLines[i];
-      const reqInline = line.match(/^requesting\s+permission\s+for:\s*(.+)$/i);
-      if (reqInline) {
-        const after = preLines.slice(i + 1).filter((l) =>
-          !/^(?:run this command\?|justification:|reason:|[-─━═]{4,})$/i.test(l)
-        );
-        if (after.length > 0) {
-          rawExtractedCommand = after.join(' ').replace(/^\$\s+/, '').trim();
-        } else if (reqInline[1] && !/^(?:run_command|bash|shell|edit_file|write_file|create_file|read_file)$/i.test(reqInline[1].trim())) {
-          rawExtractedCommand = reqInline[1].trim();
-        }
-        break;
-      }
-      if (/^(?:run\s+this\s+command\?|allow\s+this\s+command\?|would\s+you\s+like\s+to\s+run\b)/i.test(line)) {
-        const after = preLines.slice(i + 1).filter((l) =>
-          !/^(?:justification:|reason:|[-─━═]{4,})$/i.test(l)
-        );
-        if (after.length > 0) {
-          rawExtractedCommand = after.join(' ').replace(/^\$\s+/, '').trim();
-        }
-        break;
+  // Handle single-line "Requesting permission for: <tool>" with no body lines
+  if (!rawExtractedCommand && !isWorkspaceEditPrompt && !immediateNonPermissionQuestion && cursor >= 0) {
+    const reqInline = fullPreLines[cursor].match(/^requesting\s+permission\s+for:\s*(.+)$/i);
+    if (reqInline && reqInline[1]) {
+      hasPermissionHeader = true;
+      activeStartIdx = cursor;
+      const target = reqInline[1].trim();
+      if (/^(?:edit_file|write_file|write_to_file|create_file|replace_file_content|multi_replace_file_content|read_file|view_file|grep_search|find_by_name)$/i.test(target)) {
+        isWorkspaceEditPrompt = true;
+      } else if (!/^(?:run_command|bash|shell)$/i.test(target)) {
+        rawExtractedCommand = target;
       }
     }
   }
 
-  // Also consult prompt-parser's presentation if still empty
-  if (!rawExtractedCommand && cleanScreen) {
+  // Only consult prompt-parser fallback when NOT already rejected as a non-permission question
+  if (!rawExtractedCommand && !isWorkspaceEditPrompt && !immediateNonPermissionQuestion && cleanScreen) {
     const pres = getHitlPromptPresentation(cleanScreen);
-    if (pres && pres.fullCommand && !/^(?:do you want to|run this command|allow this|would you like to)/i.test(pres.fullCommand)) {
-      rawExtractedCommand = pres.fullCommand;
+    if (
+      pres &&
+      pres.fullCommand &&
+      !/^(?:do you want to|run this command|allow this|would you like to)/i.test(pres.fullCommand)
+    ) {
+      // Guard against prompt-parser grabbing a stale command across prose/output
+      const tailSlice = fullPreLines.slice(Math.max(0, fullPreLines.length - 4));
+      const hasBoundary = tailSlice.some((l) => OUTPUT_OR_PROSE_BOUNDARY_RE.test(l) || (/\?\s*$/.test(l) && !PERMISSION_PROMPT_HEADER_RE.test(l)));
+      if (!hasBoundary) {
+        rawExtractedCommand = pres.fullCommand;
+      }
     }
+  }
+
+  const activePromptLines = fullPreLines.slice(activeStartIdx);
+  const activePromptBlock = activePromptLines.join('\n');
+  if (!immediateNonPermissionQuestion && PERMISSION_PROMPT_HEADER_RE.test(activePromptBlock)) {
+    hasPermissionHeader = true;
   }
 
   const rawCommand = explicitRaw || rawExtractedCommand;
@@ -1036,7 +1173,8 @@ function extractActivePromptContext(screenText, explicitCommandPreview) {
     activePromptBlock,
     inspectionText: inspectionParts.join('\n'),
     hasPermissionHeader,
-    isWorkspaceEditPrompt
+    isWorkspaceEditPrompt,
+    immediateNonPermissionQuestion
   };
 }
 
@@ -1073,7 +1211,7 @@ function isReadOnlyNetworkCommand(segment) {
     return !READONLY_CURL_MUTATING_RE.test(s);
   }
   if (/^wget\b/i.test(s)) {
-    return READONLY_WGET_SAFE_RE.test(s);
+    return READONLY_WGET_SAFE_RE.test(s) && !READONLY_WGET_MUTATING_RE.test(s);
   }
   if (/^gh\b/i.test(s)) {
     if (!READONLY_GH_SAFE_RE.test(s)) return false;
@@ -1086,22 +1224,15 @@ function isReadOnlyNetworkCommand(segment) {
 
 function matchesTrustedDevSegment(segment, effectiveFlags) {
   const s = normalizeCommandText(segment);
-  if (!s || SHELL_METACHAR_RE.test(s)) return { ok: false, vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED, reason: 'Command contains disallowed shell operators' };
-
-  // Package install gate (default OFF)
-  const pkgHit = classifyPackageInstall(s);
-  if (pkgHit) {
-    if (effectiveFlags.allowPackageInstall === true) {
-      return { ok: true, vetoCode: null, reason: `Package install permitted by policy (${pkgHit.label})` };
-    }
-    return {
-      ok: false,
-      vetoCode: AUTO_CONSENT_VETO_CODES.PACKAGE_INSTALL_POLICY,
-      reason: `Package installation blocked by policy (${pkgHit.label})`
-    };
+  if (!s || SHELL_METACHAR_RE.test(s)) {
+    return { ok: false, vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED, reason: 'Command contains disallowed shell operators' };
   }
 
-  // External network gate (default OFF; when ON, strictly read-only network only)
+  if (hasForbiddenExecFlag(s)) {
+    return { ok: false, vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED, reason: 'Command contains disallowed code-execution or hook flag' };
+  }
+
+  // External network gate runs BEFORE package install so `ssh ... "npm install"` / `curl ... "npm install"` never bypass VETO_NETWORK_POLICY
   const netHit = classifyExternalNetwork(s);
   if (netHit) {
     if (effectiveFlags.allowReadOnlyNetwork === true && isReadOnlyNetworkCommand(s)) {
@@ -1116,7 +1247,27 @@ function matchesTrustedDevSegment(segment, effectiveFlags) {
     };
   }
 
-  if (SAFE_READONLY_COMMAND_RE.test(s)) {
+  // Package install gate (default OFF; when ON, strictly anchored at start of command only!)
+  const pkgHit = classifyPackageInstall(s);
+  if (pkgHit) {
+    if (effectiveFlags.allowPackageInstall !== true) {
+      return {
+        ok: false,
+        vetoCode: AUTO_CONSENT_VETO_CODES.PACKAGE_INSTALL_POLICY,
+        reason: `Package installation blocked by policy (${pkgHit.label})`
+      };
+    }
+    if (ANCHORED_PACKAGE_INSTALL_RE.test(s)) {
+      return { ok: true, vetoCode: null, reason: `Package install permitted by policy (${pkgHit.label})` };
+    }
+    return {
+      ok: false,
+      vetoCode: AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED,
+      reason: 'Unanchored package-install substring inside non-package command is outside trusted_dev allowlist'
+    };
+  }
+
+  if (isSafeReadOnlyCommand(s)) {
     return { ok: true, vetoCode: null, reason: 'Matches safe read-only command allowlist' };
   }
 
@@ -1305,6 +1456,14 @@ export function evaluateAutoConsentPrompt({
     return escalate(code, `Auto-consent disabled for scope (${code})`);
   }
 
+  // Enforce direct expiry check even when caller passes a pre-resolved session effectivePolicy
+  if (effectivePolicy.expiresAtMs !== null && effectivePolicy.expiresAtMs !== undefined) {
+    const expMs = Number(effectivePolicy.expiresAtMs);
+    if (!Number.isFinite(expMs) || now >= expMs) {
+      return escalate(AUTO_CONSENT_VETO_CODES.SESSION_EXPIRED, 'Session grant has expired');
+    }
+  }
+
   // 2. Operational Safety Vetoes
   if (isSeatShellExited(seat, screenText)) {
     return escalate(AUTO_CONSENT_VETO_CODES.SHELL_EXITED, 'Seat exited to bare OS shell');
@@ -1342,9 +1501,8 @@ export function evaluateAutoConsentPrompt({
     return o.isCancel === true || CANCEL_OPT_RE.test(txt);
   });
   const hasPermissionEvidence = Boolean(
-    promptCtx.hasPermissionHeader ||
-    promptCtx.isWorkspaceEditPrompt ||
-    promptCtx.normalizedCommand
+    !promptCtx.immediateNonPermissionQuestion &&
+    (promptCtx.normalizedCommand || promptCtx.isWorkspaceEditPrompt)
   );
 
   // Explicit check: if Option 1 says "Always allow" / "Persist to settings" / "Don't ask again" / "above fold"
@@ -1434,7 +1592,13 @@ export function evaluateAutoConsentPrompt({
         `Network call (${netHit.label}) is not permitted under safe_readonly`
       );
     }
-    if (!SAFE_READONLY_COMMAND_RE.test(cmd)) {
+    if (hasForbiddenExecFlag(cmd)) {
+      return escalate(
+        AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED,
+        'safe_readonly forbids code-execution and hook-injection flags'
+      );
+    }
+    if (!isSafeReadOnlyCommand(cmd)) {
       return escalate(
         AUTO_CONSENT_VETO_CODES.PROFILE_UNMATCHED,
         'Command is not in the safe_readonly allowlist'
@@ -1528,7 +1692,17 @@ export function summarizeActiveAutoConsentScopes(
 
   for (const grant of grants) {
     if (!grant || typeof grant !== 'object' || grant.revoked === true) continue;
+    if (grant.scope !== 'seat' && grant.scope !== 'rig') continue;
     if (!SESSION_PROFILES.has(grant.profile)) continue;
+    const targetId = String(grant.targetId || '').trim();
+    const targetRe = grant.scope === 'rig' ? SAFE_RIG_NAME_RE : SAFE_SEAT_ID_RE;
+    if (!targetId || FORBIDDEN_OBJECT_KEYS.has(targetId) || !targetRe.test(targetId)) continue;
+    if (grant.scope === 'seat') {
+      const epoch = (grant.seatSessionEpoch !== null && grant.seatSessionEpoch !== undefined)
+        ? String(grant.seatSessionEpoch).trim()
+        : '';
+      if (!epoch) continue;
+    }
     const createdAtMs = Number(grant.createdAtMs);
     const rawExp = Number(grant.expiresAtMs);
     if (!Number.isFinite(createdAtMs) || !Number.isFinite(rawExp) || rawExp <= createdAtMs) continue;
@@ -1537,9 +1711,11 @@ export function summarizeActiveAutoConsentScopes(
     const hardCap = grant.profile === AUTO_CONSENT_PROFILES.SPRINT_ALL
       ? AUTO_CONSENT_LIMITS.MAX_SPRINT_APPROVALS
       : AUTO_CONSENT_LIMITS.MAX_SESSION_APPROVALS;
-    const maxAllowed = Math.min(Math.floor(Number(grant.maxApprovals || 0)), hardCap);
-    const used = Math.floor(Number(grant.usedApprovals || 0));
-    if (maxAllowed <= 0 || used < 0 || used >= maxAllowed) continue;
+    const rawMax = Math.floor(Number(grant.maxApprovals));
+    const rawUsed = grant.usedApprovals === undefined ? 0 : Math.floor(Number(grant.usedApprovals));
+    if (!Number.isFinite(rawMax) || rawMax <= 0 || !Number.isFinite(rawUsed) || rawUsed < 0) continue;
+    const maxAllowed = Math.min(rawMax, hardCap);
+    if (rawUsed >= maxAllowed) continue;
     activeGrants.push(grant);
     const rem = effExp - now;
     if (minRemainingMs === null || rem < minRemainingMs) minRemainingMs = rem;

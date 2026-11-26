@@ -190,6 +190,8 @@ export {
   EXTERNAL_NETWORK_PATTERNS,
   SHELL_METACHAR_RE,
   SAFE_READONLY_COMMAND_RE,
+  hasForbiddenExecFlag,
+  isSafeReadOnlyCommand,
   normalizeCommandText,
   computePromptFingerprint,
   classifyDestructiveVetoes,
