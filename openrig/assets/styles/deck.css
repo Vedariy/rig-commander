@@ -1192,6 +1192,19 @@
 
     .canvas-wrap.has-rig-clusters { overflow: auto; }
     .rig-cluster-zone { pointer-events: none; }
+    .quiet-collapse-btn {
+      pointer-events: auto;
+      width: 24px;
+      height: 24px;
+      margin: 2px;
+      border: 1px solid var(--border-dim);
+      border-radius: 6px;
+      background: var(--bg-panel);
+      color: var(--cyan);
+      cursor: pointer;
+    }
+    #quietFoldControls:empty { display: none; }
+    #quietFoldControls .quiet-collapse-btn { width: auto; white-space: nowrap; }
     .rig-cluster-zone > rect {
       fill: rgba(14, 165, 233, 0.025);
       stroke: rgba(56, 189, 248, 0.22);
@@ -5193,7 +5206,11 @@ body.demo-mode .triage-card-title, body.demo-mode .triage-card-desc { white-spac
   body.demo-mode #demoQuestBanner { order: 1; }
   body.demo-mode #panelCenter > .canvas-wrap, body.demo-mode #ganttWrap { order: 2; }
   body.demo-mode #panelCenter > .canvas-wrap { min-height: 440px; height: 58dvh; flex: 0 0 auto; }
-  body.demo-mode #idleCollapsedPill { order: 3; }
+  body.demo-mode #canvasBottomDock { order: 3; }
+  .canvas-bottom-dock { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .canvas-bottom-dock > div { max-width: 100%; box-sizing: border-box; overflow-x: auto; }
+  .quiet-clusters-pill { flex-wrap: nowrap; }
+  .quiet-clusters-pill > button { flex-shrink: 0; }
   body.demo-mode #swimlanesSection { order: 4; }
 }
 
