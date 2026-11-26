@@ -167,3 +167,11 @@ export {
   buildPlaybookFaviconDataUri
 } from './playbooks-model.js';
 
+export {
+  OUTAGE_TIERS, STATE_BUNDLE_SCHEMA_VERSION,
+  SAFE_RIG_NAME_RE, SAFE_SEAT_ID_RE, SAFE_ATTEMPT_ID_RE, SAFE_PROVIDER_ID_RE,
+  validateResilienceTarget, parseSnapshotTable, detectSleepWakeJump,
+  classifyFleetResilience, isStateBundleEnvelope, mergeHostManifestEnvelopes,
+  buildResurrectPlanPreview, normalizeRestoreReceipt, buildDemoResilienceScenario
+} from './resilience-model.js';
+
