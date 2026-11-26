@@ -40,3 +40,25 @@ test('localized fixture data and authentic harness pairs, including terminal pro
  f.run("deckLang='ru';localizeDemoData('ru')");assert.match(f.run("getDemoTerminalCapture('dev-check@core-platform')"),/1\. Да, разрешить один раз/);
  f.run("deckLang='en';localizeDemoData('en')");assert.doesNotMatch(f.run("getDemoTerminalCapture('dev-coder3@core-platform')"),/[А-Яа-яЁё]/);
 });
+
+test('real demo send fallback localizes status and toast through language round trips without transport',async()=>{
+ const f=fixture(), status={textContent:''}, toast={textContent:'',style:{}};
+ Object.assign(f.context,{DEFAULT_ACTION_COOLDOWN_MS:1800,DEFAULT_DESTRUCTIVE_COOLDOWN_MS:2200});
+ f.context.document.documentElement={};
+ f.context.document.getElementById=id=>id==='cmdSendStatus'?status:id==='copyToast'?toast:null;
+ f.run(`rebuildDemoIntelligence=renderTriageStrip=renderReservoirs=renderWaitRadarAndDecisions=renderTopology=renderInspectorAndScorecards=fetchTerminalCapture=markDemoQuestStep=updateGraphLayoutSwitchUi=updateActiveFilterLabel=syncDemoHeader=()=>{}`);
+ for(const [action,text,type] of [['answer_prompt_option','1 Enter','key'],['cancel_prompt','Escape','key'],['wake_parked_seat','Enter','key'],['interrupt_execution','C-c','key'],['compact_context','/compact','raw'],['send_command','hello','raw']]){
+  f.run("deckLang='en';localizeDemoData('en')");
+  const result=await f.run(`executeApiSend('dev-check@core-platform',${JSON.stringify(text)},${JSON.stringify(type)},'cmdSendStatus',${JSON.stringify(action)})`);
+  assert.equal(result.ok,true);assert.equal(result.demo,true);assert.equal(f.calls.length,0);
+  assert.match(status.textContent,/Applied .*Postcondition verified/);assert.doesNotMatch(status.textContent+toast.textContent,/[А-Яа-яЁё]/);
+  f.run("setDeckLang('ru',true)");assert.match(status.textContent,/Применено .*Результат проверен/);
+  if(action!=='compact_context')assert.match(toast.textContent,/[А-Яа-яЁё]/);
+  f.run("setDeckLang('en',true)");assert.doesNotMatch(status.textContent+toast.textContent,/[А-Яа-яЁё]/);
+ }
+ status.textContent='';toast.textContent='Another operation';
+ f.run("setDeckLang('ru',true)");assert.equal(status.textContent,'');assert.equal(toast.textContent,'Another operation');
+ f.run("renderDemoQuestFeedback(document.getElementById('copyToast'),'budget',3);setDeckLang('en',true)");
+ assert.doesNotMatch(toast.textContent,/[А-Яа-яЁё]/);assert.match(toast.textContent,/Mission progress \(3\/3\)/);
+ f.run("setDeckLang('ru',true)");assert.match(toast.textContent,/Прогресс квеста \(3\/3\)/);
+});

@@ -3730,7 +3730,23 @@
       if (modalSeatId) fetchModalCapture();
       const advModal = document.getElementById('fleetAdvisorModal');
       if (advModal && advModal.classList.contains('open')) renderFleetAdvisorModal();
-      return deckLang === 'en' && /[А-Яа-яЁё]/.test(detail) ? td('demo.actionApplied') : detail;
+      return getDemoActionDetail(seat);
+    }
+
+    function getDemoActionDetail(seat) {
+      const action = DEMO_SCREEN_OVERRIDES[seat];
+      if (!action) return td('demo.actionApplied');
+      if (action.actionId === 'compact_context' || action.text.startsWith('/compact')) return `CTX ${action.previousPct ?? 75}% → 18%`;
+      if (['answer_prompt_option', 'proceed_prompt', 'cancel_prompt'].includes(action.actionId)) return td(action.cancelled ? 'demo.menuClosed' : 'demo.inputCleared');
+      if (action.actionId === 'wake_parked_seat') return td('demo.seatAwakened');
+      if (action.actionId === 'interrupt_execution' || action.text === 'C-c') return td('demo.executionStopped');
+      return td('demo.actionApplied');
+    }
+
+    function renderDemoControlFeedback(el, seat, toast = false) {
+      const detail = getDemoActionDetail(seat);
+      el.textContent = toast ? `✅ [DEMO] ${shortSeat(seat)}: ${detail}` : td('demo.actionStatus', { detail });
+      el.demoControlFeedback = { seat, toast, text: el.textContent };
     }
 
     function getDeckToken() {
@@ -3865,7 +3881,7 @@
         }
         if (statusEl) {
           statusEl.className = 'ctrl-status';
-          statusEl.textContent = `Отправка в ${shortSeat(seat)} (${type})...`;
+          statusEl.textContent = td('ctrl.sending', { seat: shortSeat(seat), type });
         }
         try {
           const { res, data } = await deckPostJson('/api/send', { seat, text, type, actionId }, {
@@ -3902,15 +3918,15 @@
           return { ok: true };
         } catch (err) {
           if (!IS_LIVE) {
-            const detail = applyDemoAction(seat, text, type, actionId);
+            applyDemoAction(seat, text, type, actionId);
             if (statusEl) {
               statusEl.className = 'ctrl-status ok';
-              statusEl.textContent = `✓ [DEMO] Применено (${detail}) • postcondition verified`;
+              renderDemoControlFeedback(statusEl, seat);
               setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3800);
             }
             const toast = document.getElementById('copyToast');
             if (toast) {
-              toast.textContent = `✅ [DEMO] ${shortSeat(seat)}: ${detail}`;
+              renderDemoControlFeedback(toast, seat, true);
               toast.style.display = 'block';
               setTimeout(() => { toast.style.display = 'none'; }, 2400);
             }
@@ -7433,14 +7449,9 @@
       demoQuestState = res.state;
       renderDemoQuest();
       if (res.newlyCompleted) {
-        const labelMap = {
-          hitl: td('quest.step1Title'),
-          gantt: td('quest.step2Title'),
-          budget: td('quest.step3Title')
-        };
         const t = document.getElementById('copyToast');
         if (t) {
-          t.textContent = td('quest.toastStep', { done: res.completed, label: labelMap[stepId] || stepId });
+          renderDemoQuestFeedback(t, stepId, res.completed);
           t.style.display = 'block';
           setTimeout(() => { t.style.display = 'none'; }, 2600);
         }
@@ -7974,6 +7985,12 @@
       }
     }
 
+    function renderDemoQuestFeedback(el, stepId, done) {
+      const key = { hitl: 'quest.step1Title', gantt: 'quest.step2Title', budget: 'quest.step3Title' }[stepId];
+      el.textContent = td('quest.toastStep', { done, label: key ? td(key) : stepId });
+      el.demoQuestFeedback = { stepId, done, text: el.textContent };
+    }
+
     function setDeckLang(lang, skipRerender = false) {
       deckLang = lang === 'en' ? 'en' : 'ru';
       resilienceUi?.render();
@@ -8012,6 +8029,13 @@
 
       localizeDemoData(deckLang);
       syncDemoHeader();
+      ['cmdSendStatus', 'modalCmdStatus', 'copyToast'].forEach(id => {
+        const el = document.getElementById(id);
+        const feedback = el?.demoControlFeedback;
+        if (feedback && el.textContent === feedback.text) renderDemoControlFeedback(el, feedback.seat, feedback.toast);
+        const quest = el?.demoQuestFeedback;
+        if (quest && el.textContent === quest.text) renderDemoQuestFeedback(el, quest.stepId, quest.done);
+      });
       if (skipRerender) return;
       rebuildDemoIntelligence();
       updateSidebarUi();
