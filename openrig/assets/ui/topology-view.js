@@ -1,17 +1,17 @@
 /** Topology views: explicit state/browser adapters plus pure geometry and markup builders. */
 import { computeTopologyLayout, computeAnchoredPopoverRect, computeAdaptiveEdgePath } from '../domain/topology-layout.js';
 
-export function renderStateIndicatorHtml(agent, { escapeHtml }) {
+export function renderStateIndicatorHtml(agent, { escapeHtml, deckLang = 'en', td }) {
   if (agent.state === 'working') {
     const suffix = (agent.activityLabel || '').includes('ELB-003')
       ? 'ELB-003'
       : agent.assignedWorkCount
         ? `(${agent.assignedWorkCount})`
         : 'ACTIVE';
-    return `<span class="heart-anim" title="Работает"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span>${escapeHtml(suffix)}</span>`;
+    return `<span class="heart-anim" title="${escapeHtml(td ? td('demo.harnessWorking') : 'Working')}"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></span><span>${escapeHtml(suffix)}</span>`;
   }
   if (agent.state === 'idle') {
-    return `<span class="zzz-anim" title="Спит (Idle)"><span>Z</span><span>z</span><span>z...</span></span>`;
+    return `<span class="zzz-anim" title="${escapeHtml(td ? td('demo.harnessSleeping') : 'Sleeping (idle)')}"><span>Z</span><span>z</span><span>z...</span></span>`;
   }
   if (agent.state === 'waiting') {
     return agent.shellExited
@@ -19,7 +19,7 @@ export function renderStateIndicatorHtml(agent, { escapeHtml }) {
       : `<span>🟠 PARKED (${escapeHtml(agent.assignedWorkCount || 1)})</span>`;
   }
   if (agent.state === 'urgent') {
-    return `<span>🚨 NEEDS INPUT</span>`;
+    return `<span>🚨 ${deckLang === 'en' ? 'NEEDS INPUT' : 'ЖДЁТ ВВОДА'}</span>`;
   }
   return `<span>${escapeHtml(agent.activityLabel || 'IDLE')}</span>`;
 }
@@ -182,7 +182,7 @@ export function renderNodeCardHtml(agent, deps) {
       <div class="ctx-box">
         <div class="ctx-header">
           <span class="ctx-thermal-label" style="color:${thermal.color}; font-weight:700;">${thermal.label}</span>
-          <span style="color:#94a3b8;" title="Число задач в очереди (получено / отправлено)">Очередь: 📥${agent.callsIn} / 📤${agent.callsOut}</span>
+          <span style="color:#94a3b8;" title="${escapeHtml(td('demo.queueTraffic'))}">${escapeHtml(td('demo.queueTraffic'))}: 📥${agent.callsIn} / 📤${agent.callsOut}</span>
         </div>
         <div class="ctx-bar-bg">
           <div class="ctx-bar-fill" style="width:${thermal.pct}%; background:${thermal.color};"></div>
@@ -369,7 +369,7 @@ export function renderTopology(deps) {
   if (idlePill) {
     if (collapsedIdleIds.size > 0) {
       const preview = collapsedIdleNames.slice(0, 3).join(', ') + (collapsedIdleNames.length > 3 ? ` +${collapsedIdleNames.length - 3}` : '');
-      idlePill.innerHTML = `<span>💤 Скрыто спящих: <b>${collapsedIdleIds.size}</b> (${escapeHtml(preview)})</span><span style="color:var(--cyan); font-weight:700;">Показать</span>`;
+      idlePill.innerHTML = `<span>${escapeHtml(td('demo.hiddenSleepers', { count: collapsedIdleIds.size, preview }))}</span><span style="color:var(--cyan); font-weight:700;">${escapeHtml(td('demo.showSleepers'))}</span>`;
       idlePill.classList.add('visible');
     } else {
       idlePill.classList.remove('visible');
@@ -709,7 +709,7 @@ export function renderTopology(deps) {
   }
 }
 
-export function renderSwimlanes({ visibleLanes, stageNames: STAGE_NAMES, currentSliceFilter, escapeHtml }) {
+export function renderSwimlanes({ visibleLanes, stageNames: STAGE_NAMES, currentSliceFilter, escapeHtml, deckLang = 'en' }) {
   return visibleLanes.map(lane => {
     const isSelectedSlice = currentSliceFilter === lane.id;
     const stagesHtml = STAGE_NAMES.map((stName, idx) => {
@@ -725,7 +725,9 @@ export function renderSwimlanes({ visibleLanes, stageNames: STAGE_NAMES, current
       return `<div class="stage-cell ${cls}" title="${escapeHtml(stName)}">${icon}${escapeHtml(stName)}</div>`;
     }).join('');
 
-    const metricsSummary = `${lane.coder} • ${lane.turns} выз • QA: ${lane.qaRounds} кр`;
+    const callsLabel = deckLang === 'en' ? 'calls' : 'выз.';
+    const roundsLabel = deckLang === 'en' ? 'rounds' : 'кр.';
+    const metricsSummary = `${lane.coder} • ${lane.turns} ${callsLabel} • QA: ${lane.qaRounds} ${roundsLabel}`;
     return `
       <div class="swimlane-row"
            style="--lane-pad:${lane.padPx}; --lane-bar:${lane.barPx}; --lane-color:${lane.color}; ${isSelectedSlice ? 'border-color:var(--cyan); box-shadow:0 0 12px rgba(0,240,255,0.28);' : ''}"
@@ -733,7 +735,7 @@ export function renderSwimlanes({ visibleLanes, stageNames: STAGE_NAMES, current
         <div class="lane-info">
           <div class="lane-name" title="${escapeHtml(lane.name)}">${escapeHtml(lane.name)}</div>
           <div class="lane-metrics" title="${escapeHtml(metricsSummary)}">
-            ${escapeHtml(lane.coder)} • ⚡ <b>${lane.turns} выз</b> • 🪃 <b>QA: ${lane.qaRounds} кр</b>
+            ${escapeHtml(lane.coder)} • ⚡ <b>${lane.turns} ${callsLabel}</b> • 🪃 <b>QA: ${lane.qaRounds} ${roundsLabel}</b>
           </div>
         </div>
         <div class="stages-track">${stagesHtml}</div>

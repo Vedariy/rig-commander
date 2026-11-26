@@ -5054,3 +5054,66 @@
   .resilience-modal { padding: 14px; }
   .resilience-modal button, .resilience-banner button { min-height: 36px; }
 }
+
+/* Public sandbox: normal-flow mission dock, deliberate defaults, legible triage. */
+body.demo-mode #demoBackLink { color: #67e8f9; text-decoration: none; font-size: 11px; }
+body.demo-mode #liveConnectionBadge { color: #6ee7b7; background: #064e3b66; border-color: #34d39977; }
+body.demo-mode .brand-sub { color: #94a3b8; white-space: normal; }
+body.demo-mode #demoQuestBanner { flex: 0 0 auto; min-width: 0; }
+body.demo-mode .quest-dock { position: static; inset: auto; transform: none; width: auto; max-width: none; margin: 4px 8px; padding: 8px; z-index: auto; animation: none; box-shadow: none; border-radius: 8px; }
+body.demo-mode .quest-top { gap: 5px; flex-wrap: wrap; }
+body.demo-mode .quest-sub { display: none; }
+body.demo-mode .quest-steps-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+body.demo-mode .quest-step-card { min-height: 0; padding: 6px; gap: 4px; }
+body.demo-mode .quest-step-desc { display: none; }
+body.demo-mode .quest-step-head { font-size: 10px; flex-wrap: wrap; gap: 3px; }
+body.demo-mode .quest-step-cta { font-size: 10px; }
+body.demo-mode .agent-node.state-urgent { padding-top: 25px; }
+body.demo-mode .agent-node.state-urgent .status-led { top: 3px; bottom: auto; right: 4px; }
+body.demo-mode .node-meta-row { flex-wrap: wrap; justify-content: flex-start; gap: 4px 8px; white-space: normal; }
+body.demo-mode .node-meta-row > span { flex: 0 0 auto; white-space: nowrap; }
+.triage-tools { position: relative; color: #94a3b8; font-size: 11px; }
+.triage-tools summary { cursor: pointer; border: 1px solid #38bdf855; border-radius: 5px; padding: 5px 8px; white-space: nowrap; }
+.triage-tools-body { position: absolute; top: calc(100% + 6px); left: 0; z-index: 9500; display: grid; gap: 7px; width: max-content; min-width: 180px; padding: 12px; background: #0b1220; border: 1px solid #38bdf877; border-radius: 8px; box-shadow: 0 12px 32px #0009; }
+body.demo-mode .triage-card { min-width: 285px; max-width: none; }
+body.demo-mode .triage-card-title, body.demo-mode .triage-card-desc { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: break-word; }
+@media (max-width: 1519px) {
+  .triage-card { min-width: 270px; }
+  .triage-card-title, .triage-card-desc { white-space: normal; overflow: visible; text-overflow: clip; }
+}
+@media (max-width: 768px) {
+  body.demo-mode .triage-strip { display: grid; grid-template-columns: minmax(0, 1fr) auto; overflow: visible; gap: 6px; padding: 6px 8px; }
+  body.demo-mode .triage-meta { min-width: 0; flex-wrap: wrap; }
+  body.demo-mode .triage-badge { font-size: 8px; letter-spacing: 0; white-space: normal; }
+  body.demo-mode .triage-cards-container { grid-row: 2; grid-column: 1 / -1; width: 100%; overflow-x: auto; }
+  body.demo-mode .triage-card { flex: 0 0 285px; min-width: 285px; }
+  body.demo-mode .brand-title { flex-wrap: wrap; }
+  body.demo-mode #deckBrandTitle { font-size: 11px; }
+  body.demo-mode .quest-dock { margin: 3px 5px; padding: 6px; }
+  body.demo-mode .quest-top-actions .quest-mini-btn:not(:last-child) { display: none; }
+  body.demo-mode .quest-step-card { min-width: 0; }
+  body.demo-mode .quest-step-cta { display: none; }
+  body.demo-mode .quest-step-card.is-next .quest-step-cta { display: block; }
+}
+@media (max-width: 768px) {
+  body.demo-mode { height: 100dvh; max-height: 100dvh; padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+  body.demo-mode .brand { width: 100%; }
+  body.demo-mode .brand > div:last-child { min-width: 0; width: 100%; }
+  body.demo-mode .brand-title { max-width: 100%; white-space: normal; }
+  body.demo-mode #deckBrandTitle { white-space: normal; overflow-wrap: anywhere; }
+  body.demo-mode .brand-sub { display: block; font-size: 9px; }
+  body.demo-mode .main-layout { flex: 1 1 0; min-height: 0; height: auto; max-height: 100%; overflow: auto; padding-bottom: 0; }
+  body.demo-mode .main-layout > .panel { height: 100%; min-height: 0; margin-bottom: 0; }
+  body.demo-mode .canvas-wrap { height: auto; min-height: 100px; flex: 1 1 0; overflow: auto; }
+  body.demo-mode #idleCollapsedPill { font-size: 8px; white-space: normal; flex-shrink: 0; }
+  body.demo-mode .swimlanes-section { flex-shrink: 0; }
+}
+@media (max-width: 768px) {
+  /* Keep the first mission visible without compressing the scrollable topology. */
+  body.demo-mode #panelCenter > .panel-header { order: 0; flex-shrink: 0; }
+  body.demo-mode #demoQuestBanner { order: 1; }
+  body.demo-mode #panelCenter > .canvas-wrap, body.demo-mode #ganttWrap { order: 2; }
+  body.demo-mode #panelCenter > .canvas-wrap { min-height: 440px; height: 58dvh; flex: 0 0 auto; }
+  body.demo-mode #idleCollapsedPill { order: 3; }
+  body.demo-mode #swimlanesSection { order: 4; }
+}
