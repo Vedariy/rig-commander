@@ -1254,14 +1254,13 @@ export function classifyQuietRigClusters(agents = [], edges = [], {
     return { visibleAgents: list, minimizedClusters: [], minimizedAgentIds: new Set() };
   }
 
-  const tierMap = (tiers && typeof tiers === 'object')
-    ? tiers
-    : classifyNodeActivityTier(list, edges, { recentActiveIds, useHysteresis }).tiers;
+  const liveTiers = classifyNodeActivityTier(list, edges, { recentActiveIds, useHysteresis }).tiers;
   const expandedSet = expandedQuietRigs instanceof Set
     ? expandedQuietRigs
     : new Set(Array.isArray(expandedQuietRigs) ? expandedQuietRigs : []);
 
   const quietRigIds = [];
+  const collapsibleRigIds = new Set();
   const allRigIds = [...groups.keys()].sort(naturalCompare);
   let hasNonQuietRig = false;
 
@@ -1269,7 +1268,8 @@ export function classifyQuietRigClusters(agents = [], edges = [], {
     const rigAgents = groups.get(rid);
     const isQuietRig = rigAgents.every(agent => {
       const state = String(agent.state || 'idle').toLowerCase();
-      if ((tierMap[agent.id] || 'dormant') !== 'dormant') return false;
+      if (liveTiers[agent.id] !== 'dormant') return false;
+      if (tiers != null && !(Object.hasOwn(tiers, agent.id) && tiers[agent.id] === 'dormant')) return false;
       if (agent.shellExited || state === 'urgent' || state === 'working') return false;
       if (typeof agent.ctxPct === 'number' && Number.isFinite(agent.ctxPct) && agent.ctxPct >= 75) return false;
       if (selectedAgentId && agent.id === selectedAgentId) return false;
@@ -1279,13 +1279,15 @@ export function classifyQuietRigClusters(agents = [], edges = [], {
     });
     if (!isQuietRig) {
       hasNonQuietRig = true;
-    } else if (!expandedSet.has(rid)) {
+    } else if (expandedSet.has(rid)) {
+      collapsibleRigIds.add(rid);
+    } else {
       quietRigIds.push(rid);
     }
   }
 
   // Never collapse the entire fleet into a blank canvas if every rig is quiet
-  if (!hasNonQuietRig || quietRigIds.length === 0 || quietRigIds.length >= allRigIds.length) {
+  if (!hasNonQuietRig) {
     return { visibleAgents: list, minimizedClusters: [], minimizedAgentIds: new Set() };
   }
 
@@ -1317,7 +1319,7 @@ export function classifyQuietRigClusters(agents = [], edges = [], {
   });
 
   const visibleAgents = list.filter(a => !minimizedSet.has(rigIdOf(a)));
-  return { visibleAgents, minimizedClusters, minimizedAgentIds };
+  return { visibleAgents, minimizedClusters, minimizedAgentIds, collapsibleRigIds };
 }
 
 // Each rig uses the existing single-rig engine inside a disjoint, padded region.

@@ -311,13 +311,23 @@ export function renderTopologyEdgesHtml({
   }).join('');
 }
 
-export function renderRigClustersHtml(clusters, { cw, ch, escapeHtml }) {
+function renderQuietCollapseButton(rigId, { td, escapeHtml }, showRigName = false) {
+  const tip = escapeHtml(td('graph.collapseQuietTip', { rig: rigId }));
+  const rig = escapeHtml(rigId);
+  return `<button xmlns="http://www.w3.org/1999/xhtml" type="button" class="quiet-collapse-btn" data-quiet-rig="${rig}" aria-expanded="true" aria-label="${tip}" title="${tip}" onclick="toggleQuietRigCluster(this.dataset.quietRig)">${showRigName ? '@' + rig + ' ' : ''}×</button>`;
+}
+
+export function renderRigClustersHtml(clusters, { cw, ch, escapeHtml, td, collapsibleRigIds }) {
   if (!clusters || clusters.length < 2) return '';
   return clusters.map(c => {
     const x = c.xPct * cw / 100, y = c.yPct * ch / 100;
     const w = c.wPct * cw / 100, h = c.hPct * ch / 100;
     const label = `@${c.rigId} · ${c.count}`;
-    return `<g class="rig-cluster-zone" data-rig-id="${escapeHtml(c.rigId)}"><title>${escapeHtml(label)}</title><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/><text x="${x + 12}" y="${y + 21}">${escapeHtml(label)}</text></g>`;
+    let toggle = '';
+    if (collapsibleRigIds?.has(c.rigId)) {
+      toggle = `<foreignObject x="${x + w - 32}" y="${y + 2}" width="30" height="29">${renderQuietCollapseButton(c.rigId, { td, escapeHtml })}</foreignObject>`;
+    }
+    return `<g class="rig-cluster-zone" data-rig-id="${escapeHtml(c.rigId)}"><title>${escapeHtml(label)}</title><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/><text x="${x + 12}" y="${y + 21}">${escapeHtml(label)}</text>${toggle}</g>`;
   }).join('');
 }
 
@@ -328,7 +338,7 @@ export function renderQuietClustersPillHtml(minimizedClusters = [], { td, escape
     const parkedBadge = c.parkedCount > 0
       ? `<span class="quiet-parked-badge">🟠 ${escapeHtml(c.parkedWorkCount > 0 ? c.parkedWorkCount : c.parkedCount)}</span>`
       : `<span>${escapeHtml(c.count)}</span>`;
-    return `<button type="button" class="quiet-cluster-chip" data-quiet-rig="${escapeHtml(c.rigId)}" title="${escapeHtml(td('graph.expandQuietTip', { rig: c.rigId }))}" onclick="toggleQuietRigCluster(this.dataset.quietRig)">@${escapeHtml(c.rigId)} · ${parkedBadge}</button>`;
+    return `<button type="button" class="quiet-cluster-chip" aria-expanded="false" data-quiet-rig="${escapeHtml(c.rigId)}" title="${escapeHtml(td('graph.expandQuietTip', { rig: c.rigId }))}" onclick="toggleQuietRigCluster(this.dataset.quietRig)">@${escapeHtml(c.rigId)} · ${parkedBadge}</button>`;
   }).join('');
   return `<span class="quiet-clusters-label">${escapeHtml(td('graph.quietClustersLabel', { count: clusters.length }))}</span>${chips}<button type="button" class="quiet-expand-btn" onclick="expandAllQuietRigs()">${escapeHtml(td('graph.expandAllQuiet'))}</button>`;
 }
@@ -493,6 +503,16 @@ export function renderTopology(deps) {
     : { positions: {}, tiers: {}, benchEdgeById: {}, benchSeparatorY: null, activeCount: visibleAgents.length, dormantCount: 0 };
 
   const clustered = layoutResult.rigClusters?.length >= 2;
+  // A map with fewer than two active rigs has no zone headers to host the toggles.
+  const foldControls = doc.getElementById('quietFoldControls');
+  if (foldControls) {
+    const html = clustered ? '' : Array.from(quietRes.collapsibleRigIds || [],
+      rigId => renderQuietCollapseButton(rigId, { td, escapeHtml }, true)).join('');
+    if (foldControls.__lastHtml !== html) {
+      foldControls.innerHTML = html;
+      foldControls.__lastHtml = html;
+    }
+  }
   const svgEl = doc.getElementById('topologySvg');
   cw = layoutResult.canvasWidth || cw;
   ch = layoutResult.canvasHeight || ch;
@@ -506,11 +526,10 @@ export function renderTopology(deps) {
     if (!zones && clustered) {
       zones = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
       zones.id = 'rigClusterZones';
-      zones.setAttribute('aria-hidden', 'true');
       svgEl.insertBefore(zones, svgGroup);
     }
     if (zones) {
-      const html = renderRigClustersHtml(layoutResult.rigClusters, { cw, ch, escapeHtml });
+      const html = renderRigClustersHtml(layoutResult.rigClusters, { cw, ch, escapeHtml, td, collapsibleRigIds: quietRes.collapsibleRigIds });
       if (zones.__lastHtml !== html) { zones.innerHTML = html; zones.__lastHtml = html; }
     }
   }

@@ -269,3 +269,17 @@ test('renderQuietClustersPillHtml renders escaped parked/idle chips and expand-a
   }
   assert.equal(renderQuietClustersPillHtml([], { td: k => k, escapeHtml }), '');
 });
+
+test('expanded quiet zone has a localized native collapse button and an escaped rig identifier', () => {
+  const rigId = 'quiet" & <lab>';
+  const clusters = [rigId, 'active'].map(rigId => ({ rigId, count: 1, xPct: 0, yPct: 5, wPct: 48, hPct: 80 }));
+  for (const lang of ['en', 'ru']) {
+    const td = (key, vars) => tDeck(lang, key, vars);
+    const html = renderRigClustersHtml(clusters, { cw: 1000, ch: 600, escapeHtml, td, collapsibleRigIds: new Set([rigId]) });
+    includes(html, 'data-quiet-rig="' + escapeHtml(rigId) + '"');
+    includes(html, 'aria-label="' + escapeHtml(td('graph.collapseQuietTip', { rig: rigId })) + '"');
+    includes(html, 'onclick="toggleQuietRigCluster(this.dataset.quietRig)"');
+    assert.equal((html.match(/<button /g) || []).length, 1);
+    assert.ok(!html.includes(rigId));
+  }
+});

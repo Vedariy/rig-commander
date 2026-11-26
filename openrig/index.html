@@ -286,6 +286,7 @@
       <div class="canvas-bottom-dock" id="canvasBottomDock">
         <div class="idle-collapsed-pill" id="idleCollapsedPill" onclick="toggleHideIdle()"></div>
         <div class="quiet-clusters-pill" id="quietClustersPill"></div>
+        <div id="quietFoldControls"></div>
       </div>
 
       <!-- GANTT VIEW: Operational Timeline (Sub-lane packed) & Chronological Handoff Flow -->
@@ -2093,10 +2094,10 @@
       }
       const isGantt = centerViewMode === 'gantt';
       const canvas = document.querySelector('#panelCenter .canvas-wrap');
-      const idlePill = document.getElementById('idleCollapsedPill');
+      const dock = document.getElementById('canvasBottomDock');
       const gantt = document.getElementById('ganttWrap');
       if (canvas) canvas.style.display = isGantt ? 'none' : '';
-      if (idlePill) idlePill.style.display = isGantt ? 'none' : '';
+      if (dock) dock.style.display = isGantt ? 'none' : '';
       if (gantt) gantt.style.display = isGantt ? 'flex' : 'none';
       const bG = document.getElementById('btnViewGraph');
       const bT = document.getElementById('btnViewGantt');
@@ -3744,6 +3745,7 @@
       const changed = selectedAgentId !== id;
       if (changed) liveScreenCapture = lastScreenBySeat[id] || '';
       selectedAgentId = id;
+      if (changed && calmMode && currentRigFilter === 'all') renderTopology();
       persistDeckPref({ selectedAgentId: id });
       applyHoverClasses();
       renderInspectorAndScorecards(true);
@@ -3785,10 +3787,8 @@
     }
 
     function expandAllQuietRigs() {
-      for (const a of AGENTS) {
-        const id = String(a && a.id || '');
-        const rid = id.includes('@') ? id.slice(id.lastIndexOf('@') + 1) : 'local';
-        expandedQuietRigs.add(rid);
+      for (const chip of document.querySelectorAll('#quietClustersPill [data-quiet-rig]')) {
+        expandedQuietRigs.add(chip.dataset.quietRig);
       }
       renderTopology();
     }

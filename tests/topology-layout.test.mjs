@@ -693,3 +693,20 @@ test('classifyQuietRigClusters folds quiet & parked-only rigs in CALM: ON while 
   const topPx = Math.min(...multi.rigClusters.map(c => (c.yPct * multi.canvasHeight) / 100));
   assert.ok(topPx >= 35.5, `Top multi-rig row (${topPx.toFixed(1)}px) must clear top HUD label (>= 36px)`);
 });
+
+test('quiet minimization requires an explicit dormant tier and preserves current activity evidence', () => {
+  const active = { id: 'lead@busy', state: 'working' };
+  const idle = { id: 'review@quiet', state: 'idle' };
+  const classify = (tiers, edges = [], extra = {}) => classifyQuietRigClusters(
+    [active, idle], edges, { calmMode: true, tiers, ...extra });
+  const dormant = { [idle.id]: 'dormant' };
+  const edge = { from: active.id, to: idle.id, queueStatus: 'pending' };
+  for (const tiers of [{}, Object.create(dormant), { [idle.id]: undefined }, { [idle.id]: null }, { [idle.id]: '' }]) {
+    assert.equal(classify(tiers).minimizedClusters.length, 0);
+  }
+  assert.equal(classify(dormant, [edge]).minimizedClusters.length, 0);
+  assert.equal(classify(dormant, [], { recentActiveIds: new Set([idle.id]) }).minimizedClusters.length, 0);
+  assert.equal(classify(dormant).minimizedClusters[0].rigId, 'quiet');
+  const expanded = new Set(['quiet', 'busy']);
+  assert.deepEqual([...classify(dormant, [], { expandedQuietRigs: expanded }).collapsibleRigIds], ['quiet']);
+});
