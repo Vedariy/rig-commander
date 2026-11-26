@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.6.0] - 2026-11-26
+
+### Added
+- **Lean MIT Fleet Resilience & 3-Port Extension Boundary (`openrig/assets/domain/resilience-model.js`, `openrig/lib/resilience/*`, `openrig/lib/routes/resilience.mjs`):**
+  - Added pure advisory outage classification (`healthy`, `seat_exited`, `rig_down`, `daemon_down`), OpenRig SQLite UTC snapshot table parsing (`parseSnapshotTable`), sleep/wake wall-clock jump detection, per-host manifest envelope merging (Lamport clock + SHA-256 deterministic tie-breaker), and 2-step plan/receipt models.
+  - Added thin, extensible `ProcessRecoveryProvider` & `StateVaultAdapter` interfaces alongside `OpenRigResilienceProvider` and atomic `0600` `LocalFsVaultAdapter` (`hosts/<hostId>/` partitions, optional `--state-dir` / `RIGCOMMANDER_STATE_DIR`).
+  - Added centralized `RecoveryPolicyGate` enforcing strict 2-step human confirmation via single-use SHA-256 `planHash` (5-minute TTL, TOCTOU pre-execute revalidation, per-target `409` single-flight mutex, intentional-stop protection, honest `restored | partial | failed | unknown` receipts, and zero silent auto-resurrection).
+  - Wired `/api/resilience/{status,plan,resurrect,snapshot}` routes and non-destructive sleep/wake SSE + Telegram advisories in `openrig/server.mjs` while keeping `0%` idle CPU and `"dependencies": {}`.
+- **Capability-Driven Crash-Cart & WakeUp Modular UI + Offline Tour (`openrig/assets/ui/resilience-view.js`, `openrig/assets/styles/deck.css`, `openrig/index.html`, `landing/guide.html`):**
+  - Added capability-gated Crash-Cart banner (hidden when healthy, collapsible on `rig_down`, always expanded on `daemon_down`), truthful Local Vault / snapshot freshness badges, 2-step Plan Preview modal with exact command preview & clipboard fallback, and offline `/demo?track=resilience` simulation firing zero live API calls.
+  - Added Tier-1 EN/RU operator recovery section to `landing/guide.html`.
+
+### Fixed
+- **Handoff Lineage Chip Routing (`openrig/assets/ui/inspector-view.js`):**
+  - Routed `handedOffFrom` / `handedOffTo` chips by reference type so seat addresses (`dev-check@rig-commander`) render cleanly as clickable `↘ dev-check` seat selectors instead of sliced suffixes (`↘ ommander`), while `qitem-*` IDs open queue lineage details.
+- **Test Verification:** Expanded automated test coverage to **`262 / 262 PASS` across 34 test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS`.
+
+---
+
 ## [3.5.1] - 2026-11-26
 
 ### Fixed
