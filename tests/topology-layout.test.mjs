@@ -604,15 +604,18 @@ test('computeAdaptiveEdgePath stays straight on clean axes, uses orthogonal S-cu
   assert.equal(vert.curved, false);
   assert.equal(vert.kind, 'straight');
 
-  // 2. Unobstructed active diagonal -> vertical-tangent cubic S-curve with exact B(0.5) anchor
+  // 2. Unobstructed active diagonal -> vertical-tangent cubic S-curve with collinear arrow landing runway & exact B(0.5) anchor
   const diag = computeAdaptiveEdgePath({ cx1: 200, cy1: 120, sz1: sz, cx2: 520, cy2: 380, sz2: sz, isGhost: false });
   assert.equal(diag.curved, true);
   assert.equal(diag.kind, 's-vertical');
-  assert.match(diag.pathD, /^M [\d.-]+ [\d.-]+ C [\d.-]+ [\d.-]+, [\d.-]+ [\d.-]+, [\d.-]+ [\d.-]+$/);
+  assert.match(diag.pathD, /^M [\d.-]+ [\d.-]+ C [\d.-]+ [\d.-]+, [\d.-]+ [\d.-]+, [\d.-]+ [\d.-]+ L [\d.-]+ [\d.-]+$/);
   assert.equal(diag.c1.x, diag.p1.x, 'vertical S-curve exits source orthogonally (90 deg)');
-  assert.equal(diag.c2.x, diag.p2.x, 'vertical S-curve enters target orthogonally (90 deg)');
-  const b05x = 0.125 * diag.p1.x + 0.375 * diag.c1.x + 0.375 * diag.c2.x + 0.125 * diag.p2.x;
-  const b05y = 0.125 * diag.p1.y + 0.375 * diag.c1.y + 0.375 * diag.c2.y + 0.125 * diag.p2.y;
+  assert.equal(diag.c2.x, diag.p2Lead.x, 'vertical S-curve arrives at landing runway orthogonally (90 deg)');
+  assert.equal(diag.p2Lead.x, diag.p2.x, 'landing runway is strictly collinear with arrowhead axis');
+  assert.ok(diag.p2.y - diag.p2Lead.y >= 9, 'landing runway gives >= 9px straight lead-in for arrowhead');
+  assert.notEqual(diag.trunkPathD, diag.pathD, 'wide trunk trims short of arrowhead tip');
+  const b05x = 0.125 * diag.p1.x + 0.375 * diag.c1.x + 0.375 * diag.c2.x + 0.125 * diag.p2Lead.x;
+  const b05y = 0.125 * diag.p1.y + 0.375 * diag.c1.y + 0.375 * diag.c2.y + 0.125 * diag.p2Lead.y;
   assert.ok(Math.abs(diag.mx - b05x) < 1e-6 && Math.abs(diag.my - b05y) < 1e-6, 'label anchor lies strictly on B(0.5)');
 
   // 3. Unobstructed ghost diagonal stays quiet/straight (zero spaghetti)

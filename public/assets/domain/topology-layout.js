@@ -786,15 +786,28 @@ export function computeAdaptiveEdgePath({
 
   const p1Straight = intersectRectBorder(cx1, cy1, sz1.hw, sz1.hh, dx, dy, padStart);
   const p2Straight = intersectRectBorder(cx2, cy2, sz2.hw, sz2.hh, -dx, -dy, padEnd);
-  const straightResult = () => ({
-    pathD: `M ${p1Straight.x.toFixed(1)} ${p1Straight.y.toFixed(1)} L ${p2Straight.x.toFixed(1)} ${p2Straight.y.toFixed(1)}`,
-    p1: p1Straight,
-    p2: p2Straight,
-    mx: (p1Straight.x + p2Straight.x) / 2,
-    my: (p1Straight.y + p2Straight.y) / 2,
-    curved: false,
-    kind: 'straight'
-  });
+  const ux = dx / dist;
+  const uy = dy / dist;
+  const straightResult = () => {
+    const segLen = Math.hypot(p2Straight.x - p1Straight.x, p2Straight.y - p1Straight.y);
+    const trim = segLen > 20 ? 11 : 0;
+    const tx = p2Straight.x - ux * trim;
+    const ty = p2Straight.y - uy * trim;
+    const pathD = `M ${p1Straight.x.toFixed(1)} ${p1Straight.y.toFixed(1)} L ${p2Straight.x.toFixed(1)} ${p2Straight.y.toFixed(1)}`;
+    const trunkPathD = trim > 0
+      ? `M ${p1Straight.x.toFixed(1)} ${p1Straight.y.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      : pathD;
+    return {
+      pathD,
+      trunkPathD,
+      p1: p1Straight,
+      p2: p2Straight,
+      mx: (p1Straight.x + p2Straight.x) / 2,
+      my: (p1Straight.y + p2Straight.y) / 2,
+      curved: false,
+      kind: 'straight'
+    };
+  };
 
   const blocking = [];
   if (Array.isArray(obstacles) && obstacles.length > 0) {
@@ -812,8 +825,6 @@ export function computeAdaptiveEdgePath({
     return straightResult();
   }
 
-  const ux = dx / dist;
-  const uy = dy / dist;
   const nx = -uy;
   const ny = ux;
 
@@ -846,12 +857,23 @@ export function computeAdaptiveEdgePath({
     const c2 = { x: cx1 + dx * 0.68 + nx * bowPx, y: cy1 + dy * 0.68 + ny * bowPx };
     const p1 = intersectRectBorder(cx1, cy1, sz1.hw, sz1.hh, c1.x - cx1, c1.y - cy1, padStart);
     const p2 = intersectRectBorder(cx2, cy2, sz2.hw, sz2.hh, c2.x - cx2, c2.y - cy2, padEnd);
-    const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x;
-    const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y;
+    const endDx = p2.x - c2.x;
+    const endDy = p2.y - c2.y;
+    const endDist = Math.hypot(endDx, endDy) || 1;
+    const leadPx = endDist > 26 ? 9 : 0;
+    const p2Lead = leadPx > 0
+      ? { x: p2.x - (endDx / endDist) * leadPx, y: p2.y - (endDy / endDist) * leadPx }
+      : p2;
+    const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2Lead.x;
+    const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2Lead.y;
+    const curveOnly = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2Lead.x.toFixed(1)} ${p2Lead.y.toFixed(1)}`;
+    const pathD = leadPx > 0 ? `${curveOnly} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` : curveOnly;
     return {
-      pathD: `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+      pathD,
+      trunkPathD: curveOnly,
       p1,
       p2,
+      p2Lead,
       c1,
       c2,
       mx,
@@ -861,8 +883,9 @@ export function computeAdaptiveEdgePath({
     };
   }
 
-  // Rule 4: Unobstructed active/queued diagonal -> orthogonal-tangent S-curve (clean 90-deg port entry)
-  const preferVertical = Math.abs(dy) >= Math.abs(dx) * 0.45;
+  // Rule 4: Unobstructed active/queued diagonal -> orthogonal-tangent S-curve with
+  // a straight collinear landing runway so the arrowhead aligns 100% with the incoming stream.
+  const preferVertical = Math.abs(dy) >= Math.abs(dx) * 0.42;
   if (preferVertical) {
     const sy = Math.sign(dy) || 1;
     const shift1 = Math.max(-sz1.hw * 0.32, Math.min(sz1.hw * 0.32, dx * 0.12));
@@ -871,15 +894,26 @@ export function computeAdaptiveEdgePath({
     const p2 = { x: cx2 - shift2, y: cy2 - sy * (sz2.hh + padEnd) };
     const spanY = (p2.y - p1.y) * sy;
     if (spanY >= 24) {
-      const k = Math.min(132, Math.max(36, spanY * 0.48));
+      const leadEnd = spanY >= 40 ? Math.min(16, Math.max(11, spanY * 0.2)) : 0;
+      const p2Lead = { x: p2.x, y: p2.y - sy * leadEnd };
+      const curveSpanY = Math.max(16, spanY - leadEnd);
+      const k = Math.min(124, Math.max(24, curveSpanY * 0.56));
       const c1 = { x: p1.x, y: p1.y + sy * k };
-      const c2 = { x: p2.x, y: p2.y - sy * k };
-      const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x;
-      const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y;
+      const c2 = { x: p2Lead.x, y: p2Lead.y - sy * k };
+      const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2Lead.x;
+      const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2Lead.y;
+      const curveOnly = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2Lead.x.toFixed(1)} ${p2Lead.y.toFixed(1)}`;
+      const pathD = leadEnd > 0 ? `${curveOnly} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` : curveOnly;
+      const trunkEndY = p2.y - sy * Math.min(leadEnd || 11, 11);
+      const trunkPathD = leadEnd > 11
+        ? `${curveOnly} L ${p2.x.toFixed(1)} ${trunkEndY.toFixed(1)}`
+        : curveOnly;
       return {
-        pathD: `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+        pathD,
+        trunkPathD,
         p1,
         p2,
+        p2Lead,
         c1,
         c2,
         mx,
@@ -897,15 +931,26 @@ export function computeAdaptiveEdgePath({
   const p2 = { x: cx2 - sx * (sz2.hw + padEnd), y: cy2 - shift2 };
   const spanX = (p2.x - p1.x) * sx;
   if (spanX >= 24) {
-    const k = Math.min(132, Math.max(36, spanX * 0.48));
+    const leadEnd = spanX >= 40 ? Math.min(16, Math.max(11, spanX * 0.2)) : 0;
+    const p2Lead = { x: p2.x - sx * leadEnd, y: p2.y };
+    const curveSpanX = Math.max(16, spanX - leadEnd);
+    const k = Math.min(124, Math.max(24, curveSpanX * 0.56));
     const c1 = { x: p1.x + sx * k, y: p1.y };
-    const c2 = { x: p2.x - sx * k, y: p2.y };
-    const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x;
-    const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y;
+    const c2 = { x: p2Lead.x - sx * k, y: p2Lead.y };
+    const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2Lead.x;
+    const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2Lead.y;
+    const curveOnly = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2Lead.x.toFixed(1)} ${p2Lead.y.toFixed(1)}`;
+    const pathD = leadEnd > 0 ? `${curveOnly} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` : curveOnly;
+    const trunkEndX = p2.x - sx * Math.min(leadEnd || 11, 11);
+    const trunkPathD = leadEnd > 11
+      ? `${curveOnly} L ${trunkEndX.toFixed(1)} ${p2.y.toFixed(1)}`
+      : curveOnly;
     return {
-      pathD: `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+      pathD,
+      trunkPathD,
       p1,
       p2,
+      p2Lead,
       c1,
       c2,
       mx,

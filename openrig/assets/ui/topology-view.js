@@ -254,23 +254,23 @@ export function renderTopologyEdgesHtml({
     }
 
     const obstacles = visibleNodeBoxes.filter(b => b.id !== n1.id && b.id !== n2.id);
-    const { pathD, mx, my } = computeAdaptiveEdgePath({
+    const { pathD, trunkPathD, mx, my } = computeAdaptiveEdgePath({
       cx1, cy1, sz1,
       cx2, cy2, sz2,
       obstacles,
       parallelIndex,
       isGhost,
       padStart: 2,
-      padEnd: 4
+      padEnd: 3
     });
 
     const segClass = isLive ? 'is-live' : (isQueuedStatic ? `is-${statusKey}` : 'is-ghost');
     const isDormantGhost = isGhost &&
       (layoutResult.tiers[edge.from] === 'dormant' || layoutResult.tiers[edge.to] === 'dormant');
     const trunkWidth = isLive
-      ? Math.max(4, Math.round(Math.log2(1 + (edge.calls || 1)) * 2.4))
+      ? Math.min(9, Math.max(4, Math.round(Math.log2(1 + (edge.calls || 1)) * 2.1)))
       : (isQueuedStatic ? 2.6 : 2);
-    const streamWidth = Math.max(2, Math.round(trunkWidth * 0.45));
+    const streamWidth = Math.min(4, Math.max(2, Math.round(trunkWidth * 0.45)));
 
     const isVisibleSlice = !hasSliceMatch || isEdgeInSlice(edge);
     const isHoveredMatch = !hoveredAgentId || edge.from === hoveredAgentId || edge.to === hoveredAgentId;
@@ -297,7 +297,7 @@ export function renderTopologyEdgesHtml({
       <g class="edge-group ${segClass} ${isDormantGhost ? 'is-dormant-edge' : ''} ${dimmedClass} ${hoverFocusClass}" style="--edge-stroke:${edge.color};" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-slice="${escapeHtml(edge.slice)}" data-edge-status="${escapeHtml(statusKey)}" onclick="selectEdge(${edgeIdx}, event)">
         <title>${escapeHtml(tooltipText)}</title>
         <path d="${pathD}" stroke="transparent" stroke-width="18" fill="none" style="pointer-events:stroke;" />
-        <path d="${pathD}" class="edge-trunk" stroke="${isLive || isQueuedStatic ? edge.color : '#334155'}" stroke-width="${trunkWidth}"${isQueuedStatic ? ` marker-end="url(#${edge.marker || 'arr-amber'})"` : ''} />
+        <path d="${isLive ? (trunkPathD || pathD) : pathD}" class="edge-trunk" stroke="${isLive || isQueuedStatic ? edge.color : '#334155'}" stroke-width="${trunkWidth}"${isQueuedStatic ? ` marker-end="url(#${edge.marker || 'arr-amber'})"` : ''} />
         ${isLive ? `
           <path d="${pathD}" class="edge-stream live-active" stroke="${edge.color}" stroke-width="${streamWidth}"
                 style="--stream-speed:${edge.speed}; --edge-glow:${edge.color};" marker-end="url(#${edge.marker})" />
