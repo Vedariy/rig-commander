@@ -28,6 +28,9 @@ import { collectFleetGitRadar } from './lib/git-radar.mjs';
 import { ShiftHistoryStore } from './lib/shift-history.mjs';
 import { SsePushHub } from './lib/sse-hub.mjs';
 import { SafePlaybookEngine } from './lib/playbook-engine.mjs';
+import { FleetResilienceService } from './lib/resilience/index.mjs';
+import { OpenRigResilienceProvider } from './lib/resilience/openrig-provider.mjs';
+import { registerResilienceRoutes } from './lib/routes/resilience.mjs';
 import { registerTelemetryRoutes } from './lib/routes/telemetry.mjs';
 import { registerGuardrailRoutes } from './lib/routes/guardrails.mjs';
 import { registerPlaybookRoutes } from './lib/routes/playbooks.mjs';
@@ -39,7 +42,10 @@ const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 30, evalTh
 const shiftHistory = new ShiftHistoryStore();
 const actionAudit = new ActionAuditLog({
   maxRecords: 100,
-  onRecordChange: (entry) => shiftHistory.recordOperatorAction(entry)
+  onRecordChange: (entry) => {
+    // Resilience records the provider's final receipt in shift history itself.
+    if (entry.transport !== 'resilience') shiftHistory.recordOperatorAction(entry);
+  }
 });
 const aiEvaluator = new AiEvaluatorService();
 const sendIdempotency = new ServerIdempotencyCache();
@@ -2043,6 +2049,9 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
   }
   payload.shiftHistoryMeta = shiftHistory.getSummaryMeta();
   latestFleetSnapshot = payload;
+  if (sseHub.hasActiveSubscribers() || Date.now() - lastTelemetryClientAt < 25000) {
+    void resilience.observeTelemetry(payload).catch(err => console.warn('Resilience observation failed:', err.code || err.name));
+  }
   sseHub.publishTelemetryBundle(rigKey, payload);
 
   setImmediate(async () => {
@@ -2349,6 +2358,18 @@ const guardrailStatus = ({ json }) => json(200, {
   playbooks: playbookEngine.getState()
 });
 
+const stateDirArg = process.argv.indexOf('--state-dir');
+const resilience = new FleetResilienceService({
+  stateDir: stateDirArg >= 0 ? process.argv[stateDirArg + 1] : process.env.RIGCOMMANDER_STATE_DIR,
+  providers: [new OpenRigResilienceProvider({ rigBin: RIG_BIN, daemonUrl: DAEMON_URL })],
+  actionAudit, shiftHistory,
+  notify: async advisory => {
+    sseHub.publishShiftEvent(advisory);
+    if (telegramBridge.isConfigured()) await telegramBridge.sendText(
+      'Fleet status after wake / Состояние флота после пробуждения: ' + advisory.tier);
+  }
+});
+registerResilienceRoutes(registry, resilience);
 registerTelemetryRoutes(registry, {
   getTelemetryBundle, getSerializedTelemetryVariant, fleetIntelligence, fetchQueueItemContextDetail,
   sseHub, captureSeatScreen, markTelemetryClient: () => { lastTelemetryClientAt = Date.now(); }
@@ -2401,7 +2422,13 @@ async function dispatchApi(req, res, url, isRemote) {
         if (!updateAction) chunks.push(chunk);
       }
       if (bytes > limit) return;
-      if (!updateAction) context.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+      if (!updateAction) {
+        try { context.body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); }
+        catch (error) {
+          if (url.pathname.startsWith('/api/resilience/')) return deny(400, 'invalid_json');
+          throw error;
+        }
+      }
     }
     await route.handler(context);
   } catch (err) {
@@ -2614,7 +2641,10 @@ function resolveSafeStaticPath(baseDir, pathname) {
   return { resolved, rel, ext };
 }
 
+server.on('listening', () => { remoteAccess.port = getPort(); });
+
 export {
+  server, resilience,
   buildGanttItems,
   isGanttSystemNoise,
   computeHistoryStats,
@@ -2642,7 +2672,6 @@ if (isMainModule) {
     telegramBridge.startPolling();
   }
   server.listen(PORT, BIND_HOST, () => {
-    remoteAccess.port = getPort();
     console.log(`💠 RigCommander // Neural Command Deck v${APP_VERSION} at http://${BIND_HOST}:${getPort()}`);
     // Warm the initial telemetry snapshot in background so first browser load is instant
     setTimeout(() => {
@@ -2651,6 +2680,7 @@ if (isMainModule) {
     // Keep telemetry warm strictly while at least one SSE subscriber is open OR a client polled within 25s (zero idle CPU!)
     setInterval(() => {
       if (sseHub.hasActiveSubscribers() || Date.now() - lastTelemetryClientAt < 25000) {
+        void resilience.checkWallClockJump().catch(err => console.warn('Resilience advisory failed:', err.code || err.name));
         const rigsToWarm = new Set(telemetryCacheByRig.keys());
         for (const c of sseHub.eventClients) rigsToWarm.add(c.rigKey || 'all');
         if (rigsToWarm.size === 0) rigsToWarm.add('all');

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { Agent, request } from 'node:http';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
@@ -15,10 +15,11 @@ const mutations = [
   'guardrails/config', 'guardrails/reset', 'guardrails/telegram',
   'evaluator/config', 'evaluator/models', 'evaluator/run',
   'playbooks/config', 'playbooks/reset', 'playbooks/dry-run',
-  'remote/config', 'remote/pair', 'remote/revoke', 'update/check', 'update/apply', 'send'
+  'remote/config', 'remote/pair', 'remote/revoke', 'update/check', 'update/apply', 'send',
+  'resilience/plan', 'resilience/snapshot', 'resilience/resurrect'
 ];
 
-async function startFixture(t) {
+async function startFixture(t, { secondProvider = false } = {}) {
   const home = await mkdtemp(path.join(tmpdir(), 'rigcmd-routes-'));
   const publicUrl = 'https://fixture.invalid';
   const guard = new RemoteAccessGuard({
@@ -30,7 +31,37 @@ async function startFixture(t) {
   const preload = path.join(home, 'offline.cjs');
   // No daemon, registry, or provider I/O. No installed rig, tmux, updater binaries or account state.
   await writeFile(preload, "globalThis.fetch = async () => { throw new Error('Offline test fixture'); };");
-  const child = spawn(process.execPath, ['--require', preload, serverPath], {
+  const effectFile = path.join(home, 'effects.log');
+  let argv = [serverPath];
+  if (secondProvider) {
+    await writeFile(effectFile, '');
+    const fixturePath = path.join(home, 'mock-service.mjs');
+    await writeFile(fixturePath, `
+      import { appendFileSync, existsSync } from 'node:fs';
+      import { server, resilience } from ${JSON.stringify(new URL('../openrig/server.mjs', import.meta.url).href)};
+      const effects = ${JSON.stringify(effectFile)};
+      resilience.registry.register({
+        id: 'second', capabilities: { daemonProbe:true, checkpoints:true, planPreview:true,
+          unitRecover:true, fleetRecover:true, receiptPolling:false },
+        probe: async () => ({daemonUp:true,liveRigs:[{rigId:'blue',running:false},{rigId:'red',running:false}]}),
+        listCheckpoints: async () => [],
+        createCheckpoint: async () => { appendFileSync(effects,'snapshot\\n'); return {created:true}; },
+        planRecover: async r => ({commandPreview:'local recover ' + r.target}),
+        executeRecover: async r => {
+          appendFileSync(effects,'execute ' + r.target + '\\n');
+          if (r.target === 'blue') {
+            const deadline = Date.now() + 5000;
+            while (!existsSync(effects + '.release') && Date.now() < deadline) await new Promise(r => setTimeout(r,10));
+          }
+          return {status:r.target === 'red' ? 'failed' : 'partial'};
+        },
+        getReceipt: async () => ({status:'unknown'})
+      });
+      server.listen(0,'127.0.0.1', () => console.log('at http://127.0.0.1:' + server.address().port));
+    `);
+    argv = [fixturePath];
+  }
+  const child = spawn(process.execPath, ['--require', preload, ...argv], {
     cwd: home,
     env: { HOME: home, PATH: home, RIGCOMMANDER_PORT: '0' },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -48,7 +79,7 @@ async function startFixture(t) {
   try {
     for await (const line of lines) {
       const url = line.match(/at (http:\/\/127\.0\.0\.1:[1-9]\d*)/);
-      if (url) return { origin: url[1], publicUrl, cookie: 'rigcmd_session=' + sessionToken };
+      if (url) return { effectFile, origin: url[1], publicUrl, cookie: 'rigcmd_session=' + sessionToken };
     }
     assert.fail('Server exited before listening. ' + stderr);
   } finally {
@@ -133,7 +164,7 @@ test('Deck HTTP router with an isolated bridge on a kernel-assigned port', async
   await t.test('paired remote status is readable, remote settings and update actions are local only', async () => {
     const remote = { 'x-forwarded-proto': 'https', origin: publicUrl };
     const paired = { ...remote, cookie };
-    for (const route of ['telemetry', 'guardrails', 'playbooks', 'update/status']) {
+    for (const route of ['telemetry', 'guardrails', 'playbooks', 'update/status', 'resilience/status']) {
       assert.equal((await get('/api/' + route, remote)).status, 401, route);
     }
     const status = await get('/api/update/status', paired);
@@ -171,7 +202,7 @@ test('Deck HTTP router with an isolated bridge on a kernel-assigned port', async
       return { socket, status: res.statusCode, data: JSON.parse(Buffer.concat(parts).toString()) };
     }
 
-    for (const path of ['/api/guardrails/config', '/api/remote/config', '/api/update/check']) {
+    for (const path of ['/api/guardrails/config', '/api/remote/config', '/api/update/check', '/api/resilience/plan', '/api/resilience/snapshot', '/api/resilience/resurrect']) {
       const rejected = await exchange(path, 'POST');
       assert.equal(rejected.status, 413, path);
       assert.equal(rejected.data.ok, false);
@@ -200,4 +231,46 @@ test('Deck HTTP router with an isolated bridge on a kernel-assigned port', async
     assert.equal(preview.status, 200);
     assert.ok((await preview.json()).dryRun);
   });
+});
+
+test('second provider uses the real authorized router, single-flight, replay and honest receipts', async t => {
+  const { origin, effectFile } = await startFixture(t, { secondProvider: true });
+  const html = await (await fetch(origin)).text();
+  const token = html.match(/<meta name="deck-token" content="([^"]+)">/)[1];
+  const status = async () => (await fetch(origin + '/api/resilience/status')).json();
+  const target = { providerId: 'second', scope: 'rig', target: 'blue' };
+  const post = (op, body, key, headers = {}) => fetch(origin + '/api/resilience/' + op, {
+    method: 'POST', headers: { origin, 'x-deck-token': token, 'content-type':'application/json',
+      ...(key && {'x-idempotency-key':key}), ...headers }, body: typeof body === 'string' ? body : JSON.stringify(body) });
+  const effects = () => readFile(effectFile, 'utf8');
+  assert.ok((await status()).providers.find(p => p.id === 'second').report.offlineRigs.includes('blue'));
+  const plan = await (await post('plan', target)).json();
+  const valid = {...target,planHash:plan.planHash,confirmed:true};
+  assert.equal(plan.plan.commandPreview,'local recover blue');
+  assert.equal((await post('plan','{')).status,400);
+  assert.equal((await post('snapshot',target)).status,400);
+  assert.equal((await post('snapshot',JSON.stringify(target).padEnd(65537),'size')).status,413);
+  assert.equal((await post('resurrect',JSON.stringify(valid).padEnd(65537),'too-big')).status,413);
+  assert.equal((await post('resurrect',valid,'unauthorized',{'x-deck-token':''})).status,403);
+  for (const invalid of [{confirmed:'true'},{target:'red'},{planHash:''}]) {
+    assert.equal((await post('resurrect',{...valid,...invalid},'denied')).status,400);
+  }
+  assert.equal(await effects(),'');
+  const pending = post('resurrect', valid, 'first');
+  for (let i = 0; i < 200 && !(await effects()).includes('execute'); i++) await new Promise(r => setTimeout(r,10));
+  assert.equal((await post('resurrect', valid, 'concurrent')).status,409);
+  await writeFile(effectFile + '.release','');
+  assert.equal((await (await pending).json()).receipt.status,'partial');
+  assert.equal((await (await post('resurrect', valid, 'first')).json()).receipt.status,'partial');
+  const red = {...target,target:'red'};
+  assert.equal((await post('resurrect', {...valid,...red}, 'first')).status,409);
+  const next = await (await post('plan',red)).json();
+  const failed = await post('resurrect',{...red,confirmed:true,planHash:next.planHash},'red');
+  assert.equal(failed.status,502);
+  assert.equal((await failed.json()).receipt.status,'failed');
+  const snap = await post('snapshot',JSON.stringify(target).padEnd(65536),'once');
+  assert.deepEqual((await snap.json()).checkpoint,{providerId:'second',target:'blue',created:true});
+  assert.equal((await post('snapshot',target,'once')).status,200);
+  assert.equal(await effects(),'execute blue\nexecute red\nsnapshot\n');
+  assert.deepEqual((await status()).history.map(r => r.status),['partial','failed']);
 });
