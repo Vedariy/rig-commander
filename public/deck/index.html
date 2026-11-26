@@ -30,10 +30,24 @@
 </head>
 <body>
 
-  <!-- LEVEL 0: TOP-3 ACTIONABLE TRIAGE STRIP (ADR-0006) -->
+  <!-- LEVEL 0: COMPACT TOP TRIAGE & FINOPS BAR (ROW 1) -->
   <div class="triage-strip" id="triageStrip">
     <div class="triage-meta">
-      <span class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal('health')" style="cursor:pointer;" title="Индекс здоровья и План действий (Triage)">🟢 LIVE TELEMETRY</span>
+      <span class="mobile-brand-chip" aria-label="RigCommander">💠 <b>RigCmd</b></span>
+      <button type="button" class="triage-badge" id="triageBadge" onclick="openFleetAdvisorModal('health')" title="Индекс здоровья и План действий (Triage)">🟢 LIVE TELEMETRY</button>
+      <div class="finops-pill-wrap" id="finopsPillWrap">
+        <button type="button" class="triage-refresh-btn finops-pill-btn" id="btnFinopsPill" aria-expanded="false" aria-haspopup="true" onclick="toggleReservoirsPopover(event)" title="FinOps & Peak CTX">
+          <span id="finopsPillText">⚡ $0.00 · CTX — ▾</span>
+        </button>
+        <div class="reservoirs-popover" id="reservoirsPopover" hidden onclick="event.stopPropagation()">
+          <div class="reservoirs" id="reservoirsContainer">
+            <!-- Self-Discovered Dynamic Quota Physics Reservoirs (ADR-0007) -->
+          </div>
+          <div class="reservoirs-popover-footer">
+            <button type="button" class="triage-refresh-btn" style="border-color:rgba(0,240,255,0.45); color:var(--cyan);" onclick="closeReservoirsPopover(); openFleetAdvisorModal('budget')" data-i18n="finops.openBudgetBtn">💰 Полный бюджет SUB vs PAYG →</button>
+          </div>
+        </div>
+      </div>
       <button class="triage-refresh-btn" id="btnFleetAdvisor" onclick="openFleetAdvisorModal('findings')" style="border-color:rgba(0,240,255,0.45); color:var(--cyan);" title="Аналитика Советника флота (Находки, QA, Бюджет, Топология)">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
         <span data-i18n="triage.advisor">Советник флота</span>
@@ -51,12 +65,24 @@
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <span class="palette-kbd">⌘K</span><span id="btnPaletteTriageBadge" class="digest-btn-badge" style="display:none;">0</span>
       </button>
-      <button class="triage-refresh-btn triage-icon-btn" id="btnShareCard" onclick="openShareCardModal()" style="border-color:rgba(168,85,247,0.45); color:#e9d5ff;" title="Daily Fleet Receipt // Share Card PNG">
-        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <button class="triage-refresh-btn" id="btnShareCard" onclick="openShareCardModal()" style="border-color:rgba(168,85,247,0.45); color:#e9d5ff;" title="Daily Fleet Receipt // Share Card PNG">
+        📸 <span data-i18n="share.btn">Карточка дня</span>
       </button>
-      <button class="triage-refresh-btn triage-icon-btn" id="btnMobileQr" onclick="openMobileQrModal()" style="border-color:rgba(56,189,248,0.45); color:#7dd3fc;" title="Phone QR (Mobile PWA)">
-        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v3h-3M14 20h7"/></svg>
+      <button class="triage-refresh-btn" id="btnMobileQr" onclick="openMobileQrModal()" style="border-color:rgba(56,189,248,0.45); color:#7dd3fc;" title="Phone QR (Mobile PWA)">
+        📱 <span data-i18n="qr.btn">QR на телефон</span>
       </button>
+      <button class="triage-refresh-btn" id="btnRefresh" onclick="refreshTelemetryNow(true)" title="Обновить телеметрию">
+        🔄 <span data-i18n="triage.refresh">Обновить</span>
+      </button>
+      <button class="triage-refresh-btn" id="btnCopyStatusCmd" onclick="copyCmd(demoPreset === 'universal' ? 'tmux ls' : 'rig status')" title="rig status">
+        📋 <span id="btnCopyStatusLabel" data-i18n="cmd.copyRigStatus">Скопировать rig status</span>
+      </button>
+      <a class="triage-refresh-btn" id="linkGuideTool" href="/guide" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(0,240,255,0.42); color:#7dd3fc;" title="Руководство пользователя / User Guide">
+        📖 Guide
+      </a>
+      <a class="triage-refresh-btn" id="linkPassportTool" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.42); color:#e9d5ff;" title="Инженерный паспорт">
+        📄 <span data-i18n="triage.passport">Паспорт</span>
+      </a>
       <button class="triage-refresh-btn" id="btnDemoQuest" onclick="toggleDemoQuest()" style="display:none; border-color:rgba(0,240,255,0.55); color:#67e8f9;">
         🎯 <span data-i18n="quest.btn">Миссия 10с</span> <span id="btnDemoQuestCount" style="font-weight:800; color:#00ff9d;">0/3</span>
       </button>
@@ -73,19 +99,11 @@
         <span data-i18n="triage.init">🔄 Инициализация оперативной обстановки...</span>
       </div>
     </div>
-    <div style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
-      <button class="triage-refresh-btn triage-icon-btn" id="btnRefresh" onclick="refreshTelemetryNow(true)" title="Обновить телеметрию">
-        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      </button>
-      <button class="triage-refresh-btn" onclick="copyCmd('rig status')" title="rig status">
-        <span class="cmd-copy-label">Cmd <svg class="cmd-copy-ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1.6"/><path d="M3 11H2.4A1.4 1.4 0 0 1 1 9.6V2.4A1.4 1.4 0 0 1 2.4 1h7.2A1.4 1.4 0 0 1 11 2.4V3"/></svg></span>
-      </button>
-      <a class="triage-refresh-btn triage-icon-btn" href="/guide" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(0,240,255,0.42); color:#7dd3fc;" title="Руководство пользователя / User Guide">
-        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      </a>
-      <a class="triage-refresh-btn triage-icon-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.42); color:#e9d5ff;" title="Инженерный паспорт">
-        <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      </a>
+    <div class="triage-right-cluster" style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
+      <div class="kbd-help-wrap" id="kbdHelpWrap">
+        <button type="button" class="triage-refresh-btn kbd-help-btn" id="btnKeyboardHelp" aria-expanded="false" aria-label="Keyboard shortcuts and help" onclick="toggleKeyboardHelpPopover(event)" title="Keyboard shortcuts & help (?)">?</button>
+        <div class="kbd-help-popover" id="keyboardHelpPopover" hidden onclick="event.stopPropagation()"></div>
+      </div>
       <div class="deck-lang-group" style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
         <button type="button" id="deckLangEn" class="triage-refresh-btn deck-lang-btn" onclick="setDeckLang('en')">EN</button>
         <button type="button" id="deckLangRu" class="triage-refresh-btn deck-lang-btn" onclick="setDeckLang('ru')">RU</button>
@@ -93,17 +111,21 @@
     </div>
   </div>
 
-  <!-- TOP HUD: BRAND + 3 QUOTA PHYSICS + FILTERS + CALM MODE -->
+  <!-- TOP HUD: BRAND + PRESET SWITCHER + WORKSPACE CONTROLS (ROW 2) -->
   <header class="hud-header">
     <div class="brand">
       <div class="brand-orb">💠</div>
-      <div>
+      <div class="brand-copy">
         <div class="brand-title">
-          <span id="deckBrandTitle">RIGCOMMANDER // NEURAL COMMAND DECK v3.9</span>
+          <span id="deckBrandTitle">RIGCOMMANDER</span>
           <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
           <span class="read-only-badge" id="readOnlyModeBadge" hidden data-i18n="hud.readOnlyBadge" title="Read-only mode (--read-only): zero terminal writes or mutations">🔒 READ-ONLY</span>
+          <div class="hud-segmented-group demo-preset-switch" id="demoPresetSwitch" hidden role="group" aria-label="Demo fleet preset">
+            <button type="button" class="hud-segment-btn" id="btnPresetUniversal" onclick="setDemoPreset('universal')" data-i18n="preset.universal">tmux / Universal</button>
+            <button type="button" class="hud-segment-btn active" id="btnPresetOpenRig" onclick="setDemoPreset('openrig')" data-i18n="preset.openrig">OpenRig Pod</button>
+          </div>
           <a id="demoBackLink" href="/" hidden data-i18n="demo.backToSite"></a>
-          <select id="rigFilterSelect" class="rig-select" onchange="onRigFilterChange(this.value)">
+          <select id="rigFilterSelect" class="rig-select" aria-label="Rig filter" onchange="onRigFilterChange(this.value)">
             <option value="all" selected data-i18n="hud.allRigs">🌐 ВСЕ РИГИ (2)</option>
             <option value="core-platform">🎯 core-platform</option>
             <option value="kernel">⚙️ kernel</option>
@@ -113,13 +135,9 @@
       </div>
     </div>
 
-    <div class="reservoirs" id="reservoirsContainer">
-      <!-- Self-Discovered Dynamic Quota Physics Reservoirs (ADR-0007) -->
-    </div>
-
     <div class="hud-controls" id="hudControlsBar">
       <div id="autoConsentHudRoot" class="ac-hud-mount"></div>
-      <!-- CLUSTER 1: SENSORY & ALARM HYGIENE -->
+      <!-- CLUSTER 1: SENSORY & ALARM HYGIENE (tucked in Tools on compact/demo) -->
       <div class="hud-cluster hud-cluster-sensory">
         <button class="cyber-btn calm-toggle" id="btnCalmMode" onclick="toggleCalmMode()" data-i18n="hud.calmOff" title="Calm Focus: приглушает спокойные узлы">
           CALM
@@ -131,10 +149,12 @@
 
       <div class="hud-cluster-divider"></div>
 
-      <!-- CLUSTER 2: DOMAIN DATA SLICING (SEGMENTED CONTROL) -->
+      <!-- CLUSTER 2: DOMAIN DATA SLICING -->
       <div class="hud-cluster hud-cluster-scope">
-        <span class="hud-cluster-label" data-i18n="hud.sliceLabel">СРЕЗ:</span>
-        <div class="hud-segmented-group" id="sliceSegmentedGroup">
+        <select id="sliceFilterSelect" class="rig-select slice-select" aria-label="Slice filter" onchange="setSliceFilter(this.value)">
+          <option value="all" data-i18n="hud.allFlows">ВСЕ ПОТОКИ</option>
+        </select>
+        <div class="hud-segmented-group" id="sliceSegmentedGroup" hidden>
           <button class="hud-segment-btn active" id="btnFilterAll" onclick="setSliceFilter('all')" data-i18n="hud.allFlows">
             ВСЕ ПОТОКИ
           </button>
@@ -151,7 +171,7 @@
           КОМПАКТ
         </button>
 
-        <div class="hud-cluster-subdivider"></div>
+        <div class="hud-cluster-subdivider hud-dock-sep"></div>
 
         <!-- SPATIAL DOCKING GLYPHS: LEFT -> CANVAS -> RIGHT -->
         <div class="hud-dock-group">
@@ -168,13 +188,13 @@
 
         <div class="hud-cluster-subdivider"></div>
 
-        <button class="cyber-btn" id="btnSaTour" onclick="toggleSaTour()" title="6-шаговый тур SA-DSS / UX">
+        <button class="cyber-btn" id="btnSaTour" onclick="toggleSaTour()" title="6-step Guided Tour">
           <svg class="ui-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-          SA-DSS
+          <span data-i18n="hud.tour">Тур</span>
         </button>
 
         <button class="cyber-btn" id="btnFullscreen" onclick="toggleFullscreen()" data-i18n="hud.fullscreen" title="Полный экран (F)">
-          FS
+          Экран
         </button>
       </div>
     </div>
@@ -200,7 +220,6 @@
         <span data-i18n="radar.title" title="⏳ WHO → WHOM → WAITING">⏳ КТО → КОГО</span>
         <span style="display:flex; align-items:center; gap:6px;">
           <span id="waitCountBadge" style="color:#fbbf24">LIVE</span>
-          <button type="button" class="widget-hint" data-hint-key="hint.radar" aria-label="Info">?</button>
         </span>
       </div>
       <div class="radar-filter-bar" id="radarFilterBar">
@@ -211,22 +230,19 @@
       <div class="panel-body">
         <div id="waitListContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
 
-        <div style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#e9d5ff; margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+        <div class="openrig-only-section" id="decisionsJournalHeader" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:#e9d5ff; margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
           <span id="decisionsJournalTitle">📜 ЖУРНАЛ РЕШЕНИЙ (decisions/latest.tsv)</span>
-          <span style="display:flex; align-items:center; gap:6px;">
-            <span style="color:#a855f7">LIVE TSV</span>
-            <button type="button" class="widget-hint" data-hint-key="hint.decisions" aria-label="Info">?</button>
-          </span>
+          <span style="color:#a855f7">LIVE TSV</span>
         </div>
-        <div id="decisionsListContainer" style="display:flex; flex-direction:column; gap:7px;"></div>
+        <div class="openrig-only-section" id="decisionsListContainer" style="display:flex; flex-direction:column; gap:7px;"></div>
       </div>
     </section>
 
     <!-- COLUMN B: SANKEY TOPOLOGY GRAPH + PROPORTIONAL SLICE SWIMLANES -->
     <section class="panel" id="panelCenter">
       <div class="panel-header">
-        <span id="centerPanelTitle" data-i18n="center.graphTitle">🕸️ МАГИСТРАЛИ ВЫЗОВОВ (ШИРИНА ЛИНИИ = ЧИСЛО ПЕРЕДАЧ В ОЧЕРЕДИ, НАВЕДИ ДЛЯ ФОКУСА)</span>
-        <span style="display:flex; align-items:center; gap:8px;">
+        <span id="centerPanelTitle" data-i18n="center.graphTitle">🕸️ МАГИСТРАЛИ ВЫЗОВОВ</span>
+        <span style="display:flex; align-items:center; gap:6px;">
           <span id="activeFilterLabel" style="color:#00ff9d" data-i18n="center.allHighways">ВСЕ МАГИСТРАЛИ</span>
           <div class="hud-segmented-group graph-layout-switch" id="graphLayoutSwitch" role="group" aria-label="Graph layout mode">
             <button type="button" class="hud-segment-btn active" id="btnLayoutDynamic" onclick="setGraphLayoutMode('dynamic')" data-i18n="graph.layoutDynamic">Динам</button>
@@ -234,7 +250,6 @@
           </div>
           <button class="hud-segment-btn active" id="btnViewGraph" onclick="setCenterView('graph')" data-i18n="center.btnGraph">🕸️ ГРАФ</button>
           <button class="hud-segment-btn" id="btnViewGantt" onclick="setCenterView('gantt')" data-i18n="center.btnGantt">📊 ГАНТ</button>
-          <button type="button" class="widget-hint" data-hint-key="hint.graph" aria-label="Info">?</button>
         </span>
       </div>
 
@@ -330,16 +345,15 @@
 
       <!-- COMPACT & COLLAPSIBLE SLICE SWIMLANES -->
       <div id="demoQuestBanner"><div class="quest-dock" id="demoQuestDock" role="region" aria-label="10-Second Interactive Demo Mission"></div></div>
-      <div class="swimlanes-section" id="swimlanesSection">
-        <div class="swimlanes-title" onclick="toggleSwimlanesCollapsed()">
+      <div class="swimlanes-section openrig-only-section" id="swimlanesSection">
+        <div class="swimlanes-title">
           <span class="swimlanes-title-left">
             <span data-i18n="swim.title" style="flex-shrink:0;">ДОРОЖКИ СЛАЙСОВ</span>
             <span class="swimlanes-count-badge" id="swimlanesCountBadge">0</span>
             <span class="swimlanes-summary-chips" id="swimlanesSummaryChips"></span>
           </span>
           <span style="display:flex; align-items:center; gap:5px; flex-shrink:0;">
-            <button type="button" class="widget-hint" data-hint-key="hint.swimlanes" aria-label="Info" onclick="event.stopPropagation()">?</button>
-            <button type="button" class="swimlanes-toggle-btn" id="btnToggleSwimlanes" aria-expanded="true" title="Свернуть дорожки слайсов" onclick="event.stopPropagation(); toggleSwimlanesCollapsed()">▾</button>
+            <button type="button" class="swimlanes-toggle-btn" id="btnToggleSwimlanes" aria-expanded="true" title="Свернуть дорожки слайсов" onclick="toggleSwimlanesCollapsed()">▾</button>
           </span>
         </div>
         <div id="swimlanesContainer" style="display:flex; flex-direction:column; gap:5px;"></div>
@@ -352,27 +366,22 @@
         <span data-i18n="insp.header">🔬 ПАСПОРТ УЗЛА, ЭКРАН TMUX & КОНВЕРТЫ L3</span>
         <span style="display:flex; align-items:center; gap:6px;">
           <span id="selectedNodeHeaderBadge" style="color:#00f0ff; background:rgba(0,240,255,0.1); border:1px solid rgba(0,240,255,0.45); border-radius:999px; padding:1px 7px; font-size:10px; letter-spacing:0.4px;">◎ SELECTED</span>
-          <button type="button" class="widget-hint" data-hint-key="hint.inspector" aria-label="Info">?</button>
         </span>
       </div>
       <div class="panel-body" id="inspectorPanelBody">
         <div id="nodeInspector"></div>
         <div id="autoConsentInspectorRoot"></div>
 
-        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+        <div class="openrig-only-section" style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
           <span data-i18n="insp.activeQueue">📦 АКТИВНЫЕ КОНВЕРТЫ В ОЧЕРЕДИ</span>
-          <span style="display:flex; align-items:center; gap:6px;">
-            <span id="queueCountBadge" style="color:#00ff9d">4</span>
-            <button type="button" class="widget-hint" data-hint-key="hint.queue" aria-label="Info">?</button>
-          </span>
+          <span id="queueCountBadge" style="color:#00ff9d">4</span>
         </div>
-        <div id="queuePacketsList" style="display:flex; flex-direction:column; gap:7px;"></div>
+        <div class="openrig-only-section" id="queuePacketsList" style="display:flex; flex-direction:column; gap:7px;"></div>
 
-        <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+        <div class="openrig-only-section" style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
           <span data-i18n="insp.scorecardTitle">🪃 РЕЙТИНГ КОДЕРОВ ПО ВОЗВРАТАМ НА ДОРАБОТКУ (QA PING-PONG)</span>
-          <button type="button" class="widget-hint" data-hint-key="hint.scorecards" aria-label="Info">?</button>
         </div>
-        <div id="coderScorecards" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="openrig-only-section" id="coderScorecards" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
     </section>
 
@@ -1134,6 +1143,223 @@
     let resilienceUi = null;
     let autoConsentUi = null;
     const IS_OFFLINE_DEMO = /^\/demo(?:\/|$)/.test(location.pathname);
+    let demoPreset = 'openrig'; // 'openrig' | 'universal'
+    const OPENRIG_DEMO_BACKUP = {
+      agents: JSON.parse(JSON.stringify(AGENTS)),
+      edges: JSON.parse(JSON.stringify(EDGES)),
+      qitems: JSON.parse(JSON.stringify(LIVE_QITEMS)),
+      decisions: JSON.parse(JSON.stringify(RECENT_DECISIONS)),
+      lanes: JSON.parse(JSON.stringify(SLICES_LANES)),
+      envelopes: JSON.parse(JSON.stringify(PAIR_ENVELOPES))
+    };
+
+    function buildUniversalTmuxPresetData(lang = deckLang) {
+      const en = lang === 'en';
+      const now = Date.now();
+      return {
+        agents: [
+          {
+            id: 'claude-api',
+            shortName: 'claude-api',
+            role: en ? 'Claude Code • API Routes' : 'Claude Code • API-маршруты',
+            icon: '🟠',
+            harness: 'claude-code',
+            model: 'claude-sonnet-4',
+            ctxPct: 34,
+            ctxWindowSize: 200000,
+            ctxUsedTokens: 68000,
+            state: 'working',
+            isAnomaly: false,
+            activityLabel: en ? '🟢 WORKING (1)' : '🟢 РАБОТАЕТ (1)',
+            assignedWorkCount: 1,
+            callsIn: 18,
+            callsOut: 12,
+            reworkBadge: null,
+            cwd: '~/projects/payments-api',
+            tmuxAttachCommand: 'tmux attach -t claude-api',
+            port: '3000',
+            x: 22,
+            y: 28,
+            usage: { model: 'claude-sonnet-4', tier: 'tier2-balanced', source: 'demo', inputTokens: 640000, uncachedInputTokens: 130000, cachedInputTokens: 510000, outputTokens: 42000, totalTokens: 682000, cachedPct: 80, estUsd: 1.18 },
+            details: en
+              ? 'CTX: 34% (68K / 200K Claude Sonnet 4). Implementing webhook signature middleware in ~/projects/payments-api.'
+              : 'CTX: 34% (68K / 200K Claude Sonnet 4). Реализует проверку подписей webhook в ~/projects/payments-api.'
+          },
+          {
+            id: 'codex-tests',
+            shortName: 'codex-tests',
+            role: en ? 'Codex CLI • Integration Tests' : 'Codex CLI • Интеграционные тесты',
+            icon: '🟣',
+            harness: 'codex',
+            model: 'gpt-5-codex',
+            ctxPct: 46,
+            ctxWindowSize: 475000,
+            ctxUsedTokens: 218500,
+            state: 'urgent',
+            isAnomaly: true,
+            needsInputCount: 1,
+            needsInputReason: 'permission_prompt',
+            activityLabel: en ? '🚨 NEEDS INPUT (npm test)' : '🚨 ЖДЁТ ВВОДА (npm test)',
+            assignedWorkCount: 1,
+            callsIn: 24,
+            callsOut: 19,
+            reworkBadge: en ? 'HITL waiting' : 'Ожидание HITL',
+            reworkClass: 'chip-rework-warn',
+            cwd: '~/projects/payments-api',
+            tmuxAttachCommand: 'tmux attach -t codex-tests',
+            port: '—',
+            x: 48,
+            y: 72,
+            usage: { model: 'gpt-5-codex', tier: 'tier3-frontier', source: 'demo', inputTokens: 820000, uncachedInputTokens: 170000, cachedInputTokens: 650000, outputTokens: 48000, totalTokens: 868000, cachedPct: 79, estUsd: 1.42 },
+            details: en
+              ? 'CTX: 46% (218K / 475K Codex). Paused on permission_prompt waiting for approval to run npm test.'
+              : 'CTX: 46% (218K / 475K Codex). Остановлен на permission_prompt: ждёт подтверждения запуска npm test.'
+          },
+          {
+            id: 'gemini-docs',
+            shortName: 'gemini-docs',
+            role: en ? 'Gemini CLI • OpenAPI & Guides' : 'Gemini CLI • OpenAPI и доки',
+            icon: '🔵',
+            harness: 'gemini-cli',
+            model: 'gemini-2.5-pro',
+            ctxPct: 22,
+            ctxWindowSize: 1000000,
+            ctxUsedTokens: 220000,
+            state: 'working',
+            isAnomaly: false,
+            activityLabel: en ? '🟢 WORKING (1)' : '🟢 РАБОТАЕТ (1)',
+            assignedWorkCount: 1,
+            callsIn: 9,
+            callsOut: 6,
+            reworkBadge: null,
+            cwd: '~/projects/payments-api',
+            tmuxAttachCommand: 'tmux attach -t gemini-docs',
+            port: '—',
+            x: 78,
+            y: 28,
+            usage: { model: 'gemini-2.5-pro', tier: 'tier2-balanced', source: 'demo', inputTokens: 310000, uncachedInputTokens: 70000, cachedInputTokens: 240000, outputTokens: 18500, totalTokens: 328500, cachedPct: 77, estUsd: 0.44 },
+            details: en
+              ? 'CTX: 22% (220K / 1M Gemini 2.5 Pro). Syncing OpenAPI spec and changelog entries.'
+              : 'CTX: 22% (220K / 1M Gemini 2.5 Pro). Синхронизирует OpenAPI-спеку и changelog.'
+          },
+          {
+            id: 'claude-refactor',
+            shortName: 'claude-refactor',
+            role: en ? 'Claude Code • Storage Refactor' : 'Claude Code • Рефакторинг хранилища',
+            icon: '🟠',
+            harness: 'claude-code',
+            model: 'claude-opus-4',
+            ctxPct: 78,
+            ctxWindowSize: 200000,
+            ctxUsedTokens: 156000,
+            ctxHistory: [
+              { t: now - 26 * 60000, pct: 61 },
+              { t: now - 12 * 60000, pct: 70 },
+              { t: now, pct: 78 }
+            ],
+            state: 'working',
+            isAnomaly: true,
+            activityLabel: en ? '🟢 WORKING (1)' : '🟢 РАБОТАЕТ (1)',
+            assignedWorkCount: 1,
+            callsIn: 31,
+            callsOut: 14,
+            reworkBadge: null,
+            cwd: '~/projects/payments-api',
+            tmuxAttachCommand: 'tmux attach -t claude-refactor',
+            port: '—',
+            x: 78,
+            y: 72,
+            usage: { model: 'claude-opus-4', tier: 'tier3-frontier', source: 'demo', inputTokens: 1180000, uncachedInputTokens: 250000, cachedInputTokens: 930000, outputTokens: 64000, totalTokens: 1244000, cachedPct: 79, estUsd: 2.38 },
+            details: en
+              ? 'CTX: 78% (156K / 200K Claude Opus 4) — above 75% threshold. Recommended to run /compact before next edit.'
+              : 'CTX: 78% (156K / 200K Claude Opus 4) — превышен порог 75%. Рекомендуется выполнить /compact.'
+          }
+        ],
+        edges: [
+          {
+            from: 'claude-api',
+            to: 'codex-tests',
+            calls: 12,
+            liveActive: true,
+            isP0: true,
+            freqLabel: en ? '12 runs • claude-api → codex-tests' : '12 запусков • claude-api → codex-tests',
+            slice: 'all',
+            color: '#ff0055',
+            marker: 'arr-crimson',
+            speed: '0.85s'
+          },
+          {
+            from: 'claude-api',
+            to: 'gemini-docs',
+            calls: 6,
+            liveActive: true,
+            freqLabel: en ? '6 updates • claude-api → gemini-docs' : '6 обновл. • claude-api → gemini-docs',
+            slice: 'all',
+            color: '#38bdf8',
+            marker: 'arr-cyan',
+            speed: '1.1s'
+          },
+          {
+            from: 'claude-refactor',
+            to: 'codex-tests',
+            calls: 14,
+            liveActive: true,
+            freqLabel: en ? '14 checks • claude-refactor → codex-tests' : '14 проверок • claude-refactor → codex-tests',
+            slice: 'all',
+            color: '#38bdf8',
+            marker: 'arr-cyan',
+            speed: '1.0s'
+          }
+        ]
+      };
+    }
+
+    function setDemoPreset(nextPreset, silent = false) {
+      if (IS_LIVE) return;
+      const target = nextPreset === 'universal' ? 'universal' : 'openrig';
+      demoPreset = target;
+      document.body?.classList?.toggle('demo-preset-universal', demoPreset === 'universal');
+      currentRigFilter = 'all';
+      currentSliceFilter = 'all';
+      Object.keys(DEMO_SCREEN_OVERRIDES).forEach(k => delete DEMO_SCREEN_OVERRIDES[k]);
+      Object.keys(lastScreenBySeat).forEach(k => delete lastScreenBySeat[k]);
+
+      if (demoPreset === 'universal') {
+        const uni = buildUniversalTmuxPresetData(deckLang);
+        AGENTS.splice(0, AGENTS.length, ...uni.agents);
+        EDGES.splice(0, EDGES.length, ...uni.edges);
+        LIVE_QITEMS.splice(0, LIVE_QITEMS.length);
+        RECENT_DECISIONS.splice(0, RECENT_DECISIONS.length);
+        SLICES_LANES.splice(0, SLICES_LANES.length);
+        PAIR_ENVELOPES = {};
+        selectedAgentId = 'codex-tests';
+      } else {
+        AGENTS.splice(0, AGENTS.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.agents)));
+        EDGES.splice(0, EDGES.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.edges)));
+        LIVE_QITEMS.splice(0, LIVE_QITEMS.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.qitems)));
+        RECENT_DECISIONS.splice(0, RECENT_DECISIONS.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.decisions)));
+        SLICES_LANES.splice(0, SLICES_LANES.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.lanes)));
+        PAIR_ENVELOPES = JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.envelopes));
+        selectedAgentId = 'dev-check@core-platform';
+      }
+
+      liveScreenCapture = getDemoTerminalCapture(selectedAgentId);
+      lastScreenBySeat[selectedAgentId] = liveScreenCapture;
+      seedDemoOntologyState();
+      localizeDemoData(deckLang);
+      rebuildDemoIntelligence();
+      syncDemoHeader();
+      if (!silent) {
+        renderTriageStrip();
+        renderReservoirs();
+        renderWaitRadarAndDecisions();
+        renderTopology();
+        renderSwimlanes();
+        renderInspectorAndScorecards(true);
+        syncMobileRadarBadge();
+        updateAlertsAndTitle();
+      }
+    }
 
     function syncReadOnlyModeUi(flag) {
       IS_READ_ONLY_MODE = Boolean(flag);
@@ -1153,20 +1379,108 @@
     }
 
     function syncDemoHeader() {
-      document.body.classList.toggle('demo-mode', IS_OFFLINE_DEMO);
+      document.body?.classList?.toggle('demo-mode', IS_OFFLINE_DEMO);
+      document.body?.classList?.toggle('demo-preset-universal', !IS_LIVE && demoPreset === 'universal');
       const back = document.getElementById('demoBackLink');
       if (back) back.hidden = !IS_OFFLINE_DEMO;
+      const presetSw = document.getElementById('demoPresetSwitch');
+      if (presetSw) presetSw.hidden = !IS_OFFLINE_DEMO;
+      const btnUni = document.getElementById('btnPresetUniversal');
+      const btnRig = document.getElementById('btnPresetOpenRig');
+      if (btnUni) {
+        btnUni.classList.toggle('active', demoPreset === 'universal');
+        btnUni.title = td('preset.universalTip');
+      }
+      if (btnRig) {
+        btnRig.classList.toggle('active', demoPreset !== 'universal');
+        btnRig.title = td('preset.openrigTip');
+      }
+      const copyLbl = document.getElementById('btnCopyStatusLabel');
+      const copyBtn = document.getElementById('btnCopyStatusCmd');
+      if (copyLbl) copyLbl.textContent = demoPreset === 'universal' ? td('cmd.copyTmuxLs') : td('cmd.copyRigStatus');
+      if (copyBtn) copyBtn.title = demoPreset === 'universal' ? 'tmux ls' : 'rig status';
       if (!IS_OFFLINE_DEMO) return;
       const badge = document.getElementById('liveConnectionBadge');
-      badge.textContent = td('demo.sandboxBadge');
-      badge.classList.remove('offline');
-      document.getElementById('lastSyncSubtitle').textContent = td('demo.sandboxSubtitle');
+      if (badge) {
+        badge.textContent = td('demo.sandboxBadge');
+        badge.classList.remove('offline');
+      }
+      const sub = document.getElementById('lastSyncSubtitle');
+      if (sub) sub.textContent = demoPreset === 'universal' ? td('preset.universalSub') : td('demo.sandboxSubtitle');
+    }
+
+    function toggleReservoirsPopover(ev) {
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+      closeKeyboardHelpPopover();
+      const pop = document.getElementById('reservoirsPopover');
+      const btn = document.getElementById('btnFinopsPill');
+      if (!pop || !btn) return;
+      const nextOpen = pop.hidden;
+      pop.hidden = !nextOpen;
+      btn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+    }
+
+    function closeReservoirsPopover() {
+      const pop = document.getElementById('reservoirsPopover');
+      const btn = document.getElementById('btnFinopsPill');
+      if (pop) pop.hidden = true;
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    function renderKeyboardHelpPopover() {
+      const pop = document.getElementById('keyboardHelpPopover');
+      if (!pop) return;
+      pop.innerHTML = `
+        <div class="kbd-help-title">${escapeHtml(td('help.title'))}</div>
+        <div class="kbd-help-list">
+          <div class="kbd-help-row"><kbd>G</kbd><span>${escapeHtml(td('help.keysGraph'))}</span></div>
+          <div class="kbd-help-row"><kbd>⌘K</kbd><span>${escapeHtml(td('help.keysPalette'))}</span></div>
+          <div class="kbd-help-row"><kbd>F</kbd><span>${escapeHtml(td('help.keysFull'))}</span></div>
+          <div class="kbd-help-row"><kbd>Esc</kbd><span>${escapeHtml(td('help.keysEsc'))}</span></div>
+        </div>
+        <button type="button" class="triage-refresh-btn" style="width:100%; justify-content:center; margin-top:8px; border-color:rgba(0,240,255,0.45); color:#67e8f9;" onclick="closeKeyboardHelpPopover(); toggleSaTour()">${escapeHtml(td('help.startTour'))}</button>
+      `;
+    }
+
+    function toggleKeyboardHelpPopover(ev) {
+      if (ev && ev.stopPropagation) ev.stopPropagation();
+      closeReservoirsPopover();
+      const pop = document.getElementById('keyboardHelpPopover');
+      const btn = document.getElementById('btnKeyboardHelp');
+      if (!pop || !btn) return;
+      const nextOpen = pop.hidden;
+      if (nextOpen) renderKeyboardHelpPopover();
+      pop.hidden = !nextOpen;
+      btn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+    }
+
+    function closeKeyboardHelpPopover() {
+      const pop = document.getElementById('keyboardHelpPopover');
+      const btn = document.getElementById('btnKeyboardHelp');
+      if (pop) pop.hidden = true;
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    function syncModalBackgroundInert() {
+      if (!document || typeof document.querySelector !== 'function') return;
+      const anyOpen = Boolean(document.querySelector('.modal-overlay.open, .palette-overlay.open'));
+      const targets = [
+        document.getElementById('triageStrip'),
+        document.querySelector('.hud-header'),
+        document.getElementById('mainLayout'),
+        document.getElementById('mobileBottomNav')
+      ].filter(Boolean);
+      for (const el of targets) {
+        el.inert = anyOpen;
+        if (anyOpen) el.setAttribute('aria-hidden', 'true');
+        else el.removeAttribute('aria-hidden');
+      }
     }
 
     function initCompactTriageTools() {
-      if (!IS_OFFLINE_DEMO && !matchMedia('(max-width: 1519px)').matches) return;
       const host = document.querySelector('#triageStrip .triage-meta');
       if (!host) return;
+      if (host.querySelector('details.triage-tools')) return;
       const menu = document.createElement('details');
       menu.className = 'triage-tools';
       const summary = document.createElement('summary');
@@ -1174,13 +1488,36 @@
       summary.textContent = td('demo.tools');
       const body = document.createElement('div');
       body.className = 'triage-tools-body';
-      // Keep primary high-signal toggles directly visible in the top bar (never trapped inside collapsed details).
-      const keepDirect = new Set(['btnAutoConsentTop', 'btnDemoQuest', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
-      for (const el of [...host.querySelectorAll(':scope > button')]) {
+      // Keep primary high-signal toggles directly visible in Row 1; fold secondary tools into Tools menu.
+      const keepDirect = new Set(['triageBadge', 'btnAutoConsentTop', 'btnDemoQuest', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
+      for (const el of [...host.querySelectorAll(':scope > button, :scope > a')]) {
         if (!keepDirect.has(el.id)) body.appendChild(el);
       }
+      if (IS_OFFLINE_DEMO) {
+        const densBtn = document.getElementById('btnDensityMode');
+        if (densBtn) body.appendChild(densBtn);
+      }
+      // Mobile-only quick items inside Tools menu (Budget, Auto-Consent, Preset switcher, Back to Site)
+      if (IS_OFFLINE_DEMO) {
+        const presetRow = document.createElement('div');
+        presetRow.className = 'triage-tools-mobile-only';
+        presetRow.innerHTML = `
+          <button type="button" class="triage-refresh-btn" onclick="openGuardrailsModal('auto-consent')">⚡ Auto-Consent</button>
+          <button type="button" class="triage-refresh-btn" onclick="openFleetAdvisorModal('budget')">💰 Budget / FinOps</button>
+          <button type="button" class="triage-refresh-btn" onclick="setDemoPreset(demoPreset === 'universal' ? 'openrig' : 'universal')">⇄ tmux / OpenRig Pod</button>
+          <a class="triage-refresh-btn" href="/" style="text-decoration:none; color:#67e8f9;" data-i18n="demo.backToSite">${escapeHtml(td('demo.backToSite'))}</a>
+        `;
+        body.prepend(presetRow);
+      }
       menu.append(summary, body); host.appendChild(menu);
-      body.addEventListener('click', event => { if (event.target.closest('button')) menu.open = false; });
+      body.addEventListener('click', event => { if (event.target.closest('button, a')) menu.open = false; });
+      document.addEventListener('click', (e) => {
+        if (menu.open && !menu.contains(e.target)) menu.open = false;
+        const finWrap = document.getElementById('finopsPillWrap');
+        if (finWrap && !finWrap.contains(e.target)) closeReservoirsPopover();
+        const kbdWrap = document.getElementById('kbdHelpWrap');
+        if (kbdWrap && !kbdWrap.contains(e.target)) closeKeyboardHelpPopover();
+      });
     }
 
     function initResilienceUi() {
@@ -1448,10 +1785,21 @@
       const btnAll = document.getElementById('btnFilterAll');
       if (btnAll) btnAll.classList.toggle('active', currentSliceFilter === 'all');
 
+      const scopedLanes = getVisibleSliceLanes();
+      const sliceSel = document.getElementById('sliceFilterSelect');
+      if (sliceSel) {
+        const optsHtml = `<option value="all">${escapeHtml(td('hud.allFlows'))}</option>` +
+          scopedLanes.map(lane => `<option value="${escapeHtml(lane.id)}">${escapeHtml(String(lane.name || '').replace(/^🏷️\s*/, ''))}</option>`).join('');
+        if (sliceSel.__lastHtml !== optsHtml) {
+          sliceSel.innerHTML = optsHtml;
+          sliceSel.__lastHtml = optsHtml;
+        }
+        sliceSel.value = scopedLanes.some(l => l.id === currentSliceFilter) ? currentSliceFilter : 'all';
+      }
+
       const container = document.getElementById('dynamicSliceButtons');
       if (!container) return;
 
-      const scopedLanes = getVisibleSliceLanes();
       const topSlices = scopedLanes.slice(0, 3);
       if (currentSliceFilter !== 'all' && !topSlices.some(l => l.id === currentSliceFilter)) {
         const extra = scopedLanes.find(l => l.id === currentSliceFilter) || {
@@ -1773,6 +2121,8 @@
         openTerminalModal(resolvedId);
       } else if (actionKind === 'compact' && typeof sendTerminalRaw === 'function') {
         sendTerminalRaw(resolvedId, '/compact');
+      } else if (typeof window !== 'undefined' && window.innerWidth <= 768 && typeof setMobileTab === 'function') {
+        setMobileTab('tmux');
       }
     }
 
@@ -2368,9 +2718,11 @@
       if (section) section.style.display = visibleLanes.length > 0 ? '' : 'none';
       if (countBadge) countBadge.textContent = String(visibleLanes.length);
       if (chipsEl) {
-        const nextChipsHtml = TopologyView.renderSwimlanesSummaryChips({
-          visibleLanes, stageNames, currentSliceFilter, escapeHtml
-        });
+        const nextChipsHtml = IS_OFFLINE_DEMO
+          ? `<span class="swim-summary-text">${escapeHtml(td('swim.stages'))}</span>`
+          : TopologyView.renderSwimlanesSummaryChips({
+              visibleLanes, stageNames, currentSliceFilter, escapeHtml
+            });
         if (chipsEl.__lastHtml !== nextChipsHtml) {
           chipsEl.innerHTML = nextChipsHtml;
           chipsEl.__lastHtml = nextChipsHtml;
@@ -2568,6 +2920,12 @@
           : (en ? '\n✓ HITL confirmed.\n✓ 14 tests passed.\nStatus: READY FOR LOCAL ACCEPTANCE' : '\n✓ HITL подтверждён.\n✓ Пройдены 14 тестов.\nСтатус: ГОТОВО К ЛОКАЛЬНОЙ ПРИЁМКЕ'));
         return prefix + '\n✓ ' + td('demo.actionApplied');
       }
+      if (seatId === 'codex-tests') return `[tmux: codex-tests] ${a?.cwd || '~/projects/payments-api'} (codex • gpt-5-codex)` + (en
+        ? '\nUpdated 3 test files in tests/webhooks.test.mjs.\nPERMISSION PROMPT (HITL):\n● Bash(npm test)\nRun this command?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this directory\n  3. No, cancel and tell agent (esc)'
+        : '\nОбновлены 3 файла тестов в tests/webhooks.test.mjs.\nЗАПРОС РАЗРЕШЕНИЯ (HITL):\n● Bash(npm test)\nВыполнить эту команду?\n\n› 1. Да, разрешить один раз (y)\n  2. Да, всегда разрешать в этом каталоге\n  3. Нет, отменить и сообщить агенту (esc)');
+      if (seatId === 'claude-refactor') return `[tmux: claude-refactor] ${a?.cwd || '~/projects/payments-api'} (claude-code • claude-opus-4)\n$ npm run typecheck\n✓ 0 errors\nCTX: ${a?.ctxPct ?? 78}% (156K / 200K)\n` + (en ? 'Context above 75% — run /compact to reclaim window.' : 'Контекст выше 75% — выполните /compact для очистки окна.');
+      if (seatId === 'claude-api') return `[tmux: claude-api] ${a?.cwd || '~/projects/payments-api'} (claude-code • claude-sonnet-4)\n$ git status --short\nM src/routes/webhooks.ts\nM src/middleware/verify-hmac.ts\n` + (en ? 'Implementing webhook signature validation…' : 'Реализует проверку подписи webhook…');
+      if (seatId === 'gemini-docs') return `[tmux: gemini-docs] ${a?.cwd || '~/projects/payments-api'} (gemini-cli • gemini-2.5-pro)\n$ git status --short\nM docs/openapi.yaml\n` + (en ? 'Updating OpenAPI schema for v2 webhooks…' : 'Обновляет OpenAPI-схему для webhook v2…');
       if (seatId.includes('dev-check')) return header + (en
         ? '\n12 passed; 2 boundary checks need a negative control.\nPERMISSION PROMPT (HITL):\n● Bash(npx playwright test e2e/boundaries.spec.ts)\nRun this command?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this worktree\n  3. No, cancel and tell agent (esc)'
         : '\n12 тестов пройдены; 2 проверки границ требуют негативного контроля.\nЗАПРОС РАЗРЕШЕНИЯ (HITL):\n● Bash(npx playwright test e2e/boundaries.spec.ts)\nВыполнить эту команду?\n\n› 1. Да, разрешить один раз (y)\n  2. Да, всегда разрешать в этом рабочем дереве\n  3. Нет, отменить и сообщить агенту (esc)');
@@ -3426,6 +3784,21 @@
       }
     }
 
+    function getFleetBlockerCounts() {
+      const radarItems = typeof buildLiveRadar === 'function' ? buildLiveRadar() : [];
+      const blockers = radarItems.filter(it => it && it.category === 'blocker');
+      const p0Items = blockers.filter(it => it.prio === 0);
+      const p1Count = Math.max(0, blockers.length - p0Items.length);
+      const rigSuffix = currentRigFilter && currentRigFilter !== 'all' ? ('@' + currentRigFilter) : '';
+      const topP0Agent = AGENTS.find(a => a && a.state === 'urgent' && (!rigSuffix || String(a.id).endsWith(rigSuffix))) || null;
+      return {
+        p0: p0Items.length,
+        p1: p1Count,
+        totalBlockers: blockers.length,
+        topP0Agent
+      };
+    }
+
     function renderTriageStrip() {
       const container = document.getElementById('triageCardsContainer');
       const strip = document.getElementById('triageStrip');
@@ -3606,25 +3979,33 @@
         badge.title += '\n' + scores.map(([rig, score]) => `${rig}: ${score.healthScore}%`).join(' · ');
       }
 
-      // Update strip alert status
-      const hasP0 = top3.some(c => c.prio === 0);
-      if (hasP0) {
+      // Update strip alert status — synced 100% honestly with Radar blocker counts (P0 + P1 = Blockers)
+      const blockerStats = getFleetBlockerCounts();
+      const topP0Name = blockerStats.topP0Agent ? getNodeDisplayTitle(blockerStats.topP0Agent) : '';
+      const countSummary = blockerStats.p0 > 0
+        ? (blockerStats.p1 > 0 ? `${blockerStats.p0} P0 · ${blockerStats.p1} P1` : `${blockerStats.p0} P0`)
+        : (blockerStats.p1 > 0 ? `${blockerStats.p1} P1` : '');
+
+      if (blockerStats.p0 > 0) {
         strip.classList.add('has-alert');
         badge.className = 'triage-badge alert-pulse';
-        badge.innerHTML = `🚨 ${td('triage.attention')} (${top3.filter(c => c.prio === 0).length})${healthSuffix}`;
-      } else if (top3.length > 0 && top3[0].prio <= 1.5) {
+        badge.style.borderColor = '';
+        badge.style.color = '';
+        badge.innerHTML = `🔴 <span class="triage-badge-counts">${escapeHtml(countSummary)}</span>${topP0Name ? `<span class="triage-badge-seat"> · ${escapeHtml(topP0Name)}</span>` : ''}`;
+      } else if (blockerStats.p1 > 0) {
         strip.classList.remove('has-alert');
         badge.className = 'triage-badge';
         badge.style.borderColor = 'var(--amber)';
         badge.style.color = 'var(--amber)';
-        badge.innerHTML = `⚠️ ${td('triage.situations')} (${top3.length})${healthSuffix}`;
+        badge.innerHTML = `⚠️ <span class="triage-badge-counts">${escapeHtml(countSummary)}</span><span class="triage-badge-seat">${escapeHtml(healthSuffix)}</span>`;
       } else {
         strip.classList.remove('has-alert');
         badge.className = 'triage-badge';
         badge.style.borderColor = 'var(--emerald)';
         badge.style.color = 'var(--emerald)';
-        badge.innerHTML = `🟢 ${td('triage.healthy')}${healthSuffix}`;
+        badge.innerHTML = `🟢 <span class="triage-badge-counts">${escapeHtml(td('triage.healthy'))}</span><span class="triage-badge-seat">${escapeHtml(healthSuffix)}</span>`;
       }
+      if (typeof syncMobileRadarBadge === 'function') syncMobileRadarBadge();
 
       if (top3.length === 0) {
         container.innerHTML = `
@@ -3769,7 +4150,25 @@
           </div>
           ${secondRowHtml}
         </div>`;
-      }).join('') + `<button type="button" class="widget-hint" data-hint-key="hint.pools" aria-label="Info" style="align-self:flex-start; margin-top:2px;">?</button>`;
+      }).join('');
+
+      // Sync compact inline FinOps & Peak CTX summary pill in Row 1
+      const pillBtn = document.getElementById('btnFinopsPill');
+      const pillText = document.getElementById('finopsPillText');
+      if (pillText) {
+        const totalUsd = activePools.reduce((sum, p) => {
+          const fp = finopsByPool[p.id] || null;
+          return sum + Number((fp ? fp.apiEqUsd : p.totalEstUsd) || 0);
+        }, 0);
+        const peakPoolCtx = activePools.reduce((mx, p) => (p.hasValidCtx ? Math.max(mx, Number(p.peakCtx) || 0) : mx), -1);
+        const ctxStr = peakPoolCtx >= 0 ? `CTX ${peakPoolCtx}%` : 'CTX —';
+        pillText.textContent = `⚡ $${totalUsd.toFixed(2)} · ${ctxStr} ▾`;
+        if (pillBtn) {
+          pillBtn.title = td('finops.pillTip');
+          pillBtn.classList.toggle('is-crit', peakPoolCtx >= CONTEXT_CRIT_PCT);
+          pillBtn.classList.toggle('is-warn', peakPoolCtx >= CONTEXT_WARN_PCT && peakPoolCtx < CONTEXT_CRIT_PCT);
+        }
+      }
     }
 
     function setHoverAgent(id) {
@@ -4953,7 +5352,7 @@
     }
 
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeTerminalModal(); closeEdgeXray(); closeContextLineageModal(); closeGitDiffModal(); closeShiftDigestModal(); closeCommandPalette(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeUpdateModal(); closeSaTour(); }
+      if (e.key === 'Escape') { closeReservoirsPopover(); closeKeyboardHelpPopover(); closeTerminalModal(); closeEdgeXray(); closeContextLineageModal(); closeGitDiffModal(); closeShiftDigestModal(); closeCommandPalette(); closeFleetAdvisorModal(); closeGuardrailsModal(); closeShareCardModal(); closeMobileQrModal(); closeUpdateModal(); closeSaTour(); syncModalBackgroundInert(); }
     });
 
     // Global ⌘K / Ctrl+K opens the Command Palette (works even while focus is inside inputs)
@@ -5645,8 +6044,11 @@
     }
 
     function openGuardrailsModal(tab = 'guardrails') {
+      closeReservoirsPopover();
+      closeKeyboardHelpPopover();
       const modal = document.getElementById('guardrailsModal');
       if (modal) modal.classList.add('open');
+      syncModalBackgroundInert();
       setGuardrailsTab(normalizeGuardrailsTab(tab));
     }
 
@@ -5971,6 +6373,7 @@
     function closeGuardrailsModal() {
       const modal = document.getElementById('guardrailsModal');
       if (modal) modal.classList.remove('open');
+      syncModalBackgroundInert();
     }
 
     async function guardrailsPost(endpoint, payload) {
@@ -7472,7 +7875,7 @@
       document.body.classList.toggle('is-fullscreen', isFs);
       const btnFs = document.getElementById('btnFullscreen');
       if (btnFs) {
-        btnFs.innerHTML = isFs ? '🗗 ВЫЙТИ ИЗ FS' : '📺 FULLSCREEN';
+        btnFs.textContent = isFs ? td('hud.exitFullscreen') : td('hud.fullscreen');
         btnFs.classList.toggle('active', isFs);
       }
       window.requestAnimationFrame(() => renderTopology());
@@ -7883,7 +8286,7 @@
       window.LIVE_FLEET_USAGE = fleetUsageSummary;
 
       let demoGitRadar = null;
-      if (typeof analyzeFleetGitRadar === 'function') {
+      if (typeof analyzeFleetGitRadar === 'function' && demoPreset !== 'universal') {
         const seatStates = {};
         for (const a of AGENTS) {
           seatStates[a.id] = a.state === 'working' ? 'working' : (a.state === 'urgent' ? 'needs-input' : 'idle');
@@ -8010,7 +8413,7 @@
         openObligations: [],
         situations: [],
         fleetUsageSummary,
-        actionRecords: [
+        actionRecords: demoPreset === 'universal' ? [] : [
           {
             execId: 'demo-audit-1',
             actionId: 'compact_context',
@@ -8218,6 +8621,28 @@
 
     function localizeDemoData(lang) {
       if (IS_LIVE) return;
+      if (demoPreset === 'universal') {
+        const uni = buildUniversalTmuxPresetData(lang);
+        const byId = new Map(uni.agents.map(x => [x.id, x]));
+        for (const a of AGENTS) {
+          const fresh = byId.get(a.id);
+          if (!fresh) continue;
+          a.role = fresh.role;
+          a.details = fresh.details;
+          a.activityLabel = a.state === 'urgent' ? '🚨 ' + td('demo.needsInput') : a.state === 'working'
+            ? '🟢 ' + td('demo.working') + ` (${a.assignedWorkCount || 1})` : '🔵 ' + td('demo.idle');
+          if (a.reworkBadge) a.reworkBadge = DEMO_SCREEN_OVERRIDES[a.id]?.cancelled ? td('demo.cancelled') : ['answer_prompt_option', 'proceed_prompt'].includes(DEMO_SCREEN_OVERRIDES[a.id]?.actionId) ? td('demo.hitlConfirmed') : fresh.reworkBadge;
+        }
+        EDGES.forEach((edge, i) => {
+          if (uni.edges[i]) edge.freqLabel = uni.edges[i].freqLabel;
+        });
+        if (IS_OFFLINE_DEMO) {
+          liveScreenCapture = getDemoTerminalCapture(selectedAgentId);
+          lastScreenBySeat[selectedAgentId] = liveScreenCapture;
+          if (modalSeatId) updateModalScreen(modalSeatId, getDemoTerminalCapture(modalSeatId), 40);
+        }
+        return;
+      }
       const map = DEMO_ROLES_I18N[lang === 'en' ? 'en' : 'ru'];
       for (const a of AGENTS) {
         const entry = map[a.id];
@@ -8357,8 +8782,8 @@
             actionPlan: {
               kind: 'open_modal',
               seatTarget: a.id,
-              label: en ? '📺 Open QA Screen' : '📺 Открыть экран QA',
-              commandPreview: `rig capture ${a.id} --lines 80`
+              label: en ? '📺 Open Terminal Screen' : '📺 Открыть экран терминала',
+              commandPreview: demoPreset === 'universal' ? `tmux capture-pane -t ${a.id} -p -S -80` : `rig capture ${a.id} --lines 80`
             }
           });
         }
@@ -8621,15 +9046,26 @@
       setDeckLang(initialLang, true);
       restoreDeckPreferences();
       initCompactTriageTools();
-      if (IS_OFFLINE_DEMO) {
-        liveScreenCapture = getDemoTerminalCapture(selectedAgentId);
-        lastScreenBySeat[selectedAgentId] = liveScreenCapture;
+      const initialPreset = (() => {
+        try {
+          const p = (new URLSearchParams(window.location.search).get('preset') || '').toLowerCase();
+          return (p === 'universal' || p === 'tmux') ? 'universal' : 'openrig';
+        } catch { return 'openrig'; }
+      })();
+      if (IS_OFFLINE_DEMO && initialPreset === 'universal') {
+        setDemoPreset('universal', true);
+      } else {
+        if (IS_OFFLINE_DEMO) {
+          liveScreenCapture = getDemoTerminalCapture(selectedAgentId);
+          lastScreenBySeat[selectedAgentId] = liveScreenCapture;
+        }
+        seedDemoOntologyState();
+        localizeDemoData(deckLang);
+        rebuildDemoIntelligence();
       }
-      seedDemoOntologyState();
-      localizeDemoData(deckLang);
-      rebuildDemoIntelligence();
       updateSidebarUi();
       updateDensityUi();
+      syncDemoHeader();
       renderTriageStrip();
       renderReservoirs();
       renderWaitRadarAndDecisions();
@@ -8673,13 +9109,15 @@
       initResilienceUi();
       initDemoQuest(activeTrack);
       initPwaSupport();
-      setMobileTab('map', true);
+      setMobileTab(window.innerWidth <= 768 ? 'tmux' : 'map', true);
       window.addEventListener('resize', () => { if (centerViewMode === 'gantt') renderGantt(); });
       document.addEventListener('keydown', (e) => {
         const tag = (e.target && e.target.tagName) || '';
         if (tag === 'INPUT' || tag === 'TEXTAREA' || e.metaKey || e.ctrlKey || e.altKey) return;
         if (e.key === 'g' || e.key === 'G' || e.key === 'п' || e.key === 'П') {
           setCenterView(centerViewMode === 'gantt' ? 'graph' : 'gantt');
+        } else if (e.key === '?') {
+          toggleKeyboardHelpPopover();
         }
       });
       window.addEventListener('resize', () => { renderTopology(); positionEdgeXrayDrawer(); });
@@ -9044,7 +9482,8 @@
     function syncMobileRadarBadge() {
       const badge = document.getElementById('mobileRadarBadge');
       if (!badge) return;
-      const urgentCount = AGENTS.filter(a => a.state === 'urgent' || a.isAnomaly).length;
+      const stats = typeof getFleetBlockerCounts === 'function' ? getFleetBlockerCounts() : { totalBlockers: AGENTS.filter(a => a.state === 'urgent').length };
+      const urgentCount = stats.totalBlockers;
       if (urgentCount > 0) {
         badge.textContent = String(urgentCount > 9 ? '9+' : urgentCount);
         badge.classList.add('show');
@@ -9193,10 +9632,8 @@
       }
       appUpdateState = { ...appUpdateState, ...next };
       if (appUpdateState.currentVersion) {
-        const parts = String(appUpdateState.currentVersion).split('.');
-        const minorTag = parts.length >= 2 ? `v${parts[0]}.${parts[1]}` : `v${appUpdateState.currentVersion}`;
         const brandEl = document.getElementById('deckBrandTitle');
-        if (brandEl) brandEl.textContent = `RIGCOMMANDER // NEURAL COMMAND DECK ${minorTag}`;
+        if (brandEl) brandEl.textContent = 'RIGCOMMANDER';
       }
       syncUpdateButtonUi();
       const modal = document.getElementById('updateModal');
@@ -9434,28 +9871,20 @@
     }
   </script>
 
-  <!-- MOBILE PWA BOTTOM TAB DOCK (<= 768px) -->
+  <!-- MOBILE PWA BOTTOM TAB DOCK (<= 768px): 3 CLEAN 44px TABS -->
   <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile navigation">
-    <button type="button" class="mobile-nav-btn active" data-mobile-tab="map" onclick="setMobileTab('map')">
+    <button type="button" class="mobile-nav-btn" data-mobile-tab="radar" onclick="setMobileTab('radar')">
+      <span class="mnav-ico">🚨</span>
+      <span data-i18n="mobile.tabTriage">Триаж</span>
+      <span class="mobile-nav-badge" id="mobileRadarBadge"></span>
+    </button>
+    <button type="button" class="mobile-nav-btn" data-mobile-tab="map" onclick="setMobileTab('map')">
       <span class="mnav-ico">🕸️</span>
       <span data-i18n="mobile.tabMap">Карта</span>
     </button>
-    <button type="button" class="mobile-nav-btn" data-mobile-tab="radar" onclick="setMobileTab('radar')">
-      <span class="mnav-ico">⏳</span>
-      <span data-i18n="mobile.tabRadar">Радар</span>
-      <span class="mobile-nav-badge" id="mobileRadarBadge"></span>
-    </button>
-    <button type="button" class="mobile-nav-btn" data-mobile-tab="tmux" onclick="setMobileTab('tmux')">
-      <span class="mnav-ico">🖥️</span>
-      <span data-i18n="mobile.tabTmux">TMUX</span>
-    </button>
-    <button type="button" class="mobile-nav-btn" onclick="openFleetAdvisorModal('budget')">
-      <span class="mnav-ico">💰</span>
-      <span data-i18n="mobile.tabBudget">Бюджет</span>
-    </button>
-    <button type="button" class="mobile-nav-btn" onclick="openShareCardModal()">
-      <span class="mnav-ico">📸</span>
-      <span data-i18n="mobile.tabCard">Карточка</span>
+    <button type="button" class="mobile-nav-btn active" data-mobile-tab="tmux" onclick="setMobileTab('tmux')">
+      <span class="mnav-ico">🔬</span>
+      <span data-i18n="mobile.tabInspector">Инспектор</span>
     </button>
   </nav>
 

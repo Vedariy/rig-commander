@@ -53,7 +53,7 @@ test('pages declare canonical URLs, version, crawler directives and typed JSON-L
       assert.equal(how.version, version);
       assert.deepEqual(how.step.map(s => s.position), [1, 2, 3]);
       assert.ok(how.step.every(s => s['@type'] === 'HowToStep' && s.name && s.text));
-      assert.match(how.step[1].text, /npx rig-commander@latest/);
+      assert.ok(how.step[1].text.includes(`npx rig-commander@${version} --read-only`));
     }
     if (name !== 'index') {
       const article = ofType('TechArticle');
@@ -151,24 +151,53 @@ test('public pages ship zero external Google Fonts, current version parity, cons
   }
 
   for (const name of ['public/llms.txt', 'public/llms-full.txt']) {
-    assert.ok(read(name).includes('--read-only'), `${name}: must document --read-only`);
+    const txt = read(name);
+    assert.ok(txt.includes(`npx rig-commander@${version} --read-only`), `${name}: must lead with pinned --read-only`);
+    assert.match(txt, /Sigstore/i, `${name}: must document npm Sigstore provenance`);
+    assert.match(txt, /CSRF[\s\S]*DNS-rebinding/i, `${name}: must document CSRF and DNS-rebinding protection`);
   }
 
   const landingHtml = read('public/index.html');
-  assert.match(landingHtml, /@media\s*\(max-width:\s*768px\)\s*\{[\s\S]*?\.hero-qr-btn\s*\{\s*display:\s*none;/);
+  assert.ok(!landingHtml.includes('id="landingQrBtn"'), 'landing hero must not include Phone QR CTA button');
+  assert.ok(!landingHtml.includes('hero-qr-btn'), 'landing must remove .hero-qr-btn');
+  assert.match(landingHtml, /\.ambient-bg\s*\{[^}]*position:\s*absolute;/, 'ambient-bg must not be position: fixed');
+  assert.doesNotMatch(landingHtml, /\.ambient-bg\s*\{[^}]*position:\s*fixed;/, 'ambient-bg must not use position: fixed');
+  assert.match(landingHtml, /\.navbar-wrapper\s*\{[^}]*position:\s*sticky;/, 'navbar-wrapper must use full-width sticky header');
+  assert.ok(landingHtml.includes('LOCAL-FIRST AI AGENT MISSION CONTROL'), 'landing hero must use sober engineering eyebrow');
+  assert.ok(landingHtml.includes(`COMMAND DECK v${version}`), 'landing preview badge must use COMMAND DECK');
+  assert.ok(!landingHtml.includes('NEURAL DECK'), 'landing must not use NEURAL DECK hype badge');
+  assert.ok(!landingHtml.includes('AUTONOMOUS AI SWARMS'), 'landing hero must not use AI SWARMS hype eyebrow');
   assert.ok(landingHtml.includes('id="security-guarantees"'));
   assert.ok(landingHtml.includes('Raw tmux') && landingHtml.includes('LangSmith') && landingHtml.includes('Langfuse'));
   assert.ok(!landingHtml.includes('watchDemoVideo('), 'landing should not duplicate Watch 20s Demo hero CTA');
   assert.ok(landingHtml.includes(`npx rig-commander@${version} --read-only`));
+  assert.match(landingHtml, /Sigstore/i, 'landing must mention npm Sigstore provenance');
+  assert.match(landingHtml, /CSRF[\s\S]*DNS-rebinding/i, 'landing must mention CSRF and DNS-rebinding protection');
+  assert.ok(landingHtml.includes(`github.com/Vedariy/rig-commander/releases/tag/v${version}`), 'landing must link to versioned source tag');
+  assert.ok(landingHtml.includes('github.com/Vedariy/rig-commander/issues'), 'landing must link to GitHub issues');
 
   const guideHtml = read('public/guide/index.html');
   const quickstartIdx = guideHtml.indexOf('id="quickstart"');
   const resilienceIdx = guideHtml.indexOf('id="resilience"');
   assert.ok(quickstartIdx !== -1 && resilienceIdx !== -1 && quickstartIdx < resilienceIdx, 'guide #quickstart must precede #resilience');
   assert.ok(!guideHtml.includes('class="hero-pills"'), 'guide must not render ambiguous dark capsule pills under the hero lead');
+  assert.ok(guideHtml.includes(`npx rig-commander@${version} --read-only`), 'guide must lead with pinned --read-only');
+  assert.ok(guideHtml.includes('SAFE START') && guideHtml.includes('БЕЗОПАСНЫЙ СТАРТ'), 'guide must highlight safe-start badge');
+  assert.ok(guideHtml.includes('>Copy<') && guideHtml.includes('>Копировать<'), 'guide copy buttons must use explicit Copy / Копировать labels');
+  assert.doesNotMatch(guideHtml, /class="copy-btn"[^>]*>Cmd ⧉<\/button>/, 'guide must not use cryptic Cmd ⧉ on copy buttons');
 
   const passportHtml = read('public/passport/index.html');
-  assert.ok(passportHtml.includes("'nav.demo': '▶ Живое демо'"), 'passport RU header demo CTA must be localized');
+  assert.ok(passportHtml.includes("'nav.demo': 'Живое демо'"), 'passport RU header demo CTA must be localized');
   assert.ok(passportHtml.includes('data-i18n="svg.bridge"'), 'passport C4 diagram labels must be localized');
   assert.ok(passportHtml.includes('id="securityGuarantees"'), 'passport must surface Security Guarantees table');
+  assert.ok(passportHtml.includes(`npx rig-commander@${version} --read-only`), 'passport must lead with pinned --read-only');
+  assert.match(passportHtml, /Sigstore/i, 'passport must mention npm Sigstore provenance');
+  assert.match(passportHtml, /CSRF[\s\S]*DNS-rebinding/i, 'passport must mention CSRF and DNS-rebinding protection');
+  assert.ok(passportHtml.includes(`github.com/Vedariy/rig-commander/releases/tag/v${version}`), 'passport must link to versioned source tag');
+  assert.ok(passportHtml.includes('github.com/Vedariy/rig-commander/issues'), 'passport must link to GitHub issues');
+
+  for (const [, name, path] of docs) {
+    const html = read(path);
+    assert.match(html, /\.lang-btn\s*\{[^}]*min-width:\s*36px;[^}]*min-height:\s*36px;/, `${name}: .lang-btn must have >=36x36px touch target`);
+  }
 });

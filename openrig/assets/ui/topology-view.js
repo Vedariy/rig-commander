@@ -172,7 +172,7 @@ export function renderNodeCardHtml(agent, deps) {
         </div>
         <span class="node-dormant-flag" title="${escapeHtml(agent.activityLabel || '')}">${escapeHtml(renderDormantFlagHtml(agent))}</span>
         <span class="${getNodeCtxValClass(thermal)}" title="${escapeHtml(thermal.label || '')}">${escapeHtml(getNodeCtxValText(agent, thermal))}</span>
-        <span class="status-led ${ledClass}" data-seat-id="${escapeHtml(agent.id)}" data-state-key="${escapeHtml(agent.state + ':' + agent.activityLabel + ':' + (agent.shellExited ? 1 : 0))}"${agent.state === 'urgent' ? ` role="button" title="${escapeHtml(td('node.urgentBadgeTip'))}"` : ''} onmousedown="handleNodeLedMouseDown(event, this)" onclick="handleNodeLedClick(event, this)">${renderStateIndicatorHtml(agent, deps)}</span>
+        <span class="status-led ${ledClass}" data-seat-id="${escapeHtml(agent.id)}" data-state-key="${escapeHtml(agent.state + ':' + agent.activityLabel + ':' + (agent.shellExited ? 1 : 0))}"${agent.state === 'urgent' ? ` role="button" title="${escapeHtml(td('node.urgentBadgeTip'))}" onmousedown="handleNodeLedMouseDown(event, this)" onclick="handleNodeLedClick(event, this)"` : ''}>${renderStateIndicatorHtml(agent, deps)}</span>
       </div>
 
       <div class="node-meta-row">${renderNodeMetaRowHtml(agent, thermal, deps)}</div>
@@ -189,12 +189,60 @@ export function renderNodeCardHtml(agent, deps) {
         </div>
       </div>
 
-      <!-- Integrated non-linear exponential thermal spectrum wedge (under content, above card background) -->
-      <div class="node-bottom-meter">
-        <div class="node-bottom-meter-fill">${typeof buildThermalCurveSvgHtml === 'function' ? buildThermalCurveSvgHtml() : ''}</div>
+      <!-- Dedicated bottom thermal sparkline strip (in-flow below metrics, zero text overlap) -->
+      <div class="node-bottom-meter" data-meter-layout="strip" style="position:relative; inset:auto; height:10px; margin-top:5px; border-radius:4px; overflow:hidden; background:rgba(15,23,42,0.55); border:1px solid rgba(148,163,184,0.12);">
+        <div class="node-bottom-meter-fill" style="position:relative; inset:auto; width:100%; height:100%;">${typeof buildThermalCurveSvgHtml === 'function' ? buildThermalCurveSvgHtml() : ''}</div>
       </div>
     </div>
   `;
+}
+
+const CRIMSON_EDGE_COLOR_RE = /^(?:#(?:ff0055|ff2a6d|ef4444|f43f5e|e11d48|ec4899|dc2626|ff1744)|rgba?\(\s*255\s*,\s*0\s*,\s*85\b)/i;
+const CALM_ACTIVE_EDGE_COLOR = '#38bdf8';
+const CALM_ACTIVE_EDGE_MARKER = 'arr-cyan';
+
+export function isCrimsonEdgeStyle(color, marker) {
+  const c = String(color || '').trim();
+  const m = String(marker || '').trim().toLowerCase();
+  return CRIMSON_EDGE_COLOR_RE.test(c) || m === 'arr-crimson' || m === 'arr-red';
+}
+
+export function isP0AnomalyEdge(edge, fromNode, toNode, statusKey) {
+  if (!edge) return false;
+  if (edge.isP0 || edge.urgent || edge.priority === 'P0' || edge.severity === 'p0_urgent') return true;
+  const hasUrgentEndpoint = Boolean(
+    (fromNode && fromNode.state === 'urgent') ||
+    (toNode && toNode.state === 'urgent')
+  );
+  if (hasUrgentEndpoint) {
+    return statusKey === 'blocked' || isCrimsonEdgeStyle(edge.color, edge.marker);
+  }
+  return false;
+}
+
+export function resolveEdgeVisualStyle(edge, fromNode, toNode, statusKey) {
+  const isP0 = isP0AnomalyEdge(edge, fromNode, toNode, statusKey);
+  const rawColor = String((edge && edge.color) || '').trim();
+  const rawMarker = String((edge && edge.marker) || '').trim();
+  if (isP0) {
+    return {
+      isP0: true,
+      color: rawColor && isCrimsonEdgeStyle(rawColor, rawMarker) ? rawColor : '#ff0055',
+      marker: rawMarker && isCrimsonEdgeStyle(rawColor, rawMarker) ? rawMarker : 'arr-crimson'
+    };
+  }
+  if (isCrimsonEdgeStyle(rawColor, rawMarker)) {
+    return {
+      isP0: false,
+      color: CALM_ACTIVE_EDGE_COLOR,
+      marker: CALM_ACTIVE_EDGE_MARKER
+    };
+  }
+  return {
+    isP0: false,
+    color: rawColor || CALM_ACTIVE_EDGE_COLOR,
+    marker: rawMarker || CALM_ACTIVE_EDGE_MARKER
+  };
 }
 
 export function renderTopologyEdgesHtml({
@@ -277,11 +325,20 @@ export function renderTopologyEdgesHtml({
     const dimmedClass = (!isVisibleSlice || !isHoveredMatch) ? 'dimmed' : '';
     const hoverFocusClass = (hoveredAgentId && isHoveredMatch) ? 'hover-focus' : '';
 
+    const visual = resolveEdgeVisualStyle(edge, n1, n2, statusKey);
+    const edgeColor = visual.color;
+    const edgeMarker = visual.marker;
+    const isP0 = visual.isP0;
+
     const showBadge = isLive || isQueuedStatic || (edge.calls && edge.calls > 0);
     const sliceLabel = edge.slice && edge.slice !== 'all' ? edge.slice : '';
     let badgeText = '';
     if (isLive) {
-      badgeText = `📨 ${sliceLabel || (deckLang === 'en' ? 'Active' : 'В работе')}`;
+      if (isP0) {
+        badgeText = sliceLabel ? `🚨 ${sliceLabel}` : '🚨 HITL';
+      } else {
+        badgeText = `📨 ${sliceLabel || (deckLang === 'en' ? 'Active' : 'В работе')}`;
+      }
     } else if (isQueuedStatic) {
       const icon = edge.statusIcon || (statusKey === 'blocked' ? '🚧' : statusKey === 'parked' ? '🅿️' : statusKey === 'held' ? '⏸️' : '⏳');
       const fallbackWord = edge.statusLabel || statusKey;
@@ -294,13 +351,13 @@ export function renderTopologyEdgesHtml({
     const tooltipText = edge.statusTooltip || `${badgeText} (${shortSeat(edge.from)} → ${shortSeat(edge.to)})`;
 
     return `
-      <g class="edge-group ${segClass} ${isDormantGhost ? 'is-dormant-edge' : ''} ${dimmedClass} ${hoverFocusClass}" style="--edge-stroke:${edge.color};" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-slice="${escapeHtml(edge.slice)}" data-edge-status="${escapeHtml(statusKey)}" onclick="selectEdge(${edgeIdx}, event)">
+      <g class="edge-group ${segClass} ${isP0 ? 'is-p0-anomaly' : ''} ${isDormantGhost ? 'is-dormant-edge' : ''} ${dimmedClass} ${hoverFocusClass}" style="--edge-stroke:${edgeColor};" data-from="${escapeHtml(edge.from)}" data-to="${escapeHtml(edge.to)}" data-slice="${escapeHtml(edge.slice)}" data-edge-status="${escapeHtml(statusKey)}" data-edge-severity="${isP0 ? 'p0' : 'routine'}" onclick="selectEdge(${edgeIdx}, event)">
         <title>${escapeHtml(tooltipText)}</title>
         <path d="${pathD}" stroke="transparent" stroke-width="18" fill="none" style="pointer-events:stroke;" />
-        <path d="${isLive ? (trunkPathD || pathD) : pathD}" class="edge-trunk" stroke="${isLive || isQueuedStatic ? edge.color : '#334155'}" stroke-width="${trunkWidth}"${isQueuedStatic ? ` marker-end="url(#${edge.marker || 'arr-amber'})"` : ''} />
+        <path d="${isLive ? (trunkPathD || pathD) : pathD}" class="edge-trunk" stroke="${isLive || isQueuedStatic ? edgeColor : '#334155'}" stroke-width="${trunkWidth}"${isQueuedStatic ? ` marker-end="url(#${edgeMarker || 'arr-amber'})"` : ''} />
         ${isLive ? `
-          <path d="${pathD}" class="edge-stream live-active" stroke="${edge.color}" stroke-width="${streamWidth}"
-                style="--stream-speed:${edge.speed}; --edge-glow:${edge.color};" marker-end="url(#${edge.marker})" />
+          <path d="${pathD}" class="edge-stream live-active" stroke="${edgeColor}" stroke-width="${streamWidth}"
+                style="--stream-speed:${edge.speed}; --edge-glow:${edgeColor};" marker-end="url(#${edgeMarker})" />
         ` : ''}
         ${showBadge ? `
           <rect x="${badgeX}" y="${my - 9}" width="${badgeWidth}" height="18" rx="4" class="edge-badge-bg" />

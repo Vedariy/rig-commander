@@ -215,9 +215,9 @@ export function getAutoConsentModalBadge(rawState, td) {
     return { text: td('autoConsent.modalBadgeCapped', { quota }), borderColor: '#ff0055', color: '#fda4af' };
   }
   if (cfg.mode === AUTO_CONSENT_MODES.ARMED) {
-    return { text: td('autoConsent.modalBadgeArmed', { quota }), borderColor: '#00ff9d', color: '#6ee7b7' };
+    return { text: td('autoConsent.modalBadgeArmed', { quota }), borderColor: '#f59e0b', color: '#fde68a' };
   }
-  return { text: td('autoConsent.modalBadgeDryRun'), borderColor: '#fbbf24', color: '#fde68a' };
+  return { text: td('autoConsent.modalBadgeDryRun'), borderColor: '#38bdf8', color: '#bae6fd' };
 }
 
 /**
@@ -428,7 +428,7 @@ export function renderAutoConsentTabHtml({
       }).join('');
 
   const seatRowsHtml = seatList.length === 0
-    ? `<div class="ac-empty-note">${escapeHtml(en ? 'No active seats discovered yet.' : 'Активные сиденья ещё не обнаружены.')}</div>`
+    ? `<div class="ac-empty-note">${escapeHtml(en ? 'No active agents discovered yet.' : 'Активные агенты ещё не обнаружены.')}</div>`
     : seatList.map((seat) => {
         const seatId = String(seat.id || seat.seatId || seat.canonicalSessionName || '');
         const rigId = inferRigId(seatId);
@@ -592,10 +592,6 @@ export function renderAutoConsentTabHtml({
           `<span>${escapeHtml(en ? 'Escalated' : 'Эскалаций')}: <b class="ac-stat-warn">${escapeHtml(stats.escalatedCount)}</b></span>` +
           `<span>${escapeHtml(en ? 'Canceled' : 'Отменено')}: <b class="ac-stat-cancel">${escapeHtml(stats.canceledCount)}</b></span>` +
         `</div>` +
-        `<div class="ac-btn-row">` +
-          `<button type="button" class="action-pill key-proceed" data-auto-consent-action="save-policy"${disabledAttr}>${escapeHtml(td('autoConsent.saveBtn'))}</button>` +
-          `<button type="button" class="action-pill ${cfg.masterPaused ? 'key-proceed' : 'key-cancel'}" data-auto-consent-action="${cfg.masterPaused ? 'resume-all' : 'pause-all'}"${cfg.masterPaused ? disabledAttr : ''}>${escapeHtml(cfg.masterPaused ? td('autoConsent.resumeAllBtn') : td('autoConsent.pauseAllBtn'))}</button>` +
-        `</div>` +
       `</section>` +
 
       `<section class="ac-card">` +
@@ -624,6 +620,21 @@ export function renderAutoConsentTabHtml({
       `</section>` +
     `</div>` +
 
+    `<div class="ac-cmd-summary" role="region" aria-label="${escapeHtml(td('autoConsent.cmdStripLabel'))}">` +
+      `<div class="ac-cmd-col is-safe">` +
+        `<span class="ac-cmd-col-title">🟢 ${escapeHtml(td('autoConsent.cmdStripSafeTitle'))}</span>` +
+        `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripSafeBody'))}</span>` +
+      `</div>` +
+      `<div class="ac-cmd-col is-dev">` +
+        `<span class="ac-cmd-col-title">⚡ ${escapeHtml(td('autoConsent.cmdStripDevTitle'))}</span>` +
+        `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
+      `</div>` +
+      `<div class="ac-cmd-col is-veto">` +
+        `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}</span>` +
+        `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
+      `</div>` +
+    `</div>` +
+
     `${statusMessage ? `<div class="ac-status-banner" role="status">${escapeHtml(statusMessage)}</div>` : ''}` +
 
     `<div class="ac-scopes-grid">` +
@@ -633,7 +644,7 @@ export function renderAutoConsentTabHtml({
       `</section>` +
       `<section class="ac-card">` +
         `<div class="ac-section-title">🤖 ${escapeHtml(td('autoConsent.seatsTitle'))}</div>` +
-        `<div class="ac-policy-list">${seatRowsHtml}</div>` +
+        `<div class="ac-policy-list ac-policy-list-scroll">${seatRowsHtml}</div>` +
       `</section>` +
     `</div>` +
 
@@ -646,6 +657,19 @@ export function renderAutoConsentTabHtml({
       `<div class="ac-section-title">📜 ${escapeHtml(td('autoConsent.recentRunsTitle'))}</div>` +
       `<div class="ac-runs-list">${runsHtml}</div>` +
     `</section>` +
+
+    `<footer class="ac-modal-footer">` +
+      `<div class="ac-footer-emergency">` +
+        `${cfg.masterPaused
+          ? `<button type="button" class="action-pill key-proceed ac-resume-btn" data-auto-consent-action="resume-all"${disabledAttr}>${escapeHtml(td('autoConsent.resumeAllBtn'))}</button>`
+          : (cfg.enabled
+            ? `<button type="button" class="action-pill key-cancel ac-pause-btn${cfg.mode === AUTO_CONSENT_MODES.ARMED ? ' is-emergency' : ' is-dry-pause'}" data-auto-consent-action="pause-all">${escapeHtml(td('autoConsent.pauseAllBtn'))}</button>`
+            : '')}` +
+      `</div>` +
+      `<div class="ac-footer-actions">` +
+        `<button type="button" class="action-pill key-proceed ac-save-btn" data-auto-consent-action="save-policy"${disabledAttr}>${escapeHtml(td('autoConsent.saveBtn'))}</button>` +
+      `</div>` +
+    `</footer>` +
   `</div>`;
 }
 

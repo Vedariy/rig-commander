@@ -194,14 +194,14 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
   if (!options.length) return banner;
   const scopeKey = buildSeatScopeKey(seatId);
   const btns = options.map(opt => {
-    const cls = opt.isCancel ? 'action-pill key-pill key-cancel' : (opt.isPrimary ? 'action-pill key-pill key-proceed' : 'action-pill key-pill');
+    const cls = opt.isCancel ? 'action-pill key-pill key-cancel' : (opt.isPrimary ? 'action-pill key-pill key-proceed' : 'action-pill key-pill key-neutral');
     const icon = opt.isCancel ? '❌' : (opt.isPrimary ? '✅' : '🔹');
     const fp = buildSeatSendKey(seatId, 'key', opt.keyStroke);
     const lockAttrs = getControlLockAttrs(scopeKey, fp);
     return `<button type="button" class="${cls}" title="${escapeHtml(opt.fullText)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}"${lockAttrs} onclick="triggerPromptOption(this)">${icon} <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}</button>`;
   }).join('');
   return `
-    <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
+    <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
       ${banner}
       <span style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
       ${btns}
@@ -232,7 +232,10 @@ export function renderOntologyActionBtn(ctx, desc, opts = {}) {
   const closeModal = opts.closeModal || '';
   const stop = opts.stopPropagation ? 'event.stopPropagation(); ' : '';
   const isCopyCmd = desc.transport === 'clipboard';
-  const btnLabelHtml = isCopyCmd ? CMD_COPY_LABEL_HTML : escapeHtml(desc.label || (ctx.deckLang === 'en' ? '⚡ Apply' : '⚡ Применить'));
+  const explicitCopyLabel = desc.label && desc.label !== 'Cmd' ? desc.label : (ctx.td ? ctx.td('cmd.copyCommand') : 'Copy cmd');
+  const btnLabelHtml = isCopyCmd
+    ? `<span class="cmd-copy-label">📋 ${escapeHtml(explicitCopyLabel)}</span>`
+    : escapeHtml(desc.label || (ctx.deckLang === 'en' ? '⚡ Apply' : '⚡ Применить'));
   const btnTitle = isCopyCmd && desc.payload
     ? `${desc.title || desc.label || 'Copy command'} (${desc.payload})`
     : (desc.title || desc.label || '');
@@ -359,16 +362,21 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
   const s2Busy = isEvalRunning('seat', agent.id, 'system2');
   const evalTriggersHtml = `
     <span class="eval-inline-triggers">
-      <button type="button" class="eval-mini-btn" data-eval-seat="${escapeHtml(agent.id)}" ${s1Busy ? 'disabled' : ''} title="${escapeHtml(td('eval.btnS1Tip'))}" onclick="runAiEvaluation('seat', this.getAttribute('data-eval-seat'), 'system1')">${s1Busy ? '⏳ S1' : escapeHtml(td('eval.btnS1'))}</button>
-      <button type="button" class="eval-mini-btn is-s2" data-eval-seat="${escapeHtml(agent.id)}" ${s2Busy ? 'disabled' : ''} title="${escapeHtml(td('eval.btnS2Tip'))}" onclick="runAiEvaluation('seat', this.getAttribute('data-eval-seat'), 'system2')">${s2Busy ? '⏳ S2' : escapeHtml(td('eval.btnS2'))}</button>
+      <button type="button" class="eval-mini-btn" data-eval-seat="${escapeHtml(agent.id)}" ${s1Busy ? 'disabled' : ''} title="${escapeHtml(td('eval.btnS1Tip'))}" onclick="runAiEvaluation('seat', this.getAttribute('data-eval-seat'), 'system1')">${s1Busy ? '⏳ S1' : escapeHtml(td('eval.btnS1Full'))}</button>
+      <button type="button" class="eval-mini-btn is-s2" data-eval-seat="${escapeHtml(agent.id)}" ${s2Busy ? 'disabled' : ''} title="${escapeHtml(td('eval.btnS2Tip'))}" onclick="runAiEvaluation('seat', this.getAttribute('data-eval-seat'), 'system2')">${s2Busy ? '⏳ S2' : escapeHtml(td('eval.btnS2Full'))}</button>
       <button type="button" class="eval-mini-btn" style="border-color:rgba(148,163,184,0.3); color:#94a3b8; background:transparent;" title="${escapeHtml(td('eval.configureBtn'))}" onclick="openGuardrailsModal('evaluator')">⚙️</button>
     </span>
+  `;
+  const evalDetailsHtml = `
+    <details class="diag-ai-details"${s1Busy || s2Busy ? ' open' : ''}>
+      <summary class="diag-ai-summary">${escapeHtml(td('eval.detailsSummary'))}</summary>
+      <div class="diag-ai-body">${evalTriggersHtml}</div>
+    </details>
   `;
   if (findings.length === 0) {
     return `
       <div class="eval-bar-row" id="inspEvalMiniBar">
-        <span>${escapeHtml(td('eval.barLabel'))} <span style="color:#6ee7b7;">⚙️ Expert</span></span>
-        ${evalTriggersHtml}
+        ${evalDetailsHtml}
       </div>
       ${evalVerdictHtml}
     `;
@@ -439,6 +447,17 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
       : '';
   const remediationText = primary.remediation || fallbackRemediation;
 
+  const inlineHitlScreen = agent.state === 'urgent'
+    ? ((ctx.lastScreenBySeat && ctx.lastScreenBySeat[agent.id]) || (agent.id === ctx.selectedAgentId ? ctx.liveScreenCapture : '') || '')
+    : '';
+  const inlineHitlHtml = inlineHitlScreen
+    ? renderInteractivePromptOptionsHtml(ctx, agent.id, inlineHitlScreen, 'cmdSendStatus')
+    : '';
+  const hasInlineHitlOptions = Boolean(inlineHitlHtml && inlineHitlHtml.includes('triggerPromptOption'));
+  const inlineHitlBlockHtml = inlineHitlHtml
+    ? `<div class="diag-inline-hitl" id="inspDiagInlineHitl">${inlineHitlHtml}</div>`
+    : '';
+
   // Build actionable 1-click buttons (skip useless select_seat since we are already on this seat!)
   const actionBtns = [];
   const seenActionIds = new Set();
@@ -453,7 +472,11 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
   const resolvedPrimary = primary.actionPlan ? resolveActionFromFinding(primary.actionPlan, agent) : null;
   if (resolvedPrimary && resolvedPrimary.transport !== 'select_seat') {
     if (agent.state === 'urgent' && resolvedPrimary.transport === 'modal_terminal') {
-      pushAction({ ...resolvedPrimary, label: td('diag.resolveHitlBtn') }, '', 'action-pill diag-hitl-primary');
+      if (hasInlineHitlOptions) {
+        pushAction({ ...resolvedPrimary, label: td('diag.openTmux80Btn') }, '', 'diag-tmux-secondary-link');
+      } else {
+        pushAction({ ...resolvedPrimary, label: td('diag.resolveHitlBtn') }, '', 'action-pill diag-hitl-primary');
+      }
     } else {
       pushAction(resolvedPrimary);
     }
@@ -488,7 +511,7 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
       transport: 'clipboard',
       seatId: agent.id,
       payload: 'rig queue list --owned',
-      label: 'Cmd',
+      label: td('cmd.copyCommand'),
       title: 'rig queue list --owned',
       tone: 'default'
     });
@@ -503,28 +526,18 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
     </div>
   ` : '';
 
-  const inlineHitlScreen = agent.state === 'urgent'
-    ? ((ctx.lastScreenBySeat && ctx.lastScreenBySeat[agent.id]) || (agent.id === ctx.selectedAgentId ? ctx.liveScreenCapture : '') || '')
-    : '';
-  const inlineHitlHtml = inlineHitlScreen
-    ? renderInteractivePromptOptionsHtml(ctx, agent.id, inlineHitlScreen, 'cmdSendStatus')
-    : '';
-  const inlineHitlBlockHtml = inlineHitlHtml
-    ? `<div class="diag-inline-hitl" id="inspDiagInlineHitl">${inlineHitlHtml}</div>`
-    : '';
-
   return `
     <div class="seat-diagnosis-card ${sevClass} ${isSpotlight ? 'is-spotlight' : ''}" id="seatDiagnosisCard">
       <div class="diag-kicker">
         <span>${sevBadge} • ${escapeHtml(td('diag.header'))}</span>
-        ${evalTriggersHtml}
       </div>
       <div class="diag-title">${escapeHtml(primary.title || '')}</div>
-      ${primary.summary ? `<div class="diag-summary">${escapeHtml(primary.summary)}</div>` : ''}
+      ${primary.summary && !hasInlineHitlOptions ? `<div class="diag-summary">${escapeHtml(primary.summary)}</div>` : ''}
       ${inlineHitlBlockHtml}
       ${queueBoxHtml}
       ${remediationText && !inlineHitlHtml ? `<div class="diag-remediation"><b style="color:var(--cyan);">${escapeHtml(td('diag.whatToDo'))}</b> ${escapeHtml(remediationText)}</div>` : ''}
       ${actionBtns.length > 0 ? `<div class="diag-actions">${actionBtns.join('')}</div>` : ''}
+      ${evalDetailsHtml}
       ${evalVerdictHtml}
       ${extrasHtml}
     </div>
@@ -724,24 +737,24 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
     box.innerHTML = `
       <div class="inspector-box" id="inspectorBoxCard" data-seat="${escapeHtml(agent.id)}" style="border-color:${thermal.color}; transition: box-shadow 0.25s ease;">
         <!-- SA Level 1: Identity & Primary Actions -->
-        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px; width:100%; box-sizing:border-box;">
-          <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
-            <span style="font-size:21px; flex-shrink:0;">${escapeHtml(agent.icon)}</span>
+        <div class="insp-identity-row" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:5px 6px; margin-bottom:5px; width:100%; box-sizing:border-box;">
+          <div style="display:flex; align-items:center; gap:6px; min-width:130px; flex:1 1 130px;">
+            <span style="font-size:17px; flex-shrink:0;">${escapeHtml(agent.icon)}</span>
             <div style="min-width:0; flex:1;">
-              <div style="font-family:var(--font-mono); font-size:13px; font-weight:800; color:#fff; word-break:break-word; line-height:1.25;" title="${escapeHtml(agent.id)}">
+              <div style="font-family:var(--font-mono); font-size:12.5px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2;" title="${escapeHtml(agent.id)}">
                 ${escapeHtml(getNodeDisplayTitle(agent))}
               </div>
-              <div style="font-size:11px; color:#94a3b8; margin-top:1px;">${escapeHtml(formatRoleForRig(agent.role))}</div>
+              <div style="font-size:10.5px; color:#94a3b8; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(formatRoleForRig(agent.role))}</div>
             </div>
           </div>
-          <div style="display:flex; gap:5px; align-items:center; flex-shrink:0;">
-            <button class="action-pill" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.screenBtn')}</button>
-            <button class="action-pill" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${CMD_COPY_LABEL_HTML}</button>
+          <div style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
+            <button class="action-pill" style="padding:3px 7px; font-size:10px; min-height:26px;" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.screenBtn')}</button>
+            <button class="action-pill" style="padding:3px 7px; font-size:10px; min-height:26px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 ${escapeHtml(td('insp.copyAttachBtn'))}</button>
           </div>
         </div>
 
         <!-- SA Level 1: Unified Status & Context Pulse Strip -->
-        <div style="background:rgba(15,23,42,0.62); border:1px solid rgba(56,189,248,0.18); border-radius:6px; padding:7px 9px; display:flex; flex-direction:column; gap:6px;">
+        <div class="insp-status-strip" style="background:rgba(15,23,42,0.62); border:1px solid rgba(56,189,248,0.18); border-radius:6px; padding:5px 8px; display:flex; flex-direction:column; gap:4px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
             <div id="inspValActivity" class="${agent.state === 'urgent' ? 'insp-act-pill is-urgent' : 'insp-act-pill'}" style="display:flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:${agent.state === 'urgent' ? '#fecdd3' : agent.state === 'working' ? '#6ee7b7' : '#7dd3fc'};">
               ${renderStateIndicatorHtml(agent)} <span style="font-size:10.5px; color:${agent.state === 'urgent' ? '#ffe4e6' : '#94a3b8'}; font-weight:500;">(${lastActStr})</span>
