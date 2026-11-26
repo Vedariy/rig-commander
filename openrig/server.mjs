@@ -147,6 +147,32 @@ function applyTerminalPromptProbes(nodes, probeResultsBySeat) {
       });
     }
 
+    if ((curNeeds > 0 || curDisp === 'needs-input') && !probe.blocked && (probe.idleAtPrompt || probe.working || probe.shellExited)) {
+      const nextDisplay = probe.working ? 'working' : 'idle';
+      const prevReason = (node.activityState && node.activityState.needsInput && node.activityState.needsInput.reason) || null;
+      return enrichIdentity({
+        ...node,
+        ...(probe.shellExited ? { shellExited: true } : {}),
+        needsAttention: false,
+        arbitratedNeedsInput: false,
+        activityState: {
+          ...(node.activityState || {}),
+          activity: probe.working ? 'working' : 'idle-at-prompt',
+          display: nextDisplay,
+          source: 'tmux-live-verify',
+          needsInput: {
+            count: 0,
+            reason: null,
+            clearedBy: 'tmux-live-verify',
+            previousReason: prevReason
+          }
+        },
+        agentActivity: node.agentActivity
+          ? { ...node.agentActivity, state: probe.working ? 'running' : 'idle' }
+          : node.agentActivity
+      });
+    }
+
     if (probe.working && curNeeds === 0 && curDisp === 'idle') {
       const hasWork = (Number(node.inProgressWorkCount) || 0) > 0 || (Number(node.assignedWorkCount) || 0) > 0;
       if (hasWork || node.runtime === 'terminal') {
@@ -243,20 +269,21 @@ async function enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR = true }
       if (!id || id.includes('operator-human') || id.includes('queue-worker') || id.includes('context-guardian')) return false;
       const curNeeds = (n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
       const curDisp = (n.activityState && n.activityState.display) || '';
-      if (curNeeds > 0 || curDisp === 'needs-input') return false;
+      const isClaimedNeedsInput = curNeeds > 0 || curDisp === 'needs-input';
       const isTerminalRuntime = n.runtime === 'terminal';
       const isActive = curDisp === 'working' || curDisp === 'running' || (n.agentActivity && n.agentActivity.state === 'running');
       const hasOpenWork = (Number(n.assignedWorkCount) || 0) > 0 || (Number(n.inProgressWorkCount) || 0) > 0;
       const isRunningSession = n.sessionStatus === 'running' || n.lifecycleState === 'running';
-      return isTerminalRuntime || isActive || hasOpenWork || isRunningSession;
+      return isClaimedNeedsInput || isTerminalRuntime || isActive || hasOpenWork || isRunningSession;
     })
     .sort((a, b) => {
       const score = n => {
         const d = (n.activityState && n.activityState.display) || '';
+        const needs = ((n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0) > 0 || d === 'needs-input' ? 6 : 0;
         const act = (d === 'working' || d === 'running' || (n.agentActivity && n.agentActivity.state === 'running')) ? 4 : 0;
         const work = ((Number(n.inProgressWorkCount) || 0) > 0 || (Number(n.assignedWorkCount) || 0) > 0) ? 3 : 0;
         const term = n.runtime === 'terminal' ? 2 : 0;
-        return act + work + term;
+        return needs + act + work + term;
       };
       return score(b) - score(a);
     })
@@ -270,7 +297,10 @@ async function enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR = true }
   for (const n of candidates) {
     const seatId = n.canonicalSessionName;
     const curDisp = (n.activityState && n.activityState.display) || '';
+    const curNeeds = (n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
     const isHotSeat =
+      curNeeds > 0 ||
+      curDisp === 'needs-input' ||
       n.runtime === 'terminal' ||
       curDisp === 'working' ||
       curDisp === 'running' ||

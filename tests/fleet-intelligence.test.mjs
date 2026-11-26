@@ -339,6 +339,28 @@ test('detectTerminalIdleAtPrompt catches Antigravity/CLI empty prompt while reje
     '↑/↓ navigate • Enter to confirm • Esc to cancel'
   ].join('\n');
   assert.equal(detectTerminalIdleAtPrompt(hitlMenu).idle, false);
+
+  // Narrow-pane Codex Ready footer (even with typed draft "1\n1" and "↓ Back to bottom · esc")
+  const codexNarrowIdle = [
+    'STATUS: blocked',
+    '        ↓ Back to bottom · esc',
+    '› 1',
+    '  1',
+    'GPT-6.1-Sol high · owner · Ready · Ask for',
+    'approval · Context 64% used · provider: openai',
+    'esc latest                               ⚠ 6 · f2'
+  ].join('\n');
+  assert.equal(detectTerminalIdleAtPrompt(codexNarrowIdle).idle, true);
+
+  // Real Codex permission menu must NEVER be treated as idle even if Ready footer appears
+  const codexRealHitl = [
+    'Would you like to run this command?',
+    '  $ git push origin main',
+    '› 1. Yes, proceed (y)',
+    '  2. No, cancel (esc)',
+    'GPT-6.1-Sol high · owner · Ready · Ask for approval'
+  ].join('\n');
+  assert.equal(detectTerminalIdleAtPrompt(codexRealHitl).idle, false);
 });
 
 test('compileAdvisoryReport caps P2/P3 penalties so retrospective findings never trigger false Critical Risk', () => {

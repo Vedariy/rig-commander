@@ -276,6 +276,45 @@ test('applyTerminalPromptProbes demotes false working terminal seat sitting idle
   assert.equal(enriched[1].activityState.display, 'working');
 });
 
+test('applyTerminalPromptProbes clears false daemon needs-input when live tmux proves idle/working, while staying fail-safe on ambiguous or blocked screens', () => {
+  const mkNode = (id) => ({
+    canonicalSessionName: id,
+    runtime: 'codex',
+    needsAttention: true,
+    arbitratedNeedsInput: true,
+    activityState: {
+      activity: 'idle-at-prompt',
+      display: 'needs-input',
+      needsInput: { count: 1, reason: 'permission_request_unverified' }
+    },
+    agentActivity: { state: 'unknown', reason: 'stale_runtime_hook' }
+  });
+  const nodes = [mkNode('owner-idle@rig'), mkNode('coder-work@rig'), mkNode('qa-ambig@rig'), mkNode('qa-real@rig')];
+  const probes = new Map([
+    ['owner-idle@rig', { blocked: false, idleAtPrompt: true, working: false, shellExited: false }],
+    ['coder-work@rig', { blocked: false, idleAtPrompt: false, working: true, shellExited: false }],
+    ['qa-ambig@rig', { blocked: false, idleAtPrompt: false, working: false, shellExited: false }],
+    ['qa-real@rig', { blocked: true, idleAtPrompt: false, working: false, shellExited: false, reason: 'permission_prompt' }]
+  ]);
+
+  const out = applyTerminalPromptProbes(nodes, probes);
+  // Idle verified -> false needs-input cleared
+  assert.equal(out[0].activityState.display, 'idle');
+  assert.equal(out[0].activityState.needsInput.count, 0);
+  assert.equal(out[0].activityState.needsInput.clearedBy, 'tmux-live-verify');
+  assert.equal(out[0].needsAttention, false);
+  assert.equal(out[0].arbitratedNeedsInput, false);
+  // Working verified -> promoted to working, needs-input cleared
+  assert.equal(out[1].activityState.display, 'working');
+  assert.equal(out[1].activityState.needsInput.count, 0);
+  // Ambiguous probe -> fail-safe: preserve daemon needs-input
+  assert.equal(out[2].activityState.display, 'needs-input');
+  assert.equal(out[2].activityState.needsInput.count, 1);
+  // Confirmed blocked -> preserve needs-input
+  assert.equal(out[3].activityState.display, 'needs-input');
+  assert.equal(out[3].activityState.needsInput.count, 1);
+});
+
 test('PWA manifest.webmanifest, sw.js and icons are valid and allowed by static path guard', async () => {
   const openrigDir = path.resolve(process.cwd(), 'openrig');
   const manifestGuard = resolveSafeStaticPath(openrigDir, '/manifest.webmanifest');

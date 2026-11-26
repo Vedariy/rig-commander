@@ -11,7 +11,7 @@ const HITL_BOTTOM_YN_RE = /(?:\[Y\/n\]|\[y\/N\]|\(y\/n\)|run\s+this\s+command\?|
 
 // Covers ALL Unicode Braille spinner glyphs (U+2801..U+28FF, incl. ⠋..⠏ and ⣟⣯⣷⣾⣽⣻⢿⡿) + active streaming & Antigravity CLI task markers
 const ACTIVE_TERMINAL_WORK_RE = /(?:[\u2801-\u28FF]\s+\S|esc\s+to\s+interrupt|ctrl\+c\s+to\s+(?:interrupt|stop|cancel)|(?:thinking|reasoning|generating|streaming|searching|evaluating)\.{2,3}|running\s+\d+\s+test|working\s*\(\d+|⏳\s*running|[○●]\s+running\b|●\s*\[\d{2}:\d{2}:\d{2}\][^\n]*\brunning\b)/i;
-const IDLE_FOOTER_MARKER_RE = /(?:^\?\s*for\s+shortcuts\b|^>\s*accept-edits\s+mode\b|shift\+tab\s+to\s+cycle|bypass\s+permissions\s+on\b|auto-accept\s+edits\s+on\b|enter\s+to\s+send\b.*shortcuts|type\s+your\s+message|ask\s+codex\s+to\s+do\s+anything|ask\s+anything|send\s+a\s+message)/i;
+const IDLE_FOOTER_MARKER_RE = /(?:^\?\s*for\s+shortcuts\b|^>\s*accept-edits\s+mode\b|shift\+tab\s+to\s+cycle|bypass\s+permissions\s+on\b|auto-accept\s+edits\s+on\b|enter\s+to\s+send\b.*shortcuts|type\s+your\s+message|ask\s+codex\s+to\s+do\s+anything|ask\s+anything|send\s+a\s+message|[·•]\s*Ready\s*[·•])/i;
 const IDLE_BARE_PROMPT_RE = /^\s*[›❯>]\s*(?:$|try\s+"|\/help\b|accept-edits\b|ask\s+codex\b)/i;
 // Bare OS shell prompts (zsh/bash/sh) indicating the AI agent process exited back to shell
 const SHELL_EXIT_PROMPT_RE = /^(?:[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\s+\S.*[%$#]|(?:sh|bash|zsh)-\d+\.\d+[$%#]|-[a-zA-Z0-9._-]+\s+\S+\s*[%$#]?|[~\/][^\s]*\s*[%$])\s*$/;
