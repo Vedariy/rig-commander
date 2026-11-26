@@ -118,16 +118,24 @@ function getAgentLabelLength(agent) {
   return Math.max(4, title.length);
 }
 
+const DETAILED_CARD_W = 238;
+const DETAILED_CARD_H = 156;
+const DETAILED_TOP_EXTRA = 32;
+const DETAILED_ROW_GAP = 38;
+const DETAILED_COL_GAP = 24;
+
 /**
  * Estimates pixel bounding box of a node card for collision & row packing.
  */
 export function estimateNodeBox(agent, tier = 'active', { detailed = false } = {}) {
   if (detailed) {
-    return { width: 238, height: 116, topExtra: 26 };
+    return { width: DETAILED_CARD_W, height: DETAILED_CARD_H, topExtra: DETAILED_TOP_EXTRA };
   }
   const titleLen = getAgentLabelLength(agent);
   const hasPct = typeof (agent && agent.ctxPct) === 'number' && Number.isFinite(agent.ctxPct);
-  const isWaiting = String((agent && agent.state) || '').toLowerCase() === 'waiting';
+  const state = String((agent && agent.state) || '').toLowerCase();
+  const isWaiting = state === 'waiting';
+  const isUrgent = state === 'urgent';
 
   if (tier === 'dormant') {
     const flagW = isWaiting ? 42 : 0;
@@ -138,11 +146,11 @@ export function estimateNodeBox(agent, tier = 'active', { detailed = false } = {
 
   const hasTokens = hasPct && agent && typeof agent.ctxWindowSize === 'number' && agent.ctxWindowSize > 0;
   const hasCalls = Boolean(agent && ((Number(agent.callsIn) || 0) > 0 || (Number(agent.callsOut) || 0) > 0));
-  const pctW = hasPct ? ((agent.ctxPct >= 65) ? 52 : 42) : 0;
-  const row1W = 24 + titleLen * 7.5 + pctW;
-  const row2W = 24 + (hasTokens ? 74 : 0) + (hasCalls ? 66 : 0) + (hasTokens && hasCalls ? 14 : 0);
-  const width = Math.max(158, Math.ceil(Math.max(row1W, row2W)));
-  const height = (hasTokens || hasCalls) ? 54 : 38;
+  const pctW = hasPct ? ((agent.ctxPct >= 65) ? 54 : 44) : 0;
+  const row1W = 28 + titleLen * 7.8 + pctW;
+  const row2W = 28 + (hasTokens ? 78 : 0) + (hasCalls ? 70 : 0) + (hasTokens && hasCalls ? 14 : 0);
+  const width = Math.max(164, Math.ceil(Math.max(row1W, row2W)));
+  const height = ((hasTokens || hasCalls) ? 58 : 42) + (isUrgent ? 18 : 0);
   return { width, height, topExtra: 28 };
 }
 
@@ -156,9 +164,9 @@ function resolveBox(agent, tier, { detailed = false, measuredBoxes = null } = {}
     Boolean(m.detailed) === Boolean(detailed)
   ) {
     return {
-      width: m.width,
-      height: m.height,
-      topExtra: detailed ? 26 : (tier === 'dormant' ? 6 : 28)
+      width: detailed ? Math.max(210, m.width) : m.width,
+      height: detailed ? Math.max(152, m.height) : m.height,
+      topExtra: detailed ? DETAILED_TOP_EXTRA : (tier === 'dormant' ? 6 : 28)
     };
   }
   return estimateNodeBox(agent, tier, { detailed });
@@ -368,6 +376,59 @@ function relaxStageItems(items, activeEdges, cw, stageTopY, stageBottomY, {
 }
 
 /**
+ * Deterministic zero-edge-force collision-resolution post-pass.
+ * Guarantees pairwise horizontal (>= minGapX) or vertical (>= minGapY) separation
+ * accounting for card width + glow border and floating status LEDs.
+ */
+function enforceHardClearance(items, cw, minY, maxY, {
+  minGapX = 22,
+  minGapY = 22,
+  padX = 14,
+  iterations = 32
+} = {}) {
+  if (!Array.isArray(items) || items.length <= 1) return;
+  for (let iter = 0; iter < iterations; iter++) {
+    let moved = false;
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        const a = items[i];
+        const b = items[j];
+        let dx = b.px - a.px;
+        let dy = b.py - a.py;
+        const reqX = (a.box.width + b.box.width) / 2 + minGapX;
+        const reqY = (a.box.height + b.box.height) / 2 + minGapY;
+        const ovX = reqX - Math.abs(dx);
+        const ovY = reqY - Math.abs(dy);
+        if (ovX > 0.25 && ovY > 0.25) {
+          moved = true;
+          if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+            dx = (i % 2 === 0 ? 1 : -1) * 4;
+            dy = 2;
+          }
+          const spanXAvail = cw - padX * 2 - (a.box.width + b.box.width) - minGapX;
+          const canSeparateX = spanXAvail >= 0;
+          const preferX = canSeparateX && (ovX <= ovY * 1.15);
+          if (preferX) {
+            const dir = dx >= 0 ? 1 : -1;
+            const shift = ovX * 0.55;
+            a.px -= dir * shift;
+            b.px += dir * shift;
+          } else {
+            const dir = dy >= 0 ? 1 : -1;
+            const shift = ovY * 0.55;
+            a.py -= dir * shift;
+            b.py += dir * shift;
+          }
+          clampItem(a, cw, minY, maxY, padX);
+          clampItem(b, cw, minY, maxY, padX);
+        }
+      }
+    }
+    if (!moved) break;
+  }
+}
+
+/**
  * Prevents 3+ nodes across distinct vertical rows from stacking on a single
  * vertical center line (e.g. [1,1,1] Owner/Coder/QA or [1,3,1] Owner/3 Coders/QA),
  * where a top-to-bottom structural edge would slice straight through a middle card.
@@ -430,17 +491,19 @@ function layoutFixedRoleGrid(agents, tiers, cw, ch, { detailed = false, measured
   }
 
   const usableW = Math.max(240, cw - 28);
+  const rowGapMin = detailed ? DETAILED_COL_GAP : 18;
   const allRows = [];
   for (const bucketId of [0, 1, 2]) {
     const group = bucketMap.get(bucketId);
     if (!group || group.length === 0) continue;
     const maxPerRow = bucketId === 1 ? 4 : 5;
-    const rows = splitIntoBalancedRows(group, usableW, 18, maxPerRow);
+    const rows = splitIntoBalancedRows(group, usableW, rowGapMin, maxPerRow);
     for (const r of rows) allRows.push(r);
   }
 
-  const topPad = detailed ? 74 : 52;
-  const bottomPad = detailed ? 68 : 38;
+  const maxCardH = items.reduce((m, it) => Math.max(m, it.box.height), detailed ? DETAILED_CARD_H : 44);
+  const topPad = detailed ? Math.max(114, Math.ceil(maxCardH / 2) + DETAILED_TOP_EXTRA + 6) : 52;
+  const bottomPad = detailed ? Math.max(96, Math.ceil(maxCardH / 2) + 18) : 38;
   const rowCount = allRows.length;
   const rowPitch = rowCount > 1 ? (ch - topPad - bottomPad) / (rowCount - 1) : ch * 0.55;
 
@@ -450,8 +513,9 @@ function layoutFixedRoleGrid(agents, tiers, cw, ch, { detailed = false, measured
       : topPad + ((ch - topPad - bottomPad) * rIdx) / Math.max(1, rowCount - 1);
     const xs = distributeRowX(row, cw, 14);
     const maxRowH = Math.max(...row.map(it => it.box.height));
-    const staggerRoom = rowPitch - maxRowH - 22;
-    const stagger = (row.length >= 3 && staggerRoom > 16)
+    const minRowClear = detailed ? DETAILED_ROW_GAP : 22;
+    const staggerRoom = rowPitch - maxRowH - minRowClear;
+    const stagger = (!detailed && row.length >= 3 && staggerRoom > 16)
       ? Math.min(22, Math.max(10, staggerRoom * 0.22))
       : 0;
     row.forEach((it, idx) => {
@@ -478,10 +542,16 @@ function layoutFixedRoleGrid(agents, tiers, cw, ch, { detailed = false, measured
 
   // Run collision-only relaxation (no edge forces in fixed mode -> invariant to queue/status changes!)
   relaxStageItems(items, [], cw, topPad - 10, ch - 18, {
-    gapX: detailed ? 14 : 20,
-    gapY: detailed ? 18 : 26,
+    gapX: detailed ? DETAILED_COL_GAP : 22,
+    gapY: detailed ? DETAILED_ROW_GAP : 26,
     edgeClearanceTarget: 0,
     iterations: 22
+  });
+
+  enforceHardClearance(items, cw, topPad - 10, ch - 18, {
+    minGapX: 22,
+    minGapY: detailed ? 36 : 18,
+    padX: 14
   });
 
   return items;
@@ -498,7 +568,14 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
   }));
 
   const k = items.length;
-  const spanY = Math.max(60, stageBottomY - stageTopY);
+  const maxStageCardH = items.reduce((m, it) => Math.max(m, it.box.height), detailed ? DETAILED_CARD_H : 44);
+  const centerTopY = detailed
+    ? Math.max(stageTopY, Math.ceil(maxStageCardH / 2) + DETAILED_TOP_EXTRA)
+    : stageTopY;
+  const centerBottomY = detailed
+    ? Math.max(centerTopY + 40, stageBottomY - Math.ceil(maxStageCardH / 2))
+    : stageBottomY;
+  const spanY = Math.max(60, centerBottomY - centerTopY);
   const middleArches = [];
 
   // Degree count across active edges for smart hub ordering
@@ -515,7 +592,7 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
 
   if (k === 1) {
     items[0].px = cw * 0.5;
-    items[0].py = stageTopY + spanY * 0.48;
+    items[0].py = centerTopY + spanY * 0.48;
   } else if (k === 2) {
     // Orient primary flow left -> right (or top -> bottom inside narrow cluster columns)
     const direct = activeEdges.find(e =>
@@ -529,7 +606,7 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     const pairCardW = ordered[0].box.width + ordered[1].box.width;
     const needsVerticalStack =
       (cw - pairCardW) < (detailed ? 110 : 140) &&
-      spanY >= (ordered[0].box.height + ordered[1].box.height + 110);
+      (stageBottomY - stageTopY) >= (ordered[0].box.height + ordered[1].box.height + (detailed ? DETAILED_ROW_GAP : 110));
     if (needsVerticalStack) {
       // Narrow cluster columns: stack source -> target vertically so edge badges
       // and expanded selected cards never collide horizontally.
@@ -538,14 +615,14 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
       }
       ordered[0].px = cw * 0.5;
       ordered[1].px = cw * 0.5;
-      ordered[0].py = stageTopY + spanY * 0.22;
-      ordered[1].py = stageTopY + spanY * 0.78;
+      ordered[0].py = detailed ? centerTopY : (centerTopY + spanY * 0.22);
+      ordered[1].py = detailed ? centerBottomY : (centerTopY + spanY * 0.78);
     } else {
       const xs = distributeRowX(ordered, cw, Math.max(20, cw * 0.08));
       ordered[0].px = xs[0];
       ordered[1].px = xs[1];
-      ordered[0].py = stageTopY + spanY * 0.48;
-      ordered[1].py = stageTopY + spanY * 0.48;
+      ordered[0].py = centerTopY + spanY * 0.48;
+      ordered[1].py = centerTopY + spanY * 0.48;
     }
   } else if (k === 3) {
     const byBucket = new Map([[0, []], [1, []], [2, []]]);
@@ -556,41 +633,41 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
       // Classic 2-top + 1-bottom wide inverted triangle (e.g. Owner + Architect + QA)
       const topXs = distributeRowX(occupied[0], cw, Math.max(24, cw * 0.07));
       occupied[0][0].px = topXs[0];
-      occupied[0][0].py = stageTopY + spanY * 0.22;
+      occupied[0][0].py = detailed ? centerTopY : (centerTopY + spanY * 0.22);
       occupied[0][1].px = topXs[1];
-      occupied[0][1].py = stageTopY + spanY * 0.22;
+      occupied[0][1].py = detailed ? centerTopY : (centerTopY + spanY * 0.22);
       occupied[1][0].px = cw * 0.5;
-      occupied[1][0].py = stageTopY + spanY * 0.84;
+      occupied[1][0].py = detailed ? centerBottomY : (centerTopY + spanY * 0.84);
     } else if (occupied.length === 2 && occupied[0].length === 1 && occupied[1].length === 2) {
       // 1-top + 2-bottom wide apex triangle (e.g. Owner + 2 Coders)
       occupied[0][0].px = cw * 0.5;
-      occupied[0][0].py = stageTopY + spanY * 0.18;
+      occupied[0][0].py = detailed ? centerTopY : (centerTopY + spanY * 0.18);
       const botXs = distributeRowX(occupied[1], cw, Math.max(24, cw * 0.07));
       occupied[1][0].px = botXs[0];
-      occupied[1][0].py = stageTopY + spanY * 0.84;
+      occupied[1][0].py = detailed ? centerBottomY : (centerTopY + spanY * 0.84);
       occupied[1][1].px = botXs[1];
-      occupied[1][1].py = stageTopY + spanY * 0.84;
+      occupied[1][1].py = detailed ? centerBottomY : (centerTopY + spanY * 0.84);
     } else if (occupied.length === 3) {
       // 3 distinct tiers (e.g. Owner -> Coder -> QA): wide Command-apex triangle
       // aligned with fixed/idle fallback so waking up never jars the graph.
       occupied[0][0].px = cw * 0.5;
-      occupied[0][0].py = stageTopY + spanY * 0.16;
+      occupied[0][0].py = detailed ? centerTopY : (centerTopY + spanY * 0.16);
       occupied[1][0].px = cw * 0.26;
-      occupied[1][0].py = stageTopY + spanY * 0.56;
+      occupied[1][0].py = detailed ? (centerTopY + spanY * 0.5) : (centerTopY + spanY * 0.56);
       occupied[2][0].px = cw * 0.74;
-      occupied[2][0].py = stageTopY + spanY * 0.86;
+      occupied[2][0].py = detailed ? centerBottomY : (centerTopY + spanY * 0.86);
     } else {
       // All 3 in same tier: place highest-degree hub at top center, others below left/right
       const hubFirst = [...items].sort((a, b) =>
         (degree.get(b.agent.id) - degree.get(a.agent.id)) || naturalCompare(a.agent.id, b.agent.id)
       );
       hubFirst[0].px = cw * 0.5;
-      hubFirst[0].py = stageTopY + spanY * 0.2;
+      hubFirst[0].py = detailed ? centerTopY : (centerTopY + spanY * 0.2);
       const botXs = distributeRowX([hubFirst[1], hubFirst[2]], cw, Math.max(24, cw * 0.07));
       hubFirst[1].px = botXs[0];
-      hubFirst[1].py = stageTopY + spanY * 0.82;
+      hubFirst[1].py = detailed ? centerBottomY : (centerTopY + spanY * 0.82);
       hubFirst[2].px = botXs[1];
-      hubFirst[2].py = stageTopY + spanY * 0.82;
+      hubFirst[2].py = detailed ? centerBottomY : (centerTopY + spanY * 0.82);
     }
   } else {
     // 4+ active nodes: collapse empty role buckets & balance wide rows + 1-pass barycenter ordering
@@ -611,8 +688,8 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     }
 
     const rCount = rows.length;
-    const topFrac = rCount === 2 && rows[0].length >= 3 ? 0.26 : 0.14;
-    const botFrac = 0.88;
+    const topFrac = detailed ? 0.0 : (rCount === 2 && rows[0].length >= 3 ? 0.26 : 0.14);
+    const botFrac = detailed ? 1.0 : 0.88;
     const rowPitch = rCount > 1 ? (spanY * (botFrac - topFrac)) / (rCount - 1) : spanY * 0.65;
 
     rows.forEach((row, rIdx) => {
@@ -637,15 +714,15 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
       }
 
       const frac = rCount === 1 ? 0.48 : (topFrac + ((botFrac - topFrac) * rIdx) / Math.max(1, rCount - 1));
-      const py = stageTopY + spanY * frac;
+      const py = centerTopY + spanY * frac;
       const xs = distributeRowX(row, cw, 20);
       const maxRowH = Math.max(...row.map(it => it.box.height));
-      const freeY = rowPitch - maxRowH - 18;
+      const freeY = rowPitch - maxRowH - (detailed ? DETAILED_ROW_GAP : 18);
       // Anti-collinear arch / stagger: 3+ nodes in one row NEVER sit on a flat horizontal line
-      const archDelta = (row.length === 3 && freeY > 14)
+      const archDelta = (!detailed && row.length === 3 && freeY > 14)
         ? Math.min(54, Math.max(18, freeY * 0.38))
         : 0;
-      const waveDelta = (row.length >= 4 && freeY > 14)
+      const waveDelta = (!detailed && row.length >= 4 && freeY > 14)
         ? Math.min(34, Math.max(14, freeY * 0.24))
         : 0;
       if (archDelta > 0 && rIdx > 0 && rIdx < rCount - 1) middleArches.push(row);
@@ -689,8 +766,8 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
   }
 
   relaxStageItems(items, activeEdges, cw, stageTopY, stageBottomY, {
-    gapX: detailed ? 18 : 42,
-    gapY: detailed ? 22 : 42,
+    gapX: detailed ? DETAILED_COL_GAP : 42,
+    gapY: detailed ? DETAILED_ROW_GAP : 42,
     edgeClearanceTarget: detailed ? 110 : 155,
     iterations: 38
   });
@@ -702,6 +779,12 @@ function layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottom
     center.py = Math.min(center.py, Math.min(left.py, right.py) - 18);
     clampItem(center, cw, stageTopY, stageBottomY, 14);
   }
+
+  enforceHardClearance(items, cw, stageTopY, stageBottomY, {
+    minGapX: 22,
+    minGapY: detailed ? 36 : 22,
+    padX: 14
+  });
 
   return items;
 }
@@ -754,6 +837,16 @@ function intersectRectBorder(cx, cy, hw, hh, vx, vy, pad) {
   return { x: cx + vx * t, y: cy + vy * t };
 }
 
+function cubicBezierHitsBox(p1, c1, c2, p2, cx, cy, hw, hh) {
+  for (const t of [0.14, 0.28, 0.42, 0.5, 0.58, 0.72, 0.86]) {
+    const mt = 1 - t;
+    const x = mt * mt * mt * p1.x + 3 * mt * mt * t * c1.x + 3 * mt * t * t * c2.x + t * t * t * p2.x;
+    const y = mt * mt * mt * p1.y + 3 * mt * mt * t * c1.y + 3 * mt * t * t * c2.y + t * t * t * p2.y;
+    if (Math.abs(x - cx) < hw && Math.abs(y - cy) < hh) return true;
+  }
+  return false;
+}
+
 /**
  * Computes an adaptive SVG edge path (strict straight line on clean horizontal/vertical axes,
  * orthogonal-tangent cubic Bezier S-curve on active diagonals, normal-vector detour around
@@ -766,8 +859,8 @@ export function computeAdaptiveEdgePath({
   obstacles = [],
   parallelIndex = 0,
   isGhost = false,
-  padStart = 2,
-  padEnd = 4
+  padStart = 4,
+  padEnd = 6
 } = {}) {
   const dx = cx2 - cx1;
   const dy = cy2 - cy1;
@@ -809,13 +902,13 @@ export function computeAdaptiveEdgePath({
     };
   };
 
+  const validObstacles = Array.isArray(obstacles)
+    ? obstacles.filter(o => o && Number.isFinite(o.cx) && Number.isFinite(o.cy))
+    : [];
   const blocking = [];
-  if (Array.isArray(obstacles) && obstacles.length > 0) {
-    for (const o of obstacles) {
-      if (!o || !Number.isFinite(o.cx) || !Number.isFinite(o.cy)) continue;
-      if (segmentIntersectsPaddedBox(p1Straight.x, p1Straight.y, p2Straight.x, p2Straight.y, o.cx, o.cy, (o.hw || 80) + 8, (o.hh || 24) + 8)) {
-        blocking.push(o);
-      }
+  for (const o of validObstacles) {
+    if (segmentIntersectsPaddedBox(p1Straight.x, p1Straight.y, p2Straight.x, p2Straight.y, o.cx, o.cy, (o.hw || 80) + 8, (o.hh || 24) + 8)) {
+      blocking.push(o);
     }
   }
 
@@ -828,13 +921,12 @@ export function computeAdaptiveEdgePath({
   const nx = -uy;
   const ny = ux;
 
-  // Rule 2: Obstacle avoidance or bidirectional/parallel dual-lane curve
-  if (blocking.length > 0 || parallelIndex !== 0) {
+  const buildDetourCurve = (obsList) => {
     let bowPx;
-    if (blocking.length > 0) {
+    if (obsList.length > 0) {
       let clearPos = 0;
       let clearNeg = 0;
-      for (const o of blocking) {
+      for (const o of obsList) {
         const s = (o.cx - cx1) * nx + (o.cy - cy1) * ny;
         const rObs = Math.abs((o.hw || 80) * nx) + Math.abs((o.hh || 24) * ny);
         clearPos = Math.max(clearPos, rObs + s + 24);
@@ -879,9 +971,25 @@ export function computeAdaptiveEdgePath({
       mx,
       my,
       curved: true,
-      kind: blocking.length > 0 ? 'avoid' : 'parallel'
+      kind: obsList.length > 0 ? 'avoid' : 'parallel'
     };
+  };
+
+  // Rule 2: Obstacle avoidance or bidirectional/parallel dual-lane curve
+  if (blocking.length > 0 || parallelIndex !== 0) {
+    return buildDetourCurve(blocking);
   }
+
+  const curveClearOfAll = (p1, c1, c2, p2Lead) => {
+    if (cubicBezierHitsBox(p1, c1, c2, p2Lead, cx1, cy1, sz1.hw + 1, sz1.hh + 1)) return false;
+    if (cubicBezierHitsBox(p1, c1, c2, p2Lead, cx2, cy2, sz2.hw + 1, sz2.hh + 1)) return false;
+    for (const o of validObstacles) {
+      if (cubicBezierHitsBox(p1, c1, c2, p2Lead, o.cx, o.cy, (o.hw || 80) + 8, (o.hh || 24) + 8)) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   // Rule 4: Unobstructed active/queued diagonal -> orthogonal-tangent S-curve with
   // a straight collinear landing runway so the arrowhead aligns 100% with the incoming stream.
@@ -900,27 +1008,29 @@ export function computeAdaptiveEdgePath({
       const k = Math.min(124, Math.max(24, curveSpanY * 0.56));
       const c1 = { x: p1.x, y: p1.y + sy * k };
       const c2 = { x: p2Lead.x, y: p2Lead.y - sy * k };
-      const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2Lead.x;
-      const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2Lead.y;
-      const curveOnly = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2Lead.x.toFixed(1)} ${p2Lead.y.toFixed(1)}`;
-      const pathD = leadEnd > 0 ? `${curveOnly} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` : curveOnly;
-      const trunkEndY = p2.y - sy * Math.min(leadEnd || 11, 11);
-      const trunkPathD = leadEnd > 11
-        ? `${curveOnly} L ${p2.x.toFixed(1)} ${trunkEndY.toFixed(1)}`
-        : curveOnly;
-      return {
-        pathD,
-        trunkPathD,
-        p1,
-        p2,
-        p2Lead,
-        c1,
-        c2,
-        mx,
-        my,
-        curved: true,
-        kind: 's-vertical'
-      };
+      if (curveClearOfAll(p1, c1, c2, p2Lead)) {
+        const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2Lead.x;
+        const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2Lead.y;
+        const curveOnly = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2Lead.x.toFixed(1)} ${p2Lead.y.toFixed(1)}`;
+        const pathD = leadEnd > 0 ? `${curveOnly} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` : curveOnly;
+        const trunkEndY = p2.y - sy * Math.min(leadEnd || 11, 11);
+        const trunkPathD = leadEnd > 11
+          ? `${curveOnly} L ${p2.x.toFixed(1)} ${trunkEndY.toFixed(1)}`
+          : curveOnly;
+        return {
+          pathD,
+          trunkPathD,
+          p1,
+          p2,
+          p2Lead,
+          c1,
+          c2,
+          mx,
+          my,
+          curved: true,
+          kind: 's-vertical'
+        };
+      }
     }
   }
 
@@ -937,27 +1047,29 @@ export function computeAdaptiveEdgePath({
     const k = Math.min(124, Math.max(24, curveSpanX * 0.56));
     const c1 = { x: p1.x + sx * k, y: p1.y };
     const c2 = { x: p2Lead.x - sx * k, y: p2Lead.y };
-    const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2Lead.x;
-    const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2Lead.y;
-    const curveOnly = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2Lead.x.toFixed(1)} ${p2Lead.y.toFixed(1)}`;
-    const pathD = leadEnd > 0 ? `${curveOnly} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` : curveOnly;
-    const trunkEndX = p2.x - sx * Math.min(leadEnd || 11, 11);
-    const trunkPathD = leadEnd > 11
-      ? `${curveOnly} L ${trunkEndX.toFixed(1)} ${p2.y.toFixed(1)}`
-      : curveOnly;
-    return {
-      pathD,
-      trunkPathD,
-      p1,
-      p2,
-      p2Lead,
-      c1,
-      c2,
-      mx,
-      my,
-      curved: true,
-      kind: 's-horizontal'
-    };
+    if (curveClearOfAll(p1, c1, c2, p2Lead)) {
+      const mx = 0.125 * p1.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2Lead.x;
+      const my = 0.125 * p1.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2Lead.y;
+      const curveOnly = `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2Lead.x.toFixed(1)} ${p2Lead.y.toFixed(1)}`;
+      const pathD = leadEnd > 0 ? `${curveOnly} L ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}` : curveOnly;
+      const trunkEndX = p2.x - sx * Math.min(leadEnd || 11, 11);
+      const trunkPathD = leadEnd > 11
+        ? `${curveOnly} L ${trunkEndX.toFixed(1)} ${p2.y.toFixed(1)}`
+        : curveOnly;
+      return {
+        pathD,
+        trunkPathD,
+        p1,
+        p2,
+        p2Lead,
+        c1,
+        c2,
+        mx,
+        my,
+        curved: true,
+        kind: 's-horizontal'
+      };
+    }
   }
 
   return straightResult();
@@ -1105,7 +1217,8 @@ function estimateRigClusterDemand(agents, rigEdges, tiers, { detailed, measuredB
     if (occupiedBuckets >= 3) {
       maxTierNeedW = Math.max(maxTierNeedW, maxCardW * 2 + insetX * 2 + 64);
     }
-    needW = Math.min(900, Math.max(360, maxTierNeedW));
+    const maxCapW = detailed ? 1060 : 900;
+    needW = Math.min(maxCapW, Math.max(detailed ? 380 : 360, maxTierNeedW));
     weight = Math.min(3.8, Math.max(1.8, needW / 185));
   }
 
@@ -1118,6 +1231,58 @@ function estimateRigClusterDemand(agents, rigEdges, tiers, { detailed, measuredB
     needW,
     weight
   };
+}
+
+function countRoleBucketRows(items, usableW, { minGap = 24, fixedCaps = false } = {}) {
+  let rows = 0;
+  let singleBucketCount = 0;
+  let occupiedBuckets = 0;
+  for (const bucket of [0, 1, 2]) {
+    const group = items.filter(it => it.role.bucket === bucket);
+    if (group.length === 0) continue;
+    occupiedBuckets++;
+    const maxPerRow = fixedCaps ? (bucket === 1 ? 4 : 5) : 4;
+    const split = splitIntoBalancedRows(group, usableW, minGap, maxPerRow);
+    rows += split.length;
+    if (occupiedBuckets === 1) singleBucketCount = group.length;
+  }
+  if (!fixedCaps && rows === 1 && singleBucketCount >= 4) {
+    rows = 2;
+  }
+  return Math.max(1, rows);
+}
+
+function estimateDetailedMinInnerHeight(items, innerW, { mode = 'dynamic' } = {}) {
+  if (!Array.isArray(items) || items.length === 0) return 260;
+  const cardH = Math.max(DETAILED_CARD_H, ...items.map(it => it.box.height));
+  const usableW = Math.max(220, innerW - 28);
+  const activeItems = items.filter(it => it.tier !== 'dormant');
+  const dormantItems = items.filter(it => it.tier === 'dormant');
+
+  if (mode === 'fixed' || activeItems.length === 0) {
+    const totalRows = countRoleBucketRows(items, usableW, { minGap: DETAILED_COL_GAP, fixedCaps: true });
+    return DETAILED_TOP_EXTRA + 18 + totalRows * cardH + Math.max(0, totalRows - 1) * DETAILED_ROW_GAP + 30;
+  }
+
+  let activeRows;
+  if (activeItems.length <= 1) {
+    activeRows = 1;
+  } else if (activeItems.length === 2) {
+    const pairCardW = activeItems[0].box.width + activeItems[1].box.width;
+    activeRows = (innerW - pairCardW) < 110 ? 2 : 1;
+  } else if (activeItems.length === 3) {
+    const occupied = new Set(activeItems.map(it => it.role.bucket)).size;
+    activeRows = occupied >= 3 ? 3 : 2;
+  } else {
+    activeRows = countRoleBucketRows(activeItems, Math.max(240, innerW - 36), { minGap: DETAILED_COL_GAP, fixedCaps: false });
+  }
+  const stageH = DETAILED_TOP_EXTRA + 18 + activeRows * cardH + Math.max(0, activeRows - 1) * DETAILED_ROW_GAP + 28;
+  if (dormantItems.length === 0) {
+    return stageH + 12;
+  }
+  const dormantRows = splitIntoBalancedRows(dormantItems, usableW, DETAILED_COL_GAP, 4).length;
+  const benchH = 26 + DETAILED_TOP_EXTRA + dormantRows * cardH + Math.max(0, dormantRows - 1) * DETAILED_ROW_GAP + 28;
+  return stageH + benchH;
 }
 
 function packRigRows(rigs, rigMeta, availCanvasW, gap) {
@@ -1141,7 +1306,7 @@ function packRigRows(rigs, rigMeta, availCanvasW, gap) {
   return rows;
 }
 
-function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, padTop = pad, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed }) {
+function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, padTop = pad, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed, mode = 'dynamic' }) {
   let width = cw;
   for (const rowRigs of rowSlices) {
     const rowMinTotal = pad * 2 + gap * Math.max(0, rowRigs.length - 1) +
@@ -1176,11 +1341,14 @@ function computeZoneGeometry(rowSlices, rigMeta, cw, ch, { pad, padTop = pad, ga
       const stageItems = activeItems.length > 0 ? activeItems : items;
       const cardH = Math.max(...items.map(it => it.box.height));
       let estH;
-      if (stageItems.length <= 1 && dormantCount === 0) {
+      if (detailed) {
+        const neededInnerH = estimateDetailedMinInnerHeight(items, innerW, { mode });
+        estH = Math.max(260, neededInnerH) + insetTop + insetBottom;
+      } else if (stageItems.length <= 1 && dormantCount === 0) {
         estH = Math.max(220, cardH + 116 + insetTop + insetBottom);
       } else if (stageItems.length === 2 && dormantCount === 0) {
         const pairCardW = stageItems[0].box.width + stageItems[1].box.width;
-        const verticalStack = (innerW - pairCardW) < (detailed ? 110 : 140);
+        const verticalStack = (innerW - pairCardW) < 140;
         estH = verticalStack
           ? Math.max(320, cardH * 2 + 168 + insetTop + insetBottom)
           : Math.max(240, cardH + 128 + insetTop + insetBottom);
@@ -1349,7 +1517,7 @@ function layoutRigClusters(list, edges, options, activity, cw, ch) {
   let rowSlices = packRigRows(rigs, rigMeta, availRowW, gap);
 
   const runPass = (slices) => {
-    const geom = computeZoneGeometry(slices, rigMeta, cw, ch, { pad, padTop, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed });
+    const geom = computeZoneGeometry(slices, rigMeta, cw, ch, { pad, padTop, gap, insetX, insetTop, insetBottom, bottomReservePx, detailed, mode });
     const locals = new Map();
     const scores = new Map();
     for (const rigId of rigs) {
@@ -1497,7 +1665,22 @@ export function computeTopologyLayout({
   }
 
   let placedItems = [];
-  const effectiveCh = Math.max(220, ch - safeBottomReserve);
+  let effectiveCh = Math.max(220, ch - safeBottomReserve);
+  let finalCh = ch;
+
+  if (detailed) {
+    const sizedList = list.map(agent => ({
+      agent,
+      tier: tiers[agent.id] || 'active',
+      role: getRolePlacementInfo(agent),
+      box: resolveBox(agent, tiers[agent.id] || 'active', { detailed: true, measuredBoxes })
+    }));
+    const neededDetailedH = estimateDetailedMinInnerHeight(sizedList, cw, { mode: safeMode });
+    if (neededDetailedH > effectiveCh) {
+      effectiveCh = neededDetailedH;
+      finalCh = Math.max(ch, effectiveCh + safeBottomReserve);
+    }
+  }
 
   if (safeMode === 'fixed') {
     // Fixed mode: invariant role-tiered layout sized for active cards so waking up never shifts positions
@@ -1515,36 +1698,41 @@ export function computeTopologyLayout({
     });
   } else if (dormantNodes.length === 0) {
     // Dynamic mode when 0 dormant nodes (or hideIdleNodes ON): active stage owns 100% height above any bottom pill
-    const stageTopY = detailed ? 74 : 46;
-    const stageBottomY = Math.max(stageTopY + 80, effectiveCh - (detailed ? 64 : 26));
+    const stageTopY = detailed ? (DETAILED_TOP_EXTRA + 10) : 46;
+    const stageBottomY = Math.max(stageTopY + 80, effectiveCh - (detailed ? 18 : 26));
     placedItems = layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottomY, {
       detailed,
       measuredBoxes
     });
   } else {
-    // Dynamic Stage + Compact Dormant Bench
+    // Dynamic Stage + Compact Dormant Bench (or full-height multi-row bench in detailed mode)
     const sortedDormant = sortAgentsDeterministically(dormantNodes);
     const dormantItems = sortedDormant.map(agent => ({
       agent,
       box: resolveBox(agent, 'dormant', { detailed, measuredBoxes }),
       px: cw / 2,
-      py: ch - 26
+      py: effectiveCh - 26
     }));
 
     const usableW = Math.max(220, cw - 28);
-    const gapX = detailed ? 14 : 10;
+    const gapX = detailed ? DETAILED_COL_GAP : 10;
     const dormantRows = splitIntoBalancedRows(dormantItems, usableW, gapX, detailed ? 4 : 9);
-    const rowPitchY = detailed ? 124 : 36;
-    const bottomCenterPad = detailed ? 66 : 24;
-    const maxBenchH = Math.max(60, ch * (detailed ? 0.44 : 0.34));
-    const effectivePitchY = dormantRows.length > 1
-      ? Math.min(rowPitchY, (maxBenchH - bottomCenterPad) / Math.max(1, dormantRows.length - 1))
-      : rowPitchY;
+    const dormantCardH = Math.max(detailed ? DETAILED_CARD_H : 28, ...dormantItems.map(it => it.box.height));
+    const rowPitchY = detailed ? (dormantCardH + DETAILED_ROW_GAP) : 36;
+    const bottomCenterPad = detailed ? (Math.ceil(dormantCardH / 2) + 20) : 24;
+    const maxBenchH = Math.max(60, effectiveCh * 0.34);
+    const effectivePitchY = detailed
+      ? rowPitchY
+      : (dormantRows.length > 1
+        ? Math.min(rowPitchY, (maxBenchH - bottomCenterPad) / Math.max(1, dormantRows.length - 1))
+        : rowPitchY);
 
-    const topBenchRowCenterY = ch - bottomCenterPad - (dormantRows.length - 1) * effectivePitchY;
-    const topBenchRowTopEdge = topBenchRowCenterY - (detailed ? 58 : 14);
-    const separatorPx = Math.max(ch * 0.52, topBenchRowTopEdge - 18);
-    benchSeparatorY = Number(((separatorPx / ch) * 100).toFixed(2));
+    const topBenchRowCenterY = effectiveCh - bottomCenterPad - (dormantRows.length - 1) * effectivePitchY;
+    const topBenchRowTopEdge = topBenchRowCenterY - (detailed ? (Math.ceil(dormantCardH / 2) + DETAILED_TOP_EXTRA) : 14);
+    const separatorPx = detailed
+      ? Math.max(140, topBenchRowTopEdge - 14)
+      : Math.max(effectiveCh * 0.52, topBenchRowTopEdge - 18);
+    benchSeparatorY = Number(((separatorPx / finalCh) * 100).toFixed(2));
 
     dormantRows.forEach((row, rIdx) => {
       const py = topBenchRowCenterY + rIdx * effectivePitchY;
@@ -1555,20 +1743,20 @@ export function computeTopologyLayout({
           it.px = cursor + it.box.width / 2;
           it.py = py;
           cursor += it.box.width + gapX;
-          clampItem(it, cw, separatorPx + 8, ch - 8, 10);
+          clampItem(it, cw, separatorPx + (detailed ? 16 : 8), effectiveCh - 8, 10);
         });
       } else {
         const xs = distributeRowX(row, cw, 12);
         row.forEach((it, idx) => {
           it.px = xs[idx];
           it.py = py;
-          clampItem(it, cw, separatorPx + 8, ch - 8, 10);
+          clampItem(it, cw, separatorPx + (detailed ? 16 : 8), effectiveCh - 8, 10);
         });
       }
     });
 
-    const stageTopY = detailed ? 70 : 46;
-    const stageBottomY = Math.max(stageTopY + 72, separatorPx - (detailed ? 64 : 34));
+    const stageTopY = detailed ? (DETAILED_TOP_EXTRA + 10) : 46;
+    const stageBottomY = Math.max(stageTopY + 72, separatorPx - (detailed ? 20 : 34));
     const stageItems = layoutDynamicStage(activeNodes, activeEdges, cw, stageTopY, stageBottomY, {
       detailed,
       measuredBoxes
@@ -1579,7 +1767,7 @@ export function computeTopologyLayout({
 
   for (const it of placedItems) {
     const xPct = Number(((it.px / cw) * 100).toFixed(2));
-    const yPct = Number(((it.py / ch) * 100).toFixed(2));
+    const yPct = Number(((it.py / finalCh) * 100).toFixed(2));
     positions[it.agent.id] = { x: xPct, y: yPct };
     if (tiers[it.agent.id] === 'dormant') {
       const flags = [];
@@ -1598,7 +1786,7 @@ export function computeTopologyLayout({
     benchSeparatorY,
     activeCount: activeNodes.length,
     dormantCount: dormantNodes.length,
-    rigClusters: [], canvasWidth: cw, canvasHeight: ch
+    rigClusters: [], canvasWidth: cw, canvasHeight: finalCh
   };
 }
 

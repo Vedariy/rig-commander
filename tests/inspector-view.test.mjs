@@ -202,3 +202,83 @@ test('handoff titles, labels and routing attributes escape markup in both direct
     }
   }
 });
+
+test('v3.9.0 inline HITL command preview and Option 1/2/3 buttons render directly inside Inspector P0 diagnosis card (EN & RU)', () => {
+  const demoScreens = {
+    en: '[dev-check@core-platform] core-platform (codex • gpt-5-codex)\n12 passed; 2 boundary checks need a negative control.\nPERMISSION PROMPT (HITL):\n● Bash(npx playwright test e2e/boundaries.spec.ts)\nRun this command?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this worktree\n  3. No, cancel and tell agent (esc)',
+    ru: '[dev-check@core-platform] core-platform (codex • gpt-5-codex)\n12 тестов пройдены; 2 проверки границ требуют негативного контроля.\nЗАПРОС РАЗРЕШЕНИЯ (HITL):\n● Bash(npx playwright test e2e/boundaries.spec.ts)\nВыполнить эту команду?\n\n› 1. Да, разрешить один раз (y)\n  2. Да, всегда разрешать в этом рабочем дереве\n  3. Нет, отменить и сообщить агенту (esc)'
+  };
+  for (const lang of ['en', 'ru']) {
+    const ctx = context(lang);
+    const qaId = 'dev-check@core-platform';
+    ctx.selectedAgentId = qaId;
+    ctx.lastScreenBySeat[qaId] = demoScreens[lang];
+    const html = renderSeatDiagnosisHtml(ctx, { id: qaId, state: 'urgent', harness: 'codex', needsInputReason: 'permission_prompt' });
+    assert.match(html, /id="inspDiagInlineHitl"/);
+    assert.match(html, /hitl-command-preview/);
+    assert.ok(html.includes('npx playwright test e2e/boundaries.spec.ts'), `${lang}: parsed command preview must appear inline inside P0 card`);
+    assert.match(html, /data-key="1 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
+    assert.match(html, /data-key="2 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
+    assert.match(html, /data-key="3 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
+    assert.ok(html.indexOf('hitl-command-preview') < html.indexOf('data-transport="modal_terminal"'), 'Inline HITL decision must precede modal fallback button');
+  }
+});
+
+test('v3.9.0 index.html enforces #autoConsentInspectorRoot below #nodeInspector, zero Google Fonts, readOnlyMode badge, collapsed demo quest & concise P1 context copy', async () => {
+  const fs = await import('node:fs/promises');
+  const vm = await import('node:vm');
+  const indexHtml = await fs.readFile(new URL('../openrig/index.html', import.meta.url), 'utf8');
+
+  // 1. Zero external Google Fonts <link>
+  assert.doesNotMatch(indexHtml, /fonts\.googleapis\.com/i);
+
+  // 2. #autoConsentInspectorRoot placed strictly BELOW #nodeInspector
+  const nodeIdx = indexHtml.indexOf('<div id="nodeInspector"></div>');
+  const acIdx = indexHtml.indexOf('<div id="autoConsentInspectorRoot"></div>');
+  assert.ok(nodeIdx > 0 && acIdx > nodeIdx, '#autoConsentInspectorRoot must sit below #nodeInspector');
+
+  // 3. #readOnlyModeBadge present in top HUD, hidden by default, toggled cleanly by syncReadOnlyModeUi
+  assert.match(indexHtml, /id="readOnlyModeBadge"[^>]*hidden/);
+  const script = indexHtml.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const badgeEl = { hidden: true, textContent: '', title: '' };
+  const bodyClasses = new Set();
+  const sandbox = {
+    console,
+    location: { pathname: '/demo', search: '', protocol: 'http:', port: '7440', hostname: '127.0.0.1' },
+    navigator: { language: 'ru' },
+    localStorage: { getItem: () => null, setItem() {} },
+    sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    document: {
+      addEventListener() {},
+      getElementById: (id) => (id === 'readOnlyModeBadge' ? badgeEl : null),
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      body: { classList: { toggle: (c, f) => (f ? bodyClasses.add(c) : bodyClasses.delete(c)), contains: (c) => bodyClasses.has(c) } }
+    },
+    addEventListener() {},
+    requestAnimationFrame() {},
+    setTimeout() {},
+    clearTimeout() {},
+    tDeck
+  };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(script, sandbox);
+
+  // Undefined / false readOnlyMode -> stays hidden with zero errors
+  vm.runInContext('syncReadOnlyModeUi(undefined)', sandbox);
+  assert.equal(badgeEl.hidden, true);
+  assert.equal(bodyClasses.has('read-only-mode'), false);
+
+  // True readOnlyMode -> surfaces 🔒 READ-ONLY badge cleanly
+  vm.runInContext('syncReadOnlyModeUi(true)', sandbox);
+  assert.equal(badgeEl.hidden, false);
+  assert.equal(badgeEl.textContent, '🔒 READ-ONLY');
+  assert.equal(bodyClasses.has('read-only-mode'), true);
+
+  // Initial /demo load keeps inline mission dock collapsed by default (only opens on ?track=quest)
+  vm.runInContext("initDemoQuest('')", sandbox);
+  assert.equal(vm.runInContext('demoQuestOpen', sandbox), false);
+  vm.runInContext("initDemoQuest('quest')", sandbox);
+  assert.equal(vm.runInContext('demoQuestOpen', sandbox), true);
+});

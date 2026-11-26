@@ -86,9 +86,9 @@
       <a class="triage-refresh-btn triage-icon-btn" href="/passport" target="_blank" rel="noopener" style="text-decoration:none; border-color:rgba(168,85,247,0.42); color:#e9d5ff;" title="Инженерный паспорт">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       </a>
-      <div style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
-        <button type="button" id="deckLangEn" class="triage-refresh-btn" style="padding:2px 6px; border:none; font-size:10px;" onclick="setDeckLang('en')">EN</button>
-        <button type="button" id="deckLangRu" class="triage-refresh-btn" style="padding:2px 6px; border:none; font-size:10px;" onclick="setDeckLang('ru')">RU</button>
+      <div class="deck-lang-group" style="display:inline-flex; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.28); border-radius:6px; padding:2px; gap:2px;" role="group" aria-label="Language">
+        <button type="button" id="deckLangEn" class="triage-refresh-btn deck-lang-btn" onclick="setDeckLang('en')">EN</button>
+        <button type="button" id="deckLangRu" class="triage-refresh-btn deck-lang-btn" onclick="setDeckLang('ru')">RU</button>
       </div>
     </div>
   </div>
@@ -101,6 +101,7 @@
         <div class="brand-title">
           <span id="deckBrandTitle">RIGCOMMANDER // NEURAL COMMAND DECK v3.8</span>
           <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
+          <span class="read-only-badge" id="readOnlyModeBadge" hidden data-i18n="hud.readOnlyBadge" title="Read-only mode (--read-only): zero terminal writes or mutations">🔒 READ-ONLY</span>
           <a id="demoBackLink" href="/" hidden data-i18n="demo.backToSite"></a>
           <select id="rigFilterSelect" class="rig-select" onchange="onRigFilterChange(this.value)">
             <option value="all" selected data-i18n="hud.allRigs">🌐 ВСЕ РИГИ (2)</option>
@@ -355,8 +356,8 @@
         </span>
       </div>
       <div class="panel-body" id="inspectorPanelBody">
-        <div id="autoConsentInspectorRoot"></div>
         <div id="nodeInspector"></div>
+        <div id="autoConsentInspectorRoot"></div>
 
         <div style="font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:var(--cyan); margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
           <span data-i18n="insp.activeQueue">📦 АКТИВНЫЕ КОНВЕРТЫ В ОЧЕРЕДИ</span>
@@ -579,7 +580,7 @@
         role: 'Диспетчер ядра OpenRig',
         icon: '🛰️',
         harness: 'codex',
-        model: 'gpt-6.2-sol',
+        model: 'gpt-5-codex',
         ctxPct: 14,
         ctxWindowSize: 475000,
         ctxUsedTokens: 66500,
@@ -591,7 +592,7 @@
         cwd: '~/.openrig/workspace',
         port: '—',
         x: 11, y: 14,
-        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 185000, uncachedInputTokens: 32000, cachedInputTokens: 153000, outputTokens: 9400, totalTokens: 194400, cachedPct: 83, estUsd: 0.28 },
+        usage: { model: 'gpt-5-codex', tier: 'tier3-frontier', source: 'demo', inputTokens: 185000, uncachedInputTokens: 32000, cachedInputTokens: 153000, outputTokens: 9400, totalTokens: 194400, cachedPct: 83, estUsd: 0.28 },
         details: 'Глобальный оператор ядра OpenRig.'
       },
       {
@@ -600,7 +601,7 @@
         role: 'Оператор рига • Watchdog 15m',
         icon: '🧭',
         harness: 'codex',
-        model: 'gpt-6.2-sol (medium*)',
+        model: 'gpt-5-codex (medium*)',
         ctxPct: 31,
         ctxWindowSize: 475000,
         ctxUsedTokens: 147250,
@@ -613,7 +614,7 @@
         cwd: 'core-platform',
         port: '—',
         x: 89, y: 16,
-        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 460000, uncachedInputTokens: 94000, cachedInputTokens: 366000, outputTokens: 21800, totalTokens: 481800, cachedPct: 80, estUsd: 0.72 },
+        usage: { model: 'gpt-5-codex', tier: 'tier3-frontier', source: 'demo', inputTokens: 460000, uncachedInputTokens: 94000, cachedInputTokens: 366000, outputTokens: 21800, totalTokens: 481800, cachedPct: 80, estUsd: 0.72 },
         details: 'CTX: 31% (из 475K окна Codex). Следит за очередью, Watchdog 75% на dev-check и матрицей выбора чекера (S/M/L).'
       },
       {
@@ -622,7 +623,7 @@
         role: 'Архитектор и Оркестратор',
         icon: '🏛️',
         harness: 'codex',
-        model: 'gpt-6.2-sol',
+        model: 'gpt-5-codex',
         ctxPct: 48,
         ctxWindowSize: 475000,
         ctxUsedTokens: 228000,
@@ -635,7 +636,7 @@
         cwd: 'core-platform',
         port: '4173 / 4176',
         x: 38, y: 22,
-        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 1120000, uncachedInputTokens: 210000, cachedInputTokens: 910000, outputTokens: 54000, totalTokens: 1174000, cachedPct: 81, estUsd: 1.74 },
+        usage: { model: 'gpt-5-codex', tier: 'tier3-frontier', source: 'demo', inputTokens: 1120000, uncachedInputTokens: 210000, cachedInputTokens: 910000, outputTokens: 54000, totalTokens: 1174000, cachedPct: 81, estUsd: 1.74 },
         details: 'CTX: 48% (228K / 475K в текущем Codex-рантайме). Активно координирует слайсы tts-strict-chunked и elb-001.'
       },
       {
@@ -720,7 +721,7 @@
         role: 'Кодер 4 (Parallel Worktree)',
         icon: '💻',
         harness: 'codex',
-        model: 'gpt-6.2-sol',
+        model: 'gpt-5-codex',
         ctxPct: 68,
         ctxWindowSize: 475000,
         ctxUsedTokens: 323000,
@@ -743,7 +744,7 @@
         cwd: 'core-platform-coder4',
         port: '4175 / 5201',
         x: 61, y: 52,
-        usage: { model: 'gpt-6.2-sol', tier: 'tier3-frontier', source: 'demo', inputTokens: 1380000, uncachedInputTokens: 310000, cachedInputTokens: 1070000, outputTokens: 67200, totalTokens: 1447200, cachedPct: 78, estUsd: 2.26 },
+        usage: { model: 'gpt-5-codex', tier: 'tier3-frontier', source: 'demo', inputTokens: 1380000, uncachedInputTokens: 310000, cachedInputTokens: 1070000, outputTokens: 67200, totalTokens: 1447200, cachedPct: 78, estUsd: 2.26 },
         details: 'CTX: 68% (из 475K окна Codex). Активно дорабатывает tts-strict-chunked (d81fa52) перед повторной передачей в QA.'
       },
       {
@@ -1129,9 +1130,21 @@
       ]
     };
     let IS_LIVE = false;
+    let IS_READ_ONLY_MODE = false;
     let resilienceUi = null;
     let autoConsentUi = null;
     const IS_OFFLINE_DEMO = /^\/demo(?:\/|$)/.test(location.pathname);
+
+    function syncReadOnlyModeUi(flag) {
+      IS_READ_ONLY_MODE = Boolean(flag);
+      document.body?.classList?.toggle('read-only-mode', IS_READ_ONLY_MODE);
+      const badge = document.getElementById('readOnlyModeBadge');
+      if (badge) {
+        badge.hidden = !IS_READ_ONLY_MODE;
+        badge.textContent = td('hud.readOnlyBadge');
+        badge.title = td('hud.readOnlyTip');
+      }
+    }
 
     function deckFetch(resource, options) {
       // The public sandbox never discovers a bridge, even on an API-capable origin.
@@ -1153,6 +1166,7 @@
     function initCompactTriageTools() {
       if (!IS_OFFLINE_DEMO && !matchMedia('(max-width: 1519px)').matches) return;
       const host = document.querySelector('#triageStrip .triage-meta');
+      if (!host) return;
       const menu = document.createElement('details');
       menu.className = 'triage-tools';
       const summary = document.createElement('summary');
@@ -1160,7 +1174,11 @@
       summary.textContent = td('demo.tools');
       const body = document.createElement('div');
       body.className = 'triage-tools-body';
-      for (const el of [...host.querySelectorAll(':scope > button')]) body.appendChild(el);
+      // Keep primary high-signal toggles directly visible in the top bar (never trapped inside collapsed details).
+      const keepDirect = new Set(['btnAutoConsentTop', 'btnDemoQuest', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
+      for (const el of [...host.querySelectorAll(':scope > button')]) {
+        if (!keepDirect.has(el.id)) body.appendChild(el);
+      }
       menu.append(summary, body); host.appendChild(menu);
       body.addEventListener('click', event => { if (event.target.closest('button')) menu.open = false; });
     }
@@ -1652,7 +1670,7 @@
 
       const modelName = (liveNode.modelObservation && liveNode.modelObservation.model) ||
                         liveNode.model ||
-                        (liveNode.runtime === 'terminal' ? 'terminal' : (liveNode.runtime === 'codex' ? 'gpt-6.1-sol' : 'gpt-6.1'));
+                        (liveNode.runtime === 'terminal' ? 'terminal' : (liveNode.runtime === 'codex' ? 'gpt-5-codex' : 'gpt-5'));
 
       agent = {
         id: id,
@@ -1975,9 +1993,9 @@
             <span class="actor-pill">${w.to}</span>
             ${groupBtn}
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:6px;">
-            <span style="font-family:var(--font-mono); font-size:10.5px; color:var(--cyan); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🏷️ ${w.slice}</span>
-            <span style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:${w.color}; white-space:nowrap;">${w.state}</span>
+          <div class="wait-meta-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:5px; gap:3px 6px;">
+            <span class="wait-slice-label" style="font-family:var(--font-mono); font-size:10.5px; color:var(--cyan); line-height:1.3; word-break:break-word;">🏷️ ${w.slice}</span>
+            <span class="${w.prio === 0 ? 'wait-state-pill is-p0' : 'wait-state-pill'}" style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:${w.prio === 0 ? '#fecdd3' : w.color}; white-space:nowrap;">${w.state}</span>
           </div>
           <div class="${isLongDesc ? `wait-desc-clamped${isDescOpen ? ' expanded' : ''}` : ''}" style="${isLongDesc ? '' : 'font-size:12px; line-height:1.4; color:#cbd5e1;'}">${w.summary}</div>
           ${isLongDesc ? `<button type="button" class="wait-desc-toggle" data-desc-key="${escapeHtml(descKey)}" onclick="event.stopPropagation(); toggleRadarDesc(this.getAttribute('data-desc-key'))">${isDescOpen ? td('radar.collapseDesc') : td('radar.expandDesc')}</button>` : ''}
@@ -2551,8 +2569,8 @@
         return prefix + '\n✓ ' + td('demo.actionApplied');
       }
       if (seatId.includes('dev-check')) return header + (en
-        ? '\n$ npx playwright test e2e/boundaries.spec.ts\n12 passed; 2 boundary checks need a negative control.\nPERMISSION PROMPT (HITL):\nAllow running the synthetic negative control?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this worktree\n  3. No, cancel and tell agent (esc)'
-        : '\n$ npx playwright test e2e/boundaries.spec.ts\n12 тестов пройдены; 2 проверки границ требуют негативного контроля.\nЗАПРОС РАЗРЕШЕНИЯ (HITL):\nРазрешить синтетический негативный контроль?\n\n› 1. Да, разрешить один раз (y)\n  2. Да, всегда разрешать в этом рабочем дереве\n  3. Нет, отменить и сообщить агенту (esc)');
+        ? '\n12 passed; 2 boundary checks need a negative control.\nPERMISSION PROMPT (HITL):\n● Bash(npx playwright test e2e/boundaries.spec.ts)\nRun this command?\n\n› 1. Yes, allow once (y)\n  2. Yes, always allow in this worktree\n  3. No, cancel and tell agent (esc)'
+        : '\n12 тестов пройдены; 2 проверки границ требуют негативного контроля.\nЗАПРОС РАЗРЕШЕНИЯ (HITL):\n● Bash(npx playwright test e2e/boundaries.spec.ts)\nВыполнить эту команду?\n\n› 1. Да, разрешить один раз (y)\n  2. Да, всегда разрешать в этом рабочем дереве\n  3. Нет, отменить и сообщить агенту (esc)');
       if (seatId.includes('dev-coder3')) return header + '\n$ rig queue list --owned\n  qitem-demo-worker-01 pending\n  qitem-demo-worker-02 pending\n' + (en
         ? 'PARKED: 2 open obligations without an active wake timer.\nChoose Wake or send a command below.'
         : 'PARKED: 2 открытые задачи без активного таймера пробуждения.\nВыберите пробуждение или отправьте команду ниже.');
@@ -2603,6 +2621,16 @@
         if (quickKeysBar.getAttribute('data-cache-key') !== qHtml) {
           quickKeysBar.innerHTML = qHtml;
           quickKeysBar.setAttribute('data-cache-key', qHtml);
+        }
+      }
+      if (curAgent && curAgent.state === 'urgent') {
+        const elDiag = document.getElementById('inspSeatDiagnosis');
+        if (elDiag) {
+          const diagHtml = InspectorView.renderSeatDiagnosisHtml(getInspectorViewDeps(), curAgent);
+          if (elDiag.getAttribute('data-cache-key') !== diagHtml) {
+            elDiag.innerHTML = diagHtml;
+            elDiag.setAttribute('data-cache-key', diagHtml);
+          }
         }
       }
     }
@@ -2668,6 +2696,16 @@
           InspectorView.updateInspectorPromptOptions(promptOptsBar, nextOpts);
         }
         const curAgent = AGENTS.find(x => x.id === seatId);
+        if (curAgent && curAgent.state === 'urgent') {
+          const elDiag = document.getElementById('inspSeatDiagnosis');
+          if (elDiag) {
+            const diagHtml = InspectorView.renderSeatDiagnosisHtml(getInspectorViewDeps(), curAgent);
+            if (elDiag.getAttribute('data-cache-key') !== diagHtml) {
+              elDiag.innerHTML = diagHtml;
+              elDiag.setAttribute('data-cache-key', diagHtml);
+            }
+          }
+        }
         if (IS_LIVE && curAgent && typeof detectLiveHitlPrompt === 'function') {
           const liveHitl = detectLiveHitlPrompt(text);
           if (liveHitl.blocked && curAgent.state !== 'urgent') {
@@ -2889,6 +2927,7 @@
         }
         if (!res.ok) throw new Error('Offline');
         const data = await res.json();
+        syncReadOnlyModeUi(Boolean(data && data.readOnlyMode));
         if (data.historyUnchanged && lastCachedHistory) {
           data.history = lastCachedHistory;
         } else if (data.history) {
@@ -3431,6 +3470,11 @@
         const burnRate = burn.perHour > 0 ? burn.perHour : 20;
         const etaMin = Math.max(1, Math.round(((CONTEXT_CRIT_PCT - a.ctxPct) / burnRate) * 60));
         const etaStr = isOver ? td('triage.ctxOver') : td('triage.ctxEta', { min: etaMin });
+        const paceUnit = deckLang === 'en' ? 'h' : 'ч';
+        const paceStr = typeof burn.perHour === 'number' && Number.isFinite(burn.perHour)
+          ? (burn.perHour > 0.1 ? `+${burn.perHour.toFixed(1)}%/${paceUnit}` : `~0%/${paceUnit}`)
+          : '';
+        const ctxDesc = paceStr ? `${etaStr} • ${paceStr}` : etaStr;
         const isPi = isPiHarness(a);
         const action = isPi
           ? { id: 'copy_restart_seat', transport: 'clipboard', seatId: a.id, payload: buildSeatRelaunchCommand(a.id, 'context rotation'), label: td('radar.rotateBtn'), tone: 'warn' }
@@ -3441,7 +3485,7 @@
           type: 'p1-hot',
           tag: isOver ? td('triage.critTag') : td('triage.ctxTag'),
           title: `🔥 ${getNodeDisplayTitle(a)}: CTX ${a.ctxPct}%`,
-          desc: `${etaStr} • ${burn.label}`,
+          desc: ctxDesc,
           action,
           targetAgentId: a.id
         });
@@ -3697,26 +3741,31 @@
             <span style="font-family:var(--font-mono); font-size:10.5px; color:${pool.hasValidCtx ? '#cbd5e1' : '#64748b'};">${pool.hasValidCtx ? pool.avgCtx + '%' : '—'}</span>
           </div>`;
 
+        const isWarnPool = !pool.isOver && pool.hasValidCtx && pool.peakCtx >= 65;
         const tankTint = pool.isOver
-          ? 'rgba(255, 0, 85, 0.14)'
-          : pool.color === '#a855f7'
-            ? 'rgba(168, 85, 247, 0.11)'
-            : pool.color === '#00ff9d' || pool.color === '#10b981'
-              ? 'rgba(16, 185, 129, 0.11)'
-              : 'rgba(56, 189, 248, 0.10)';
+          ? 'rgba(127, 29, 29, 0.32)'
+          : isWarnPool
+            ? 'rgba(245, 158, 11, 0.12)'
+            : 'rgba(148, 163, 184, 0.05)';
+        const tankAccent = pool.isOver
+          ? '#ff0055'
+          : isWarnPool
+            ? '#f59e0b'
+            : 'rgba(100, 116, 139, 0.55)';
+        const tankToneClass = pool.isOver ? ' is-crit' : (isWarnPool ? ' is-warn' : '');
 
         return `
-        <div class="tank-card" onclick="openFleetAdvisorModal('budget')" title="Seats (${pool.seatCount}): ${seatListTip} • Click for SUB vs API Budget" style="cursor:pointer; --tank-color: ${pool.color}; --tank-tint: ${tankTint}; --pool-fill: ${ctxFillWidth}%; ${pool.isOver ? 'border-color:#ff0055; box-shadow:0 0 12px rgba(255,0,85,0.3);' : ''}">
+        <div class="tank-card${tankToneClass}" onclick="openFleetAdvisorModal('budget')" title="Seats (${pool.seatCount}): ${seatListTip} • Click for SUB vs API Budget" style="cursor:pointer; --tank-color: ${tankAccent}; --tank-tint: ${tankTint}; --pool-fill: ${ctxFillWidth}%;">
           <div class="tank-top">
             <span>${pool.name}</span>
-            <span style="color:${pool.activeCount > 0 ? '#6ee7b7' : '#e9d5ff'}; font-family:var(--font-mono); font-size:11px;">${pool.statusLabel}</span>
+            <span style="color:${pool.activeCount > 0 ? '#6ee7b7' : '#cbd5e1'}; font-family:var(--font-mono); font-size:11px;">${pool.statusLabel}</span>
           </div>
           <div class="meter-row" title="Peak CTX ${escapeHtml(pool.name)}">
             <span class="meter-label">${td('pool.peakCtx')}</span>
             <div class="meter-track">
               <div class="meter-fill" style="width: ${ctxFillWidth}%; background: ${ctxFillBg};"></div>
             </div>
-            <span style="color:${pool.isOver ? '#ff0055' : pool.hasValidCtx ? '#e2e8f0' : '#64748b'}; font-weight:${pool.isOver ? '800' : '600'}; font-family:var(--font-mono); font-size:10.5px;">${ctxRightText}</span>
+            <span style="color:${pool.isOver ? '#fecdd3' : pool.hasValidCtx ? '#e2e8f0' : '#64748b'}; font-weight:${pool.isOver ? '800' : '600'}; font-family:var(--font-mono); font-size:10.5px;">${ctxRightText}</span>
           </div>
           ${secondRowHtml}
         </div>`;
@@ -7629,9 +7678,15 @@
       demoQuestState = typeof createQuestState === 'function'
         ? createQuestState({ dismissed })
         : { steps: { hitl: false, gantt: false, budget: false }, dismissed, minimized: false };
-      demoQuestOpen = typeof shouldAutoOpenQuest === 'function'
-        ? shouldAutoOpenQuest({ isLive: IS_LIVE, track: activeTrack, dismissed })
-        : (!IS_LIVE && !activeTrack && !dismissed);
+      const cleanTrack = String(activeTrack || '').toLowerCase().trim();
+      const explicitQuestTrack = cleanTrack === 'quest' || cleanTrack === 'mission' || cleanTrack === 'start';
+      // Keep the inline mission dock collapsed by default on /demo initial load (accessible via #btnDemoQuest)
+      // to preserve vertical viewport height on 1280×720; only auto-open when explicitly requested via ?track=quest.
+      demoQuestOpen = explicitQuestTrack && !IS_LIVE && (
+        typeof shouldAutoOpenQuest === 'function'
+          ? shouldAutoOpenQuest({ isLive: IS_LIVE, track: activeTrack, dismissed })
+          : true
+      );
       if (demoQuestOpen) {
         demoQuestState.dismissed = false;
         saveDemoQuestDismissed(false);
@@ -7774,7 +7829,6 @@
             <span class="quest-sub">${escapeHtml(td('quest.subtitle'))}</span>
           </div>
           <div class="quest-top-actions">
-            <button type="button" class="quest-mini-btn ${calmMode ? 'active' : ''}" onclick="toggleCalmMode()">${escapeHtml(calmMode ? td('quest.cleanOn') : td('quest.cleanOff'))}</button>
             ${prog.completed > 0 ? `<button type="button" class="quest-mini-btn" onclick="resetDemoQuest()">${escapeHtml(td('quest.reset'))}</button>` : ''}
             <button type="button" class="quest-mini-btn" onclick="dismissDemoQuest()" aria-label="${escapeHtml(td('quest.hide'))}">✕</button>
           </div>
@@ -8237,6 +8291,7 @@
 
       localizeDemoData(deckLang);
       syncDemoHeader();
+      syncReadOnlyModeUi(IS_READ_ONLY_MODE);
       ['cmdSendStatus', 'modalCmdStatus', 'copyToast'].forEach(id => {
         const el = document.getElementById(id);
         const feedback = el?.demoControlFeedback;

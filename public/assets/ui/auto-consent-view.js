@@ -719,9 +719,10 @@ export function renderSeatAutoConsentPickerHtml({
     options.splice(1, 0, { val: AUTO_CONSENT_PROFILES.OFF, label: getProfileLabel(AUTO_CONSENT_PROFILES.OFF, td) });
   }
 
+  const grantBtnToneClass = cfg.enabled ? '' : ' ac-insp-btn-muted';
   const sessionControl = activeSeatGrant
     ? `<button type="button" class="action-pill key-cancel ac-insp-btn" data-auto-consent-action="revoke-grant" data-grant-id="${escapeHtml(activeSeatGrant.grant.grantId)}" title="${escapeHtml(td('autoConsent.remainingMeta', { min: activeSeatGrant.remainingMin, left: activeSeatGrant.remainingApprovals, max: activeSeatGrant.effectiveMax }))}"${disabledAttr}>${escapeHtml(td('autoConsent.revokeGrantBtn'))} (${escapeHtml(formatTtlShort(activeSeatGrant.remainingMin, lang))})</button>`
-    : `<button type="button" class="action-pill ac-insp-btn" data-auto-consent-action="grant-session" data-scope="seat" data-target="${escapeHtml(seatId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>`;
+    : `<button type="button" class="action-pill ac-insp-btn${grantBtnToneClass}" data-auto-consent-action="grant-session" data-scope="seat" data-target="${escapeHtml(seatId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>`;
 
   return `<div class="ac-inspector-strip" data-seat="${escapeHtml(seatId)}">` +
     `<div class="ac-inspector-head">` +
