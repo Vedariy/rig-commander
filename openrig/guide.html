@@ -47,7 +47,7 @@
           "@type": "HowToStep",
           "position": 2,
           "name": "Start RigCommander",
-          "text": "Run npx rig-commander@latest in a terminal."
+          "text": "Run npx rig-commander@3.9.0 --read-only in a terminal."
         },
         {
           "@type": "HowToStep",
@@ -112,19 +112,21 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(3, 7, 18, 0.92);
-      backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--border);
+      height: 56px;
+      background: rgba(5, 10, 20, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
     }
     .topbar-inner {
       max-width: 1220px;
+      height: 100%;
       margin: 0 auto;
-      padding: 10px 20px;
+      padding: 0 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      flex-wrap: wrap;
     }
     .brand {
       display: inline-flex;
@@ -151,35 +153,58 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 4px;
-      flex-wrap: wrap;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
+      gap: 6px;
+      font-size: 13px;
     }
     .nav-links a {
       display: inline-flex;
       align-items: center;
-      min-height: 32px;
-      padding: 0 7px;
-      border-radius: 6px;
-      color: var(--muted);
+      min-height: 36px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #cbd5e1;
+      font-weight: 600;
+      white-space: nowrap;
       text-decoration: none;
       transition: color 0.15s, background 0.15s;
     }
-    .nav-links a:hover { color: var(--cyan); background: rgba(0, 240, 255, 0.08); }
+    .nav-links a:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+    .nav-links a[aria-current="page"] { color: #fff; background: rgba(255, 255, 255, 0.06); }
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 0 16px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
+      color: #020617;
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      font-weight: 800;
+      text-decoration: none;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: 0 0 22px rgba(0, 255, 157, 0.42), 0 0 12px rgba(0, 240, 255, 0.35);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .nav-cta:hover { box-shadow: 0 0 32px rgba(0, 255, 157, 0.72), 0 0 22px rgba(0, 240, 255, 0.65); transform: translateY(-1px); color: #000; }
+    .nav-cta-dot { width: 7px; height: 7px; border-radius: 50%; background: #022c22; box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.28); }
+
     .nav-right { display: flex; align-items: center; gap: 10px; }
     .lang-switch {
       display: inline-flex;
       background: rgba(15, 23, 42, 0.9);
       border: 1px solid var(--border-bright);
-      border-radius: 8px;
+      border-radius: 999px;
       padding: 2px;
     }
     .lang-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 32px;
+      min-width: 36px;
+      min-height: 36px;
       background: transparent;
       border: none;
       color: var(--muted);
@@ -187,26 +212,10 @@
       font-size: 11px;
       font-weight: 700;
       padding: 0 9px;
-      border-radius: 6px;
+      border-radius: 999px;
       cursor: pointer;
     }
-    .lang-btn.active { background: rgba(0, 240, 255, 0.18); color: var(--cyan); }
-    .cta-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      min-height: 34px;
-      text-decoration: none;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      font-weight: 800;
-      color: #030712;
-      background: linear-gradient(135deg, var(--emerald), var(--cyan));
-      padding: 0 14px;
-      border-radius: 9px;
-      box-shadow: 0 0 18px rgba(0, 240, 255, 0.28);
-      white-space: nowrap;
-    }
+    .lang-btn.active { background: rgba(0, 240, 255, 0.16); color: var(--cyan); }
 
     .layout {
       max-width: 1220px;
@@ -220,7 +229,7 @@
 
     .toc {
       position: sticky;
-      top: 76px;
+      top: 72px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -339,6 +348,8 @@
     .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 
     .subcard {
+      min-width: 0;
+      overflow-wrap: anywhere;
       background: var(--card-2);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -396,7 +407,35 @@
     }
     .copy-btn:hover { border-color: var(--cyan); color: #fff; background: rgba(0, 240, 255, 0.14); }
     .copy-btn.copied { border-color: var(--emerald); color: var(--emerald); }
+    .copy-btn { min-height: 32px; padding: 4px 12px; }
+    .safe-start {
+      margin-top: 10px;
+      padding: 10px 12px 4px;
+      border: 1px solid rgba(0, 255, 157, 0.5);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(0, 255, 157, 0.09), rgba(0, 255, 157, 0.02));
+      box-shadow: 0 0 22px rgba(0, 255, 157, 0.12);
+    }
+    .safe-start-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .safe-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: #00ff9d;
+      color: #022c22;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      white-space: nowrap;
+    }
+    .safe-start-note { font-family: var(--font-mono); font-size: 11.5px; color: #6ee7b7; }
+    .safe-start .cmd-row { border-color: rgba(0, 255, 157, 0.45); color: #6ee7b7; }
+    .alias-note { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin: 2px 0 6px; }
 
+    td code.inline { white-space: nowrap; }
     code.inline {
       font-family: var(--font-mono);
       font-size: 11.8px;
@@ -555,8 +594,10 @@
       .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     }
     @media (max-width: 640px) {
-      .topbar { position: relative; }
-      .topbar-inner { padding: 8px 14px; gap: 8px; }
+      .topbar { position: relative; height: auto; }
+      .topbar-inner { height: auto; min-height: 56px; padding: 8px 14px; gap: 8px; flex-wrap: wrap; }
+      .pill-tag { display: none; }
+      .nav-links { order: 3; width: 100%; flex-wrap: wrap; gap: 2px; }
       .layout { padding: 14px 14px 0; }
       section.card { padding: 16px 14px; }
       table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -570,23 +611,22 @@
         <span>💠 RIGCOMMANDER</span>
         <span class="pill-tag">USER GUIDE v3.9.0</span>
       </a>
-      <nav class="nav-links">
-        <a href="#quickstart"><span data-lang-block="ru">Старт</span><span data-lang-block="en">Quick Start</span></a>
-        <a href="#anatomy"><span data-lang-block="ru">Экран L0–L3</span><span data-lang-block="en">L0–L3 Deck</span></a>
-        <a href="#playbooks"><span data-lang-block="ru">Плейбуки</span><span data-lang-block="en">Playbooks</span></a>
-        <a href="#openrig-playbook"><span data-lang-block="ru">OpenRig L3</span><span data-lang-block="en">OpenRig L3</span></a>
-        <a href="#guardrails"><span data-lang-block="ru">FinOps & TG</span><span data-lang-block="en">FinOps & TG</span></a>
-        <a href="#pwa"><span data-lang-block="ru">Live PWA</span><span data-lang-block="en">Live PWA</span></a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="/#architecture"><span data-lang-block="ru">Архитектура</span><span data-lang-block="en">Architecture</span></a>
+        <a href="/guide" aria-current="page"><span data-lang-block="ru">Гайд</span><span data-lang-block="en">Guide</span></a>
         <a href="/passport"><span data-lang-block="ru">Паспорт</span><span data-lang-block="en">Passport</span></a>
+        <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
       </nav>
       <div class="nav-right">
         <div class="lang-switch" role="group" aria-label="Language">
           <button type="button" class="lang-btn active" data-lang="en" onclick="setLang('en')">EN</button>
           <button type="button" class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
         </div>
-        <a class="cta-btn" href="/demo" id="guidePrimaryCta">
-          <span data-lang-block="ru">▶ Открыть демо</span>
-          <span data-lang-block="en">▶ Open Demo</span>
+        <a class="nav-cta" href="/demo" id="guidePrimaryCta">
+          <span class="nav-cta-dot"></span>
+          <span data-lang-block="ru">Живое демо</span>
+          <span data-lang-block="en">Live Demo</span>
+          <span>→</span>
         </a>
       </div>
     </div>
@@ -641,22 +681,31 @@
           <span data-lang-block="en">RigCommander is a zero-dependency, local-first server with no cloud login. Start in zero-write <code class="inline">--read-only</code> mode for safe first evaluation, or launch the full interactive deck on <code class="inline">http://127.0.0.1:7440</code>.</span>
         </p>
 
-        <div style="font-family:var(--font-mono); font-size:11.5px; color:var(--emerald); margin-top:4px;">
-          <span data-lang-block="ru">🔒 Безопасный первый запуск (read-only — запись в терминал и мутации отключены):</span>
-          <span data-lang-block="en">🔒 Safe first evaluation (read-only — all terminal writes and mutations disabled):</span>
-        </div>
-        <div class="cmd-row">
-          <code>npx rig-commander@latest --read-only</code>
-          <button type="button" class="copy-btn" data-copy="npx rig-commander@latest --read-only">Cmd ⧉</button>
+        <div class="safe-start">
+          <div class="safe-start-head">
+            <span class="safe-badge">✓ <span data-lang-block="ru">БЕЗОПАСНЫЙ СТАРТ</span><span data-lang-block="en">SAFE START</span></span>
+            <span class="safe-start-note">
+              <span data-lang-block="ru">read-only — запись в терминал и мутации отключены (рекомендуется для первого осмотра)</span>
+              <span data-lang-block="en">read-only — all terminal writes and mutations disabled (recommended first run)</span>
+            </span>
+          </div>
+          <div class="cmd-row">
+            <code>npx rig-commander@3.9.0 --read-only</code>
+            <button type="button" class="copy-btn" data-copy="npx rig-commander@3.9.0 --read-only"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button>
+          </div>
         </div>
 
-        <div style="font-family:var(--font-mono); font-size:11.5px; color:#7dd3fc; margin-top:8px;">
+        <div style="font-family:var(--font-mono); font-size:11.5px; color:#7dd3fc; margin-top:10px;">
           <span data-lang-block="ru">⚡ Полный интерактивный пульт (HITL-подтверждения, /compact и управление):</span>
           <span data-lang-block="en">⚡ Full interactive command deck (1-click HITL approvals, /compact &amp; controls):</span>
         </div>
         <div class="cmd-row">
-          <code>npx rig-commander@latest</code>
-          <button type="button" class="copy-btn" data-copy="npx rig-commander@latest">Cmd ⧉</button>
+          <code>npx rig-commander@3.9.0</code>
+          <button type="button" class="copy-btn" data-copy="npx rig-commander@3.9.0"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button>
+        </div>
+        <div class="alias-note">
+          <span data-lang-block="ru">Версия закреплена для воспроизводимости. <code class="inline">@latest</code> — необязательный алиас на самый свежий релиз.</span>
+          <span data-lang-block="en">Version-pinned for reproducibility. <code class="inline">@latest</code> is an optional alias for the newest release.</span>
         </div>
 
         <div class="grid-2" style="margin-top:12px;">
@@ -686,7 +735,7 @@
           </thead>
           <tbody>
             <tr>
-              <td><code class="inline">npx rig-commander@latest --read-only</code></td>
+              <td><code class="inline">npx rig-commander@3.9.0 --read-only</code></td>
               <td><span data-lang-block="ru">Безопасный режим осмотра: блокирует любые записи в <code class="inline">tmux</code>, перезапуски и мутации</span><span data-lang-block="en">Zero-write inspection mode: disables all <code class="inline">tmux</code> keystrokes, restarts, and mutations</span></td>
             </tr>
             <tr>
@@ -955,7 +1004,7 @@
         </div>
         <div class="cmd-row">
           <code>tailscale serve https / http://127.0.0.1:7440</code>
-          <button type="button" class="copy-btn" data-copy="tailscale serve https / http://127.0.0.1:7440">Cmd ⧉</button>
+          <button type="button" class="copy-btn" data-copy="tailscale serve https / http://127.0.0.1:7440"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button>
         </div>
 
         <div style="font-family:var(--font-mono); font-size:11.5px; color:#7dd3fc; margin-top:8px;">
@@ -964,7 +1013,7 @@
         </div>
         <div class="cmd-row">
           <code>cloudflared tunnel --url http://127.0.0.1:7440</code>
-          <button type="button" class="copy-btn" data-copy="cloudflared tunnel --url http://127.0.0.1:7440">Cmd ⧉</button>
+          <button type="button" class="copy-btn" data-copy="cloudflared tunnel --url http://127.0.0.1:7440"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button>
         </div>
 
         <ul class="clean" style="margin-top:10px;">
@@ -1105,9 +1154,9 @@
           </div>
           <div class="subcard">
             <div class="subcard-title">🔄 <span data-lang-block="ru">Ежедневный цикл и восстановление</span><span data-lang-block="en">Daily Lifecycle & Honest Recovery</span></div>
-            <div class="cmd-row"><code>rig daemon start &amp;&amp; rig ps</code><button type="button" class="copy-btn" data-copy="rig daemon start &amp;&amp; rig ps">Cmd ⧉</button></div>
-            <div class="cmd-row"><code>rig up kernel --existing --plan</code><button type="button" class="copy-btn" data-copy="rig up kernel --existing --plan">Cmd ⧉</button></div>
-            <div class="cmd-row"><code>rig parked --rig core-platform</code><button type="button" class="copy-btn" data-copy="rig parked --rig core-platform">Cmd ⧉</button></div>
+            <div class="cmd-row"><code>rig daemon start &amp;&amp; rig ps</code><button type="button" class="copy-btn" data-copy="rig daemon start &amp;&amp; rig ps"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+            <div class="cmd-row"><code>rig up kernel --existing --plan</code><button type="button" class="copy-btn" data-copy="rig up kernel --existing --plan"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+            <div class="cmd-row"><code>rig parked --rig core-platform</code><button type="button" class="copy-btn" data-copy="rig parked --rig core-platform"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
             <p style="margin-top:6px;">
               <span data-lang-block="ru"><strong>5 статусов восстановления:</strong> <code class="inline">resumed</code> (родной диалог), <code class="inline">fresh-primed</code> (чистый с контекстом роли), <code class="inline">awaiting-decision</code> (был остановлен намеренно ➔ <code class="inline">rig seat launch --fresh</code>), <code class="inline">attention_required</code> (проверьте <code class="inline">rig capture</code> ➔ <code class="inline">rig seat clear-attention</code>), <code class="inline">failed</code>.</span>
               <span data-lang-block="en"><strong>5 Recovery Statuses:</strong> <code class="inline">resumed</code> (native session), <code class="inline">fresh-primed</code> (role context loaded), <code class="inline">awaiting-decision</code> (intentionally stopped ➔ <code class="inline">rig seat launch --fresh</code>), <code class="inline">attention_required</code> (verify with <code class="inline">rig capture</code> ➔ <code class="inline">rig seat clear-attention</code>), <code class="inline">failed</code>.</span>
@@ -1158,9 +1207,9 @@
 
         <details class="faq" open>
           <summary><span data-lang-block="ru">1–3. Усыновление живых tmux-агентов (discover/adopt), attach --self и горячее масштабирование (grow/expand)</span><span data-lang-block="en">1–3. Adopt running tmux agents (discover/adopt), attach --self, and live scaling (grow/expand)</span></summary>
-          <div class="cmd-row"><code>rig discover --draft &amp;&amp; rig adopt ./rig.yaml --bind dev.coder=&lt;tmuxSession&gt;</code><button type="button" class="copy-btn" data-copy="rig discover --draft">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig attach --self --rig &lt;rigId&gt; --pod operator --member person-agent --runtime codex --print-env</code><button type="button" class="copy-btn" data-copy="rig attach --self --rig &lt;rigId&gt; --pod operator --member person-agent --runtime codex --print-env">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig grow core-platform coder6 --pod dev --runtime codex --cwd /path/to/repo</code><button type="button" class="copy-btn" data-copy="rig grow core-platform coder6 --pod dev --runtime codex --cwd /path/to/repo">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig discover --draft &amp;&amp; rig adopt ./rig.yaml --bind dev.coder=&lt;tmuxSession&gt;</code><button type="button" class="copy-btn" data-copy="rig discover --draft"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig attach --self --rig &lt;rigId&gt; --pod operator --member person-agent --runtime codex --print-env</code><button type="button" class="copy-btn" data-copy="rig attach --self --rig &lt;rigId&gt; --pod operator --member person-agent --runtime codex --print-env"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig grow core-platform coder6 --pod dev --runtime codex --cwd /path/to/repo</code><button type="button" class="copy-btn" data-copy="rig grow core-platform coder6 --pod dev --runtime codex --cwd /path/to/repo"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
           <p>
             <span data-lang-block="ru"><code class="inline">rig release &lt;rigId&gt;</code> отпускает adopted-сессии живыми, не убивая терминалы. <code class="inline">attach --self</code> включает ваш внешний shell в топологию, чтобы агенты могли делать <code class="inline">handoff</code> прямо в ваш инбокс, а <code class="inline">grow/expand/add/remove</code> масштабируют живой риг без <code class="inline">rig down</code>.</span>
             <span data-lang-block="en"><code class="inline">rig release &lt;rigId&gt;</code> detaches adopted sessions without killing terminals. <code class="inline">attach --self</code> registers your own shell as a named member so agents can hand off directly to your inbox, while <code class="inline">grow/expand/add/remove</code> scale a live rig without <code class="inline">rig down</code>.</span>
@@ -1169,10 +1218,10 @@
 
         <details class="faq">
           <summary><span data-lang-block="ru">4–6. Пересадка рантайма (set-runtime), клон прогретого агента (fork) и защита контекста (compact/watchdog/handover)</span><span data-lang-block="en">4–6. Live runtime transplant (set-runtime), warmed-agent cloning (fork), and context hygiene (compact/watchdog/handover)</span></summary>
-          <div class="cmd-row"><code>rig seat set-runtime dev-coder4@core-platform --runtime claude-code --reason "quota swap" --dry-run</code><button type="button" class="copy-btn" data-copy="rig seat set-runtime dev-coder4@core-platform --runtime claude-code --reason &quot;quota swap&quot; --dry-run">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig fork dev-coder4@core-platform --rig core-platform --pod dev --member coder4-spike --keep-image</code><button type="button" class="copy-btn" data-copy="rig fork dev-coder4@core-platform --rig core-platform --pod dev --member coder4-spike --keep-image">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig compact dev-check@core-platform</code><button type="button" class="copy-btn" data-copy="rig compact dev-check@core-platform">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig handover dev-coder4@core-platform --source fork:dev-coder4@core-platform --reason "clean successor"</code><button type="button" class="copy-btn" data-copy="rig handover dev-coder4@core-platform --source fork:dev-coder4@core-platform --reason &quot;clean successor&quot;">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig seat set-runtime dev-coder4@core-platform --runtime claude-code --reason "quota swap" --dry-run</code><button type="button" class="copy-btn" data-copy="rig seat set-runtime dev-coder4@core-platform --runtime claude-code --reason &quot;quota swap&quot; --dry-run"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig fork dev-coder4@core-platform --rig core-platform --pod dev --member coder4-spike --keep-image</code><button type="button" class="copy-btn" data-copy="rig fork dev-coder4@core-platform --rig core-platform --pod dev --member coder4-spike --keep-image"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig compact dev-check@core-platform</code><button type="button" class="copy-btn" data-copy="rig compact dev-check@core-platform"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig handover dev-coder4@core-platform --source fork:dev-coder4@core-platform --reason "clean successor"</code><button type="button" class="copy-btn" data-copy="rig handover dev-coder4@core-platform --source fork:dev-coder4@core-platform --reason &quot;clean successor&quot;"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
           <p>
             <span data-lang-block="ru"><strong>Successor-First:</strong> при <code class="inline">set-runtime</code> новый рантайм прогревается рядом с handover-пакетом, входящие сообщения придерживаются и не теряются. <code class="inline">rig fork</code> раздваивает агента с прогретым контекстом для параллельной гипотезы, а <code class="inline">rig watchdog register --policy context-usage-threshold --threshold-percent 70</code> предупреждает до деградации.</span>
             <span data-lang-block="en"><strong>Successor-First:</strong> <code class="inline">set-runtime</code> boots the replacement runtime alongside the old seat with a handover pack while holding incoming work safely. <code class="inline">rig fork</code> clones a warmed agent to test parallel hypotheses, and <code class="inline">rig watchdog register --policy context-usage-threshold --threshold-percent 70</code> alerts before context rot.</span>
@@ -1181,10 +1230,10 @@
 
         <details class="faq">
           <summary><span data-lang-block="ru">7–10. Некромантия одного вопроса (ask --wake), дозированный контекст (context+walk), ACP, мульти-хост и crash-cart</span><span data-lang-block="en">7–10. One-question wake (ask --wake), paced context (context+walk), ACP, multi-host &amp; crash-cart</span></summary>
-          <div class="cmd-row"><code>rig ask core-platform "Why was this index chosen?" --wake dev-senior-architect@core-platform</code><button type="button" class="copy-btn" data-copy="rig ask core-platform &quot;Why was this index chosen?&quot; --wake dev-senior-architect@core-platform">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig context compose --out packs/onboarding --from ./ADR-01.md ./API.md</code><button type="button" class="copy-btn" data-copy="rig context compose --out packs/onboarding --from ./ADR-01.md ./API.md">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig walk dev-coder5@core-platform --through packs/onboarding --pace 12s</code><button type="button" class="copy-btn" data-copy="rig walk dev-coder5@core-platform --through packs/onboarding --pace 12s">Cmd ⧉</button></div>
-          <div class="cmd-row"><code>rig acp run &lt;qitemId&gt; &lt;agent-cmd&gt;   # emergency: rig crash-cart --json</code><button type="button" class="copy-btn" data-copy="rig crash-cart --json">Cmd ⧉</button></div>
+          <div class="cmd-row"><code>rig ask core-platform "Why was this index chosen?" --wake dev-senior-architect@core-platform</code><button type="button" class="copy-btn" data-copy="rig ask core-platform &quot;Why was this index chosen?&quot; --wake dev-senior-architect@core-platform"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig context compose --out packs/onboarding --from ./ADR-01.md ./API.md</code><button type="button" class="copy-btn" data-copy="rig context compose --out packs/onboarding --from ./ADR-01.md ./API.md"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig walk dev-coder5@core-platform --through packs/onboarding --pace 12s</code><button type="button" class="copy-btn" data-copy="rig walk dev-coder5@core-platform --through packs/onboarding --pace 12s"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
+          <div class="cmd-row"><code>rig acp run &lt;qitemId&gt; &lt;agent-cmd&gt;   # emergency: rig crash-cart --json</code><button type="button" class="copy-btn" data-copy="rig crash-cart --json"><span data-lang-block="ru">Копировать</span><span data-lang-block="en">Copy</span></button></div>
           <p>
             <span data-lang-block="ru"><code class="inline">ask --wake</code> точечно будит архивное кресло на один вопрос и снова усыпляет. <code class="inline">context + walk</code> скармливает большие спеки порциями с паузами. Для пробивки застрявшего меню (после визуальной проверки экрана) используйте <code class="inline">rig send &lt;seat&gt; "1" --dangerously-interact --reason "..."</code>, а когда демон не стартует — <code class="inline">rig crash-cart --json</code>.</span>
             <span data-lang-block="en"><code class="inline">ask --wake</code> wakes a stopped/archived seat for a single question and puts it back to sleep. <code class="inline">context + walk</code> feeds large specs in paced chunks. To answer a stuck menu (after checking the screen), use <code class="inline">rig send &lt;seat&gt; "1" --dangerously-interact --reason "..."</code>, and when the daemon won't boot, run read-only <code class="inline">rig crash-cart --json</code>.</span>
@@ -1275,11 +1324,11 @@
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).catch(() => {});
           }
-          const orig = btn.textContent;
+          const orig = btn.innerHTML;
           btn.textContent = '✓ OK';
           btn.classList.add('copied');
           setTimeout(() => {
-            btn.textContent = orig;
+            btn.innerHTML = orig;
             btn.classList.remove('copied');
           }, 1300);
         });
