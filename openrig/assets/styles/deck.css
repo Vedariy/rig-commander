@@ -5083,6 +5083,7 @@ body.demo-mode .triage-card-title, body.demo-mode .triage-card-desc { white-spac
 }
 @media (max-width: 768px) {
   body.demo-mode .triage-strip { display: grid; grid-template-columns: minmax(0, 1fr) auto; overflow: visible; gap: 6px; padding: 6px 8px; }
+  body.demo-mode .triage-meta { min-width: 0; flex-wrap: wrap; }
   body.demo-mode .triage-badge { font-size: 8px; letter-spacing: 0; white-space: normal; }
   body.demo-mode .triage-cards-container { grid-row: 2; grid-column: 1 / -1; width: 100%; overflow-x: auto; }
   body.demo-mode .triage-card { flex: 0 0 285px; min-width: 285px; }

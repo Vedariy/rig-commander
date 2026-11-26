@@ -3634,9 +3634,14 @@
     function copyCmd(cmd) {
       navigator.clipboard.writeText(cmd);
       const t = document.getElementById('copyToast');
-      t.textContent = `Скопировано: ${cmd}`;
+      renderCopiedCommandFeedback(t, cmd);
       t.style.display = 'block';
       setTimeout(() => { t.style.display = 'none'; }, 2200);
+    }
+
+    function renderCopiedCommandFeedback(el, cmd) {
+      el.textContent = `${td('advisor.copied')} ${cmd}`;
+      el.copiedCommandFeedback = { cmd, text: el.textContent };
     }
 
     // ===== Interactive Cyber-Console Controller =====
@@ -8035,6 +8040,8 @@
         if (feedback && el.textContent === feedback.text) renderDemoControlFeedback(el, feedback.seat, feedback.toast);
         const quest = el?.demoQuestFeedback;
         if (quest && el.textContent === quest.text) renderDemoQuestFeedback(el, quest.stepId, quest.done);
+        const copied = el?.copiedCommandFeedback;
+        if (copied && el.textContent === copied.text) renderCopiedCommandFeedback(el, copied.cmd);
       });
       if (skipRerender) return;
       rebuildDemoIntelligence();

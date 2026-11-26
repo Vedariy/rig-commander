@@ -62,3 +62,18 @@ test('real demo send fallback localizes status and toast through language round 
  assert.doesNotMatch(toast.textContent,/[А-Яа-яЁё]/);assert.match(toast.textContent,/Mission progress \(3\/3\)/);
  f.run("setDeckLang('ru',true)");assert.match(toast.textContent,/Прогресс квеста \(3\/3\)/);
 });
+
+test('copy command stays clipboard-only and its active toast follows EN/RU language changes',()=>{
+ const f=fixture(), writes=[], toast={textContent:'',style:{}};
+ f.context.navigator.clipboard={writeText:cmd=>{writes.push(cmd);return Promise.resolve();}};
+ f.context.document.documentElement={};f.context.document.getElementById=id=>id==='copyToast'?toast:null;
+ f.run('updateGraphLayoutSwitchUi=updateActiveFilterLabel=syncDemoHeader=()=>{}');
+ for(const lang of ['en','ru']){
+  f.run(`setDeckLang('${lang}',true);copyCmd('npx rig-commander@latest')`);
+  assert.equal(toast.textContent,(lang==='en'?'Copied: ':'Скопировано: ')+'npx rig-commander@latest');
+  f.run(`setDeckLang('${lang==='en'?'ru':'en'}',true)`);
+  assert.equal(toast.textContent,(lang==='en'?'Скопировано: ':'Copied: ')+'npx rig-commander@latest');
+ }
+ assert.deepEqual(writes,['npx rig-commander@latest','npx rig-commander@latest']);assert.equal(f.calls.length,0);
+ toast.textContent='Another operation';f.run("setDeckLang('en',true)");assert.equal(toast.textContent,'Another operation');
+});
