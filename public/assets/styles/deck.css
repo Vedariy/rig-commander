@@ -6681,10 +6681,29 @@ body.demo-preset-universal .hud-cluster-scope {
 }
 .diag-inline-hitl {
   margin-top: 2px;
-  padding: 6px 8px;
+  padding: 2px 0 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+}
+.hitl-term-context {
+  margin: 0 0 8px;
+  padding: 5px 8px;
   border-radius: 6px;
-  background: rgba(5, 10, 22, 0.86);
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(2, 6, 23, 0.88);
+  border-left: 2px solid rgba(56, 189, 248, 0.55);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.38;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 68px;
+  overflow: hidden;
+}
+.wait-card.is-selected-card {
+  border-color: rgba(56, 189, 248, 0.65) !important;
+  box-shadow: inset 3px 0 0 var(--wait-color, var(--cyan)), 0 0 0 1px rgba(56, 189, 248, 0.25);
 }
 .diag-inline-hitl .ctrl-prompt-options {
   display: flex !important;
@@ -6918,6 +6937,9 @@ body.demo-preset-universal .hud-cluster-scope {
   #panelRight > .panel-header {
     padding: 6px 10px !important;
     min-height: 32px;
+  }
+  #panelRight > .panel-header {
+    display: none !important;
   }
   #panelRight .panel-body {
     padding: 8px !important;

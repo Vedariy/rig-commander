@@ -204,7 +204,7 @@ flowchart TD
     subgraph DEV["Доставка и тесты"]
         SYNC["scripts/sync-public.mjs -> public/ (Vercel)"]
         CLI["scripts/verify-providers.mjs (npm run verify:providers)"]
-        TEST["tests/*.test.mjs (44 набора, 372/372 PASS на node --test)"]
+        TEST["tests/*.test.mjs (44 набора, 373/373 PASS на node --test)"]
     end
 
     HTML --> CSS

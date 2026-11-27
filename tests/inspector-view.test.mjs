@@ -639,3 +639,23 @@ test('v3.12.0 inspector deduplicates HITL options bar when P0 inline card is pre
   assert.equal(barStub.innerHTML, '');
   assert.equal(attrs.get('data-cache-key'), '');
 });
+
+test('v3.12.2 P0 HITL renders inline 3-line redacted terminal context above Allow Once and Wait Radar drops fake selected-pill button', async () => {
+  const fs = await import('node:fs/promises');
+  const indexHtml = await fs.readFile(new URL('../openrig/index.html', import.meta.url), 'utf8');
+  const screen = [
+    '[tmux: codex-tests] ~/projects/payments-api (codex • gpt-5-codex)',
+    'Updated 3 test files in tests/webhooks.test.mjs.',
+    'export API_TOKEN="secret-fixture-value-12345"',
+    '$ npm test',
+    '› 1. Yes, allow once (y)',
+    '  2. Yes, always allow in this directory',
+    '  3. No, cancel (esc)'
+  ].join('\n');
+  const html = renderInteractivePromptOptionsHtml({ ...context('en'), agents: [{ id: 'codex-tests', cwd: '~/projects/payments-api' }] }, 'codex-tests', screen);
+  assert.match(html, /class="hitl-term-context"/);
+  assert.ok(html.includes('Updated 3 test files in tests/webhooks.test.mjs.'));
+  assert.ok(!html.includes('secret-fixture-value-12345'), 'Secrets in inline terminal context must be redacted');
+  assert.ok(html.indexOf('hitl-term-context') < html.indexOf('hitl-btn-primary'), 'Terminal context must sit above primary Allow Once button');
+  assert.doesNotMatch(indexHtml, /class="radar-selected-pill"/, 'Wait Radar must not render non-interactive pseudo-button');
+});

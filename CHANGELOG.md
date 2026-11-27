@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.12.2] - 2026-11-27
+
+### Fixed & Improved
+- **Live 3-Line Terminal Context Directly Inside P0 HITL Card (`openrig/assets/domain/prompt-parser.js`, `openrig/assets/ui/inspector-view.js`, `openrig/assets/styles/deck.css`):**
+  - Extracted up to 3 redacted terminal context lines directly before the active prompt menu (`extractPromptContextLines`) and rendered them inline above the primary Allow Once button so operators on `1280×720` laptop and `390×844` mobile see live terminal context before approving without scrolling.
+  - Collapsed redundant nested yellow frame inside `.diag-inline-hitl` and hid the duplicate `#panelRight > .panel-header` on mobile (`<= 768px`) to reclaim vertical space above the fold.
+- **No False Button Affordance in Wait Radar & Clean Card Wrapping (`openrig/index.html`, `landing/index.html`, `landing/passport.html`):**
+  - Removed the non-interactive `→ Selected right` pseudo-button in Wait Radar in favor of crisp `.wait-card.is-selected-card` border highlighting so active cards never mimic mutating `/compact` buttons.
+  - Enforced `overflow-wrap: anywhere` / `white-space: normal` on `.sec-guarantee-desc code` and `.guarantees-table code` and linked the `SIGSTORE PROVENANCE` card directly to the copyable `/guide#quickstart` 1-liner, eliminating card border overflow on desktop.
+
+---
+
 ## [3.12.1] - 2026-11-27
 
 ### Fixed & Improved

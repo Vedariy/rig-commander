@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.12.1" />
+  <meta name="app-version" content="3.12.2" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -2328,7 +2328,7 @@
               ? { id: 'focus_seat', transport: 'select_seat', seatId: w.seatId, payload: '', label: w.actionLabel, tone: 'default' }
               : null);
             const quickActionBtn = isSelectedHitlInRight
-              ? `<span class="radar-selected-pill">${escapeHtml(td('radar.selectedRight'))}</span>`
+              ? ''
               : (radarActionDesc
                 ? renderOntologyActionBtn(radarActionDesc, {
                     className: `radar-quick-btn ${w.actionKind === 'tmux' ? 'urgent' : ''}`,

@@ -293,11 +293,31 @@ function currentPromptCommand(screen) {
   return shellFallback || question;
 }
 
+function extractPromptContextLines(screen, maxLines = 3) {
+  const lines = screen.split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(-48);
+  if (!lines.length) return [];
+  let end = lines.findLastIndex(line => NUMBERED_OPT_RE.exec(line)?.[1] === '1');
+  if (end < 0) {
+    end = lines.findIndex(line => NUMBERED_OPT_RE.test(line) || /^\[[1-9a-z]\]/i.test(line));
+    if (end < 0) end = lines.length;
+  }
+  const picked = [];
+  for (let i = end - 1; i >= Math.max(0, end - 10) && picked.length < maxLines; i--) {
+    const line = lines[i];
+    if (NUMBERED_OPT_RE.test(line) || HITL_STRONG_NAV_RE.test(line) || IDLE_BARE_PROMPT_RE.test(line)) break;
+    if (/^[-─━=]+$/.test(line) || /^\[(?:tmux:\s*)?[^\]]+\]\s*/i.test(line)) continue;
+    const sanitized = safePromptText(line);
+    const chars = Array.from(sanitized);
+    picked.push(chars.length > 96 ? chars.slice(0, 95).join('') + '…' : sanitized);
+  }
+  return picked.reverse();
+}
+
 /** Presentation data for both approval surfaces. Only sanitized text reaches their tooltips. */
 export function getHitlPromptPresentation(screenText) {
   const screen = typeof screenText === 'string' ? stripTerminalFormatting(screenText) : '';
   const hitl = detectPlainHitlPrompt(screen);
-  if (!hitl.blocked) return { preview: '', fullCommand: '', options: [] };
+  if (!hitl.blocked) return { preview: '', fullCommand: '', options: [], contextLines: [] };
   const fullCommand = safePromptText(currentPromptCommand(screen));
   const characters = Array.from(fullCommand);
   const preview = characters.length > 180 ? characters.slice(0, 179).join('') + '…' : fullCommand;
@@ -305,7 +325,8 @@ export function getHitlPromptPresentation(screenText) {
     const fullText = safePromptText(opt.fullText);
     return fullText === opt.fullText ? opt : { ...opt, fullText, shortLabel: fullText };
   });
-  return { preview, fullCommand, options };
+  const contextLines = extractPromptContextLines(screen, 3);
+  return { preview, fullCommand, options, contextLines };
 }
 
 export function extractHitlCommandPreview(screenText) {

@@ -223,7 +223,7 @@ export function dedupeRadarItemsByAgent(items) {
 
 export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, statusElId = 'cmdSendStatus') {
   const { td, escapeHtml, getControlLockAttrs } = ctx;
-  const { preview, fullCommand, options } = getHitlPromptPresentation(screenText);
+  const { preview, fullCommand, options, contextLines = [] } = getHitlPromptPresentation(screenText);
   if (!preview && !options.length) return '';
   const agent = Array.isArray(ctx.agents) ? ctx.agents.find(a => a && a.id === seatId) : null;
   const shortName = ctx.shortSeat ? ctx.shortSeat(seatId) : String(seatId || '').split('@')[0];
@@ -234,6 +234,9 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     : '';
   const banner = preview
     ? `<div class="hitl-command-preview" title="${escapeHtml(fullCommand)}"><strong>🔍 ${escapeHtml(td('insp.hitlCmdLabel'))}</strong> <code>${escapeHtml(preview)}</code></div>`
+    : '';
+  const termContextHtml = contextLines.length
+    ? `<pre class="hitl-term-context" aria-label="Live terminal context">${escapeHtml(contextLines.join('\n'))}</pre>`
     : '';
   if (!options.length) return banner;
   const scopeKey = buildSeatScopeKey(seatId);
@@ -281,6 +284,7 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
       ${targetScopeHtml}
       ${banner}
+      ${termContextHtml}
       <span class="hitl-options-kicker" style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
       ${primaryHtml}
       ${secondaryHtml}

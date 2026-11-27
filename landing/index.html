@@ -1069,6 +1069,8 @@
       font-size: 12.5px;
       line-height: 1.5;
       color: #cbd5e1;
+      overflow-wrap: anywhere;
+      min-width: 0;
     }
     .sec-guarantee-desc a {
       display: inline-block;
@@ -1086,6 +1088,10 @@
       background: rgba(15, 23, 42, 0.9);
       padding: 1px 5px;
       border-radius: 4px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      box-decoration-break: clone;
     }
 
     /* 3-COLUMN COMPARISON MATRIX */
@@ -2247,7 +2253,7 @@ Command: npm test
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">SIGSTORE PROVENANCE</span>
             <div class="sec-guarantee-title" data-i18n="sec.g7.t">Verified Supply Chain &amp; 30-Second Audit</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify the exact package in a clean temp folder without running code (<code>npm install --ignore-scripts rig-commander@{{APP_VERSION}} &amp;&amp; npm audit signatures</code>, or <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
           </div>
         </div>
       </div>
@@ -2630,11 +2636,11 @@ Command: npm test
               Inspect Trust Boundaries, Operational Twin, Security Posture &amp; Verification
             </h3>
             <p style="font-size:13.5px; color:#94a3b8; line-height:1.5;" data-i18n="passport.desc">
-              Clean architectural &amp; security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 372 automated tests across 44 suites.
+              Clean architectural &amp; security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 373 automated tests across 44 suites.
             </p>
             <div class="passport-pills">
               <span class="passport-pill">0 npm deps • MIT</span>
-              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">372 / 372 Automated Tests PASS</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">373 / 373 Automated Tests PASS</span>
               <span class="passport-pill" style="color:#d8b4fe; border-color:rgba(168,85,247,0.4);">Advisory-Only AI Guardrails</span>
               <span class="passport-pill">Shared Context Lineage &amp; RECAP</span>
               <span class="passport-pill">SUB vs PAYG FinOps + PNG Card</span>
@@ -2902,7 +2908,7 @@ Command: npm test
         'sec.g6.t': 'Malicious Browser Tabs Can\'t Drive Your Terminals',
         'sec.g6.d': 'Local HTTP→tmux control checks every request\'s Host and Origin and requires per-process session auth. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>) — CSRF and DNS-rebinding from other tabs are rejected.',
         'sec.g7.t': 'Verified Supply Chain & 30-Second Audit',
-        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify the exact package in a clean temp folder without running code (<code>npm install --ignore-scripts rig-commander@{{APP_VERSION}} &amp;&amp; npm audit signatures</code>, or <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Honest Local Storage Model',
         'sec.g5.d': 'Local recovery & shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.',
         'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
@@ -3004,7 +3010,7 @@ Command: npm test
         'arch.s3.desc': 'Authorize HITL prompts in 1 click through the Security Gate (session auth + quick-action allowlist, explicit confirmation for manual input, and 403 hard-block in --read-only) and verify every postcondition automatically.',
         'passport.eyebrow': 'ARCHITECTURAL & SECURITY PASSPORT',
         'passport.title': 'Inspect Trust Boundaries, Operational Twin, Security Posture & Verification',
-        'passport.desc': 'Clean architectural & security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 372 automated tests across 44 suites.',
+        'passport.desc': 'Clean architectural & security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 373 automated tests across 44 suites.',
         'passport.cta': '📄 Open Project Passport',
         'passport.guardCta': '🛡️ Try Telegram HITL & Breaker',
         'waitlist.badge': '🚀 PRIVATE ACCESS',
@@ -3094,7 +3100,7 @@ Command: npm test
         'sec.g6.t': 'Вкладки браузера не управляют вашими терминалами',
         'sec.g6.d': 'Локальный мост HTTP→tmux проверяет Host и Origin каждого запроса и требует аутентификации сессии процесса. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>) — CSRF и DNS-rebinding из других вкладок отклоняются.',
         'sec.g7.t': 'Проверяемая цепочка поставки и аудит за 30 секунд',
-        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте артефакт в пустом временном каталоге без запуска кода (<code>npm install --ignore-scripts rig-commander@{{APP_VERSION}} &amp;&amp; npm audit signatures</code> или <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте через <code>npm audit signatures</code> и <code>dist.attestations</code> (<a href="/guide#quickstart">готовая команда в Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Честное локальное хранение',
         'sec.g5.d': 'Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска.',
         'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
@@ -3196,7 +3202,7 @@ Command: npm test
         'arch.s3.desc': 'Подтверждайте HITL-запросы в 1 клик через Security Gate (сессионная авторизация + белый список быстрых клавиш, явное подтверждение для ручного ввода и блок 403 в --read-only) с автоматической проверкой результата.',
         'passport.eyebrow': 'ПАСПОРТ АРХИТЕКТУРЫ И БЕЗОПАСНОСТИ',
         'passport.title': 'Изучите границы доверия, цифровой двойник, гарантии безопасности и верификацию',
-        'passport.desc': 'Чистый паспорт системы: C4-границы доверия, операционный цифровой двойник, гарантии localhost + защищённого Mobile PWA и 372 автотеста по 44 наборам.',
+        'passport.desc': 'Чистый паспорт системы: C4-границы доверия, операционный цифровой двойник, гарантии localhost + защищённого Mobile PWA и 373 автотеста по 44 наборам.',
         'passport.cta': '📄 Открыть паспорт проекта',
         'passport.guardCta': '🛡️ Telegram HITL и Авто-тормоз',
         'waitlist.badge': '🚀 ЗАКРЫТЫЙ ДОСТУП',
