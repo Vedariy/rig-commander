@@ -40,14 +40,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Architecture & Security Passport">
-  <meta property="og:description" content="Local-first trust boundaries, 0-dependency architecture, Operational Twin, privacy & security guarantees, and 373 automated tests.">
+  <meta property="og:description" content="Local-first trust boundaries, 0-dependency architecture, Operational Twin, privacy & security guarantees, and 378 automated tests.">
   <meta property="og:url" content="https://rig-commander.vercel.app/passport">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Architecture & Security Passport">
-  <meta name="twitter:description" content="Local-first trust boundaries, 0-dep architecture, Operational Twin, hardened security guarantees & 373 automated tests.">
+  <meta name="twitter:description" content="Local-first trust boundaries, 0-dep architecture, Operational Twin, hardened security guarantees & 378 automated tests.">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <style>
     :root {
@@ -152,21 +152,21 @@
       align-items: center;
       gap: 7px;
       min-height: 36px;
-      padding: 0 16px;
+      padding: 0 15px;
       border-radius: 9999px;
-      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
-      color: #020617;
+      background: rgba(0, 240, 255, 0.1);
+      color: #a5f3fc;
       font-family: var(--font-sans);
       font-size: 12.5px;
-      font-weight: 800;
+      font-weight: 700;
       text-decoration: none;
       white-space: nowrap;
-      border: 1px solid rgba(255, 255, 255, 0.55);
-      box-shadow: 0 0 22px rgba(0, 255, 157, 0.42), 0 0 12px rgba(0, 240, 255, 0.35);
-      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      border: 1px solid rgba(0, 240, 255, 0.42);
+      box-shadow: none;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
     }
-    .nav-cta:hover { box-shadow: 0 0 32px rgba(0, 255, 157, 0.72), 0 0 22px rgba(0, 240, 255, 0.65); transform: translateY(-1px); color: #000; }
-    .nav-cta-dot { width: 7px; height: 7px; border-radius: 50%; background: #022c22; box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.28); }
+    .nav-cta:hover { background: rgba(0, 240, 255, 0.18); border-color: rgba(0, 255, 157, 0.65); transform: translateY(-1px); color: #ecfeff; }
+    .nav-cta-dot { width: 7px; height: 7px; border-radius: 50%; background: #00ff9d; box-shadow: 0 0 0 2px rgba(0, 255, 157, 0.22); }
 
     .nav-right { display: flex; align-items: center; gap: 10px; }
     .lang-switch {
@@ -533,7 +533,7 @@
       <div class="eyebrow" data-i18n="hero.eyebrow">Архитектурный и операционный паспорт системы</div>
       <h1 data-i18n="hero.title">RigCommander // Command Deck</h1>
       <p class="hero-sub" data-i18n="hero.sub">
-        Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig и standalone tmux / JSONL). Объединяет адаптивную топологию, живой SSE-поток TMUX, операционный цифровой двойник, Гант и передачу задач, Git Worktree Radar, сводку смены, FinOps, защищённый Mobile PWA и идемпотентный HITL-контроль.
+        Локальный пульт управления параллельными ИИ-агентами в терминале (tmux, Claude Code, Codex CLI, Gemini CLI и OpenRig). Вместо ручного обхода вкладок показывает зависшие подтверждения HITL, перегрев контекста и Git Worktree — в отличие от облачных трейсеров (LangSmith/Langfuse), не требует аккаунта и оставляет вывод терминала на вашей машине.
       </p>
     </div>
 
@@ -579,13 +579,18 @@
               <td><span class="badge-sec"><span data-lang-block="en">AFTER OPT-IN</span><span data-lang-block="ru">ПОСЛЕ ВКЛЮЧЕНИЯ</span></span></td>
             </tr>
             <tr>
+              <td><b><span data-lang-block="en">Live TMUX SSE Redaction &amp; Log Scope</span><span data-lang-block="ru">Живой поток TMUX SSE и область чтения логов</span></b></td>
+              <td><span data-lang-block="en">API keys, Bearer/JWT tokens, PEM blocks, and <code>.env</code> secrets are masked server-side before live <code>/api/capture</code> or <code>/api/capture/stream</code> SSE reaches the browser (opt out via <code>--raw-capture</code>); live terminal captures stay in browser tab memory only and are never saved to <code>localStorage</code>. Local <code>~/.claude/</code> and <code>~/.codex/</code> logs are read for context/cost counters by default — pass <code>--no-session-logs</code> to restrict discovery strictly to live <code>tmux</code> panes.</span><span data-lang-block="ru">API-ключи, Bearer/JWT-токены, PEM-блоки и секреты <code>.env</code> маскируются на сервере до передачи живого экрана в браузер по <code>/api/capture</code> и SSE <code>/api/capture/stream</code> (отключается флагом <code>--raw-capture</code>); живой вывод хранится только в оперативной памяти вкладки и не пишется в <code>localStorage</code>. Журналы <code>~/.claude/</code> и <code>~/.codex/</code> читаются по умолчанию только для счётчиков контекста и стоимости — передайте <code>--no-session-logs</code>, чтобы ограничить чтение строго живыми панелями <code>tmux</code>.</span></td>
+              <td><span class="badge-ok"><span data-lang-block="en">BY DEFAULT</span><span data-lang-block="ru">ПО УМОЛЧАНИЮ</span></span></td>
+            </tr>
+            <tr>
               <td><b><span data-lang-block="en">Automatic Secret Redaction &amp; Automated Verification</span><span data-lang-block="ru">Автоматическая редакция секретов и автотесты</span></b></td>
-              <td><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are masked before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.</span><span data-lang-block="ru">API-ключи, токены, PEM-блоки и локальные пути маскируются до записи истории смен, экспортов и вызовов опциональных оценщиков. Набор открытых автотестов (<code>npm test</code>) проверяет нулевую запись <code>--read-only</code>, редакцию секретов, защиту CSRF/Origin и отмену при дрейфе TOCTOU.</span></td>
+              <td><span data-lang-block="en">API keys, tokens, PEM blocks, and local paths are masked before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, live SSE &amp; export secret redaction, <code>--no-session-logs</code> isolation, CSRF/Origin guards, and TOCTOU drift aborts.</span><span data-lang-block="ru">API-ключи, токены, PEM-блоки и локальные пути маскируются до записи истории смен, экспортов и вызовов опциональных оценщиков. Набор открытых автотестов (<code>npm test</code>) проверяет нулевую запись <code>--read-only</code>, редакцию секретов в SSE и экспортах, изоляцию <code>--no-session-logs</code>, защиту CSRF/Origin и отмену при дрейфе TOCTOU.</span></td>
               <td><span class="badge-ok">TESTED</span></td>
             </tr>
             <tr>
-              <td><b><span data-lang-block="en">Honest Local Storage</span><span data-lang-block="ru">Прозрачное локальное хранение</span></b></td>
-              <td><span data-lang-block="en">Local recovery and shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on OS disk encryption (FileVault / LUKS).</span><span data-lang-block="ru">Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска (FileVault / LUKS).</span></td>
+              <td><b><span data-lang-block="en">Honest Local Storage &amp; Maintainer Contact</span><span data-lang-block="ru">Локальное хранение и контакт мейнтейнера</span></b></td>
+              <td><span data-lang-block="en">Local recovery and shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on OS disk encryption (FileVault / LUKS). Maintained openly under MIT by <a href="https://github.com/Vedariy" target="_blank" rel="noopener">@Vedariy</a>; report bugs or security disclosures via <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub Issues</a> or <a href="https://github.com/Vedariy/rig-commander/security/advisories/new" target="_blank" rel="noopener">GitHub Security Advisories</a>.</span><span data-lang-block="ru">Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска (FileVault / LUKS). Открытый проект под лицензией MIT, мейнтейнер <a href="https://github.com/Vedariy" target="_blank" rel="noopener">@Vedariy</a>; баги и уязвимости принимаются через <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub Issues</a> и <a href="https://github.com/Vedariy/rig-commander/security/advisories/new" target="_blank" rel="noopener">GitHub Security Advisories</a>.</span></td>
               <td><span class="badge-sec">OWNER-ONLY</span></td>
             </tr>
           </tbody>
@@ -616,8 +621,8 @@
         </div>
         <div class="kpi-card">
           <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-          <div class="kpi-val" style="color:var(--emerald);">373 / 373 PASS</div>
-          <div class="kpi-note" data-i18n="kpi.tests.n">44 тестовых набора • ~3s локально</div>
+          <div class="kpi-val" style="color:var(--emerald);">378 / 378 PASS</div>
+          <div class="kpi-note" data-i18n="kpi.tests.n">45 тестовых наборов • ~3s локально</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
@@ -720,7 +725,7 @@
           <ul>
             <li><span data-lang-block="ru"><strong>Безопасные действия:</strong> каждая кнопка управления учитывает тип харнеса, проверяет предусловия, блокирует двойную отправку и сверяет фактический результат в журнале аудита.</span><span data-lang-block="en"><strong>Safe Controls:</strong> every operator action respects the agent runtime, checks preconditions, prevents duplicate sends, and verifies the post-action outcome automatically.</span></li>
             <li><span data-lang-block="ru"><strong>Авто-тормоз и Telegram HITL:</strong> настраиваемые лимиты бюджета и циклов доработок QA плюс удалённое подтверждение критичных запросов с телефона.</span><span data-lang-block="en"><strong>Circuit-Breaker &amp; Telegram HITL:</strong> configurable spend/rework caps plus optional remote confirmation of critical prompts from your phone.</span></li>
-            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@{{APP_VERSION}} --read-only</code>, встроенное безопасное самообновление и 373 автоматических теста.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@{{APP_VERSION}} --read-only</code> launch, built-in safe self-update, and 373 automated tests.</span></li>
+            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@{{APP_VERSION}} --read-only</code>, встроенное безопасное самообновление и 378 автоматических тестов.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@{{APP_VERSION}} --read-only</code> launch, built-in safe self-update, and 378 automated tests.</span></li>
           </ul>
         </div>
       </div>
@@ -856,7 +861,7 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тестирование и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 373/373 PASS</span>
+        <span class="sec-tag">NODE --TEST • 378/378 PASS</span>
       </div>
       <table>
         <thead>
@@ -925,7 +930,7 @@
         'nav.demo': 'Живое демо',
         'hero.eyebrow': 'Архитектурный и операционный паспорт системы',
         'hero.title': 'RigCommander // Command Deck',
-        'hero.sub': 'Локальная DSS SA-система управления автономным флотом AI-агентов (OpenRig и standalone tmux / JSONL). Объединяет адаптивную топологию, живой SSE-поток TMUX, операционный цифровой двойник, Гант и передачу задач, Git Worktree Radar, сводку смены, FinOps, защищённый Mobile PWA и идемпотентный HITL-контроль.',
+        'hero.sub': 'Локальный пульт управления параллельными ИИ-агентами в терминале (tmux, Claude Code, Codex CLI, Gemini CLI и OpenRig). Вместо ручного обхода вкладок показывает зависшие подтверждения HITL, перегрев контекста и Git Worktree — в отличие от облачных трейсеров (LangSmith/Langfuse), не требует аккаунта и оставляет вывод терминала на вашей машине.',
         'kpi.class.l': 'Класс системы',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Архитектура',
@@ -934,7 +939,7 @@
         'kpi.ont.l': 'Цифровой двойник',
         'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',
         'kpi.tests.l': 'Автотесты',
-        'kpi.tests.n': '44 тестовых набора • ~3s локально',
+        'kpi.tests.n': '45 тестовых наборов • ~3s локально',
         'kpi.sec.l': 'Граница доверия',
         'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
         's1.title': '1. Контекст системы, гарантии и границы доверия (C4 Level 1)',
@@ -1003,7 +1008,7 @@
         'nav.demo': 'Live Demo',
         'hero.eyebrow': 'Architectural & Security System Passport',
         'hero.title': 'RigCommander // Command Deck',
-        'hero.sub': 'Local-first DSS SA Mission Control for autonomous AI coding fleets (OpenRig and standalone tmux / JSONL). Unifies adaptive topology, live TMUX SSE streaming, an operational digital twin, Task Gantt & Handoff Flow, Git Worktree Radar, Shift Catch-Up Digest, FinOps, paired Mobile PWA, and idempotent HITL controls.',
+        'hero.sub': 'Local-first command deck for parallel terminal AI agents (tmux, Claude Code, Codex CLI, Gemini CLI & OpenRig). Instead of hopping across panes, it surfaces blocked HITL prompts, context overheating, and Git Worktrees — unlike cloud tracers (LangSmith/Langfuse), it needs no account and keeps terminal output on your machine.',
         'kpi.class.l': 'System Class',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Architecture',
@@ -1012,7 +1017,7 @@
         'kpi.ont.l': 'Digital Twin',
         'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',
         'kpi.tests.l': 'Automated Tests',
-        'kpi.tests.n': '44 test suites • ~3s locally',
+        'kpi.tests.n': '45 test suites • ~3s locally',
         'kpi.sec.l': 'Trust Boundary',
         'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
         's1.title': '1. System Context, Security Guarantees & Trust Boundaries (C4 Level 1)',

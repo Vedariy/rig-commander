@@ -273,7 +273,8 @@ export async function discoverUniversalFleet({
   codexDir = path.join(os.homedir(), '.codex', 'sessions'),
   maxAgeMs = 7 * 24 * 3600 * 1000,
   nowMs = Date.now(),
-  execTmux = null
+  execTmux = null,
+  readSessionLogs = true
 } = {}) {
   const runTmux = execTmux || (async (args) => {
     try {
@@ -289,7 +290,9 @@ export async function discoverUniversalFleet({
       'list-panes', '-a', '-F',
       '#{session_name}\t#{window_index}\t#{pane_index}\t#{pane_id}\t#{pane_current_command}\t#{pane_current_path}\t#{pane_title}\t#{pane_active}'
     ]),
-    discoverRecentTranscripts({ claudeDir, codexDir, maxAgeMs, nowMs })
+    readSessionLogs
+      ? discoverRecentTranscripts({ claudeDir, codexDir, maxAgeMs, nowMs })
+      : Promise.resolve([])
   ]);
 
   const panes = parseTmuxPaneLines(panesRaw);

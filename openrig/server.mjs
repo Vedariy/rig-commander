@@ -47,7 +47,28 @@ function resolveReadOnlyMode(env = process.env, argv = process.argv) {
   return rawEnv === '1' || rawEnv === 'true' || (Array.isArray(argv) && argv.includes('--read-only'));
 }
 
+function resolveNoSessionLogsMode(env = process.env, argv = process.argv) {
+  const rawEnv = String((env && env.RIGCOMMANDER_NO_SESSION_LOGS) || '').trim().toLowerCase();
+  return rawEnv === '1' || rawEnv === 'true' || (Array.isArray(argv) && argv.includes('--no-session-logs'));
+}
+
+function resolveRedactLiveCapture(env = process.env, argv = process.argv) {
+  const rawEnv = String((env && env.RIGCOMMANDER_RAW_CAPTURE) || '').trim().toLowerCase();
+  const rawOptOut = rawEnv === '1' || rawEnv === 'true' || (Array.isArray(argv) && argv.includes('--raw-capture'));
+  return !rawOptOut;
+}
+
+function redactLiveCaptureScreen(rawScreen, { enabled = true } = {}) {
+  const text = typeof rawScreen === 'string' ? rawScreen : '';
+  if (!enabled || !text) return text;
+  // Mask API keys, Bearer/JWT tokens, PEM blocks, .env secrets & SSH host IPs before sending
+  // over /api/capture or /api/capture/stream SSE, while keeping local paths readable for the operator.
+  return stripAnsiAndRedact(text, { redactPaths: false }).text;
+}
+
 const READ_ONLY_MODE = resolveReadOnlyMode();
+const NO_SESSION_LOGS_MODE = resolveNoSessionLogsMode();
+const REDACT_LIVE_CAPTURE = resolveRedactLiveCapture();
 const READ_ONLY_ERROR_BODY = Object.freeze({
   ok: false,
   code: 'READ_ONLY_MODE',
@@ -86,9 +107,10 @@ let latestFleetSnapshot = null;
 async function captureSeatScreen(seat, lines = 38) {
   const lineCount = Math.min(200, Math.max(10, Number(lines) || 38));
   const universalTarget = universalTmuxTargets.get(seat);
-  return universalTarget && isValidTmuxTarget(universalTarget)
-    ? safeTextExec(TMUX_BIN, ['capture-pane', '-p', '-t', universalTarget, '-S', `-${lineCount}`])
-    : safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(lineCount)]);
+  const raw = universalTarget && isValidTmuxTarget(universalTarget)
+    ? await safeTextExec(TMUX_BIN, ['capture-pane', '-p', '-t', universalTarget, '-S', `-${lineCount}`])
+    : await safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(lineCount)]);
+  return redactLiveCaptureScreen(raw, { enabled: REDACT_LIVE_CAPTURE });
 }
 
 const sseHub = new SsePushHub({ captureFn: captureSeatScreen });
@@ -580,12 +602,15 @@ const selfUpdater = new SelfUpdater({
         if (installMode === 'npx-cache') {
           const npxArgs = ['--yes', 'rig-commander@latest', '--no-open', '-p', String(PORT), '--host', BIND_HOST];
           if (READ_ONLY_MODE) npxArgs.push('--read-only');
+          if (NO_SESSION_LOGS_MODE) npxArgs.push('--no-session-logs');
+          if (!REDACT_LIVE_CAPTURE) npxArgs.push('--raw-capture');
           const child = spawn('npx', npxArgs, { detached: true, stdio: 'ignore', env: process.env });
           child.unref();
         } else {
-          const respawnArgs = READ_ONLY_MODE
-            ? [fileURLToPath(import.meta.url), '--read-only']
-            : [fileURLToPath(import.meta.url)];
+          const respawnArgs = [fileURLToPath(import.meta.url)];
+          if (READ_ONLY_MODE) respawnArgs.push('--read-only');
+          if (NO_SESSION_LOGS_MODE) respawnArgs.push('--no-session-logs');
+          if (!REDACT_LIVE_CAPTURE) respawnArgs.push('--raw-capture');
           const child = spawn(process.execPath, respawnArgs, {
             detached: true,
             stdio: 'ignore',
@@ -2069,7 +2094,10 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
   let resolvedHistory = history || EMPTY_HISTORY;
   let resolvedHistoryRev = historyRev;
   if (nodes.length === 0) {
-    const universal = await discoverUniversalFleet({ tmuxBin: TMUX_BIN });
+    const universal = await discoverUniversalFleet({
+      tmuxBin: TMUX_BIN,
+      readSessionLogs: !NO_SESSION_LOGS_MODE
+    });
     if (universal.nodes.length > 0) {
       discoveryMode = 'universal';
       universalTmuxTargets.clear();
@@ -2097,7 +2125,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
   }
 
   // Additive multi-vendor swarm discovery (Antigravity /swarm, Claude Teams, Codex subagents)
-  const disableSwarm = process.env.RIGCOMMANDER_DISABLE_SWARM === '1';
+  const disableSwarm = process.env.RIGCOMMANDER_DISABLE_SWARM === '1' || NO_SESSION_LOGS_MODE;
   const [swarmBundle] = await Promise.all([
     disableSwarm
       ? Promise.resolve(null)
@@ -3091,8 +3119,13 @@ server.on('close', () => { autoConsent.dispose(); });
 export {
   server, resilience, autoConsent,
   READ_ONLY_MODE,
+  NO_SESSION_LOGS_MODE,
+  REDACT_LIVE_CAPTURE,
   READ_ONLY_ERROR_BODY,
   resolveReadOnlyMode,
+  resolveNoSessionLogsMode,
+  resolveRedactLiveCapture,
+  redactLiveCaptureScreen,
   buildGanttItems,
   isGanttSystemNoise,
   computeHistoryStats,

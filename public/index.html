@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="3.12.2">
+  <meta name="app-version" content="3.13.0">
   <meta name="theme-color" content="#030712">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,7 +31,7 @@
       "description": "Local command deck for observing AI coding fleets and reviewing terminal actions.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Linux",
-      "softwareVersion": "3.12.2",
+      "softwareVersion": "3.13.0",
       "license": "https://opensource.org/licenses/MIT",
       "isAccessibleForFree": true,
       "offers": {
@@ -55,7 +55,7 @@
       "@type": "HowTo",
       "@id": "https://rig-commander.vercel.app/#quickstart",
       "name": "Start the local RigCommander deck",
-      "version": "3.12.2",
+      "version": "3.13.0",
       "inLanguage": "en",
       "step": [
         {
@@ -68,7 +68,7 @@
           "@type": "HowToStep",
           "position": 2,
           "name": "Start RigCommander",
-          "text": "Run npx rig-commander@3.12.2 --read-only in a terminal."
+          "text": "Run npx rig-commander@3.13.0 --read-only in a terminal."
         },
         {
           "@type": "HowToStep",
@@ -88,7 +88,7 @@
           "name": "How do I start the live deck?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Run npx rig-commander@3.12.2 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
+            "text": "Run npx rig-commander@3.13.0 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
           }
         },
         {
@@ -157,14 +157,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.12.2 --read-only">
+  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.13.0 --read-only">
   <meta property="og:url" content="https://rig-commander.vercel.app/">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.12.2 --read-only">
+  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.13.0 --read-only">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
 
   <style>
@@ -374,47 +374,21 @@
 
     /* HERO SECTION */
     .hero {
-      padding-top: 26px;
-      padding-bottom: 52px;
+      padding-top: 16px;
+      padding-bottom: 44px;
       text-align: center;
       position: relative;
     }
     .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(10, 22, 44, 0.85);
-      border: 1px solid rgba(0, 240, 255, 0.35);
-      border-radius: 9999px;
-      padding: 6px 14px;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      font-weight: 700;
-      color: var(--cyan);
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
-      margin-bottom: 12px;
-      user-select: none;
-    }
-    .pulse-dot {
-      width: 7px;
-      height: 7px;
-      background: var(--cyan);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--cyan);
-      animation: pulseAnim 2s infinite;
-    }
-    @keyframes pulseAnim {
-      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7); }
-      70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(0, 240, 255, 0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 240, 255, 0); }
+      display: none;
     }
 
     .hero-title {
-      font-size: clamp(36px, 4.8vw, 62px);
+      font-size: clamp(30px, 4.1vw, 52px);
       font-weight: 900;
-      line-height: 1.06;
-      letter-spacing: -0.035em;
-      margin-bottom: 10px;
+      line-height: 1.07;
+      letter-spacing: -0.032em;
+      margin-bottom: 8px;
       background: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -426,10 +400,10 @@
     }
 
     .hero-subtitle {
-      max-width: 740px;
-      margin: 0 auto 18px;
-      font-size: clamp(16px, 1.8vw, 19px);
-      line-height: 1.55;
+      max-width: 720px;
+      margin: 0 auto 14px;
+      font-size: clamp(14.5px, 1.55vw, 17px);
+      line-height: 1.5;
       color: #94a3b8;
       font-weight: 500;
     }
@@ -439,8 +413,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
+      gap: 7px;
+      margin-bottom: 14px;
     }
     .hero-primary-paths {
       display: flex;
@@ -472,6 +446,15 @@
       background: rgba(15, 23, 42, 0.85);
       padding: 1px 5px;
       border-radius: 4px;
+    }
+    .hero-cli-note a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
     .hero-secondary-links {
       display: flex;
@@ -525,67 +508,36 @@
     .btn-demo-hero {
       position: relative;
       overflow: hidden;
-      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 55%, #38bdf8 100%);
+      background: linear-gradient(135deg, #34d399 0%, #38bdf8 100%);
       color: #020617;
-      font-weight: 900;
-      font-size: 15.5px;
+      font-weight: 800;
+      font-size: 14.5px;
       letter-spacing: -0.01em;
-      padding: 15px 28px;
+      padding: 12px 22px;
+      min-height: 46px;
       border-radius: 10px;
       text-decoration: none;
-      border: 1px solid rgba(255, 255, 255, 0.65);
-      box-shadow: 0 0 36px rgba(0, 255, 157, 0.48), 0 10px 34px rgba(0, 240, 255, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 6px 20px rgba(0, 240, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.45);
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-      animation: demoGlowPulse 3.2s ease-in-out infinite;
-    }
-    .btn-demo-hero::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: -75%;
-      width: 45%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-      transform: skewX(-22deg);
-      animation: demoShimmer 4.5s ease-in-out infinite;
-      pointer-events: none;
+      gap: 8px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
     }
     .btn-demo-hero:hover {
-      transform: translateY(-3px) scale(1.025);
-      box-shadow: 0 0 52px rgba(0, 255, 157, 0.72), 0 14px 44px rgba(0, 240, 255, 0.52);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px rgba(56, 189, 248, 0.28);
+      filter: brightness(1.04);
       color: #000;
     }
     .btn-demo-label-short { display: none; }
-    .btn-demo-tag {
-      white-space: nowrap;
-      flex-shrink: 0;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.4px;
-      background: rgba(2, 6, 23, 0.85);
-      color: #6ee7b7;
-      padding: 3px 8px;
-      border-radius: 9999px;
-      text-transform: uppercase;
-    }
-    @keyframes demoGlowPulse {
-      0%, 100% { box-shadow: 0 0 32px rgba(0, 255, 157, 0.45), 0 10px 30px rgba(0, 240, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.65); }
-      50% { box-shadow: 0 0 46px rgba(0, 255, 157, 0.68), 0 12px 42px rgba(0, 240, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.8); }
-    }
-    @keyframes demoShimmer {
-      0%, 72% { left: -75%; }
-      100% { left: 135%; }
-    }
+    .btn-demo-tag { display: none; }
     .cli-copy-box {
       background: rgba(8, 16, 32, 0.92);
-      border: 1px solid rgba(56, 189, 248, 0.35);
+      border: 1px solid rgba(56, 189, 248, 0.32);
       border-radius: 10px;
-      padding: 13px 16px;
-      min-height: 52px;
+      padding: 10px 15px;
+      min-height: 46px;
       max-width: 100%;
       display: inline-flex;
       align-items: center;
@@ -1930,7 +1882,7 @@
     <nav class="navbar" id="primaryNavbar">
       <a href="#" class="nav-brand">
         <span>💠 RIGCOMMANDER</span>
-        <span class="nav-brand-badge" id="navVersionBadge">v3.12.2</span>
+        <span class="nav-brand-badge" id="navVersionBadge">v3.13.0</span>
       </a>
       <ul class="nav-links" id="primaryNavLinks">
         <li><a href="#architecture" data-i18n="nav.arch" onclick="closeMobileNav()">Architecture</a></li>
@@ -1965,11 +1917,6 @@
 
     <!-- HERO SECTION -->
     <section class="hero container">
-      <div class="hero-eyebrow">
-        <span class="pulse-dot"></span>
-        <span data-i18n="hero.eyebrow">LOCAL-FIRST AI AGENT MISSION CONTROL</span>
-      </div>
-
       <h1 class="hero-title" data-i18n-html="hero.title">
         See which AI terminal agent is blocked —<br>
         <span class="accent-cyan">approve in 1 click.</span>
@@ -1984,24 +1931,18 @@
           <a href="/demo" class="btn-demo-hero">
             <span class="btn-demo-label-full" data-i18n="hero.demoCta">▶ Launch Interactive Demo</span>
             <span class="btn-demo-label-short" data-i18n="hero.demoCtaShort">▶ Interactive Demo</span>
-            <span class="btn-demo-tag" data-i18n="hero.demoTag">0 SETUP</span>
             <span>→</span>
           </a>
           <div class="hero-cli-group">
-            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.12.2 --read-only')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.12.2 --read-only');}" title="Click to copy safe read-only CLI command" data-i18n-title="hero.cliTitle">
+            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.13.0 --read-only')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.13.0 --read-only');}" title="Click to copy safe read-only CLI command" data-i18n-title="hero.cliTitle">
               <span class="cli-prompt">$</span>
-              <span class="cli-cmd-text">npx rig-commander@3.12.2 --read-only</span>
+              <span class="cli-cmd-text">npx rig-commander@3.13.0 --read-only</span>
               <span class="cli-icon">📋</span>
             </div>
           </div>
         </div>
         <div class="hero-cli-note" data-i18n-html="hero.cliNote">
-          Zero-write inspection · drop <code>--read-only</code> for interactive HITL (<code>@latest</code> is an optional alias)
-        </div>
-        <div class="hero-secondary-links">
-          <a href="/passport" class="hero-sec-link">
-            <span data-i18n="hero.passportCta">🛡️ Security Passport →</span>
-          </a>
+          0-setup browser demo · zero-write inspection (add <code>--no-session-logs</code> for tmux-only) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>
         </div>
       </div>
 
@@ -2238,7 +2179,7 @@ Command: npm test
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">AUTO REDACTION · TESTED</span>
             <div class="sec-guarantee-title" data-i18n="sec.g4.t">Secrets Masked &amp; Verified by npm test</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g4.d">API keys, tokens, private key blocks &amp; local paths are redacted before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g4.d">API keys, Bearer/JWT tokens, PEM blocks &amp; <code>.env</code> secrets are redacted server-side before live <code>/api/capture</code> SSE reaches the browser, as well as before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.</div>
           </div>
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">OWNER-ONLY FILES</span>
@@ -2253,7 +2194,7 @@ Command: npm test
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">SIGSTORE PROVENANCE</span>
             <div class="sec-guarantee-title" data-i18n="sec.g7.t">Verified Supply Chain &amp; 30-Second Audit</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.2" target="_blank" rel="noopener">v3.12.2 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.0" target="_blank" rel="noopener">v3.13.0 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
           </div>
         </div>
       </div>
@@ -2347,7 +2288,7 @@ Command: npm test
                   <td data-i18n="cmp.r2.k">Setup &amp; code changes</td>
                   <td data-i18n="cmp.r2.c1">Manual attach &amp; pane-by-pane switching</td>
                   <td data-i18n="cmp.r2.c2">SDK instrumentation, API keys &amp; cloud account</td>
-                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.12.2 --read-only</code> (0 code changes, 0 npm deps)</td>
+                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.13.0 --read-only</code> (0 code changes, 0 npm deps)</td>
                 </tr>
                 <tr>
                   <td data-i18n="cmp.r3.k">Blocked prompts &amp; control</td>
@@ -2604,7 +2545,7 @@ Command: npm test
             <p class="step-desc" data-i18n="arch.s1.desc">
               Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.
             </p>
-            <div class="step-code">$ npx rig-commander@3.12.2 --read-only</div>
+            <div class="step-code">$ npx rig-commander@3.13.0 --read-only</div>
           </div>
 
           <div class="step-card">
@@ -2636,11 +2577,11 @@ Command: npm test
               Inspect Trust Boundaries, Operational Twin, Security Posture &amp; Verification
             </h3>
             <p style="font-size:13.5px; color:#94a3b8; line-height:1.5;" data-i18n="passport.desc">
-              Clean architectural &amp; security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 373 automated tests across 44 suites.
+              Clean architectural &amp; security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 378 automated tests across 45 suites.
             </p>
             <div class="passport-pills">
               <span class="passport-pill">0 npm deps • MIT</span>
-              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">373 / 373 Automated Tests PASS</span>
+              <span class="passport-pill" style="color:#6ee7b7; border-color:rgba(0,255,157,0.35);">378 / 378 Automated Tests PASS</span>
               <span class="passport-pill" style="color:#d8b4fe; border-color:rgba(168,85,247,0.4);">Advisory-Only AI Guardrails</span>
               <span class="passport-pill">Shared Context Lineage &amp; RECAP</span>
               <span class="passport-pill">SUB vs PAYG FinOps + PNG Card</span>
@@ -2666,8 +2607,8 @@ Command: npm test
       <h2 class="section-title"><span lang="en">Operator FAQ</span><span lang="ru">Вопросы оператора</span></h2>
       <details>
         <summary><span lang="en">How do I start the live deck?</span><span lang="ru">Как запустить живой пульт?</span></summary>
-        <p lang="en">Run npx rig-commander@3.12.2 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
-        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.12.2 --read-only и откройте http://127.0.0.1:7440.</p>
+        <p lang="en">Run npx rig-commander@3.13.0 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
+        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.13.0 --read-only и откройте http://127.0.0.1:7440.</p>
       </details>
       <details>
         <summary><span lang="en">Can I try it without running agents?</span><span lang="ru">Можно попробовать без запущенных агентов?</span></summary>
@@ -2785,7 +2726,7 @@ Command: npm test
         <span class="pulse-dot" style="background:var(--emerald); box-shadow:0 0 10px var(--emerald);"></span>
         <span data-i18n="footer.status">ALL SYSTEMS OPERATIONAL</span>
         <span>•</span>
-        <span>RigCommander v3.12.2</span>
+        <span>RigCommander v3.13.0</span>
         <span>•</span>
         <a href="/demo" style="color:var(--cyan); text-decoration:none;" data-i18n="nav.demo">Live Demo</a>
         <span>·</span>
@@ -2868,7 +2809,7 @@ Command: npm test
         'hero.demoCta': '▶ Launch Interactive Demo',
         'hero.demoCtaShort': '▶ Interactive Demo',
         'hero.demoTag': '0 SETUP',
-        'hero.cliNote': 'Zero-write inspection · drop <code>--read-only</code> for interactive HITL (<code>@latest</code> is an optional alias)',
+        'hero.cliNote': '0-setup browser demo · zero-write inspection (add <code>--no-session-logs</code> for tmux-only) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>',
         'qr.title': '📱 Open RigCommander Mobile PWA',
         'qr.sub': 'Point your iPhone or Android camera at the QR code to launch the mobile Command Deck:',
         'qr.ios': 'iOS: Safari → Share ⬆ → "Add to Home Screen"',
@@ -2904,11 +2845,11 @@ Command: npm test
         'sec.g3.t': 'External Modules OFF + TOCTOU Guard',
         'sec.g3.d': 'Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent & optional AI Evaluator stay OFF until enabled. Before any optional Auto-Consent keypress fires after the 3s grace window, RigCommander re-captures the live terminal and verifies a SHA-256 prompt hash — if the prompt changed by a single character, dispatch aborts with zero writes.',
         'sec.g4.t': 'Secrets Masked & Verified by npm test',
-        'sec.g4.d': 'API keys, tokens, private key blocks & local paths are redacted before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.',
+        'sec.g4.d': 'API keys, Bearer/JWT tokens, PEM blocks &amp; <code>.env</code> secrets are redacted server-side before live <code>/api/capture</code> SSE reaches the browser, as well as before shift-history writes, exports, or optional evaluator calls. Automated tests (<code>npm test</code>) verify <code>--read-only</code> zero-write, secret redaction, CSRF/Origin guards, and TOCTOU drift aborts.',
         'sec.g6.t': 'Malicious Browser Tabs Can\'t Drive Your Terminals',
         'sec.g6.d': 'Local HTTP→tmux control checks every request\'s Host and Origin and requires per-process session auth. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>) — CSRF and DNS-rebinding from other tabs are rejected.',
         'sec.g7.t': 'Verified Supply Chain & 30-Second Audit',
-        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.2" target="_blank" rel="noopener">v3.12.2 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.0" target="_blank" rel="noopener">v3.13.0 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Honest Local Storage Model',
         'sec.g5.d': 'Local recovery & shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.',
         'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
@@ -2937,7 +2878,7 @@ Command: npm test
         'cmp.r2.k': 'Setup & code changes',
         'cmp.r2.c1': 'Manual attach & pane-by-pane switching',
         'cmp.r2.c2': 'SDK instrumentation, API keys & cloud account',
-        'cmp.r2.c3': '<code>npx rig-commander@3.12.2 --read-only</code> (0 code changes, 0 npm deps)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.13.0 --read-only</code> (0 code changes, 0 npm deps)',
         'cmp.r3.k': 'Blocked prompts & control',
         'cmp.r3.c1': 'Manual scan across panes to find hangs',
         'cmp.r3.c2': 'Read-only dashboards (no terminal write-back)',
@@ -3010,7 +2951,7 @@ Command: npm test
         'arch.s3.desc': 'Authorize HITL prompts in 1 click through the Security Gate (session auth + quick-action allowlist, explicit confirmation for manual input, and 403 hard-block in --read-only) and verify every postcondition automatically.',
         'passport.eyebrow': 'ARCHITECTURAL & SECURITY PASSPORT',
         'passport.title': 'Inspect Trust Boundaries, Operational Twin, Security Posture & Verification',
-        'passport.desc': 'Clean architectural & security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 373 automated tests across 44 suites.',
+        'passport.desc': 'Clean architectural & security passport: C4 trust boundaries, Operational Twin model, localhost + paired Mobile PWA guarantees, and 378 automated tests across 45 suites.',
         'passport.cta': '📄 Open Project Passport',
         'passport.guardCta': '🛡️ Try Telegram HITL & Breaker',
         'waitlist.badge': '🚀 PRIVATE ACCESS',
@@ -3060,7 +3001,7 @@ Command: npm test
         'hero.demoCta': '▶ Открыть интерактивное демо',
         'hero.demoCtaShort': '▶ Интерактивное демо',
         'hero.demoTag': 'БЕЗ УСТАНОВКИ',
-        'hero.cliNote': 'Осмотр без записи · уберите <code>--read-only</code> для интерактивного HITL (<code>@latest</code> — необязательный алиас)',
+        'hero.cliNote': 'Демо без установки · осмотр без записи (добавьте <code>--no-session-logs</code> для режима только tmux) · <a href="/passport" style="color:#7dd3fc;">Паспорт безопасности →</a>',
         'qr.title': '📱 Открыть мобильную PWA-версию',
         'qr.sub': 'Наведи камеру iPhone или Android на QR-код — откроется мобильный Command Deck:',
         'qr.ios': 'iOS: Safari → «Поделиться» ⬆ → «На экран „Домой“»',
@@ -3096,11 +3037,11 @@ Command: npm test
         'sec.g3.t': 'Внешние модули ВЫКЛ + защита TOCTOU',
         'sec.g3.d': 'Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛ, пока вы их не включите. Перед срабатыванием любого опционального авто-подтверждения после 3-секундного окна отмены RigCommander повторно снимает живой экран терминала и сверяет SHA-256 хэш промпта — если запрос изменился хотя бы на один символ, отправка отменяется с нулём записей.',
         'sec.g4.t': 'Редакция секретов и проверка npm test',
-        'sec.g4.d': 'API-ключи, токены, приватные ключи и локальные пути маскируются до записи истории смен, экспортов и любых вызовов опциональных оценщиков. Автотесты (<code>npm test</code>) проверяют нулевую запись <code>--read-only</code>, редакцию секретов, защиту CSRF/Origin и отмену при дрейфе TOCTOU.',
+        'sec.g4.d': 'API-ключи, Bearer/JWT-токены, PEM-блоки и секреты <code>.env</code> маскируются на сервере до отправки живого экрана по SSE (<code>/api/capture</code>), а также до записи истории смен, экспортов и вызовов опциональных оценщиков. Автотесты (<code>npm test</code>) проверяют нулевую запись <code>--read-only</code>, редакцию секретов, защиту CSRF/Origin и отмену при дрейфе TOCTOU.',
         'sec.g6.t': 'Вкладки браузера не управляют вашими терминалами',
         'sec.g6.d': 'Локальный мост HTTP→tmux проверяет Host и Origin каждого запроса и требует аутентификации сессии процесса. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>) — CSRF и DNS-rebinding из других вкладок отклоняются.',
         'sec.g7.t': 'Проверяемая цепочка поставки и аудит за 30 секунд',
-        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте через <code>npm audit signatures</code> и <code>dist.attestations</code> (<a href="/guide#quickstart">готовая команда в Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.2" target="_blank" rel="noopener">исходный тег v3.12.2</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте через <code>npm audit signatures</code> и <code>dist.attestations</code> (<a href="/guide#quickstart">готовая команда в Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.0" target="_blank" rel="noopener">исходный тег v3.13.0</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Честное локальное хранение',
         'sec.g5.d': 'Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска.',
         'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
@@ -3129,7 +3070,7 @@ Command: npm test
         'cmp.r2.k': 'Установка и правки кода',
         'cmp.r2.c1': 'Ручной attach и переключение между панелями',
         'cmp.r2.c2': 'Встраивание SDK, API-ключи и облачный аккаунт',
-        'cmp.r2.c3': '<code>npx rig-commander@3.12.2 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.13.0 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
         'cmp.r3.k': 'Зависшие промпты и управление',
         'cmp.r3.c1': 'Ручной обход каждой панели в поисках зависания',
         'cmp.r3.c2': 'Только дашборды чтения (нет ответа в терминал)',
@@ -3202,7 +3143,7 @@ Command: npm test
         'arch.s3.desc': 'Подтверждайте HITL-запросы в 1 клик через Security Gate (сессионная авторизация + белый список быстрых клавиш, явное подтверждение для ручного ввода и блок 403 в --read-only) с автоматической проверкой результата.',
         'passport.eyebrow': 'ПАСПОРТ АРХИТЕКТУРЫ И БЕЗОПАСНОСТИ',
         'passport.title': 'Изучите границы доверия, цифровой двойник, гарантии безопасности и верификацию',
-        'passport.desc': 'Чистый паспорт системы: C4-границы доверия, операционный цифровой двойник, гарантии localhost + защищённого Mobile PWA и 373 автотеста по 44 наборам.',
+        'passport.desc': 'Чистый паспорт системы: C4-границы доверия, операционный цифровой двойник, гарантии localhost + защищённого Mobile PWA и 378 автотестов по 45 наборам.',
         'passport.cta': '📄 Открыть паспорт проекта',
         'passport.guardCta': '🛡️ Telegram HITL и Авто-тормоз',
         'waitlist.badge': '🚀 ЗАКРЫТЫЙ ДОСТУП',
@@ -3472,7 +3413,7 @@ Command: npm test
 
     // Auto-Update Watcher on Website (checks npmjs.org/rig-commander/latest via CORS)
     let landingUpdateState = {
-      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.12.2').trim(),
+      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.13.0').trim(),
       latestVersion: '',
       updateAvailable: false,
       releaseUrl: 'https://www.npmjs.com/package/rig-commander'

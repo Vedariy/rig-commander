@@ -464,10 +464,11 @@ export function renderAutoConsentTabHtml({
         const seatGrantBtnHtml = cfg.enabled
           ? `<button type="button" class="action-pill ac-mini-btn" data-auto-consent-action="grant-session" data-scope="seat" data-target="${escapeHtml(seatId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>`
           : '';
+        const showEffChip = Boolean(cfg.masterPaused || effective.active || explicitProfile !== 'inherit' || effective.profile === AUTO_CONSENT_PROFILES.MANUAL_ONLY);
         return `<div class="ac-policy-row">` +
           `<div class="ac-policy-target">` +
             `<b>${escapeHtml(shortSeat(seatId))}</b>` +
-            `<span class="ac-eff-chip ${effClass}">${escapeHtml(effText)}</span>` +
+            `${showEffChip ? `<span class="ac-eff-chip ${effClass}">${escapeHtml(effText)}</span>` : ''}` +
             `${isCtxHot ? `<span class="ac-ctx-warn-chip">CTX ${escapeHtml(ctxVal)}%</span>` : ''}` +
           `</div>` +
           `<div class="ac-policy-controls">` +
@@ -569,14 +570,14 @@ export function renderAutoConsentTabHtml({
   const modeCoolSec = cooldownSecFor('acModeSelect');
   const modeDisabledAttr = (busy || modeCoolSec > 0) ? ' disabled' : '';
 
-  return `<div class="ac-tab-wrap">` +
+  return `<div class="ac-tab-wrap${cfg.enabled ? '' : ' is-master-off'}">` +
     `<div class="ac-tab-scroll">` +
       `${demoTrack ? `<div class="ac-demo-notice">${escapeHtml(td('autoConsent.demoTrackBanner'))}</div>` : ''}` +
       `${cfg.masterPaused ? `<div class="ac-paused-banner"><span>${escapeHtml(td('autoConsent.pausedBanner'))}</span><button type="button" class="action-pill key-proceed" data-auto-consent-action="resume-all"${disabledAttr}>${escapeHtml(td('autoConsent.resumeAllBtn'))}</button></div>` : ''}` +
       `<div class="ac-subtitle-box">${escapeHtml(td('autoConsent.subtitle'))}</div>` +
 
       `<div class="ac-top-grid">` +
-        `<section class="ac-card">` +
+        `<section class="ac-card ac-master-card">` +
           `<div class="ac-card-head">` +
             `${renderSwitch({ id: 'acMasterEnable', checked: cfg.enabled, label: td('autoConsent.masterEnable'), isMaster: true })}` +
             `<span class="ac-quota-chip">${escapeHtml(en ? 'Quota' : 'Квота')}: <b>${escapeHtml(stats.actionsLastHour)} / ${escapeHtml(cfg.maxActionsPerHour)}/h</b></span>` +
@@ -623,18 +624,21 @@ export function renderAutoConsentTabHtml({
         `</section>` +
       `</div>` +
 
-      `<div class="ac-cmd-summary" role="region" aria-label="${escapeHtml(td('autoConsent.cmdStripLabel'))}">` +
-        `<div class="ac-cmd-col is-safe">` +
-          `<span class="ac-cmd-col-title">🟢 ${escapeHtml(td('autoConsent.cmdStripSafeTitle'))}</span>` +
-          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripSafeBody'))}</span>` +
-        `</div>` +
-        `<div class="ac-cmd-col is-dev">` +
-          `<span class="ac-cmd-col-title">⚡ ${escapeHtml(td('autoConsent.cmdStripDevTitle'))}</span>` +
-          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
-        `</div>` +
-        `<div class="ac-cmd-col is-veto">` +
-          `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}</span>` +
-          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
+      `<div class="ac-cmd-legend-block">` +
+        `<div class="ac-cmd-summary-kicker">${escapeHtml(td('autoConsent.cmdLegendNote'))}</div>` +
+        `<div class="ac-cmd-summary" role="region" aria-label="${escapeHtml(td('autoConsent.cmdStripLabel'))}">` +
+          `<div class="ac-cmd-col is-safe">` +
+            `<span class="ac-cmd-col-title">🟢 ${escapeHtml(td('autoConsent.cmdStripSafeTitle'))}</span>` +
+            `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripSafeBody'))}</span>` +
+          `</div>` +
+          `<div class="ac-cmd-col is-dev">` +
+            `<span class="ac-cmd-col-title">⚡ ${escapeHtml(td('autoConsent.cmdStripDevTitle'))}</span>` +
+            `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
+          `</div>` +
+          `<div class="ac-cmd-col is-veto">` +
+            `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}</span>` +
+            `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
+          `</div>` +
         `</div>` +
       `</div>` +
 

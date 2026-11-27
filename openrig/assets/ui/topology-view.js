@@ -3,11 +3,12 @@ import { computeTopologyLayout, computeAnchoredPopoverRect, computeAdaptiveEdgeP
 
 export function renderStateIndicatorHtml(agent, { escapeHtml, deckLang = 'en', td }) {
   if (agent.state === 'working') {
+    const isStandaloneTmux = !String(agent.id || '').includes('@');
     const suffix = (agent.activityLabel || '').includes('ELB-003')
       ? 'ELB-003'
-      : agent.assignedWorkCount
+      : (!isStandaloneTmux && agent.assignedWorkCount)
         ? `${agent.assignedWorkCount}`
-        : 'WORK';
+        : (deckLang === 'ru' ? 'РАБОТАЕТ' : 'WORK');
     return `<span class="heart-anim work-status-dot" aria-hidden="true" title="${escapeHtml(td ? td('demo.harnessWorking') : 'Working')}">●</span><span>${escapeHtml(suffix)}</span>`;
   }
   if (agent.state === 'idle') {
@@ -587,11 +588,18 @@ export function renderTopology(deps) {
     }
   }
   const svgEl = doc.getElementById('topologySvg');
+  const isNoEdgesFleet = EDGES.length === 0 && visibleAgents.length > 0;
+  doc.body?.classList?.toggle('fleet-no-edges', isNoEdgesFleet);
+  const centerTitleEl = doc.getElementById('centerPanelTitle');
+  const graphBtnEl = doc.getElementById('btnViewGraph');
+  if (centerTitleEl && (!graphBtnEl || graphBtnEl.classList?.contains('active'))) {
+    centerTitleEl.textContent = isNoEdgesFleet ? td('center.panesTitle') : td('center.graphTitle');
+  }
   cw = layoutResult.canvasWidth || cw;
   ch = layoutResult.canvasHeight || ch;
-  const needsCanvasScroll = clustered || cw > baseCw + 1 || ch > baseCh + 1;
+  const needsCanvasScroll = !isNoEdgesFleet && (clustered || cw > baseCw + 1 || ch > baseCh + 1);
   if (wrapEl) {
-    wrapEl.classList.toggle('has-rig-clusters', clustered);
+    wrapEl.classList.toggle('has-rig-clusters', clustered && !isNoEdgesFleet);
     wrapEl.classList.toggle('has-canvas-scroll', needsCanvasScroll);
   }
   nodesLayer.style.width = needsCanvasScroll ? `${cw}px` : '';

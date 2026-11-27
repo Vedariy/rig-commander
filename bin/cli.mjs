@@ -30,6 +30,8 @@ Options:
   --public-url <https://> Enable paired Live Mobile PWA via Tailscale Serve / Cloudflare Tunnel
   --universal             Force Universal Mode (Claude Code / Codex / tmux without OpenRig)
   --read-only             Read-only inspection mode (0 terminal writes or state mutations)
+  --no-session-logs       Do not read ~/.claude/ or ~/.codex/ session logs (tmux panes only)
+  --raw-capture           Disable default secret redaction on live /api/capture SSE stream
   --no-open               Do not automatically open browser on startup
   -v, --version           Show version
   -h, --help              Show this help manual
@@ -72,6 +74,14 @@ if (pubIdx !== -1 && args[pubIdx + 1]) {
 
 const noOpen = args.includes('--no-open');
 const forceUniversal = args.includes('--universal');
+const noSessionLogs =
+  args.includes('--no-session-logs') ||
+  process.env.RIGCOMMANDER_NO_SESSION_LOGS === '1' ||
+  String(process.env.RIGCOMMANDER_NO_SESSION_LOGS || '').trim().toLowerCase() === 'true';
+const rawCapture =
+  args.includes('--raw-capture') ||
+  process.env.RIGCOMMANDER_RAW_CAPTURE === '1' ||
+  String(process.env.RIGCOMMANDER_RAW_CAPTURE || '').trim().toLowerCase() === 'true';
 const readOnly =
   args.includes('--read-only') ||
   process.env.RIGCOMMANDER_READ_ONLY === '1' ||
@@ -96,7 +106,9 @@ const childEnv = {
   RIGCOMMANDER_SUPERVISED: '1',
   ...(publicUrl ? { RIGCOMMANDER_PUBLIC_URL: publicUrl } : {}),
   ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {}),
-  ...(readOnly ? { RIGCOMMANDER_READ_ONLY: '1' } : {})
+  ...(readOnly ? { RIGCOMMANDER_READ_ONLY: '1' } : {}),
+  ...(noSessionLogs ? { RIGCOMMANDER_NO_SESSION_LOGS: '1' } : {}),
+  ...(rawCapture ? { RIGCOMMANDER_RAW_CAPTURE: '1' } : {})
 };
 
 let serverProc = null;
@@ -109,9 +121,14 @@ function startServerChild(useNpxLatest = false) {
     if (publicUrl) npxArgs.push('--public-url', publicUrl);
     if (forceUniversal) npxArgs.push('--universal');
     if (readOnly) npxArgs.push('--read-only');
+    if (noSessionLogs) npxArgs.push('--no-session-logs');
+    if (rawCapture) npxArgs.push('--raw-capture');
     serverProc = spawn('npx', npxArgs, { env: childEnv, stdio: 'inherit' });
   } else {
-    const serverArgs = readOnly ? [serverPath, '--read-only'] : [serverPath];
+    const serverArgs = [serverPath];
+    if (readOnly) serverArgs.push('--read-only');
+    if (noSessionLogs) serverArgs.push('--no-session-logs');
+    if (rawCapture) serverArgs.push('--raw-capture');
     serverProc = spawn(process.execPath, serverArgs, { env: childEnv, stdio: 'inherit' });
   }
 

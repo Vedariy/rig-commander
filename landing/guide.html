@@ -175,21 +175,21 @@
       align-items: center;
       gap: 7px;
       min-height: 36px;
-      padding: 0 16px;
+      padding: 0 15px;
       border-radius: 9999px;
-      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
-      color: #020617;
+      background: rgba(0, 240, 255, 0.1);
+      color: #a5f3fc;
       font-family: var(--font-sans);
       font-size: 12.5px;
-      font-weight: 800;
+      font-weight: 700;
       text-decoration: none;
       white-space: nowrap;
-      border: 1px solid rgba(255, 255, 255, 0.55);
-      box-shadow: 0 0 22px rgba(0, 255, 157, 0.42), 0 0 12px rgba(0, 240, 255, 0.35);
-      transition: box-shadow 0.2s ease, transform 0.2s ease;
+      border: 1px solid rgba(0, 240, 255, 0.42);
+      box-shadow: none;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
     }
-    .nav-cta:hover { box-shadow: 0 0 32px rgba(0, 255, 157, 0.72), 0 0 22px rgba(0, 240, 255, 0.65); transform: translateY(-1px); color: #000; }
-    .nav-cta-dot { width: 7px; height: 7px; border-radius: 50%; background: #022c22; box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.28); }
+    .nav-cta:hover { background: rgba(0, 240, 255, 0.18); border-color: rgba(0, 255, 157, 0.65); transform: translateY(-1px); color: #ecfeff; }
+    .nav-cta-dot { width: 7px; height: 7px; border-radius: 50%; background: #00ff9d; box-shadow: 0 0 0 2px rgba(0, 255, 157, 0.22); }
 
     .nav-right { display: flex; align-items: center; gap: 10px; }
     .lang-switch {
@@ -795,8 +795,13 @@
             <ul>
               <li>
                 <strong><span data-lang-block="ru">Читает:</span><span data-lang-block="en">Reads:</span></strong>
-                <span data-lang-block="ru">статус и вывод локальных панелей <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) и опционально локальные журналы CLI (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) для телеметрии контекста и стоимости (может работать с одной панелью <code class="inline">tmux</code> или демоном OpenRig).</span>
-                <span data-lang-block="en">local <code class="inline">tmux</code> pane status/output (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) and optional local CLI session logs (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) for context &amp; cost telemetry (can also target a single tmux pane or OpenRig daemon).</span>
+                <span data-lang-block="ru">статус и вывод локальных панелей <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) и по умолчанию локальные журналы CLI (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) для счётчиков контекста и стоимости. Добавьте <code class="inline">--no-session-logs</code>, чтобы полностью отключить чтение <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> (только <code class="inline">tmux</code>).</span>
+                <span data-lang-block="en">local <code class="inline">tmux</code> pane status/output (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) and, by default, local CLI session logs (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) for context &amp; cost counters. Pass <code class="inline">--no-session-logs</code> to disable reading <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> completely (tmux panes only).</span>
+              </li>
+              <li>
+                <strong><span data-lang-block="ru">Живой SSE и AI-оценка:</span><span data-lang-block="en">Live SSE &amp; AI Evaluator:</span></strong>
+                <span data-lang-block="ru">секреты (API-ключи, Bearer/JWT, PEM, <code class="inline">.env</code>-секреты) автоматически маскируются на сервере до отправки живого экрана в браузер по SSE (<code class="inline">/api/capture/stream</code>; отключается флагом <code class="inline">--raw-capture</code>). Опциональная <code class="inline">🧠 AI-риск</code> выключена по умолчанию (0 исходящих вызовов API до явной настройки).</span>
+                <span data-lang-block="en">secrets (API keys, Bearer/JWT, PEM blocks, <code class="inline">.env</code> values) are masked server-side before live capture reaches the browser over SSE (<code class="inline">/api/capture/stream</code>; opt out with <code class="inline">--raw-capture</code>). Optional <code class="inline">🧠 AI Risk</code> stays OFF by default (0 outbound API calls until explicitly configured).</span>
               </li>
               <li>
                 <strong><span data-lang-block="ru">Пишет:</span><span data-lang-block="en">Writes:</span></strong>
@@ -872,6 +877,14 @@
             <tr>
               <td><code class="inline">npx rig-commander --public-url https://mac.ts.net</code></td>
               <td><span data-lang-block="ru">Сразу активировать защищённый Live Mobile PWA и QR-код для телефона</span><span data-lang-block="en">Pre-configure HTTPS origin for paired Live Mobile PWA &amp; QR code</span></td>
+            </tr>
+            <tr>
+              <td><code class="inline">npx rig-commander --no-session-logs</code></td>
+              <td><span data-lang-block="ru">Не читать локальные журналы <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> (только живые панели <code class="inline">tmux</code>)</span><span data-lang-block="en">Skip reading local <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> session logs (live <code class="inline">tmux</code> panes only)</span></td>
+            </tr>
+            <tr>
+              <td><code class="inline">npx rig-commander --raw-capture</code></td>
+              <td><span data-lang-block="ru">Отключить серверную редакцию секретов в живом потоке <code class="inline">/api/capture</code> (для отладки)</span><span data-lang-block="en">Disable default server-side secret masking on live <code class="inline">/api/capture</code> SSE stream</span></td>
             </tr>
             <tr>
               <td><code class="inline">npx rig-commander --no-open</code></td>

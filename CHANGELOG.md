@@ -10,6 +10,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.13.0] - 2026-11-27
+
+### Added
+- **Live Server-Side Secret Redaction on `/api/capture` & `/api/capture/stream` SSE (`openrig/server.mjs`):**
+  - Enabled automatic redaction of API keys, Bearer/JWT tokens, PEM private keys, `.env` secret assignments, and SSH host IPs before live terminal output reaches the browser over SSE (`redactLiveCaptureScreen`), while keeping workspace paths readable for the local operator. Opt out via `--raw-capture` / `RIGCOMMANDER_RAW_CAPTURE=1`.
+- **Strict `--no-session-logs` Opt-Out Flag (`bin/cli.mjs`, `openrig/server.mjs`, `openrig/lib/universal-discovery.mjs`):**
+  - Added `--no-session-logs` (and `RIGCOMMANDER_NO_SESSION_LOGS=1`) so operators can completely skip reading `~/.claude/` and `~/.codex/` transcripts and restrict discovery strictly to live local `tmux` panes.
+- **Global Fleet Safety Pause (`⏸ Pause` / `Shift+Space`) & Header `🛑 Ctrl+C` (`openrig/index.html`, `openrig/assets/ui/inspector-view.js`, `openrig/assets/styles/deck.css`):**
+  - Added a visible `⏸ Pause` toggle in the top bar (desktop, laptop & mobile) that pauses Auto-Consent and locks terminal sends until resumed, plus a compact `🛑 Ctrl+C` button in the Inspector header above the fold.
+
+### Changed
+- **Adaptive Standalone TMUX Panes Grid & Wide Decision Inspector (`openrig/assets/ui/topology-view.js`, `openrig/assets/styles/deck.css`, `openrig/index.html`):**
+  - When a fleet has 0 call-highway edges (`tmux / Universal` mode), the center canvas automatically switches from an empty 2D graph void to a structured 2-column `TMUX PANES` grid, hiding unused graph/layout toggles and expanding the Decision Inspector (`+90–100px`) so Git Worktree and live TMUX preview stay above the fold.
+  - Collapsed routine healthy working agents in Wait Radar into quiet 1-line rows (`Management-by-Exception`), deduplicated the P0 HITL Inspector header, vertically separated `Always (dir)` below `Cancel (esc)` with a dashed divider, labeled optional `🧠 AI Risk · OFF (opt-in)` honestly, and removed synthetic queue-envelope counts on standalone `tmux` demo panes.
+- **Auto-Consent Modal & Public Docs Clarity (`openrig/assets/ui/auto-consent-view.js`, `landing/index.html`, `landing/guide.html`, `landing/passport.html`):**
+  - Dimmed dependent Auto-Consent controls & desaturated active sub-toggles when the global master switch is OFF, labeled the 3-column profile strip explicitly as a flat read-only reference, and expanded the agents policy viewport so all 4 agents fit without clipping.
+  - Removed landing hero neon glow, eyebrow pill, and nested CTA badge so the interactive preview lifts into `1280×720` / `1440×900` viewports; replaced jargon in `/passport` intro, added a dedicated C4 row for Live TMUX SSE redaction & `--no-session-logs`, and documented maintainer/security contact channels.
+
+---
+
 ## [3.12.2] - 2026-11-27
 
 ### Fixed & Improved

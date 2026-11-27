@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.12.2" />
+  <meta name="app-version" content="3.13.0" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -12,7 +12,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
-  <title>RigCommander // Neural Command Deck v3.11</title>
+  <title>RigCommander // Command Deck v3.13</title>
   <meta name="description" content="Interactive Neural Command Deck for autonomous AI coding fleets (Claude Code, Codex CLI, tmux & OpenRig). Live Graph ⇄ Task Gantt, 1-click HITL, SUB vs PAYG FinOps & Share Card PNG export." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="RigCommander" />
@@ -74,6 +74,7 @@
         <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
       <button type="button" class="triage-refresh-btn ac-top-is-off" id="btnAutoConsentTop" onclick="openGuardrailsModal('auto-consent')" title="Scoped Auto-Consent Policy (Dry-Run / Armed)">⚡ <span class="ac-top-lbl-desktop" data-i18n="autoConsent.topBtn">Авто-согласие</span><span class="ac-top-lbl-mobile" data-i18n="autoConsent.mobileShort">Авто</span><span id="btnAutoConsentStateBadge" class="ac-top-badge is-off">ВЫКЛ</span></button>
+      <button type="button" class="triage-refresh-btn fleet-pause-btn" id="btnFleetPause" aria-pressed="false" onclick="toggleFleetPause()" title="Пауза флота (Shift+Space): замораживает авто-согласие и блокирует отправку команд">⏸ <span id="btnFleetPauseLabel" data-i18n="hud.pauseFleet">Пауза</span></button>
       <button class="triage-refresh-btn" id="btnShiftDigest" onclick="openShiftDigestModal()" style="border-color:rgba(251,191,36,0.45); color:#fde68a;" title="Shift Catch-Up / Overnight Digest">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span data-i18n="digest.btn">Смена</span><span id="btnShiftDigestBadge" class="digest-btn-badge" style="display:none;">0</span>
@@ -1178,8 +1179,8 @@
             isAnomaly: false,
             activityLabel: en ? '🟢 WORKING (1)' : '🟢 РАБОТАЕТ (1)',
             assignedWorkCount: 1,
-            callsIn: 18,
-            callsOut: 12,
+            callsIn: 0,
+            callsOut: 0,
             reworkBadge: null,
             cwd: '~/projects/payments-api',
             tmuxAttachCommand: 'tmux attach -t claude-api',
@@ -1207,8 +1208,8 @@
             needsInputReason: 'permission_prompt',
             activityLabel: en ? '🚨 NEEDS INPUT (npm test)' : '🚨 ЖДЁТ ВВОДА (npm test)',
             assignedWorkCount: 1,
-            callsIn: 24,
-            callsOut: 19,
+            callsIn: 0,
+            callsOut: 0,
             reworkBadge: en ? 'HITL waiting' : 'Ожидание HITL',
             reworkClass: 'chip-rework-warn',
             cwd: '~/projects/payments-api',
@@ -1235,8 +1236,8 @@
             isAnomaly: false,
             activityLabel: en ? '🟢 WORKING (1)' : '🟢 РАБОТАЕТ (1)',
             assignedWorkCount: 1,
-            callsIn: 9,
-            callsOut: 6,
+            callsIn: 0,
+            callsOut: 0,
             reworkBadge: null,
             cwd: '~/projects/payments-api',
             tmuxAttachCommand: 'tmux attach -t gemini-docs',
@@ -1267,8 +1268,8 @@
             isAnomaly: true,
             activityLabel: en ? '🟢 WORKING (1)' : '🟢 РАБОТАЕТ (1)',
             assignedWorkCount: 1,
-            callsIn: 31,
-            callsOut: 14,
+            callsIn: 0,
+            callsOut: 0,
             reworkBadge: null,
             cwd: '~/projects/payments-api',
             tmuxAttachCommand: 'tmux attach -t claude-refactor',
@@ -1460,9 +1461,9 @@
       summary.textContent = td('demo.tools');
       const body = document.createElement('div');
       body.className = 'triage-tools-body';
-      // Keep only Auto-Consent + conditional install/update buttons directly in the single 54px bar;
+      // Keep Fleet Pause + Auto-Consent + conditional install/update buttons directly in the single 54px bar;
       // tuck secondary tools (?, 10s Mission, Back to Site, Fullscreen, Rig/Slice filters, etc.) inside Tools.
-      const keepDirect = new Set(['btnAutoConsentTop', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
+      const keepDirect = new Set(['btnFleetPause', 'btnAutoConsentTop', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
       for (const el of [...host.querySelectorAll(':scope > button, :scope > a')]) {
         if (!keepDirect.has(el.id)) body.appendChild(el);
       }
@@ -2348,6 +2349,23 @@
                 : w.color === '#00f0ff' || w.color === '#38bdf8'
                   ? 'rgba(0, 240, 255, 0.10)'
                   : 'rgba(245, 158, 11, 0.11)';
+            const isRoutineRow = w.prio >= 3 && w.slice === 'active' && !quickActionBtn && !groupBtn && secondaryChipsHtml === '';
+            if (isRoutineRow) {
+              const agentObj = AGENTS.find(a => a.id === w.seatId);
+              const ctxText = agentObj && typeof agentObj.ctxPct === 'number' ? `CTX ${Math.round(agentObj.ctxPct)}%` : '';
+              return `
+        <div class="wait-card is-routine-row${w.seatId === selectedAgentId ? ' is-selected-card' : ''}" style="--wait-color:${w.color};"
+             data-seat="${safeSeat}"
+             onmouseenter="if (this.getAttribute('data-seat')) setHoverAgent(this.getAttribute('data-seat'))"
+             onmouseleave="if (this.getAttribute('data-seat')) setHoverAgent(null)"
+             onclick="if (this.getAttribute('data-seat')) focusFromRadar(this.getAttribute('data-seat'), 'focus')">
+          <span class="routine-dot" aria-hidden="true">●</span>
+          <span class="routine-name">${w.from}</span>
+          ${ctxText ? `<span class="routine-ctx">${escapeHtml(ctxText)}</span>` : ''}
+          <span class="routine-state">${escapeHtml(td('radar.routineWorking'))}</span>
+        </div>
+      `;
+            }
             return `
         <div class="wait-card${w.seatId === selectedAgentId ? ' is-selected-card' : ''}" style="--wait-color:${w.color}; --wait-wash:${washColor};"
              data-seat="${safeSeat}"
@@ -2439,7 +2457,7 @@
     }
 
     function renderStateIndicatorHtml(agent) {
-      return TopologyView.renderStateIndicatorHtml(agent, { escapeHtml });
+      return TopologyView.renderStateIndicatorHtml(agent, { escapeHtml, deckLang, td });
     }
 
     function updateGraphLayoutSwitchUi() {
@@ -2497,7 +2515,8 @@
       updateGraphLayoutSwitchUi();
       const title = document.getElementById('centerPanelTitle');
       if (title) {
-        title.textContent = isGantt ? td('center.ganttTitle') : td('center.graphTitle');
+        const isNoEdges = document.body?.classList?.contains('fleet-no-edges');
+        title.textContent = isGantt ? td('center.ganttTitle') : (isNoEdges ? td('center.panesTitle') : td('center.graphTitle'));
       }
       document.querySelectorAll('[data-gantt-window]').forEach(b => {
         b.classList.toggle('active', Number(b.getAttribute('data-gantt-window')) === ganttWindowH);
@@ -4685,11 +4704,53 @@
       return res;
     }
 
+    let fleetSafetyPaused = false;
+
+    function syncFleetPauseUi() {
+      const btn = document.getElementById('btnFleetPause');
+      const lbl = document.getElementById('btnFleetPauseLabel');
+      document.body?.classList?.toggle('fleet-safety-paused', fleetSafetyPaused);
+      if (btn) {
+        btn.classList.toggle('is-paused', fleetSafetyPaused);
+        btn.setAttribute('aria-pressed', fleetSafetyPaused ? 'true' : 'false');
+        btn.title = td('hud.pauseFleetTip');
+        const iconNode = btn.firstChild;
+        if (iconNode && iconNode.nodeType === 3) {
+          iconNode.nodeValue = fleetSafetyPaused ? '▶ ' : '⏸ ';
+        }
+      }
+      if (lbl) {
+        lbl.textContent = fleetSafetyPaused ? td('hud.resumeFleet') : td('hud.pauseFleet');
+      }
+    }
+
+    function toggleFleetPause() {
+      fleetSafetyPaused = !fleetSafetyPaused;
+      syncFleetPauseUi();
+      if (fleetSafetyPaused && autoConsentUi && typeof autoConsentUi.getState === 'function') {
+        const st = autoConsentUi.getState();
+        if (st && st.config && st.config.enabled && !st.config.masterPaused && typeof autoConsentUi.handleAction === 'function') {
+          void autoConsentUi.handleAction('pause-all');
+        }
+      }
+      if (typeof showToast === 'function') {
+        showToast(fleetSafetyPaused ? td('hud.pauseToastOn') : td('hud.pauseToastOff'));
+      }
+    }
+
     function sendTerminalKey(seat, keyStr, statusElId = 'cmdSendStatus', actionId = '', controlEl = null) {
+      if (fleetSafetyPaused) {
+        if (typeof showToast === 'function') showToast(td('hud.pauseToastOn'));
+        return Promise.resolve({ ok: false, blockedByPause: true });
+      }
       return executeApiSend(seat, keyStr, 'key', statusElId, actionId, controlEl);
     }
 
     function sendTerminalRaw(seat, rawText, statusElId = 'cmdSendStatus', actionId = '', controlEl = null) {
+      if (fleetSafetyPaused) {
+        if (typeof showToast === 'function') showToast(td('hud.pauseToastOn'));
+        return Promise.resolve({ ok: false, blockedByPause: true });
+      }
       return executeApiSend(seat, rawText, 'raw', statusElId, actionId, controlEl);
     }
 
@@ -8010,6 +8071,9 @@
       } else if (e.key === 'd' || e.key === 'D') {
         e.preventDefault();
         toggleDensityMode();
+      } else if (e.shiftKey && e.code === 'Space') {
+        e.preventDefault();
+        toggleFleetPause();
       } else if (e.key === '?') {
         e.preventDefault();
         toggleSaTour();

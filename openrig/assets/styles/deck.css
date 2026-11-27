@@ -7708,4 +7708,405 @@ body.demo-mode .hud-header {
   fill: #e9d5ff;
 }
 
+/* ==========================================================================
+   v3.13.0 DARK COCKPIT STRUCTURAL ERGONOMICS:
+   - Adaptive TMUX Panes grid when fleet has 0 call-highway edges (no empty void)
+   - Wide Decision Inspector (+90px) & deduplicated compact P0 HITL header
+   - Vertical separation of Cancel vs Always (dir) (zero fat-finger risk)
+   - Quiet 1-line routine rows in Wait Radar (Management-by-Exception)
+   - Global Fleet Safety Pause button in top bar + Ctrl+C in Inspector header
+   - Auto-Consent modal master-OFF dimming, flat read-only legend & full 4-agent list
+   ========================================================================== */
+
+/* 1. Global Fleet Pause button (Top Bar — desktop, laptop & mobile) */
+.fleet-pause-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px !important;
+  min-width: 34px !important;
+  padding: 3px 9px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  border-color: rgba(245, 158, 11, 0.44) !important;
+  background: rgba(120, 53, 15, 0.2) !important;
+  color: #fde68a !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.fleet-pause-btn:hover {
+  border-color: rgba(245, 158, 11, 0.78) !important;
+  background: rgba(120, 53, 15, 0.36) !important;
+  color: #fef3c7 !important;
+}
+.fleet-pause-btn.is-paused {
+  border-color: #ef4444 !important;
+  background: rgba(153, 27, 27, 0.44) !important;
+  color: #fff1f2 !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.32);
+}
+
+/* 2. Adaptive Standalone TMUX Layout (0 call-highway edges -> structured grid + wide Inspector) */
+@media (min-width: 1360px) {
+  body.fleet-no-edges .main-layout:not(.left-collapsed):not(.right-collapsed) {
+    grid-template-columns: 244px minmax(340px, 1fr) 448px;
+  }
+}
+@media (min-width: 769px) and (max-width: 1359px) {
+  body.fleet-no-edges .main-layout:not(.left-collapsed):not(.right-collapsed) {
+    grid-template-columns: 224px minmax(260px, 1fr) 406px;
+  }
+}
+body.fleet-no-edges #topologySvg,
+body.fleet-no-edges #activeFilterLabel,
+body.fleet-no-edges #graphLayoutSwitch,
+body.fleet-no-edges #dormantBenchDivider {
+  display: none !important;
+}
+body.fleet-no-edges #panelCenter .canvas-wrap {
+  background: radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.72), rgba(6, 11, 23, 0.96)) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
+body.fleet-no-edges #nodesLayer {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  box-sizing: border-box;
+}
+body.fleet-no-edges #nodesLayer .agent-node {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  padding: 11px 12px 10px !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+body.fleet-no-edges #nodesLayer .agent-node.state-urgent {
+  padding-top: 11px !important;
+}
+body.fleet-no-edges #nodesLayer .agent-node .node-top {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+}
+body.fleet-no-edges #nodesLayer .agent-node .status-led {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin-left: 4px;
+  flex-shrink: 0;
+  font-size: 9.5px !important;
+  padding: 2px 7px !important;
+  min-height: 22px !important;
+}
+body.fleet-no-edges #nodesLayer .agent-node .status-led.led-urgent {
+  min-height: 24px !important;
+  padding: 2px 7px !important;
+}
+body.fleet-no-edges #nodesLayer .agent-node .node-role {
+  display: block !important;
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.fleet-no-edges #nodesLayer .agent-node .badge-row {
+  display: flex !important;
+  margin-top: 4px;
+}
+body.fleet-no-edges #nodesLayer .agent-node:hover {
+  transform: translateY(-1px) !important;
+}
+body.fleet-no-edges #nodesLayer .node-meta-row:empty {
+  display: none;
+}
+
+/* 3. Quiet 1-line Routine Rows in Wait Radar (Management-by-Exception) */
+.wait-card.is-routine-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px !important;
+  min-height: 34px;
+  background: rgba(15, 23, 42, 0.44) !important;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  border-left: 2px solid rgba(56, 189, 248, 0.38) !important;
+  box-shadow: none !important;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.wait-card.is-routine-row:hover {
+  background: rgba(30, 41, 59, 0.68) !important;
+  border-color: rgba(56, 189, 248, 0.38) !important;
+}
+.wait-card.is-routine-row.is-selected-card {
+  background: rgba(14, 165, 233, 0.14) !important;
+  border-color: rgba(56, 189, 248, 0.55) !important;
+}
+.wait-card.is-routine-row .routine-dot {
+  color: #34d399;
+  font-size: 9px;
+  flex-shrink: 0;
+}
+.wait-card.is-routine-row .routine-name {
+  color: #e2e8f0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.wait-card.is-routine-row .routine-ctx {
+  color: #94a3b8;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.wait-card.is-routine-row .routine-state {
+  color: #64748b;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* 4. Deduplicated Compact Inspector Header + Separated Cancel vs Always + Dual Utility Row */
+.insp-status-strip.is-compact-hitl {
+  padding: 4px 8px !important;
+  gap: 3px !important;
+}
+.insp-status-strip.is-compact-hitl #inspValActivity {
+  display: none !important;
+}
+.seat-diagnosis-card.is-inline-hitl-compact {
+  padding: 8px 10px !important;
+  gap: 6px !important;
+}
+.diag-inline-hitl .ctrl-prompt-options {
+  padding-bottom: 4px !important;
+  margin-bottom: 0 !important;
+  border-bottom: none !important;
+}
+.diag-inline-hitl .hitl-target-scope {
+  margin-bottom: 5px !important;
+  padding: 3px 7px !important;
+}
+.diag-inline-hitl .hitl-command-preview {
+  margin-bottom: 6px !important;
+}
+.diag-inline-hitl .hitl-term-context {
+  margin-bottom: 8px !important;
+}
+.diag-inline-hitl .hitl-btn-primary {
+  min-height: 44px !important;
+}
+.hitl-secondary-row {
+  margin-top: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+.diag-inline-hitl .hitl-btn-secondary {
+  min-height: 36px !important;
+  width: 100%;
+}
+.diag-inline-hitl .hitl-btn-always {
+  margin-top: 10px !important;
+  min-height: 32px !important;
+  padding: 5px 10px !important;
+  font-size: 10.5px !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(245, 158, 11, 0.38) !important;
+  background: rgba(15, 23, 42, 0.42) !important;
+  position: relative;
+}
+.diag-inline-hitl .hitl-btn-always::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(148, 163, 184, 0.24);
+  pointer-events: none;
+}
+.diag-utility-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+  width: 100%;
+}
+.diag-utility-row .diag-tmux-secondary-link,
+.diag-utility-row .diag-ai-summary {
+  min-height: 32px !important;
+  padding: 4px 8px !important;
+  font-size: 10px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.diag-utility-row .diag-ai-details {
+  margin-top: 0 !important;
+  min-width: 0;
+}
+.insp-ctrlc-btn {
+  border-color: rgba(244, 63, 94, 0.44) !important;
+  background: rgba(136, 19, 55, 0.24) !important;
+  color: #fecdd3 !important;
+}
+.insp-ctrlc-btn:hover:not(:disabled) {
+  border-color: rgba(251, 113, 133, 0.85) !important;
+  background: rgba(159, 18, 57, 0.46) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 768px) {
+  .triage-strip.unified-topbar {
+    gap: 4px !important;
+    padding: 0 7px !important;
+  }
+  .topbar-center {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden;
+  }
+  #triageBadge {
+    padding: 3px 6px !important;
+    font-size: 9.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  #btnAutoConsentTop .ac-top-lbl-mobile {
+    display: none !important;
+  }
+  .fleet-pause-btn {
+    padding: 3px 7px !important;
+    font-size: 10px !important;
+    min-width: 30px !important;
+  }
+  .fleet-pause-btn #btnFleetPauseLabel {
+    display: none;
+  }
+  .fleet-pause-btn.is-paused #btnFleetPauseLabel {
+    display: inline;
+  }
+  .diag-utility-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 5. Auto-Consent Modal Master-OFF Dimming, Flat Read-Only Legend & Unclipped 4-Agent List */
+#modalGuardStatusBadge,
+#guardrailsStatusBadge {
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+  border-radius: 5px !important;
+  font-weight: 700 !important;
+}
+.ac-tab-wrap.is-master-off .ac-card:not(.ac-master-card),
+.ac-tab-wrap.is-master-off .ac-cmd-legend-block {
+  opacity: 0.62;
+  transition: opacity 0.18s ease;
+}
+.ac-tab-wrap.is-master-off .ac-card:not(.ac-master-card):hover,
+.ac-tab-wrap.is-master-off .ac-card:not(.ac-master-card):focus-within {
+  opacity: 0.96;
+}
+.ac-tab-wrap.is-master-off .ac-switch:not(.is-master) .ac-switch-input:checked + .ac-switch-track,
+.ac-tab-wrap.is-master-off .ac-switch:not(.is-master).is-on .ac-switch-track {
+  background: rgba(71, 85, 105, 0.52) !important;
+  border-color: rgba(148, 163, 184, 0.42) !important;
+  box-shadow: none !important;
+}
+.ac-cmd-legend-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(6, 11, 23, 0.68);
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+}
+.ac-cmd-summary-kicker {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+.ac-cmd-legend-block .ac-cmd-summary {
+  gap: 8px;
+}
+.ac-cmd-legend-block .ac-cmd-col {
+  background: transparent;
+  border: none;
+  border-left: 2px solid rgba(148, 163, 184, 0.28);
+  border-radius: 0;
+  padding: 2px 0 2px 8px;
+}
+.ac-cmd-legend-block .ac-cmd-col.is-safe { border-left-color: rgba(56, 189, 248, 0.5); }
+.ac-cmd-legend-block .ac-cmd-col.is-dev { border-left-color: rgba(16, 185, 129, 0.5); }
+.ac-cmd-legend-block .ac-cmd-col.is-veto {
+  border-left-color: rgba(239, 68, 68, 0.65);
+  background: rgba(69, 10, 10, 0.18);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.ac-policy-list-scroll {
+  max-height: 320px !important;
+}
+.ac-policy-row {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  padding: 5px 8px !important;
+}
+.ac-policy-row .ac-policy-target {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ac-policy-row .ac-policy-controls {
+  width: auto !important;
+  flex: 0 1 205px;
+  justify-content: flex-end;
+}
+.ac-policy-row .ac-policy-select {
+  flex: 1 1 150px;
+  padding: 3px 6px !important;
+  font-size: 11px !important;
+}
+.ac-scroll-wrap.has-scroll-fade::after {
+  display: none;
+}
+
+
 
