@@ -38,6 +38,7 @@ const MAX_RECENT_RUNS = 40;
 const MAX_CANCELED_HASHES = 500;
 const MAX_OBSERVED_KEYS = 400;
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+export const VETO_NON_TMUX_SEAT = 'VETO_NON_TMUX_SEAT';
 const PROJECT_PROFILES = new Set(['off', 'manual_only', 'safe_readonly', 'trusted_dev']);
 const SEAT_PROFILES = new Set(['inherit', 'off', 'manual_only', 'safe_readonly', 'trusted_dev']);
 const SESSION_PROFILES = new Set(['safe_readonly', 'trusted_dev', 'sprint_all']);
@@ -656,6 +657,9 @@ export class AutoConsentEngine {
     if (!isPlainObject(rawBody)) {
       return { ok: false, error: 'Session grant payload must be a JSON object' };
     }
+    if (rawBody.capabilities?.canSendKeys === false || rawBody.seat?.capabilities?.canSendKeys === false) {
+      return { ok: false, error: VETO_NON_TMUX_SEAT, vetoCode: VETO_NON_TMUX_SEAT };
+    }
     const now = this.now();
     this._pruneSessionGrants(now);
 
@@ -962,6 +966,64 @@ export class AutoConsentEngine {
 
     this._pruneApprovalHistory(now);
     this._pruneSessionGrants(now);
+
+    if (seat && seat.capabilities && seat.capabilities.canSendKeys === false) {
+      const existingPending = this.pendingBySeat.get(cleanSeatId);
+      if (existingPending) {
+        this._abortPendingInternal(existingPending, {
+          status: 'canceled',
+          vetoCode: VETO_NON_TMUX_SEAT,
+          reason: `${VETO_NON_TMUX_SEAT}: target seat is non-tmux / read-only (0 writes)`,
+          recordCanceledHash: false,
+          incrementCanceledStat: false,
+          nowMs: now
+        });
+      }
+      const dedupKey = `non_tmux:${cleanSeatId}`;
+      if (!this.observedOutcomeKeys.has(dedupKey)) {
+        boundedSet(this.observedOutcomeKeys, dedupKey, now, MAX_OBSERVED_KEYS);
+        this.stats.escalatedCount += 1;
+        const runEntry = {
+          id: `ac-${now.toString(36)}-${crypto.randomBytes(3).toString('hex')}`,
+          seatId: cleanSeatId,
+          rigId: cleanRigId,
+          status: 'escalated',
+          decision: 'escalate',
+          vetoCode: VETO_NON_TMUX_SEAT,
+          reason: `${VETO_NON_TMUX_SEAT}: non-tmux swarm seat does not support interactive tmux send-keys (0 writes)`,
+          commandPreview: '',
+          promptHash: null,
+          matchedProfile: AUTO_CONSENT_PROFILES.OFF,
+          sourceScope: 'seat',
+          grantId: null,
+          keyStroke: null,
+          execId: null,
+          at: new Date(now).toISOString(),
+          tsMs: now
+        };
+        this._recordRun(runEntry);
+        this._emit('auto_consent_resolved', runEntry, cleanRigId || 'all');
+        this._emit('auto_consent_state', this.getState(now), 'all');
+      }
+      return {
+        action: 'escalated',
+        vetoCode: VETO_NON_TMUX_SEAT,
+        reason: VETO_NON_TMUX_SEAT,
+        evaluation: {
+          decision: 'escalate',
+          keyStroke: null,
+          vetoCode: VETO_NON_TMUX_SEAT,
+          hardVetoes: [VETO_NON_TMUX_SEAT],
+          reason: `${VETO_NON_TMUX_SEAT}: non-tmux swarm seat does not support interactive tmux send-keys`,
+          matchedProfile: AUTO_CONSENT_PROFILES.OFF,
+          sourceScope: 'seat',
+          commandPreview: '',
+          normalizedCommand: '',
+          promptFingerprint: ''
+        },
+        promptHash: null
+      };
+    }
 
     if (this.config.masterPaused) {
       return { action: 'inactive', vetoCode: AUTO_CONSENT_VETO_CODES.MASTER_PAUSED };
@@ -1338,6 +1400,12 @@ export class AutoConsentEngine {
       const freshHash = computePromptHash(freshScreen, freshEval.normalizedCommand || freshEval.commandPreview, freshOptions);
 
       // 3. Enforce strict promptHash identity & re-classification verdict
+      if (liveSeat && liveSeat.capabilities && liveSeat.capabilities.canSendKeys === false) {
+        return abortDrift(
+          `TOCTOU abort: ${VETO_NON_TMUX_SEAT} — seat is non-tmux / read-only (0 tmux writes)`,
+          VETO_NON_TMUX_SEAT
+        );
+      }
       if (freshHash !== pending.promptHash) {
         return abortDrift('TOCTOU abort: live promptHash drifted during grace window (0 tmux writes)');
       }
