@@ -25,7 +25,7 @@ This repository is **public (MIT Open Source)** and powers both the static showc
    - Contains: deep R&D specs & heuristics (`AI Evaluator` cascade/prompts/centroids, `Fleet Intelligence` detector formulas, `Safe Playbook Automation` / Iteration 5 specs, C4 Level 3 internal passport, cognitive load analyses, diligence reviews), commercial roadmap, pricing/GTM, private rig configs, provider quotas/keys, and future Team/Enterprise specs.
    - `.private-docs/` **must remain in `.gitignore`** and must never be tracked by Git or packaged into npm.
 
-## 3. Mandatory Pre-Commit Verification Gate
+## 3. Mandatory Pre-Commit & Pre-Publish Verification Gate
 Before committing or pushing any change:
 ```bash
 npm run sync:public
@@ -33,3 +33,5 @@ npm test
 npm run audit:exposure
 ```
 All unit tests must pass (`0 fail`) and `npm run audit:exposure` must exit `0` (`EXPOSURE_AUDIT_PASS`).
+
+- **Visual Concept Sign-Off Before Publish:** Before pushing or publishing any change that affects the visual concept (layout, hero framing, default `/demo` mode, navigation, modals, or design tokens), first show the user a local screenshot or live local preview URL (e.g., `http://127.0.0.1:7440`) and get explicit sign-off before `git push` / tagging / publishing.

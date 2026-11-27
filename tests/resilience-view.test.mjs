@@ -144,11 +144,13 @@ test('rig_down banner formats multi-day snapshot age cleanly and supports collap
   const folded = renderCrashCartBannerHtml(rigDown, { ...deps('en'), collapsed: true });
   assert.match(folded, /is-collapsed/);
   assert.doesNotMatch(folded, /resilience-provider/);
-  // daemon_down stays expanded even when collapsed=true
+  // daemon_down collapses into a compact 1-line bar while keeping the 1-click Recover fleet button visible
   const daemonDown = status();
   const ddHtml = renderCrashCartBannerHtml(daemonDown, { ...deps('en'), collapsed: true });
-  assert.doesNotMatch(ddHtml, /is-collapsed/);
-  assert.match(ddHtml, /resilience-provider/);
+  assert.match(ddHtml, /is-collapsed/);
+  assert.match(ddHtml, /data-resilience-action="plan"/);
+  assert.match(ddHtml, /Recover fleet/);
+  assert.match(ddHtml, /data-resilience-action="toggle-collapse"/);
 });
 
 test('Control-Plane Queue Hygiene banner stays hidden when healthy, renders on zombie backlog, and executes 2-step plan/confirm', async () => {

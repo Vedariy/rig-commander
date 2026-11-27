@@ -122,7 +122,10 @@ export function normalizeRestoreReceipt(raw) {
   const children = [...rigs, ...seats];
   if (status === 'restored' && children.some(c => c.status !== 'restored')) status = 'partial';
   const attemptId = Number.isSafeInteger(raw?.attemptId) && raw.attemptId >= 0 ? String(raw.attemptId) : text(raw?.attemptId);
-  return { attemptId: SAFE_ATTEMPT_ID_RE.test(attemptId) ? attemptId : null, status, rigs, seats };
+  const detail = text(raw?.detail).slice(0, 260);
+  const out = { attemptId: SAFE_ATTEMPT_ID_RE.test(attemptId) ? attemptId : null, status, rigs, seats };
+  if (detail) out.detail = detail;
+  return out;
 }
 
 export function buildDemoResilienceScenario(step = 'blackout') {

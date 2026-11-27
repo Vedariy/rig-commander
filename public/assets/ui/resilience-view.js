@@ -36,10 +36,14 @@ export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = fals
     array(status.providers).some(p => p.report?.tier === 'daemon_down' || array(p.report?.offlineRigs).length)));
   const effectiveCp = controlPlane || status?.controlPlane || null;
   const cpHealth = effectiveCp ? evaluateControlPlaneHealth(effectiveCp) : null;
-  const hasHygieneIssue = Boolean(cpHealth && !cpHealth.healthy);
+  const m = cpHealth?.metrics || {};
+  const hasActionableHygiene = Boolean(
+    cpHealth && !cpHealth.healthy &&
+    ((m.opgateOlderThan24h || 0) > 0 || (m.daemonLogBytes || 0) > 50 * 1024 * 1024)
+  );
+  const hasHygieneIssue = hasActionableHygiene;
   if (!hasOutage && !hasHygieneIssue) return '';
 
-  const m = cpHealth?.metrics || {};
   const mb = bytes => ((Number(bytes) || 0) / (1024 * 1024)).toFixed(1);
   const hygieneSectionHtml = hasHygieneIssue ? `<section class="resilience-provider resilience-hygiene"><div class="resilience-provider-head"><strong>🩺 ${esc(td('hygiene.bannerTitle'))}</strong>
     <span class="resilience-snapshot ${cpHealth.status === 'degraded' ? 'stale' : 'aging'}">${esc(td('hygiene.staleLabel', { count: m.opgateOlderThan24h || 0 }))}</span>
@@ -49,15 +53,29 @@ export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = fals
     ${array(cpHealth.findings).map(f => `<small style="display:block;color:#cbd5e1;margin-top:4px;">${esc(f.title || f.summary)}</small>`).join('')}</section>` : '';
 
   if (!hasOutage) {
-    const isCollapsed = Boolean(collapsed && cpHealth.status !== 'degraded');
-    const toggleBtn = cpHealth.status === 'degraded' ? '' : button('toggle-collapse', isCollapsed ? '▾' : '▴', `aria-expanded="${!isCollapsed}"`);
+    const isCollapsed = Boolean(collapsed);
+    const toggleBtn = button('toggle-collapse', isCollapsed ? '▾' : '▴', `aria-expanded="${!isCollapsed}"`);
+    const compactChips = isCollapsed
+      ? `<span class="resilience-vault">daemon.log: ${mb(m.daemonLogBytes)} MB</span>${button('hygiene-plan', td('hygiene.planBtn'), 'data-scope="fleet" data-cutoff-hours="24"', busy)}`
+      : '';
     return `<aside class="resilience-banner${isCollapsed ? ' is-collapsed' : ''}" aria-live="polite"><div class="resilience-heading"><div><strong>🩺 ${esc(td('hygiene.bannerTitle'))}</strong>
       ${isCollapsed ? '' : `<p>${esc(cpHealth.findings[0]?.summary || '')}</p>`}</div>
-      ${button('refresh', td('triage.refresh'), '', busy)}${toggleBtn}</div>${isCollapsed ? '' : hygieneSectionHtml}</aside>`;
+      ${compactChips}${button('refresh', td('triage.refresh'), '', busy)}${toggleBtn}</div>${isCollapsed ? '' : hygieneSectionHtml}</aside>`;
   }
 
   const isDaemonDown = status.report?.tier === 'daemon_down' || array(status.providers).some(p => p.report?.tier === 'daemon_down');
-  const isCollapsed = Boolean(collapsed && !isDaemonDown);
+  const isCollapsed = Boolean(collapsed);
+  const offlineRigsList = array(status.report?.offlineRigs);
+  const primaryProvider = array(status.providers).find(p => {
+    const rep = providerReport(status, p);
+    return rep?.tier === 'daemon_down' || array(rep?.offlineRigs).length;
+  }) || array(status.providers)[0];
+  const collapsedFleetBtn = (isCollapsed && primaryProvider && primaryProvider.capabilities?.fleetRecover === true && primaryProvider.capabilities?.planPreview === true)
+    ? button('plan', td('resilience.resurrectFleetBtn'), targetAttrs({ providerId: primaryProvider.id, scope: 'fleet', target: null }), busy)
+    : '';
+  const collapsedRigsChip = (isCollapsed && offlineRigsList.length)
+    ? `<span class="resilience-vault" style="color:#fde68a;">${esc(offlineRigsList.join(' · '))}</span>`
+    : '';
   const content = isCollapsed ? '' : array(status.providers).map(provider => {
     const report = providerReport(status, provider), caps = provider.capabilities || {};
     if (!(report?.tier === 'daemon_down' || array(report?.offlineRigs).length)) return '';
@@ -74,13 +92,14 @@ export function renderCrashCartBannerHtml(status, { td, lang = 'en', demo = fals
           ${age ? `<small>${esc(td('resilience.snapshotAge', { age }))}</small>` : ''}</div><div class="resilience-actions">
           ${caps.unitRecover === true && caps.planPreview === true ? button('plan', td('resilience.wakeupBtn', { rig: rig.rigId }), targetAttrs(request), busy) : ''}
           ${caps.checkpoints === true ? button('snapshot', td('resilience.snapshotBtn'), targetAttrs(request), busy) : ''}
+          ${button('dismiss', td('resilience.dismissBtn'), targetAttrs(request), busy)}
           ${button('copy', td('resilience.copyCommandBtn'), `data-command="${esc(rig.commandPreview || '')}"`, !rig.commandPreview)}</div></div>`;
       }).join('')}</section>`;
   }).join('');
-  const toggleBtn = isDaemonDown ? '' : button('toggle-collapse', isCollapsed ? '▾' : '▴', `aria-expanded="${!isCollapsed}"`);
-  return `<aside class="resilience-banner${isCollapsed ? ' is-collapsed' : ''}" aria-live="polite"><div class="resilience-heading"><div><strong>${esc(td(isDaemonDown ? 'resilience.daemonDownTitle' : 'resilience.rigDownTitle', { rig: array(status.report?.offlineRigs).join(', ') }))}</strong>
+  const toggleBtn = button('toggle-collapse', isCollapsed ? '▾' : '▴', `aria-expanded="${!isCollapsed}"`);
+  return `<aside class="resilience-banner${isCollapsed ? ' is-collapsed' : ''}" aria-live="polite"><div class="resilience-heading"><div><strong>${esc(td(isDaemonDown ? 'resilience.daemonDownTitle' : 'resilience.rigDownTitle', { rig: offlineRigsList.join(', ') }))}</strong>
     ${isCollapsed ? '' : `<p>${esc(td(isDaemonDown ? 'resilience.daemonDownDesc' : 'resilience.rigDownDesc'))}</p>`}</div>
-    <span class="resilience-vault">${esc(td(status.vault?.encrypted === true ? 'resilience.vaultEncrypted' : 'resilience.vaultLocal'))}</span>
+    ${collapsedRigsChip}${collapsedFleetBtn}${isCollapsed ? '' : `<span class="resilience-vault">${esc(td(status.vault?.encrypted === true ? 'resilience.vaultEncrypted' : 'resilience.vaultLocal'))}</span>`}
     ${button('refresh', td('triage.refresh'), '', busy)}${toggleBtn}</div>${demo && !isCollapsed ? `<p class="resilience-demo">${esc(td('resilience.demoNotice'))}</p>` : ''}${content}${isCollapsed ? '' : hygieneSectionHtml}</aside>`;
 }
 
@@ -113,6 +132,9 @@ export function renderResilienceModalHtml(state, { td, demo = false, now = Date.
 
   const response = state.planResponse, plan = response?.plan;
   const receipt = state.receipt ? normalizeRestoreReceipt(state.receipt) : null;
+  const suggestedSeatMatch = String(state.receipt?.detail || '').match(/rig\s+seat\s+launch\s+([A-Za-z0-9._-]+@[A-Za-z0-9._-]+)\s+--fresh/i);
+  const suggestedSeatId = suggestedSeatMatch ? suggestedSeatMatch[1] : null;
+  const canDismissFailedRig = Boolean(receipt?.status === 'failed' && state.request?.scope === 'rig' && state.request?.target);
   const canConfirm = confirming && plan?.supported === true && (demo || (typeof response.planHash === 'string' && response.planHash.length > 0 && Date.parse(response.expiresAt) > now));
   return `<div class="resilience-backdrop"><section class="resilience-modal" role="dialog" aria-modal="true" aria-labelledby="resilienceModalTitle" tabindex="-1">
     <header><h2 id="resilienceModalTitle">${esc(td(receipt || state.snapshotSaved ? 'resilience.receiptTitle' : 'resilience.previewTitle'))}</h2>
@@ -125,11 +147,14 @@ export function renderResilienceModalHtml(state, { td, demo = false, now = Date.
       ${array(plan.skippedRigs).length ? `<p>${esc(td('resilience.intentionalSkipNote'))}</p><ul>${plan.skippedRigs.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
       ${list('resilience.warnings', plan.warnings)}` : ''}
     ${state.error ? `<p class="resilience-error" role="alert">${esc(td('resilience.statusUnknown'))}: ${esc(state.error)}</p>` : ''}
+    ${state.receipt?.detail ? `<pre class="resilience-command" style="color:#fda4af; border-color:rgba(244,63,94,0.4); white-space:pre-wrap;">${esc(state.receipt.detail)}</pre>` : ''}
     ${state.phase === 'executing' ? `<p role="status">${esc(td(state.operation === 'snapshot' ? 'modal.loading' : 'resilience.inProgress'))}</p>` : ''}
     ${state.snapshotSaved ? `<p role="status">${esc(td('resilience.snapshotSaved'))}</p>` : ''}
     ${receipt ? `<p class="resilience-result ${receipt.status}" role="status">${esc(td(`resilience.${receiptKey(receipt.status)}`))}</p>
       <ul>${[...receipt.rigs, ...receipt.seats].map(item => `<li>${esc(item.target)} — ${esc(td(`resilience.${receiptKey(item.status)}`))}</li>`).join('')}</ul>` : ''}
     <footer>${confirming || state.phase === 'executing' ? button('confirm', td('resilience.confirmBtn'), `data-plan-hash="${esc(response?.planHash || '')}"${demo ? ' data-simulated="true"' : ''}`, !canConfirm) : ''}
+    ${suggestedSeatId ? button('plan', td('resilience.launchSuggestedSeat', { seat: suggestedSeatId }), targetAttrs({ providerId: plan?.providerId || 'openrig', scope: 'seat', target: suggestedSeatId })) : ''}
+    ${canDismissFailedRig ? button('dismiss', td('resilience.dismissBtn'), targetAttrs(state.request)) : ''}
     ${button('copy', td('resilience.copyCommandBtn'), `data-command="${esc(plan?.commandPreview || state.commandPreview || '')}"`, !(plan?.commandPreview || state.commandPreview))}</footer>
     ${state.copyFallback ? `<textarea class="resilience-copy-fallback" readonly aria-label="${esc(td('resilience.copyCommandBtn'))}">${esc(state.copyFallback)}</textarea>` : ''}
     </section></div>`;
@@ -139,7 +164,7 @@ export function renderResilienceModalHtml(state, { td, demo = false, now = Date.
 export function createResilienceController({ root, modalRoot, td, lang = () => 'en', isLive = () => false, demo = false,
   getJson, postJson, copyCommand = () => Promise.reject(new Error('Clipboard unavailable')),
   guard = new ActionFlightGuard(), now = Date.now } = {}) {
-  let status = null, controlPlane = null, state = { phase: 'closed' }, epoch = 0, refreshing = null, destroyed = false, focusReturn = null, collapsed = false;
+  let status = null, controlPlane = null, state = { phase: 'closed' }, epoch = 0, refreshing = null, destroyed = false, focusReturn = null, collapsed = !demo;
   const lockScope = 'resilience:operator';
   const busy = () => guard.isScopeInFlight(lockScope);
   const deps = () => ({ td, lang: lang(), demo, now: now(), busy: busy(), collapsed, controlPlane });
@@ -333,6 +358,17 @@ export function createResilienceController({ root, modalRoot, td, lang = () => '
       await hygieneMutate();
     }
     if (action === 'snapshot') await snapshot(request);
+    if (action === 'dismiss' && request.scope === 'rig' && request.target) {
+      if (demo) { cancel(); return; }
+      try {
+        await postJson('/api/resilience/dismiss', { target: request.target });
+        cancel();
+        await refresh();
+      } catch (error) {
+        state = { phase: 'receipt', request, error: String(error.message || error) };
+        render();
+      }
+    }
   }
   function keydown(event) {
     if (state.phase === 'closed') return;

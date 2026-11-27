@@ -13,6 +13,7 @@ export function registerResilienceRoutes({ get, post }, service) {
   get('/api/resilience/status', wrap(async ({ url, json }) =>
     json(200, await service.getStatus({ refresh: url.searchParams.get('refresh') === '1' }))));
   post('/api/resilience/plan', wrap(async ({ body, json }) => json(200, await service.gate.createPlan(body))));
+  post('/api/resilience/dismiss', wrap(async ({ body, json }) => json(200, await service.dismissRig(body?.target))));
 
   for (const action of ['snapshot', 'resurrect']) {
     post('/api/resilience/' + action, wrap(async ({ req, body, json }) => {

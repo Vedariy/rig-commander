@@ -183,6 +183,14 @@ export class FleetResilienceService {
     await this.notify(this.lastWakeAdvisory);
   }
 
+  async dismissRig(rigId) {
+    const clean = String(rigId || '').trim();
+    if (!SAFE_RIG_NAME_RE.test(clean)) throw new PolicyError(400, 'invalid_target');
+    await this.store.markIntentionalStop(clean, true);
+    this.observed = null;
+    return { ok: true, dismissed: clean };
+  }
+
   async observeTelemetry(snapshot) {
     if (snapshot && typeof snapshot === 'object') {
       this.lastHygieneSnapshot = {

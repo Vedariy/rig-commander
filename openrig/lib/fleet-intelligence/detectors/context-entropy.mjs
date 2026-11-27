@@ -11,6 +11,9 @@ export class ContextEntropyDetector {
     const findings = [];
 
     for (const node of nodes) {
+      if (node.hasLivePane === false || node.readOnlyTranscript === true || /\(JSONL\)$/i.test(String(node.resolvedSpecName || ''))) {
+        continue;
+      }
       const seat = node.canonicalSessionName || node.logicalId || '';
       const shortName = seat.split('@')[0];
       const ctxPct = node.contextUsage?.usedPercentage;

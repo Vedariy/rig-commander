@@ -1565,8 +1565,12 @@ function layoutRigClusters(list, edges, options, activity, cw, ch) {
         kept.push(rigId);
       }
     }
+    const hasUrgent = (rid) => (rigMeta.get(rid)?.agents || []).some(a => a && a.state === 'urgent');
+    const urgentSolo = solo.filter(hasUrgent);
+    const normalSolo = solo.filter(r => !hasUrgent(r));
+    for (const rigId of urgentSolo) refinedSlices.push([rigId]);
     if (kept.length > 0) refinedSlices.push(kept);
-    for (const rigId of solo) refinedSlices.push([rigId]);
+    for (const rigId of normalSolo) refinedSlices.push([rigId]);
   }
   if (promoted) {
     rowSlices = refinedSlices;

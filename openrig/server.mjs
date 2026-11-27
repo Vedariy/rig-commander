@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import http from 'node:http';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -680,7 +682,23 @@ const selfUpdater = new SelfUpdater({
 });
 const RIG_BIN = process.env.RIG_BIN || (process.env.HOME ? path.join(process.env.HOME, '.local/bin/rig') : 'rig');
 const TMUX_BIN = process.env.TMUX_BIN || 'tmux';
-const DAEMON_URL = process.env.OPENRIG_DAEMON_URL || 'http://127.0.0.1:7437';
+function resolveOpenRigDaemonUrl() {
+  if (process.env.OPENRIG_DAEMON_URL) return String(process.env.OPENRIG_DAEMON_URL).replace(/\/+$/, '');
+  const openrigDir = path.join(os.homedir(), '.openrig');
+  for (const fname of ['config.json', 'daemon.json']) {
+    try {
+      const parsed = JSON.parse(readFileSync(path.join(openrigDir, fname), 'utf8'));
+      const port = Number(parsed?.daemon?.port ?? parsed?.daemonPort ?? parsed?.port);
+      if (Number.isInteger(port) && port >= 1024 && port <= 65535) {
+        return `http://127.0.0.1:${port}`;
+      }
+    } catch {
+      // ignore missing/unreadable file
+    }
+  }
+  return 'http://127.0.0.1:7437';
+}
+const DAEMON_URL = resolveOpenRigDaemonUrl();
 const DECISIONS_DIR = process.env.OPENRIG_DECISIONS_DIR || (process.env.HOME ? path.join(process.env.HOME, 'openrig-lab/core-platform/decisions') : path.join(process.cwd(), 'decisions'));
 const RIGS_TOPOLOGY_DIR = process.env.OPENRIG_TOPOLOGY_DIR || (process.env.HOME ? path.join(process.env.HOME, '.openrig/topology/rigs') : path.join(process.cwd(), '.openrig/topology/rigs'));
 
@@ -1523,7 +1541,7 @@ async function getRecentDecisionsCached(limit = 15, nodes = []) {
 async function fetchDaemonJson(endpoint) {
   const startedAt = Date.now();
   try {
-    const res = await fetch(`${DAEMON_URL}${endpoint}`);
+    const res = await fetch(`${resolveOpenRigDaemonUrl()}${endpoint}`);
     recordProbeLatency({ endpoint, durationMs: Date.now() - startedAt, ok: res.ok, tsMs: Date.now() });
     if (!res.ok) return null;
     return await res.json();
@@ -2253,7 +2271,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
       activeQueue: Array.isArray(activeQueue) ? activeQueue : [],
       nodes,
       nowMs: Date.now(),
-      daemonUrl: DAEMON_URL,
+      daemonUrl: resolveOpenRigDaemonUrl(),
       fetchFn: typeof fetch === 'function' ? fetch : null,
       probeHealthz: shouldProbeHealthz
     }).catch(() => null)
@@ -2872,7 +2890,7 @@ const resilience = new FleetResilienceService({
   openrigHome: process.env.OPENRIG_HOME || undefined,
   rigBin: RIG_BIN,
   readOnly: READ_ONLY_MODE,
-  providers: [new OpenRigResilienceProvider({ rigBin: RIG_BIN, daemonUrl: DAEMON_URL })],
+  providers: [new OpenRigResilienceProvider({ rigBin: RIG_BIN, daemonUrl: () => resolveOpenRigDaemonUrl() })],
   actionAudit, shiftHistory,
   notify: async advisory => {
     sseHub.publishShiftEvent(advisory);
@@ -2896,7 +2914,69 @@ registerAutoConsentRoutes(registry, { autoConsent, invalidateTelemetryCache });
 registerGitShiftRoutes(registry, {
   getPort, remoteAccess, selfUpdater, getFleetSnapshot, boundedMapSet, getTelemetryBundle, shiftHistory, actionAudit
 });
+async function attachSeatTerminal({ isRemote, json, body: payload }) {
+  if (READ_ONLY_MODE) {
+    await json(403, READ_ONLY_ERROR_BODY);
+    return;
+  }
+  if (isRemote) {
+    await json(403, { ok: false, code: 'LOCAL_ONLY', error: 'Local terminal attach is only available on the host machine.' });
+    return;
+  }
+  const seat = String(payload.seat || '').trim();
+  if (!/^[a-zA-Z0-9._@-]+$/.test(seat)) {
+    await json(400, { ok: false, error: 'Invalid seat identifier' });
+    return;
+  }
+  if (!isSeatAllowedByTmuxFilter(seat)) {
+    await json(403, { ok: false, code: 'TMUX_SCOPE_DENIED', error: 'Seat is outside --tmux-session allowlist' });
+    return;
+  }
+  const universalTarget = universalTmuxTargets.get(seat);
+  const rawTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seat;
+  const sessionTarget = rawTarget.includes(':') ? rawTarget.split(':')[0] : rawTarget;
+  if (!/^[a-zA-Z0-9._:@%-]+$/.test(sessionTarget)) {
+    await json(400, { ok: false, error: 'Invalid tmux session target' });
+    return;
+  }
+  const tmuxArgs = buildTmuxArgs(TMUX_SOCKET, ['attach-session', '-t', sessionTarget]);
+  const cmdDisplay = ['tmux', ...tmuxArgs].join(' ');
+
+  try {
+    if (process.platform === 'darwin') {
+      const useITerm = String(process.env.TERM_PROGRAM || '') === 'iTerm.app';
+      const escapedCmd = cmdDisplay.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const script = useITerm
+        ? `tell application "iTerm" to create window with default profile command "${escapedCmd}"\ntell application "iTerm" to activate`
+        : `tell application "Terminal" to do script "${escapedCmd}"\ntell application "Terminal" to activate`;
+      await safeTextExec('osascript', ['-e', script], 6000);
+      await json(200, { ok: true, launched: true, platform: 'darwin', command: cmdDisplay });
+      return;
+    }
+    if (process.platform === 'linux') {
+      const termCmds = [
+        ['x-terminal-emulator', ['-e', 'tmux', ...tmuxArgs]],
+        ['gnome-terminal', ['--', 'tmux', ...tmuxArgs]]
+      ];
+      for (const [bin, args] of termCmds) {
+        try {
+          const child = spawn(bin, args, { detached: true, stdio: 'ignore' });
+          child.unref();
+          await json(200, { ok: true, launched: true, platform: 'linux', command: cmdDisplay });
+          return;
+        } catch {
+          // try next terminal emulator
+        }
+      }
+    }
+    await json(200, { ok: false, launched: false, command: cmdDisplay, error: 'No desktop terminal emulator available' });
+  } catch (err) {
+    await json(200, { ok: false, launched: false, command: cmdDisplay, error: err?.message || 'Terminal launch failed' });
+  }
+}
+
 registry.post('/api/send', sendToSeat);
+registry.post('/api/attach-terminal', attachSeatTerminal);
 
 async function dispatchApi(req, res, url, isRemote) {
   const route = apiRoutes.get(url.pathname);

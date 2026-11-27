@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.14.2" />
+  <meta name="app-version" content="3.14.3" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -34,8 +34,10 @@
   <div class="triage-strip unified-topbar" id="triageStrip">
     <div class="topbar-left">
       <div class="topbar-brand-desktop">
-        <span class="brand-orb" aria-hidden="true">💠</span>
-        <span id="deckBrandTitle" class="topbar-brand-name">RIGCOMMANDER</span>
+        <a href="/" class="topbar-brand-link" id="deckBrandHomeLink" title="RigCommander — Главная / Home">
+          <span class="brand-orb" aria-hidden="true">💠</span>
+          <span id="deckBrandTitle" class="topbar-brand-name">RIGCOMMANDER</span>
+        </a>
         <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
         <span class="read-only-badge" id="readOnlyModeBadge" hidden data-i18n="hud.readOnlyBadge" title="Read-only mode (--read-only): zero terminal writes or mutations">🔒 READ-ONLY</span>
         <div class="hud-segmented-group demo-preset-switch" id="demoPresetSwitch" hidden role="group" aria-label="Demo fleet mode">
@@ -43,7 +45,7 @@
           <button type="button" class="hud-segment-btn" id="btnPresetUniversal" onclick="setDemoPreset('universal')" data-i18n="preset.universal">Обычный tmux</button>
         </div>
       </div>
-      <span class="mobile-brand-chip" aria-label="RigCommander">💠 <b>RigCmd</b></span>
+      <a href="/" class="mobile-brand-chip" id="mobileBrandHomeLink" aria-label="RigCommander Home" title="RigCommander — Главная / Home">💠 <b>RigCmd</b></a>
     </div>
 
     <div class="topbar-center">
@@ -224,7 +226,7 @@
     <!-- COLUMN A: WHO WAITS FOR WHOM & WHY + DECISIONS LOG -->
     <section class="panel" id="panelLeft">
       <div class="panel-header">
-        <span data-i18n="radar.title" title="⏳ WHO → WHOM → WAITING">⏳ КТО → КОГО</span>
+        <span data-i18n="radar.title" title="Wait Radar — blockers, handoffs &amp; active tasks">РАДАР ОЖИДАНИЯ</span>
         <span style="display:flex; align-items:center; gap:6px;">
           <span id="waitCountBadge" style="color:#fbbf24">LIVE</span>
         </span>
@@ -248,7 +250,10 @@
     <!-- COLUMN B: SANKEY TOPOLOGY GRAPH + PROPORTIONAL SLICE SWIMLANES -->
     <section class="panel" id="panelCenter">
       <div class="panel-header">
-        <span id="centerPanelTitle" data-i18n="center.graphTitle">🕸️ МАГИСТРАЛИ ВЫЗОВОВ</span>
+        <span style="display:flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap;">
+          <span id="centerPanelTitle" data-i18n="center.graphTitle">🕸️ МАГИСТРАЛИ ВЫЗОВОВ</span>
+          <span id="centerScopeSlot" style="display:inline-flex; align-items:center; gap:6px;"></span>
+        </span>
         <span style="display:flex; align-items:center; gap:6px;">
           <span id="activeFilterLabel" style="color:#00ff9d" data-i18n="center.allHighways">ВСЕ МАГИСТРАЛИ</span>
           <div class="hud-segmented-group graph-layout-switch" id="graphLayoutSwitch" role="group" aria-label="Graph layout mode">
@@ -612,6 +617,50 @@
         details: 'Глобальный оператор ядра OpenRig.'
       },
       {
+        id: 'kernel-dev@kernel',
+        shortName: 'kernel-dev',
+        role: 'Кодер ядра • Auth Guard',
+        icon: '⚙️',
+        harness: 'claude-code',
+        model: 'claude-sonnet-4',
+        ctxPct: 38,
+        ctxWindowSize: 200000,
+        ctxUsedTokens: 76000,
+        state: 'working',
+        isAnomaly: false,
+        activityLabel: '🟢 WORKING (1)',
+        assignedWorkCount: 1,
+        callsIn: 8, callsOut: 6,
+        reworkBadge: null,
+        cwd: 'kernel/auth-guard',
+        port: '—',
+        x: 78, y: 24,
+        usage: { model: 'claude-sonnet-4', tier: 'tier2-balanced', source: 'demo', inputTokens: 410000, uncachedInputTokens: 82000, cachedInputTokens: 328000, outputTokens: 24000, totalTokens: 434000, cachedPct: 80, estUsd: 0.74 },
+        details: 'CTX: 38% (76K / 200K Claude Sonnet 4). Реализует проверку токенов сессии в kernel/auth-guard.'
+      },
+      {
+        id: 'kernel-qa@kernel',
+        shortName: 'kernel-qa',
+        role: 'QA ядра • Security Audit',
+        icon: '🧪',
+        harness: 'gemini-cli',
+        model: 'gemini-2.5-pro',
+        ctxPct: 29,
+        ctxWindowSize: 1000000,
+        ctxUsedTokens: 290000,
+        state: 'working',
+        isAnomaly: false,
+        activityLabel: '🟢 WORKING (1)',
+        assignedWorkCount: 1,
+        callsIn: 6, callsOut: 4,
+        reworkBadge: null,
+        cwd: 'kernel/auth-guard',
+        port: '—',
+        x: 78, y: 58,
+        usage: { model: 'gemini-2.5-pro', tier: 'tier2-balanced', source: 'demo', inputTokens: 290000, uncachedInputTokens: 61000, cachedInputTokens: 229000, outputTokens: 16000, totalTokens: 306000, cachedPct: 79, estUsd: 0.39 },
+        details: 'CTX: 29% (290K / 1M Gemini 2.5 Pro). Гоняет негативные тесты CSRF и Origin-проверок в @kernel.'
+      },
+      {
         id: 'dev-operator@core-platform',
         shortName: 'dev-operator',
         role: 'Оператор рига • Watchdog 15m',
@@ -955,6 +1004,18 @@
         color: '#ff0055',
         marker: 'arr-crimson',
         speed: '0.75s'
+      },
+      // 5. Second Active Project Cluster (@kernel): kernel-dev -> kernel-qa
+      {
+        from: 'kernel-dev@kernel',
+        to: 'kernel-qa@kernel',
+        calls: 6,
+        liveActive: true,
+        freqLabel: '📨 6 выз (kernel-dev → kernel-qa)',
+        slice: 'auth-guard',
+        color: '#38bdf8',
+        marker: 'arr-cyan',
+        speed: '1.15s'
       }
     ];
 
@@ -1473,13 +1534,45 @@
       // Keep Fleet Pause + Auto-Consent + conditional install/update buttons directly in the single 54px bar;
       // tuck secondary tools (?, 10s Mission, Back to Site, Fullscreen, Rig/Slice filters, etc.) inside Tools.
       const keepDirect = new Set(['btnFleetPause', 'btnAutoConsentTop', 'btnPwaInstall', 'btnReloadStaleTab', 'btnAppUpdate']);
-      for (const el of [...host.querySelectorAll(':scope > button, :scope > a')]) {
-        if (!keepDirect.has(el.id)) body.appendChild(el);
+      const scopeSlot = document.getElementById('centerScopeSlot');
+      if (scopeSlot) {
+        for (const scopeId of ['rigFilterSelect', 'sliceFilterSelect']) {
+          const sel = document.getElementById(scopeId);
+          if (sel) scopeSlot.appendChild(sel);
+        }
       }
-      // Tuck secondary workspace controls from #hudHeader & graph layout switcher into Tools popover
-      for (const ctrlId of ['rigFilterSelect', 'sliceFilterSelect', 'graphLayoutSwitch', 'btnDensityMode', 'btnHideIdle', 'btnCalmMode', 'btnAudioRadar', 'btnSaTour', 'btnFullscreen']) {
-        const ctrl = document.getElementById(ctrlId);
-        if (ctrl) body.appendChild(ctrl);
+      const toolGroups = [
+        { key: 'tools.grpPerceptual', ids: ['btnCalmMode', 'btnAudioRadar', 'btnFullscreen'] },
+        { key: 'tools.grpCognitive',  ids: ['btnDensityMode', 'graphLayoutSwitch', 'btnHideIdle'] },
+        { key: 'tools.grpSaDss',      ids: ['btnFleetAdvisor', 'btnShiftDigest', 'btnShareCard'] },
+        { key: 'tools.grpSettings',   ids: ['btnGuardrails', 'btnKeyboardHelp', 'btnMobileQr', 'btnCopyStatusCmd'] },
+        { key: 'tools.grpLearn',      ids: ['btnSaTour', 'btnDemoQuest', 'linkPassportTool', 'linkGuideTool', 'demoBackLink'] },
+        { key: 'tools.grpGeneral',    ids: ['btnRefresh', 'btnCommandPalette'] }
+      ];
+      const placed = new Set();
+      for (const grp of toolGroups) {
+        const els = grp.ids
+          .map(id => document.getElementById(id))
+          .filter(el => el && !keepDirect.has(el.id));
+        if (!els.length) continue;
+        const sec = document.createElement('div');
+        sec.className = 'tools-section';
+        const hdr = document.createElement('div');
+        hdr.className = 'tools-section-title';
+        hdr.dataset.i18n = grp.key;
+        hdr.textContent = td(grp.key);
+        const row = document.createElement('div');
+        row.className = 'tools-section-items';
+        for (const el of els) {
+          placed.add(el);
+          row.appendChild(el);
+        }
+        sec.append(hdr, row);
+        body.appendChild(sec);
+      }
+      // Append any remaining non-direct controls safely
+      for (const el of [...host.querySelectorAll(':scope > button, :scope > a')]) {
+        if (!keepDirect.has(el.id) && !placed.has(el)) body.appendChild(el);
       }
       // Mobile-only quick items inside Tools drawer (EN|RU language switcher, Auto-Consent, Budget, Preset toggle)
       const mobileQuick = document.createElement('div');
@@ -2009,8 +2102,9 @@
         defaultY = [24, 52, 78][Math.floor(idx / 4) % 3] || 52;
       }
 
-      // Safe collision avoidance if any edge-case coordinate overlap occurs
-      while (AGENTS.some(a => Math.abs(a.x - defaultX) < 14 && Math.abs(a.y - defaultY) < 12)) {
+      // Safe collision avoidance if any edge-case coordinate overlap occurs (bounded to prevent infinite loop on large fleets)
+      let collisionAttempts = 0;
+      while (collisionAttempts++ < 64 && AGENTS.some(a => Math.abs(a.x - defaultX) < 14 && Math.abs(a.y - defaultY) < 12)) {
         defaultX = (defaultX + 20) % 86;
         if (defaultX < 14) {
           defaultX = 20;
@@ -2156,6 +2250,7 @@
 
       // P1.5: context overheating >= 65% (unified with Ontology Action Registry + Pi guard; calm amber, never crimson)
       for (const a of rigAgents) {
+        if (a.hasLivePane === false || /\(JSONL\)$/i.test(String(a.role || ''))) continue;
         if (typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_WARN_PCT) {
           const burn = computeBurn(a, deckLang);
           const isCrit = a.ctxPct >= CONTEXT_CRIT_PCT;
@@ -3058,6 +3153,15 @@
 
     async function fetchTerminalCapture(seatId, silent = false) {
       const box = document.getElementById('tmuxScreenBox');
+      const targetAgent = AGENTS.find(x => x.id === seatId);
+      if (targetAgent && (targetAgent.hasLivePane === false || /\(JSONL\)$/i.test(String(targetAgent.role || '')))) {
+        liveScreenCapture = deckLang === 'en'
+          ? `📄 Archived JSONL session (${seatId}) — no live tmux pane attached.\nOnly historical token/context telemetry is available.`
+          : `📄 Архивная JSONL-сессия (${seatId}) — живая tmux-панель не привязана.\nДоступна только историческая телеметрия токенов и контекста.`;
+        lastScreenBySeat[seatId] = liveScreenCapture;
+        InspectorView.updateTerminalScreen(box, liveScreenCapture);
+        return;
+      }
       if (box && !silent && !lastScreenBySeat[seatId]) box.textContent = `Захват экрана tmux для ${seatId}...`;
       try {
         const res = await deckFetch(`/api/capture?seat=${encodeURIComponent(seatId)}&lines=72`);
@@ -3566,6 +3670,7 @@
             target.callsOut = seat.callsOut;
             target.lastActivityAt = seat.lastActivityAt;
             target.tmuxAttachCommand = seat.tmuxAttachCommand;
+            target.hasLivePane = seat.hasLivePane !== false;
             target.capabilities = seat.capabilities || liveNode.capabilities || null;
             target.swarmMeta = seat.swarmMeta || liveNode.swarmMeta || null;
             target.providerKind = seat.providerKind || liveNode.providerKind || '';
@@ -4421,6 +4526,37 @@
       setTimeout(() => { t.style.display = 'none'; }, 2200);
     }
 
+    async function attachSeatInTerminal(seatId, fallbackCmd) {
+      if (!seatId) return;
+      // In static /demo or read-only mode, open the built-in interactive 80-line live terminal modal directly.
+      if (!IS_LIVE || IS_READ_ONLY_MODE) {
+        openTerminalModal(seatId);
+        return;
+      }
+      try {
+        const res = await deckFetch('/api/attach-terminal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ seat: seatId })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data && data.launched) {
+          const t = document.getElementById('copyToast');
+          if (t) {
+            t.textContent = deckLang === 'en'
+              ? `🖥️ Opened terminal: ${data.command || fallbackCmd || seatId}`
+              : `🖥️ Открыт терминал: ${data.command || fallbackCmd || seatId}`;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2600);
+          }
+          return;
+        }
+      } catch {
+        // Fallback to built-in interactive terminal modal
+      }
+      openTerminalModal(seatId);
+    }
+
     function renderCopiedCommandFeedback(el, cmd) {
       el.textContent = `${td('advisor.copied')} ${cmd}`;
       el.copiedCommandFeedback = { cmd, text: el.textContent };
@@ -5109,7 +5245,7 @@
             desc: a.needsInputReason || td('triage.waitingDefault'),
             actionDesc: { id: 'open_live_terminal', transport: 'modal_terminal', seatId: a.id, payload: '', label: td('radar.waitingHumanBtn'), tone: 'proceed' }
           });
-        } else if (typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_CRIT_PCT && !playbookSteps.some(s => s.actionDesc?.seatId === a.id && s.actionDesc?.id === 'compact_context')) {
+        } else if (a.hasLivePane !== false && !/\(JSONL\)$/i.test(String(a.role || '')) && typeof a.ctxPct === 'number' && a.ctxPct >= CONTEXT_CRIT_PCT && !playbookSteps.some(s => s.actionDesc?.seatId === a.id && s.actionDesc?.id === 'compact_context')) {
           const isPi = isPiHarness(a);
           playbookSteps.push({
             severity: 'p1_high',
@@ -7921,8 +8057,9 @@
       const attn = AGENTS.filter(a => a.state === 'urgent');
       const shells = AGENTS.filter(a => Boolean(a.shellExited));
       const gitConflicts = (window.LIVE_GIT_RADAR && Array.isArray(window.LIVE_GIT_RADAR.conflicts)) ? window.LIVE_GIT_RADAR.conflicts : [];
-      const hot = AGENTS.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= 75);
-      const warm = AGENTS.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= 70);
+      const livePaneAgents = AGENTS.filter(a => a.hasLivePane !== false && !/\(JSONL\)$/i.test(String(a.role || '')));
+      const hot = livePaneAgents.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= 75);
+      const warm = livePaneAgents.filter(a => typeof a.ctxPct === 'number' && a.ctxPct >= 70);
       const working = AGENTS.filter(a => a.state === 'working');
 
       // New alerts only → individual sound per waiting agent + opt-in Critical SA Desktop Notification
@@ -8688,7 +8825,7 @@
                 unmergedCount: 0,
                 insertions: 0,
                 deletions: 0,
-                seatIds: ['operator-agent@kernel']
+                seatIds: ['operator-agent@kernel', 'kernel-dev@kernel', 'kernel-qa@kernel']
               }
             ];
         demoGitRadar = analyzeFleetGitRadar(gitWorkspaces, seatStates);
@@ -8707,7 +8844,7 @@
           ? [{ rigId: 'payments-api', name: 'payments-api', status: 'running', nodeCount: 4, runningCount: 4 }]
           : [
               { rigId: 'core-platform', name: 'core-platform', status: 'running', nodeCount: 8, runningCount: 4 },
-              { rigId: 'kernel', name: 'kernel', status: 'running', nodeCount: 1, runningCount: 0 }
+              { rigId: 'kernel', name: 'kernel', status: 'running', nodeCount: 3, runningCount: 2 }
             ],
         seats: [],
         seatsById: {},
@@ -8901,6 +9038,8 @@
     const DEMO_ROLES_I18N = {
       en: {
         'operator-agent@kernel': { role: 'Kernel Dispatcher', details: 'Global OpenRig kernel operator.' },
+        'kernel-dev@kernel': { role: 'Kernel Coder • Auth Guard', details: 'CTX: 38% (76K / 200K Claude Sonnet 4). Implementing session token guards in kernel/auth-guard.' },
+        'kernel-qa@kernel': { role: 'Kernel QA • Security Audit', details: 'CTX: 29% (290K / 1M Gemini 2.5 Pro). Running negative CSRF and Origin boundary checks in @kernel.' },
         'dev-operator@core-platform': { role: 'Rig Operator • Watchdog 15m', details: 'CTX: 31% (475K Codex window). Monitors queue, 75% watchdog, and checker selection.' },
         'dev-owner@core-platform': { role: 'Architect & Orchestrator', details: 'CTX: 48% (228K / 475K Codex). Coordinates tts-strict-chunked and elb-001 slices.' },
         'dev-senior-architector@core-platform': { role: 'Senior Architect (Spec & Arch)', details: 'CTX: 26% (52K / 200K Claude Sonnet 4). Authors specs, ADRs, and architecture reviews.' },
@@ -8912,6 +9051,8 @@
       },
       ru: {
         'operator-agent@kernel': { role: 'Диспетчер ядра OpenRig', details: 'Глобальный оператор ядра OpenRig.' },
+        'kernel-dev@kernel': { role: 'Кодер ядра • Auth Guard', details: 'CTX: 38% (76K / 200K Claude Sonnet 4). Реализует проверку токенов сессии в kernel/auth-guard.' },
+        'kernel-qa@kernel': { role: 'QA ядра • Security Audit', details: 'CTX: 29% (290K / 1M Gemini 2.5 Pro). Гоняет негативные тесты CSRF и Origin-проверок в @kernel.' },
         'dev-operator@core-platform': { role: 'Оператор рига • Watchdog 15m', details: 'CTX: 31% (из 475K окна Codex). Следит за очередью, Watchdog 75% и матрицей выбора чекера.' },
         'dev-owner@core-platform': { role: 'Архитектор и Оркестратор', details: 'CTX: 48% (228K / 475K). Активно координирует слайсы tts-strict-chunked и elb-001.' },
         'dev-senior-architector@core-platform': { role: 'Старший Архитектор (Spec & Arch)', details: 'CTX: 26% (52K / 200K Claude Sonnet 4). Постановки задач, ADR и ревью спецификаций.' },
@@ -10210,6 +10351,114 @@
       <span data-i18n="mobile.tabInspector">Инспектор</span>
     </button>
   </nav>
+
+  <!-- FLOATING PHOTOSHOP/FIGMA-STYLE DRAGGABLE ICON TOOL DOCK (Grouped by Human Factors) -->
+  <div class="floating-tool-dock" id="floatingToolDock" role="toolbar" aria-label="Floating tools">
+    <div class="ftd-drag-handle" id="ftdDragHandle" title="Перетащить панель / Drag toolbar">⋮⋮</div>
+    <!-- 1. Perceptual Load: Calm, Audio, Fullscreen -->
+    <div class="ftd-group" aria-label="Perceptual load">
+      <button type="button" class="ftd-btn" onclick="toggleCalmMode()" title="Перцептивная: Calm Focus (спокойное внимание, меньше шума)">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 4c-2 3-3 6-3 9 0 2.5 1.3 4.5 3 5.5 1.7-1 3-3 3-5.5 0-3-1-6-3-9z"/>
+          <path d="M9 14c-2.5-.5-5-2.2-6-5 2.6-.3 5 .8 6.5 2.5"/>
+          <path d="M15 14c2.5-.5 5-2.2 6-5-2.6-.3-5 .8-6.5 2.5"/>
+          <path d="M5 18.5c2.2.8 4.6 1 7 1s4.8-.2 7-1"/>
+        </svg>
+      </button>
+      <button type="button" class="ftd-btn" onclick="toggleAudioRadar()" title="Перцептивная: Звук (Audio)">🔊</button>
+      <button type="button" class="ftd-btn" onclick="toggleFullscreen()" title="Перцептивная: Полный экран (F)">⛶</button>
+    </div>
+    <div class="ftd-sep" aria-hidden="true"></div>
+    <!-- 2. Cognitive Load: Compact/Detailed, Idle -->
+    <div class="ftd-group" aria-label="Cognitive load">
+      <button type="button" class="ftd-btn" onclick="toggleDensityMode()" title="Когнитивная: Компакт / Детальный">▦</button>
+      <button type="button" class="ftd-btn" onclick="toggleHideIdle()" title="Когнитивная: Скрыть / показать спящих (Idle)">👁</button>
+    </div>
+    <div class="ftd-sep" aria-hidden="true"></div>
+    <!-- 3. SA & DSS: Fleet Advisor, Shift Catch-Up, Share Card -->
+    <div class="ftd-group" aria-label="SA and decision support">
+      <button type="button" class="ftd-btn is-accent" onclick="openFleetAdvisorModal('findings')" title="SA/DSS: Советник флота (Fleet Advisor)">💡</button>
+      <button type="button" class="ftd-btn is-amber" onclick="openShiftDigestModal()" title="SA/DSS: Сводка смены (Catch-Up)">🕒</button>
+      <button type="button" class="ftd-btn" onclick="openShareCardModal()" title="SA/DSS: Карточка дня (Share Card)">📸</button>
+    </div>
+    <div class="ftd-sep" aria-hidden="true"></div>
+    <!-- 5. Settings & Guardrails: Auto-Consent, Guardrails/TG, QR, Shortcuts -->
+    <div class="ftd-group" aria-label="Settings and guardrails">
+      <button type="button" class="ftd-btn is-emerald" onclick="openGuardrailsModal('auto-consent')" title="Настройки: Авто-согласие">⚡</button>
+      <button type="button" class="ftd-btn is-emerald" onclick="openGuardrailsModal()" title="Настройки: Авто-тормоз / Telegram">🛡</button>
+      <button type="button" class="ftd-btn is-accent" onclick="openMobileQrModal()" title="Настройки: QR на телефон">📱</button>
+      <button type="button" class="ftd-btn" onclick="toggleKeyboardHelpPopover(event)" title="Настройки: Горячие клавиши (?)">⌨</button>
+    </div>
+    <div class="ftd-sep" aria-hidden="true"></div>
+    <!-- 7. General Control: Command Palette, Refresh -->
+    <div class="ftd-group" aria-label="General control">
+      <button type="button" class="ftd-btn is-accent" onclick="openCommandPalette()" title="Управление: Палитра команд (⌘K)">⌘</button>
+      <button type="button" class="ftd-btn" onclick="refreshTelemetryNow(true)" title="Управление: Обновить телеметрию">↻</button>
+    </div>
+    <div class="ftd-sep" aria-hidden="true"></div>
+    <button type="button" class="ftd-btn ftd-orient-btn" id="ftdOrientBtn" onclick="toggleFloatingDockOrientation()" title="Горизонтально / вертикально">⇄</button>
+    <button type="button" class="ftd-btn" id="ftdCollapseBtn" onclick="toggleFloatingDockCollapse()" title="Свернуть / развернуть панель инструментов">—</button>
+  </div>
+
+  <script>
+    (function initFloatingToolDock() {
+      const STORAGE_KEY = 'rc.floatingDock.v1';
+      const dock = document.getElementById('floatingToolDock');
+      const handle = document.getElementById('ftdDragHandle');
+      const collapseBtn = document.getElementById('ftdCollapseBtn');
+      if (!dock) return;
+      const isDemoPath = /\/demo(?:\/|$)|\/deck(?:\/|$)/i.test(window.location.pathname || '');
+      let state = { collapsed: isDemoPath, vertical: false, x: null, y: null };
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (saved && typeof saved === 'object') state = { ...state, ...saved };
+      } catch {}
+      const save = () => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {} };
+      const apply = () => {
+        dock.classList.toggle('is-collapsed', Boolean(state.collapsed));
+        dock.classList.toggle('is-vertical', Boolean(state.vertical));
+        if (collapseBtn) collapseBtn.textContent = state.collapsed ? '🧰' : '—';
+        if (typeof state.x === 'number' && typeof state.y === 'number') {
+          const maxX = Math.max(8, window.innerWidth - 64);
+          const maxY = Math.max(56, window.innerHeight - 48);
+          dock.classList.add('is-dragged');
+          dock.style.left = Math.min(maxX, Math.max(8, state.x)) + 'px';
+          dock.style.top = Math.min(maxY, Math.max(56, state.y)) + 'px';
+          dock.style.bottom = 'auto';
+        }
+      };
+      window.toggleFloatingDockCollapse = () => { state.collapsed = !state.collapsed; apply(); save(); };
+      window.toggleFloatingDockOrientation = () => { state.vertical = !state.vertical; apply(); save(); };
+      if (handle) {
+        let dragging = false, offX = 0, offY = 0;
+        handle.addEventListener('pointerdown', (e) => {
+          dragging = true;
+          const r = dock.getBoundingClientRect();
+          offX = e.clientX - r.left;
+          offY = e.clientY - r.top;
+          dock.classList.add('is-dragging', 'is-dragged');
+          dock.style.bottom = 'auto';
+          dock.style.left = r.left + 'px';
+          dock.style.top = r.top + 'px';
+          handle.setPointerCapture?.(e.pointerId);
+        });
+        window.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          state.x = Math.max(8, Math.min(window.innerWidth - dock.offsetWidth - 8, e.clientX - offX));
+          state.y = Math.max(56, Math.min(window.innerHeight - dock.offsetHeight - 8, e.clientY - offY));
+          dock.style.left = state.x + 'px';
+          dock.style.top = state.y + 'px';
+        });
+        window.addEventListener('pointerup', () => {
+          if (!dragging) return;
+          dragging = false;
+          dock.classList.remove('is-dragging');
+          save();
+        });
+      }
+      apply();
+    })();
+  </script>
 
   <script type="module">
     import * as RigDomain from '/assets/domain/index.js';

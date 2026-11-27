@@ -114,6 +114,9 @@ test('native provider uses fixed argv and requires matching rig and attempt evid
   output = '{"state":"down"}'; fail = true;
   assert.equal((await provider.probe()).daemonUp,false);
   assert.deepEqual(calls.pop(),['crash-cart','--json']);
+  output = '{"state":"unverified","evidence":{"pidState":"dead (pid 41091)","probeResult":"timeout"}}'; fail = false;
+  assert.equal((await provider.probe()).daemonUp,false);
+  assert.deepEqual(calls.pop(),['crash-cart','--json']);
   fail = false;
   output = 'id1  manual  complete  2026-11-20T01:00:00Z';
   assert.equal((await provider.listCheckpoints('demo'))[0].id,'id1');

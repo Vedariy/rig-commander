@@ -594,7 +594,7 @@
       margin: 0 auto 7px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       flex-wrap: wrap;
       gap: 6px 12px;
       padding: 0 4px;
@@ -610,14 +610,64 @@
       color: #7dd3fc;
       letter-spacing: 0.35px;
     }
-    .hero-preview-kicker-link {
-      color: #6ee7b7;
-      text-decoration: underline;
-      text-underline-offset: 2px;
-      font-weight: 700;
+    .sim-preset-switch {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(10, 18, 36, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.48);
+      border-radius: 7px;
+      padding: 2px;
+      gap: 2px;
     }
-    .hero-preview-kicker-link:hover {
-      color: #ecfdf5;
+    .sim-preset-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      min-height: 26px;
+      padding: 0 9px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .sim-preset-btn:hover:not(.active) {
+      color: #fff;
+      background: rgba(56, 189, 248, 0.1);
+    }
+    .sim-preset-btn.active {
+      background: rgba(0, 240, 255, 0.18);
+      border-color: rgba(56, 189, 248, 0.72);
+      color: #ecfeff;
+      font-weight: 800;
+    }
+    .sim-fleet-svg-wrap {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sim-fleet-svg {
+      width: 100%;
+      height: auto;
+      max-height: 292px;
+      display: block;
+    }
+    .sim-svg-node {
+      cursor: pointer;
+    }
+    .sim-svg-node:hover rect.sim-svg-card {
+      stroke: #38bdf8;
+    }
+    @keyframes simDashFlow {
+      from { stroke-dashoffset: 24; }
+      to { stroke-dashoffset: 0; }
+    }
+    .sim-edge-flow {
+      stroke-dasharray: 6 4;
+      animation: simDashFlow 1.2s linear infinite;
     }
     .hero-simulator-wrapper {
       background: linear-gradient(180deg, rgba(56, 189, 248, 0.25) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
@@ -751,6 +801,129 @@
       min-height: 296px;
       background: #01040a;
       position: relative;
+    }
+    .sim-body.radar-collapsed.inspector-collapsed {
+      grid-template-columns: 1fr;
+    }
+    .sim-body.radar-collapsed:not(.inspector-collapsed) {
+      grid-template-columns: 1fr 296px;
+    }
+    .sim-body:not(.radar-collapsed).inspector-collapsed {
+      grid-template-columns: 228px 1fr;
+    }
+    .sim-body.radar-collapsed .sim-left-col {
+      display: none;
+    }
+    .sim-body.inspector-collapsed .sim-right-col {
+      display: none;
+    }
+    .sim-edge-tab {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 6;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 7px;
+      background: rgba(8, 15, 32, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.7px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      backdrop-filter: blur(8px);
+    }
+    .sim-edge-tab:hover {
+      background: rgba(15, 23, 42, 0.98);
+      color: #ffffff;
+    }
+    .sim-edge-tab-left {
+      left: 0;
+      border-left: none;
+      border-radius: 0 9px 9px 0;
+      border-color: rgba(251, 191, 36, 0.42);
+      color: #fde68a;
+      box-shadow: 4px 0 18px rgba(0, 0, 0, 0.45);
+    }
+    .sim-edge-tab-left:hover {
+      border-color: rgba(251, 191, 36, 0.78);
+    }
+    .sim-edge-tab-right {
+      right: 0;
+      border-right: none;
+      border-radius: 9px 0 0 9px;
+      border-color: rgba(255, 0, 85, 0.5);
+      color: #fda4af;
+      box-shadow: -4px 0 18px rgba(0, 0, 0, 0.45);
+    }
+    .sim-edge-tab-right:hover {
+      border-color: rgba(255, 0, 85, 0.85);
+    }
+    .sim-edge-tab-label {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      text-transform: uppercase;
+    }
+    .sim-edge-tab-left .sim-edge-tab-label {
+      transform: rotate(180deg);
+    }
+    .sim-edge-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 800;
+    }
+    .sim-edge-badge.amber {
+      background: rgba(245, 158, 11, 0.22);
+      border: 1px solid rgba(251, 191, 36, 0.5);
+      color: #fde68a;
+    }
+    .sim-edge-badge.coral {
+      background: rgba(255, 0, 85, 0.22);
+      border: 1px solid rgba(255, 0, 85, 0.6);
+      color: #fda4af;
+    }
+    .sim-body.radar-collapsed .sim-edge-tab-left {
+      display: inline-flex;
+    }
+    .sim-body.inspector-collapsed .sim-edge-tab-right {
+      display: inline-flex;
+    }
+    .sim-drawer-close {
+      background: transparent;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      color: #94a3b8;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .sim-drawer-close:hover {
+      color: #f8fafc;
+      border-color: rgba(56, 189, 248, 0.55);
+    }
+    .sim-body.radar-collapsed.inspector-collapsed .sim-canvas {
+      padding: 16px 46px !important;
+    }
+    .sim-body.radar-collapsed.inspector-collapsed .sim-fleet-svg {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .sim-body.radar-collapsed.inspector-collapsed .sim-panes-grid {
+      max-width: 760px;
+      margin: 0 auto;
     }
     .sim-panes-grid {
       display: grid;
@@ -2072,12 +2245,12 @@
     <!-- HERO SECTION -->
     <section class="hero container">
       <h1 class="hero-title" data-i18n-html="hero.title">
-        See which AI terminal agent is blocked&nbsp;—<br>
-        <span class="accent-cyan">approve in 1 click.</span>
+        Command your AI agent fleet&nbsp;—<br>
+        <span class="accent-cyan">zero chaos, zero blockers</span>
       </h1>
 
       <p class="hero-subtitle" data-i18n-html="hero.subtitle">
-        Local-first, 0 npm dependencies, MIT command deck running on top of local tmux (or OpenRig) for Claude Code, Codex CLI, and Gemini CLI — start safely with <span class="nowrap-flag">--read-only</span>.
+        Local-first MIT command deck (0 npm deps) over tmux &amp; OpenRig for any CLI agent (Claude Code, Codex, Gemini, OpenCode, Aider, Swarms &amp; more) — start safely with <span class="nowrap-flag">--read-only</span>.
       </p>
 
       <div class="hero-actions">
@@ -2106,8 +2279,7 @@
         <p lang="ru">Симулятор показывает подтверждение в терминале и передачу задачи. Для работы со своими сессиями запустите локальный пульт по <a href="/guide#quickstart">руководству оператора</a>.</p>
       </noscript>
       <div class="hero-preview-kicker">
-        <span class="hero-preview-kicker-tag" data-i18n="sim.kickerMode">CASE 1: UNIVERSAL TMUX (STANDALONE · NO FRAMEWORK)</span>
-        <a href="/demo" class="hero-preview-kicker-link" data-i18n="sim.kickerFleetLink">Open /demo for coordinated Fleet Topology Graph (OpenRig) →</a>
+        <span class="hero-preview-kicker-tag" data-i18n="sim.kickerMode">2 MODES OUT OF THE BOX: PLAIN TMUX (ZERO FRAMEWORK) ⇄ COORDINATED FLEET (OPENRIG)</span>
       </div>
       <div class="hero-simulator-wrapper">
         <div class="hero-simulator">
@@ -2115,7 +2287,10 @@
             <div class="sim-brand-cluster">
               <span class="sim-brand-name">💠 RIGCOMMANDER</span>
               <span class="sim-demo-pill" data-i18n="sim.previewBadge">PREVIEW</span>
-              <span class="sim-preset-pill">Universal tmux</span>
+              <div class="sim-preset-switch" role="group" aria-label="Preview mode preset">
+                <button type="button" class="sim-preset-btn active" id="simPresetOpenRig" onclick="setSimPreset('openrig')" data-i18n="sim.presetOpenRig">Fleet (OpenRig)</button>
+                <button type="button" class="sim-preset-btn" id="simPresetTmux" onclick="setSimPreset('universal')" data-i18n="sim.presetTmux">Plain tmux</button>
+              </div>
             </div>
 
             <div class="sim-telemetry-cluster">
@@ -2124,7 +2299,7 @@
             </div>
 
             <div class="sim-view-switch" role="tablist" aria-label="Preview mode">
-              <button type="button" class="sim-tab-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">Panes</button>
+              <button type="button" class="sim-tab-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">Graph</button>
               <button type="button" class="sim-tab-btn" id="simViewGantt" onclick="setSimView('gantt')" data-i18n="sim.viewGantt">Gantt</button>
             </div>
           </div>
@@ -2149,37 +2324,170 @@
             </div>
           </div>
 
-          <div class="sim-body" id="simBodyGrid">
-            <!-- Left Col: Wait Radar (1-to-1 parity with /demo) -->
+          <div class="sim-body radar-collapsed inspector-collapsed" id="simBodyGrid">
+            <!-- Left Col: Wait Radar (1-to-1 parity with /demo, tucked to edge by default) -->
             <div class="sim-left-col">
               <div class="sim-col-title">
                 <span data-i18n="sim.waitRadar">WAIT RADAR</span>
-                <span style="color:var(--amber);">P0–P1</span>
+                <span style="display:inline-flex; align-items:center; gap:6px;">
+                  <span style="color:var(--amber);">P0–P1</span>
+                  <button type="button" class="sim-drawer-close" onclick="toggleSimDrawer('radar')" aria-label="Collapse radar" title="Collapse">◀</button>
+                </span>
               </div>
               <div class="sim-card" style="border-left: 3px solid var(--coral); cursor:pointer;" onclick="selectSimNode(document.getElementById('simQaNode'), 'codex-tests', 'Codex CLI • Integration tests', '46% CTX • permission_prompt HITL', 'alert')">
                 <div class="sim-card-header">
-                  <span style="color:#fda4af;">P0 · codex-tests</span>
+                  <span id="simRadarP0Head" style="color:#fda4af;">P0 · dev-check (QA)</span>
                 </div>
-                <div class="sim-card-body" data-i18n="sim.card3">
-                  NEEDS INPUT: Command npm test — 3 parsed options ready for 1-click HITL.
+                <div class="sim-card-body" id="simRadarP0Body" data-i18n="sim.card3Fleet">
+                  NEEDS INPUT: npx playwright test — 3 parsed options ready for 1-click HITL.
                 </div>
               </div>
-              <div class="sim-card" style="border-left: 3px solid var(--amber); cursor:pointer;" onclick="selectSimNode(document.getElementById('simClaudeNode'), 'claude-refactor', 'Claude Code • Storage refactor', '78% CTX • claude-opus-4 • /compact ready', 'warm')">
+              <div class="sim-card" style="border-left: 3px solid var(--amber); cursor:pointer;" onclick="selectSimNode(document.getElementById('simClaudeNode'), 'dev-check (QA)', 'Codex CLI • Proof-based QA', '79% CTX • gpt-5-codex • /compact ready', 'warm')">
                 <div class="sim-card-header">
-                  <span style="color:#fde68a;">CTX 78% · claude-refactor</span>
+                  <span id="simRadarP1Head" style="color:#fde68a;">CTX 79% · dev-check (QA)</span>
                 </div>
-                <div class="sim-card-body" data-i18n="sim.card1">
-                  Context at 78% (threshold 75%): preemptive /compact ready before quality drops.
+                <div class="sim-card-body" id="simRadarP1Body" data-i18n="sim.card1Fleet">
+                  Context at 79% (threshold 75%): preemptive /compact ready before quality drops.
                 </div>
               </div>
-              <div style="font-size:10.5px; color:#94a3b8; padding:6px 4px 0; border-top:1px solid rgba(148,163,184,0.14);" data-i18n="sim.healthySummary">
-                + 2 running normally (see Panes)
+              <div id="simHealthySummary" style="font-size:10.5px; color:#94a3b8; padding:6px 4px 0; border-top:1px solid rgba(148,163,184,0.14);" data-i18n="sim.healthySummaryFleet">
+                + 5 running normally (see Graph)
               </div>
             </div>
 
-            <!-- Center Col: 2x2 TMUX Panes Grid (matches /demo tmux / Universal) + Mini Gantt -->
+            <!-- Center Col: Real Curved SVG Multi-Project Fleet Graph (OpenRig) / 2x2 Plain TMUX + Mini Gantt -->
             <div class="sim-canvas" id="simCanvas">
-              <div id="simGraphView" class="sim-graph-view">
+              <button type="button" class="sim-edge-tab sim-edge-tab-left" id="simEdgeRadarBtn" onclick="toggleSimDrawer('radar')" aria-label="Open Wait Radar">
+                <span class="sim-edge-badge amber">2</span>
+                <span class="sim-edge-tab-label" data-i18n="sim.edgeRadar">RADAR</span>
+                <span>▶</span>
+              </button>
+              <button type="button" class="sim-edge-tab sim-edge-tab-right" id="simEdgeInspectorBtn" onclick="toggleSimDrawer('inspector')" aria-label="Open Inspector &amp; HITL">
+                <span class="sim-edge-badge coral">P0</span>
+                <span class="sim-edge-tab-label" data-i18n="sim.edgeInspector">INSPECTOR</span>
+                <span>◀</span>
+              </button>
+              <div id="simFleetView" class="sim-graph-view sim-fleet-svg-wrap">
+                <svg class="sim-fleet-svg" viewBox="0 0 640 286" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Multi-project AI fleet topology graph">
+                  <defs>
+                    <marker id="simArrCyan" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+                    </marker>
+                    <marker id="simArrGreen" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399"/>
+                    </marker>
+                    <marker id="simArrAmber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+                    </marker>
+                    <marker id="simArrRed" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ff0055"/>
+                    </marker>
+                    <filter id="simRedGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#ff0055" flood-opacity="0.45"/>
+                    </filter>
+                  </defs>
+
+                  <!-- Cluster 1: @core-platform -->
+                  <rect x="6" y="8" width="424" height="270" rx="12" fill="rgba(8,16,34,0.48)" stroke="rgba(56,189,248,0.28)" stroke-dasharray="5 4"/>
+                  <text x="18" y="26" fill="#7dd3fc" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" font-weight="800">@core-platform · 5</text>
+
+                  <!-- Cluster 2: @kernel -->
+                  <rect x="442" y="8" width="192" height="270" rx="12" fill="rgba(8,16,34,0.48)" stroke="rgba(0,255,157,0.24)" stroke-dasharray="5 4"/>
+                  <text x="454" y="26" fill="#6ee7b7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" font-weight="800">@kernel · 2</text>
+
+                  <!-- Curved Call Highways (@core-platform) -->
+                  <!-- dev-owner -> dev-coder (elb-001) -->
+                  <path d="M 192 78 C 192 98, 92 96, 92 122" fill="none" stroke="rgba(56,189,248,0.24)" stroke-width="5"/>
+                  <path d="M 192 78 C 192 98, 92 96, 92 122" fill="none" stroke="#38bdf8" stroke-width="2" class="sim-edge-flow" marker-end="url(#simArrCyan)"/>
+                  <rect x="98" y="89" width="60" height="16" rx="4" fill="#071326" stroke="#38bdf8" stroke-width="0.9"/>
+                  <text x="128" y="100" text-anchor="middle" fill="#e0f2fe" font-family="ui-monospace, monospace" font-size="9" font-weight="700">elb-001</text>
+
+                  <!-- dev-owner -> dev-coder4 (tts-strict) -->
+                  <path d="M 244 78 C 244 98, 344 96, 344 122" fill="none" stroke="rgba(52,211,153,0.24)" stroke-width="5"/>
+                  <path d="M 244 78 C 244 98, 344 96, 344 122" fill="none" stroke="#34d399" stroke-width="2" class="sim-edge-flow" marker-end="url(#simArrGreen)"/>
+                  <rect x="260" y="89" width="94" height="16" rx="4" fill="#071a1c" stroke="#34d399" stroke-width="0.9"/>
+                  <text x="307" y="100" text-anchor="middle" fill="#d1fae5" font-family="ui-monospace, monospace" font-size="9" font-weight="700">tts-chunked</text>
+
+                  <!-- dev-coder4 -> dev-check (QA) -->
+                  <path d="M 344 176 C 344 198, 286 196, 266 212" fill="none" stroke="rgba(245,158,11,0.25)" stroke-width="4.5"/>
+                  <path d="M 344 176 C 344 198, 286 196, 266 212" fill="none" stroke="#f59e0b" stroke-width="2" class="sim-edge-flow" marker-end="url(#simArrAmber)"/>
+
+                  <!-- dev-check (QA) -> dev-owner (P0 HITL crimson highway) -->
+                  <path d="M 218 212 L 218 82" fill="none" stroke="rgba(255,0,85,0.26)" stroke-width="5.5"/>
+                  <path d="M 218 212 L 218 82" fill="none" stroke="#ff0055" stroke-width="2.2" class="sim-edge-flow" marker-end="url(#simArrRed)"/>
+                  <rect x="188" y="138" width="60" height="18" rx="4" fill="#2a0a18" stroke="#ff0055" stroke-width="1"/>
+                  <text x="218" y="150" text-anchor="middle" fill="#fecdd3" font-family="ui-monospace, monospace" font-size="9.5" font-weight="800">🚨 HITL</text>
+
+                  <!-- @kernel highway: kernel-dev -> kernel-qa -->
+                  <path d="M 538 110 L 538 186" fill="none" stroke="rgba(56,189,248,0.22)" stroke-width="4.5"/>
+                  <path d="M 538 110 L 538 186" fill="none" stroke="#38bdf8" stroke-width="2" class="sim-edge-flow" marker-end="url(#simArrCyan)"/>
+                  <rect x="498" y="139" width="80" height="17" rx="4" fill="#071326" stroke="#38bdf8" stroke-width="0.9"/>
+                  <text x="538" y="150" text-anchor="middle" fill="#e0f2fe" font-family="ui-monospace, monospace" font-size="9" font-weight="700">auth-guard</text>
+
+                  <!-- Nodes (@core-platform) -->
+                  <!-- dev-owner -->
+                  <g class="sim-svg-node" onclick="selectSimNode(null, 'dev-owner', 'Orchestrator • @core-platform', '48% CTX • gpt-5-codex', 'active')">
+                    <rect class="sim-svg-card" x="150" y="36" width="136" height="42" rx="7" fill="#0b1528" stroke="rgba(56,189,248,0.45)" stroke-width="1.2"/>
+                    <text x="160" y="53" fill="#f8fafc" font-family="ui-monospace, monospace" font-size="10.5" font-weight="800">dev-owner</text>
+                    <text x="276" y="53" text-anchor="end" fill="#7dd3fc" font-family="ui-monospace, monospace" font-size="9.5" font-weight="700">48%</text>
+                    <text x="160" y="68" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="8.5">228K/475K · codex</text>
+                    <rect x="160" y="72" width="116" height="2.5" rx="1.5" fill="rgba(148,163,184,0.2)"/>
+                    <rect x="160" y="72" width="56" height="2.5" rx="1.5" fill="#38bdf8"/>
+                  </g>
+
+                  <!-- dev-coder -->
+                  <g class="sim-svg-node" onclick="selectSimNode(null, 'dev-coder', 'Primary Coder • @core-platform', '24% CTX • claude-sonnet-4', 'active')">
+                    <rect class="sim-svg-card" x="24" y="124" width="134" height="48" rx="7" fill="#0b1528" stroke="rgba(56,189,248,0.36)" stroke-width="1.1"/>
+                    <text x="34" y="141" fill="#f8fafc" font-family="ui-monospace, monospace" font-size="10.5" font-weight="800">dev-coder</text>
+                    <text x="148" y="141" text-anchor="end" fill="#7dd3fc" font-family="ui-monospace, monospace" font-size="9.5" font-weight="700">24%</text>
+                    <text x="34" y="156" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="8.5">48K/200K · claude</text>
+                    <rect x="34" y="162" width="114" height="2.5" rx="1.5" fill="rgba(148,163,184,0.2)"/>
+                    <rect x="34" y="162" width="28" height="2.5" rx="1.5" fill="#38bdf8"/>
+                  </g>
+
+                  <!-- dev-coder4 -->
+                  <g class="sim-svg-node" onclick="selectSimNode(null, 'dev-coder4', 'Parallel Coder • @core-platform', '68% CTX • gpt-5-codex', 'warm')">
+                    <rect class="sim-svg-card" x="278" y="124" width="138" height="48" rx="7" fill="#171622" stroke="rgba(245,158,11,0.55)" stroke-width="1.2"/>
+                    <text x="288" y="141" fill="#f8fafc" font-family="ui-monospace, monospace" font-size="10.5" font-weight="800">dev-coder4</text>
+                    <text x="406" y="141" text-anchor="end" fill="#fde68a" font-family="ui-monospace, monospace" font-size="9.5" font-weight="800">68%</text>
+                    <text x="288" y="156" fill="#cbd5e1" font-family="ui-monospace, monospace" font-size="8.5">323K/475K · ⚔️ 1</text>
+                    <rect x="288" y="162" width="118" height="2.5" rx="1.5" fill="rgba(148,163,184,0.2)"/>
+                    <rect x="288" y="162" width="80" height="2.5" rx="1.5" fill="#f59e0b"/>
+                  </g>
+
+                  <!-- dev-check (QA) P0 HITL -->
+                  <g class="sim-svg-node" filter="url(#simRedGlow)" onclick="selectSimNode(null, 'dev-check (QA)', 'Evidence QA • @core-platform', '79% CTX • permission_prompt HITL', 'alert')">
+                    <rect class="sim-svg-card" x="132" y="214" width="174" height="52" rx="8" fill="#230e1c" stroke="#ff0055" stroke-width="1.6"/>
+                    <text x="142" y="232" fill="#ffffff" font-family="ui-monospace, monospace" font-size="10.5" font-weight="800">dev-check (QA)</text>
+                    <rect x="242" y="221" width="54" height="14" rx="7" fill="#9f1239"/>
+                    <text x="269" y="231" text-anchor="middle" fill="#ffe4e6" font-family="ui-monospace, monospace" font-size="8" font-weight="800">● HITL</text>
+                    <text x="142" y="248" fill="#fda4af" font-family="ui-monospace, monospace" font-size="8.8" font-weight="700">79%! · ⚔️ 1 · playwright</text>
+                    <rect x="142" y="255" width="154" height="3" rx="1.5" fill="rgba(255,255,255,0.14)"/>
+                    <rect x="142" y="255" width="122" height="3" rx="1.5" fill="#ff2a6d"/>
+                  </g>
+
+                  <!-- Nodes (@kernel) -->
+                  <g class="sim-svg-node" onclick="selectSimNode(null, 'kernel-dev', 'Kernel Coder • @kernel', '38% CTX • claude-sonnet-4', 'active')">
+                    <rect class="sim-svg-card" x="462" y="60" width="152" height="48" rx="7" fill="#0b1528" stroke="rgba(0,255,157,0.36)" stroke-width="1.1"/>
+                    <text x="472" y="77" fill="#f8fafc" font-family="ui-monospace, monospace" font-size="10.5" font-weight="800">kernel-dev</text>
+                    <text x="604" y="77" text-anchor="end" fill="#6ee7b7" font-family="ui-monospace, monospace" font-size="9.5" font-weight="700">38%</text>
+                    <text x="472" y="92" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="8.5">76K/200K · claude</text>
+                    <rect x="472" y="98" width="132" height="2.5" rx="1.5" fill="rgba(148,163,184,0.2)"/>
+                    <rect x="472" y="98" width="50" height="2.5" rx="1.5" fill="#34d399"/>
+                  </g>
+
+                  <g class="sim-svg-node" onclick="selectSimNode(null, 'kernel-qa', 'Kernel QA • @kernel', '29% CTX • gemini-2.5-pro', 'active')">
+                    <rect class="sim-svg-card" x="462" y="190" width="152" height="48" rx="7" fill="#0b1528" stroke="rgba(0,255,157,0.36)" stroke-width="1.1"/>
+                    <text x="472" y="207" fill="#f8fafc" font-family="ui-monospace, monospace" font-size="10.5" font-weight="800">kernel-qa</text>
+                    <text x="604" y="207" text-anchor="end" fill="#6ee7b7" font-family="ui-monospace, monospace" font-size="9.5" font-weight="700">29%</text>
+                    <text x="472" y="222" fill="#94a3b8" font-family="ui-monospace, monospace" font-size="8.5">290K/1M · gemini</text>
+                    <rect x="472" y="228" width="132" height="2.5" rx="1.5" fill="rgba(148,163,184,0.2)"/>
+                    <rect x="472" y="228" width="38" height="2.5" rx="1.5" fill="#34d399"/>
+                  </g>
+                </svg>
+              </div>
+
+              <div id="simGraphView" class="sim-graph-view" style="display:none;">
                 <div class="sim-panes-grid">
                   <!-- Pane 1: claude-api -->
                   <div class="sim-node" onclick="selectSimNode(this, 'claude-api', 'Claude Code • API routes', '34% CTX • claude-sonnet-4', 'active')">
@@ -2261,16 +2569,19 @@
             <div class="sim-right-col">
               <div class="sim-col-title">
                 <span data-i18n="sim.inspector">INSPECTOR &amp; HITL</span>
-                <span style="color:var(--cyan);" id="simInspectorId">codex-tests</span>
+                <span style="display:inline-flex; align-items:center; gap:6px;">
+                  <span style="color:var(--cyan);" id="simInspectorId">dev-check (QA)</span>
+                  <button type="button" class="sim-drawer-close" onclick="toggleSimDrawer('inspector')" aria-label="Collapse inspector" title="Collapse">▶</button>
+                </span>
               </div>
-              <div class="sim-terminal-screen" id="simTerminalScreen">[codex-tests · tmux %4 · feat/webhooks-v2]
-$ npm test -- --grep "webhooks"
-  ✓ 18 passed  ✘ 1 token-expiry
-⚠️ Run command: npm test
+              <div class="sim-terminal-screen" id="simTerminalScreen">[dev-check · @core-platform · 79% CTX]
+$ npx playwright test e2e/boundaries.spec.ts
+⚔️ Git overlap (1 file) with dev-coder4
+⚠️ Run command: npx playwright test
 › 1. Allow once (y) · 2. Always (dir) · 3. Cancel</div>
 
               <div class="sim-prompt-pills" id="simPromptPills">
-                <button type="button" class="sim-prompt-pill primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✓ 1. Allow once (y)</button>
+                <button type="button" class="sim-prompt-pill primary" id="simOpt1Btn" onclick="simChoosePrompt(1)" data-i18n="sim.opt1Fleet">✓ 1. Allow once (y)</button>
                 <button type="button" class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">✕ Cancel (esc)</button>
                 <button type="button" class="sim-prompt-pill" style="opacity:0.88; border-style:dashed;" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">▸ Always (dir)</button>
               </div>
@@ -2942,8 +3253,8 @@ $ npm test -- --grep "webhooks"
         'nav.cta': 'Live Demo',
         'nav.ctaShort': 'Demo',
         'hero.eyebrow': 'LOCAL-FIRST AI AGENT MISSION CONTROL',
-        'hero.title': 'See which AI terminal agent is blocked&nbsp;—<br><span class="accent-cyan">approve in 1 click.</span>',
-        'hero.subtitle': 'Local-first, 0 npm dependencies, MIT command deck on top of local tmux (or OpenRig) for Claude Code, Codex CLI &amp; Gemini CLI — safe start with <span class="nowrap-flag">--read-only</span>.',
+        'hero.title': 'Command your AI agent fleet&nbsp;—<br><span class="accent-cyan">zero chaos, zero blockers</span>',
+        'hero.subtitle': 'Local-first MIT command deck (0 npm deps) over tmux &amp; OpenRig for any CLI agent (Claude Code, Codex, Gemini, OpenCode, Aider, Swarms &amp; more) — start safely with <span class="nowrap-flag">--read-only</span>.',
         'hero.demoCta': '▶ Launch Interactive Demo',
         'hero.demoCtaShort': '▶ Interactive Demo',
         'hero.demoTag': '0 SETUP',
@@ -2956,23 +3267,31 @@ $ npm test -- --grep "webhooks"
         'qr.copy': '📋 Copy URL',
         'hero.passportCta': '🛡️ Security Passport →',
         'hero.cliTitle': 'Click to copy safe tmux-only read-only CLI command',
-        'sim.kickerMode': 'CASE 1: UNIVERSAL TMUX (STANDALONE · NO FRAMEWORK)',
-        'sim.kickerFleetLink': 'Open /demo for coordinated Fleet Topology Graph (OpenRig) →',
+        'sim.kickerMode': '2 MODES OUT OF THE BOX: COORDINATED FLEET (OPENRIG) ⇄ PLAIN TMUX (ZERO FRAMEWORK)',
+        'sim.presetOpenRig': 'Fleet (OpenRig)',
+        'sim.presetTmux': 'Plain tmux',
         'sim.healthySummary': '+ 2 running normally (see Panes)',
+        'sim.healthySummaryFleet': '+ 5 running normally (see Graph)',
         'sim.previewBadge': 'PREVIEW',
-        'sim.viewGraph': 'Panes',
+        'sim.viewGraph': 'Graph',
+        'sim.viewPanes': 'Panes',
         'sim.viewGantt': 'Gantt',
         'sim.mobileBadge': 'SAMPLE · P0',
         'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Allow Codex to run npm test in worktree?',
         'sim.mobileFootLeft': 'Interactive preview · same layout as /demo',
         'sim.mobileFootRight': 'CTX 78% · 1-click HITL',
         'sim.waitRadar': 'WAIT RADAR',
+        'sim.edgeRadar': 'RADAR',
+        'sim.edgeInspector': 'INSPECTOR',
         'sim.card1': 'Context at 78% (threshold 75%): preemptive /compact ready before quality drops.',
+        'sim.card1Fleet': 'Context at 79% (threshold 75%): preemptive /compact ready before quality drops.',
         'sim.card2': 'Updating OpenAPI migration notes (24% CTX, 0 blockers).',
         'sim.card3': 'NEEDS INPUT: Command npm test — 3 parsed options ready for 1-click HITL.',
+        'sim.card3Fleet': 'NEEDS INPUT: npx playwright test — 3 parsed options ready for 1-click HITL.',
         'sim.ganttTitle': '📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)',
         'sim.inspector': 'INSPECTOR & HITL',
-        'sim.opt1': '✓ 1. Allow once (y)',
+        'sim.opt1': '✓ 1. Allow npm test once (y)',
+        'sim.opt1Fleet': '✓ 1. Allow once (y)',
         'sim.opt2': '2. Always allow in worktree',
         'sim.opt3': '3. Cancel (esc)',
         'sim.opt2Short': '▸ Always (dir)',
@@ -3139,8 +3458,8 @@ $ npm test -- --grep "webhooks"
         'nav.cta': 'Живое демо',
         'nav.ctaShort': 'Демо',
         'hero.eyebrow': 'ЛОКАЛЬНЫЙ ПУЛЬТ ДЛЯ ИИ-АГЕНТОВ',
-        'hero.title': 'Сразу видно, какой ИИ-агент застрял в терминале&nbsp;—<br><span class="accent-cyan">отвечайте в 1 клик.</span>',
-        'hero.subtitle': 'Локальный пульт под лицензией MIT без внешних npm-зависимостей поверх tmux (или OpenRig) для Claude Code, Codex CLI и Gemini CLI — безопасный старт через <span class="nowrap-flag">--read-only</span>.',
+        'hero.title': 'Управляй флотом ИИ-агентов&nbsp;—<br><span class="accent-cyan">без хаоса и стопперов</span>',
+        'hero.subtitle': 'Локальный пульт под лицензией MIT (0 npm-зависимостей) поверх tmux и OpenRig для любых CLI-агентов (Claude Code, Codex, Gemini, OpenCode, Aider, Swarm и др.) — безопасный старт через <span class="nowrap-flag">--read-only</span>.',
         'hero.demoCta': '▶ Открыть интерактивное демо',
         'hero.demoCtaShort': '▶ Интерактивное демо',
         'hero.demoTag': 'БЕЗ УСТАНОВКИ',
@@ -3153,23 +3472,31 @@ $ npm test -- --grep "webhooks"
         'qr.copy': '📋 Скопировать ссылку',
         'hero.passportCta': '🛡️ Паспорт безопасности →',
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду безопасного read-only запуска только для tmux',
-        'sim.kickerMode': 'КЕЙС 1: UNIVERSAL TMUX (БЕЗ ФРЕЙМВОРКОВ)',
-        'sim.kickerFleetLink': 'В /demo — граф связанного флота (OpenRig) →',
+        'sim.kickerMode': '2 РЕЖИМА ИЗ КОРОБКИ: СВЯЗАННЫЙ ФЛОТ (OPENRIG) ⇄ ОБЫЧНЫЙ TMUX (БЕЗ ФРЕЙМВОРКОВ)',
+        'sim.presetOpenRig': 'Флот (OpenRig)',
+        'sim.presetTmux': 'Обычный tmux',
         'sim.healthySummary': '+ 2 работают штатно (см. Панели)',
+        'sim.healthySummaryFleet': '+ 5 работают штатно (см. Граф)',
         'sim.previewBadge': 'ПРИМЕР',
-        'sim.viewGraph': 'Панели',
+        'sim.viewGraph': 'Граф',
+        'sim.viewPanes': 'Панели',
         'sim.viewGantt': 'Гант',
         'sim.mobileBadge': 'ПРИМЕР · P0',
         'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Разрешить Codex запуск npm test в worktree?',
         'sim.mobileFootLeft': 'Пример запроса · порядок кнопок как в /demo',
         'sim.mobileFootRight': 'CTX 78% · HITL в 1 клик',
         'sim.waitRadar': 'РАДАР ОЖИДАНИЯ',
+        'sim.edgeRadar': 'РАДАР',
+        'sim.edgeInspector': 'ИНСПЕКТОР',
         'sim.card1': 'Контекст 78% (порог 75%): готов превентивный /compact до потери качества.',
+        'sim.card1Fleet': 'Контекст 79% (порог 75%): готов превентивный /compact до потери качества.',
         'sim.card2': 'Обновляет заметки миграции OpenAPI (24% CTX, 0 блокеров).',
         'sim.card3': 'ЖДЁТ ВВОДА: команда npm test — 3 варианта распарсены для HITL в 1 клик.',
+        'sim.card3Fleet': 'ЖДЁТ ВВОДА: npx playwright test — 3 варианта распарсены для HITL в 1 клик.',
         'sim.ganttTitle': '📊 ДИАГРАММА ГАНТА • ПОСЛЕДНИЕ 6Ч (ШТРИХОВКА = ОЖИДАНИЕ)',
         'sim.inspector': 'ИНСПЕКТОР И HITL',
         'sim.opt1': '✓ 1. Разрешить npm test один раз (y)',
+        'sim.opt1Fleet': '✓ 1. Разрешить один раз (y)',
         'sim.opt2': '2. Всегда разрешать в worktree',
         'sim.opt3': '3. Отменить (esc)',
         'sim.opt2Short': '▸ Всегда (папка)',
@@ -3368,6 +3695,46 @@ $ npm test -- --grep "webhooks"
 
     // Interactive Hero Simulator Logic (synchronized with /demo)
     let simView = 'graph';
+    let simPreset = 'openrig';
+
+    function setSimPreset(preset) {
+      simPreset = preset === 'universal' ? 'universal' : 'openrig';
+      const dict = I18N[currentLang] || I18N.en;
+      const btnRig = document.getElementById('simPresetOpenRig');
+      const btnTmux = document.getElementById('simPresetTmux');
+      const viewGraphBtn = document.getElementById('simViewGraph');
+      if (btnRig) btnRig.classList.toggle('active', simPreset === 'openrig');
+      if (btnTmux) btnTmux.classList.toggle('active', simPreset === 'universal');
+      if (viewGraphBtn) viewGraphBtn.textContent = simPreset === 'openrig' ? dict['sim.viewGraph'] : dict['sim.viewPanes'];
+      const inspId = document.getElementById('simInspectorId');
+      const screen = document.getElementById('simTerminalScreen');
+      const p0Head = document.getElementById('simRadarP0Head');
+      const p0Body = document.getElementById('simRadarP0Body');
+      const p1Head = document.getElementById('simRadarP1Head');
+      const p1Body = document.getElementById('simRadarP1Body');
+      const healthySummary = document.getElementById('simHealthySummary');
+      const opt1Btn = document.getElementById('simOpt1Btn');
+      if (simPreset === 'openrig') {
+        if (inspId) inspId.textContent = 'dev-check (QA)';
+        if (p0Head) p0Head.textContent = 'P0 · dev-check (QA)';
+        if (p0Body) p0Body.textContent = dict['sim.card3Fleet'];
+        if (p1Head) p1Head.textContent = 'CTX 79% · dev-check (QA)';
+        if (p1Body) p1Body.textContent = dict['sim.card1Fleet'];
+        if (healthySummary) healthySummary.textContent = dict['sim.healthySummaryFleet'];
+        if (opt1Btn) opt1Btn.textContent = dict['sim.opt1Fleet'];
+        if (screen) screen.textContent = '[dev-check · @core-platform · 79% CTX]\n$ npx playwright test e2e/boundaries.spec.ts\n⚔️ Git overlap (1 file) with dev-coder4\n⚠️ Run command: npx playwright test\n› 1. Allow once (y) · 2. Always (dir) · 3. Cancel';
+      } else {
+        if (inspId) inspId.textContent = 'codex-tests';
+        if (p0Head) p0Head.textContent = 'P0 · codex-tests';
+        if (p0Body) p0Body.textContent = dict['sim.card3'];
+        if (p1Head) p1Head.textContent = 'CTX 78% · claude-refactor';
+        if (p1Body) p1Body.textContent = dict['sim.card1'];
+        if (healthySummary) healthySummary.textContent = dict['sim.healthySummary'];
+        if (opt1Btn) opt1Btn.textContent = dict['sim.opt1'];
+        if (screen) screen.textContent = '[codex-tests · tmux %4 · feat/webhooks-v2]\n$ npm test -- --grep "webhooks"\n  ✓ 18 passed  ✘ 1 token-expiry\n⚠️ Run command: npm test\n› 1. Allow once (y) · 2. Always (dir) · 3. Cancel';
+      }
+      setSimView(simView);
+    }
 
     function setSimView(mode) {
       simView = mode === 'gantt' ? 'gantt' : 'graph';
@@ -3375,9 +3742,11 @@ $ npm test -- --grep "webhooks"
       const tBtn = document.getElementById('simViewGantt');
       if (gBtn) gBtn.classList.toggle('active', simView === 'graph');
       if (tBtn) tBtn.classList.toggle('active', simView === 'gantt');
+      const fleetEl = document.getElementById('simFleetView');
       const graphEl = document.getElementById('simGraphView');
       const ganttEl = document.getElementById('simGanttView');
-      if (graphEl) graphEl.style.display = simView === 'graph' ? '' : 'none';
+      if (fleetEl) fleetEl.style.display = (simView === 'graph' && simPreset === 'openrig') ? '' : 'none';
+      if (graphEl) graphEl.style.display = (simView === 'graph' && simPreset === 'universal') ? '' : 'none';
       if (ganttEl) ganttEl.style.display = simView === 'gantt' ? 'flex' : 'none';
     }
 
@@ -3402,9 +3771,18 @@ $ npm test -- --grep "webhooks"
       }
     }
 
+    function toggleSimDrawer(which) {
+      const body = document.getElementById('simBodyGrid');
+      if (!body) return;
+      if (which === 'radar') body.classList.toggle('radar-collapsed');
+      if (which === 'inspector') body.classList.toggle('inspector-collapsed');
+    }
+
     function selectSimNode(el, id, role, status, mood) {
       document.querySelectorAll('.sim-node').forEach(n => n.classList.remove('selected'));
       if (el) el.classList.add('selected');
+      const body = document.getElementById('simBodyGrid');
+      if (body) body.classList.remove('inspector-collapsed');
 
       const inspectorId = document.getElementById('simInspectorId');
       if (inspectorId) inspectorId.textContent = id;

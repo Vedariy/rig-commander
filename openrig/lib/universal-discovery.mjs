@@ -440,6 +440,8 @@ export async function discoverUniversalFleet({
       rigId: rigName,
       runtime: tr.runtime,
       nodeKind: 'agent',
+      hasLivePane: false,
+      readOnlyTranscript: true,
       resolvedSpecName: `${tr.runtime} (JSONL)`,
       cwd: tr.cwd || repoName,
       model: tr.model,

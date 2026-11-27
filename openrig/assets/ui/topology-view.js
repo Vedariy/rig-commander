@@ -191,7 +191,9 @@ export function renderNodeCardHtml(agent, deps) {
       <div class="ctx-box">
         <div class="ctx-header">
           <span class="ctx-thermal-label" style="color:${displayCtxColor}; font-weight:700;">${thermal.label}</span>
-          <span style="color:#94a3b8;" title="${escapeHtml(td('demo.queueTraffic'))}">${escapeHtml(td('demo.queueTraffic'))}: 📥${agent.callsIn} / 📤${agent.callsOut}</span>
+          ${(agent.hasLivePane === false || /\(JSONL\)$/i.test(String(agent.role || '')))
+            ? `<span style="color:#64748b; font-size:10px;">JSONL</span>`
+            : `<span style="color:#94a3b8;" title="${escapeHtml(td('demo.queueTraffic'))}">${escapeHtml(td('demo.queueTraffic'))}: 📥${agent.callsIn} / 📤${agent.callsOut}</span>`}
         </div>
         <div class="ctx-bar-bg">
           <div class="ctx-bar-fill" style="width:${thermal.pct}%; background:${displayCtxColor};"></div>

@@ -236,8 +236,18 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
   const banner = preview
     ? `<div class="hitl-command-preview" title="${escapeHtml(fullCommand)}"><strong>${escapeHtml(td('insp.hitlCmdLabel'))}</strong> <code>${escapeHtml(preview)}</code></div>`
     : '';
-  const termContextHtml = contextLines.length
-    ? `<pre class="hitl-term-context" aria-label="Live terminal context">${escapeHtml(contextLines.join('\n'))}</pre>`
+  const dedupedContextLines = preview
+    ? contextLines.filter((line) => {
+        const trimmed = String(line || '').trim();
+        if (!trimmed) return false;
+        const normPreview = String(preview).trim();
+        if (trimmed === normPreview || trimmed === `$ ${normPreview}`) return false;
+        if (trimmed.includes(normPreview) && /^(?:●|•|\$|Bash\(|Run\()/i.test(trimmed)) return false;
+        return true;
+      })
+    : contextLines;
+  const termContextHtml = dedupedContextLines.length
+    ? `<pre class="hitl-term-context" aria-label="Live terminal context">${escapeHtml(dedupedContextLines.join('\n'))}</pre>`
     : '';
   if (!options.length) return banner;
   const scopeKey = buildSeatScopeKey(seatId);
@@ -246,9 +256,10 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     .filter(opt => opt !== primaryOpt)
     .sort((a, b) => Number(Boolean(b.isCancel)) - Number(Boolean(a.isCancel)));
 
+  const isAlwaysOption = (opt) => !opt.isCancel && /always|всегда|remember|запомнить|don'?t ask again|не спрашивать|allow.*(?:dir|folder|session|all|project)/i.test(`${opt.fullText || ''} ${opt.shortLabel || ''}`);
   let hasAlwaysOption = false;
   const renderOptBtn = (opt, isPrimarySlot) => {
-    const isAlways = !isPrimarySlot && !opt.isCancel && (opt.badge === '2' || /always|всегда|remember|запомнить/i.test(`${opt.fullText || ''} ${opt.shortLabel || ''}`));
+    const isAlways = !isPrimarySlot && isAlwaysOption(opt);
     if (isAlways) hasAlwaysOption = true;
     const cls = isPrimarySlot
       ? 'action-pill key-pill key-proceed hitl-btn-primary'
@@ -267,9 +278,9 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
         : opt.shortLabel;
       labelHtml = `✓ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(primaryText)}`;
     } else if (opt.isCancel) {
-      labelHtml = `✕ ${escapeHtml(td('insp.hitlCancelShort'))}`;
+      labelHtml = `✕ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(td('insp.hitlCancelShort'))}`;
     } else if (isAlways) {
-      labelHtml = `▸ ${escapeHtml(td('insp.hitlAlwaysShort'))}`;
+      labelHtml = `▸ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(td('insp.hitlAlwaysShort'))}`;
     } else {
       labelHtml = `▸ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}`;
     }
@@ -278,7 +289,7 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
   };
 
   const primaryHtml = primaryOpt ? renderOptBtn(primaryOpt, true) : '';
-  const alwaysOpts = secondaryOpts.filter(opt => !opt.isCancel && (opt.badge === '2' || /always|всегда|remember|запомнить/i.test(`${opt.fullText || ''} ${opt.shortLabel || ''}`)));
+  const alwaysOpts = secondaryOpts.filter(opt => isAlwaysOption(opt));
   const nonAlwaysSecondary = secondaryOpts.filter(opt => !alwaysOpts.includes(opt));
   const secondaryHtml = nonAlwaysSecondary.length
     ? `<div class="hitl-secondary-row${nonAlwaysSecondary.length === 1 ? ' is-single' : ''}">${nonAlwaysSecondary.map(opt => renderOptBtn(opt, false)).join('')}</div>`
@@ -873,7 +884,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
             </div>
           </div>
           <div class="insp-identity-actions" style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
-            <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 9px; font-size:10px; min-height:28px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${escapeHtml(attachBtnLabel)}</button>
+            <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 9px; font-size:10px; min-height:28px;" data-seat="${escapeHtml(agent.id)}" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="attachSeatInTerminal(this.getAttribute('data-seat'), this.getAttribute('data-cmd'))">${escapeHtml(attachBtnLabel)}</button>
           </div>
         </div>
 

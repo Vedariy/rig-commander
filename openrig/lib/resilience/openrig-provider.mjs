@@ -9,10 +9,18 @@ import {
 const runFile = promisify(execFile);
 const LIVE_RIG_STATES = new Set(['running', 'attention_required', 'degraded', 'partial']);
 const unknown = attemptId => normalizeRestoreReceipt({ attemptId });
-function argsFor({ scope, target }) {
+function argsFor({ scope, target, explicitRigs }) {
   if (!validateResilienceTarget({ providerId: 'openrig', scope, target })) throw new Error('invalid_target');
   if (scope === 'seat') return ['seat', 'launch', target, '--fresh', '--stop', '--reason', 'resurrect via deck', '--json'];
-  return scope === 'fleet' ? ['start', '--last', '--json'] : ['start', '--rigs', target, '--json'];
+  if (scope === 'fleet') {
+    if (Array.isArray(explicitRigs) && explicitRigs.length > 0) {
+      const safe = explicitRigs.filter(r => typeof r === 'string' && r !== 'kernel' && SAFE_RIG_NAME_RE.test(r));
+      if (safe.length > 0) return ['start', '--rigs', ...safe, '--json'];
+    }
+    return ['start', '--last', '--json'];
+  }
+  if (target === 'kernel') return ['up', 'kernel', '--existing'];
+  return ['start', '--rigs', target, '--json'];
 }
 
 export class OpenRigResilienceProvider {
@@ -28,8 +36,9 @@ export class OpenRigResilienceProvider {
     this.attemptRigs = new Map();
     this.rigIds = new Map();
     this.readFleet = readFleet || (async () => {
+      const baseUrl = typeof daemonUrl === 'function' ? daemonUrl() : daemonUrl;
       const read = async path => {
-        const res = await fetchFn(daemonUrl + path, { signal: AbortSignal.timeout(3500) });
+        const res = await fetchFn(baseUrl + path, { signal: AbortSignal.timeout(3500) });
         if (!res.ok) throw new Error('daemon_unavailable');
         const rows = await res.json();
         if (!Array.isArray(rows)) throw new Error('invalid_fleet_response');
@@ -70,8 +79,20 @@ export class OpenRigResilienceProvider {
       catch (error) { stdout = error.stdout; } // A daemon-down verdict exits 1.
       let verdict;
       try { verdict = JSON.parse(stdout); } catch {}
-      if (verdict?.state !== 'down') throw new Error('fleet_probe_unavailable');
-      const found = verdict.discovery?.foundOnHost;
+      const deadPidEvidence = verdict?.state === 'unverified' && /^dead\b/i.test(String(verdict?.evidence?.pidState || ''));
+      let confirmedDown = verdict?.state === 'down' || deadPidEvidence;
+      if (!confirmedDown) {
+        let statusOut;
+        try { ({ stdout: statusOut } = await this.run(['status', '--json'])); }
+        catch (error) { statusOut = error.stdout; }
+        let st;
+        try { st = JSON.parse(statusOut); } catch {}
+        if (st?.daemon && st.daemon.reachable === false && ['stale', 'stopped', 'down'].includes(String(st.daemon.state || '').toLowerCase())) {
+          confirmedDown = true;
+        }
+      }
+      if (!confirmedDown) throw new Error('fleet_probe_unavailable');
+      const found = verdict?.discovery?.foundOnHost;
       const liveRigs = Array.isArray(found) ? found.slice(0, 64)
         .filter(r => typeof r?.rigName === 'string' && SAFE_RIG_NAME_RE.test(r.rigName))
         .map(r => ({ rigId: r.rigName, running: false })) : [];
@@ -96,10 +117,17 @@ export class OpenRigResilienceProvider {
   }
 
   async planRecover(request) {
-    const commandPreview = this.commandPreview(request);
-    // --last has no per-rig exclusion argument. A stop known only to the vault
-    // cannot be guaranteed by the CLI; individually scoped recovery remains available.
-    if (request.scope === 'fleet' && request.unverifiedSkips?.length) throw new PolicyError(400, 'unverified_stop_exclusion');
+    let explicitRigs = null;
+    // When the vault records intentionally stopped rigs not yet verified by a live daemon,
+    // use explicit `rig start --rigs <recoverable...>` so stopped rigs are deterministically excluded.
+    if (request.scope === 'fleet' && request.unverifiedSkips?.length) {
+      const recoverableRigs = (request.report?.rigReports || [])
+        .filter(r => r.recoverable && !r.intentionallyStopped && SAFE_RIG_NAME_RE.test(r.rigId))
+        .map(r => r.rigId);
+      if (!recoverableRigs.length) throw new PolicyError(400, 'unverified_stop_exclusion');
+      explicitRigs = recoverableRigs;
+    }
+    const commandPreview = this.commandPreview({ ...request, explicitRigs });
     if (request.scope === 'rig' && request.report && !request.report.rigReports.some(r => r.rigId === request.target)) {
       throw new PolicyError(400, 'unknown_rig');
     }
@@ -114,17 +142,29 @@ export class OpenRigResilienceProvider {
   }
 
   async executeRecover(request) {
-    const argv = argsFor(request);
-    let stdout, failed = false;
-    try { ({ stdout } = await this.run(argv, 180000)); }
+    const explicitRigs = (request.scope === 'fleet' && request.plan?.commandPreview?.includes(' --rigs ') && Array.isArray(request.plan?.rigsToRestore))
+      ? request.plan.rigsToRestore
+      : null;
+    const argv = argsFor({ ...request, explicitRigs });
+    let stdout = '', stderr = '', failed = false;
+    try { ({ stdout = '', stderr = '' } = await this.run(argv, 180000)); }
     catch (error) {
       if (error.killed || error.signal) return unknown(null);
-      stdout = error.stdout;
+      stdout = error.stdout || '';
+      stderr = error.stderr || '';
       failed = true;
     }
     let raw;
     try { raw = JSON.parse(stdout); }
-    catch { return normalizeRestoreReceipt({ status: failed ? 'failed' : 'unknown' }); }
+    catch {
+      if (!failed && request.scope === 'rig' && request.target === 'kernel') {
+        return normalizeRestoreReceipt({ status: 'restored', rigs: [{ target: 'kernel', status: 'restored' }] });
+      }
+      const rawMsg = String(stderr || stdout || '').replace(/\s+/g, ' ').trim().slice(0, 260);
+      const rec = normalizeRestoreReceipt({ status: failed ? 'failed' : 'unknown' });
+      if (rawMsg) rec.detail = rawMsg;
+      return rec;
+    }
     if (Array.isArray(raw?.restoredRigs)) {
       const rigs = [], seats = [];
       for (const row of raw.restoredRigs.slice(0, 64)) {

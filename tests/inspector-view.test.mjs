@@ -658,4 +658,15 @@ test('v3.12.2 P0 HITL renders inline 3-line redacted terminal context above Allo
   assert.ok(!html.includes('secret-fixture-value-12345'), 'Secrets in inline terminal context must be redacted');
   assert.ok(html.indexOf('hitl-term-context') < html.indexOf('hitl-btn-primary'), 'Terminal context must sit above primary Allow Once button');
   assert.doesNotMatch(indexHtml, /class="radar-selected-pill"/, 'Wait Radar must not render non-interactive pseudo-button');
+
+  // Regression: non-Always option #2 must preserve its real parsed label and not be mislabeled as Always (dir)
+  const choiceScreen = [
+    'Select deployment strategy:',
+    '› 1. Roll out canary 10%',
+    '  2. Run dry-run diff only',
+    '  3. Cancel'
+  ].join('\n');
+  const choiceHtml = renderInteractivePromptOptionsHtml(context('en'), 'codex-tests', choiceScreen);
+  assert.ok(choiceHtml.includes('Run dry-run diff only'), 'Option 2 non-Always label must be preserved verbatim');
+  assert.ok(!choiceHtml.includes('Always (dir)'), 'Non-Always option #2 must never be mislabeled as Always (dir)');
 });

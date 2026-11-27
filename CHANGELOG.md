@@ -10,6 +10,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.14.3] - 2026-11-28
+
+### Added & Improved
+- **Uncluttered Only-Graph Landing Hero & Synchronized Dual-Mode Switcher (`landing/index.html`):**
+  - Updated H1 & subtitle (EN/RU) to frame the full multi-agent CLI fleet value proposition across any terminal/tmux CLI agent (Claude Code, Codex, Gemini, OpenCode, Aider, Swarms & more).
+  - Replaced stacked preview cards with a real curved-highway inline SVG Topology Graph (`@core-platform · 5` + `@kernel · 2`) matching `/demo` 1-to-1, with Wait Radar (`2 · RADAR`) and Inspector (`P0 · INSPECTOR`) tucked into collapsible side edge handles by default and expanding on click or node selection.
+  - Added interactive `Fleet (OpenRig)` (`Graph | Gantt`) ⇄ `Plain tmux` (`Panes | Gantt`) toggle directly in the hero preview header.
+- **Multi-Project Clustering in `/demo` & Clickable Home Navigation (`openrig/index.html`, `openrig/assets/domain/topology-layout.js`, `openrig/assets/styles/deck.css`):**
+  - Added 2 active working agents in `@kernel` (`kernel-dev` → `auth-guard` → `kernel-qa`) alongside `@core-platform · 5` to showcase live multi-project clustering, with urgent (P0 HITL) clusters prioritized on Row 0 on compact `1280×720` screens.
+  - Made `💠 RIGCOMMANDER` (and mobile `💠 RigCmd`) in `/demo` a clickable `<a href="/">` link back to the landing page.
+- **Floating Draggable Icon Tool Dock & 7-Group Human Factors Taxonomy (`openrig/index.html`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`):**
+  - Added a Photoshop/Figma-style draggable, flippable (`⇄`), collapsible floating icon toolbar (`38×38px` controls, persisted in `localStorage`) with a minimal inline SVG lotus icon for `Calm Focus`, and grouped both the `Tools` menu and floating dock by Human Factors categories (Perceptual Load, Cognitive Load, SA/DSS, Scope, Settings & Guardrails, Learn & Docs, General Control).
+  - Promoted Rig & Flow scope selectors (`#rigFilterSelect`, `#sliceFilterSelect`) directly into the center canvas header next to `Call Highways`, and restored centered left/right collapse edge arrows on Wait Radar and Inspector borders.
+- **Real Actionable `Attach` Button (`openrig/server.mjs`, `openrig/assets/ui/inspector-view.js`, `openrig/index.html`):**
+  - Replaced passive clipboard copy on `Attach` with a local-only guarded `POST /api/attach-terminal` route (opens Terminal.app / iTerm2 on macOS or Linux terminal emulator attached to the validated `tmux` session) and automatic fallback to the built-in 80-line interactive Live Terminal modal in `/demo`, `--read-only`, or remote sessions.
+- **Resurrect & Control-Plane Hygiene Ergonomics (`openrig/lib/resilience/*`, `openrig/assets/ui/resilience-view.js`, `openrig/lib/routes/resilience.mjs`):**
+  - Added **Forget rig (`Dismiss`)** button + `POST /api/resilience/dismiss` endpoint to remove unrecoverable/obsolete rigs from the Resilience Vault.
+  - Auto-extracted allowlisted `rig seat launch <seat> --fresh` hints from OpenRig recovery errors into a 1-click button inside the Resurrect modal (no terminal switch needed), and surfaced sanitized CLI failure diagnostics (`receipt.detail`) directly in the modal.
+  - Made Resurrect and Hygiene banners compact & collapsible by default, and hid the Hygiene banner completely when zero actionable items remain (`opgateOlderThan24h === 0` and `daemon.log <= 50 MB`).
+  - Added dynamic OpenRig daemon port resolution (`~/.openrig/config.json` / `daemon.json`) instead of hardcoding `:7437`.
+
+### Fixed (Bugfixes & Regressions)
+- **P0 Browser Freeze (`Page Unresponsive`) on Large Fleets (`openrig/index.html`):** Bounded the fallback coordinate collision-avoidance `while` loop in `ensureDynamicAgent` (`collisionAttempts < 64`) that previously spun infinitely once a fleet exceeded ~24 nodes across multiple live rigs.
+- **Resurrect Blackout Detection After Reboot (`openrig/lib/resilience/openrig-provider.mjs`):** Fixed `probe()` rejecting `rig crash-cart --json` verdicts with `state: "unverified"` and `evidence.pidState: "dead (...)"` (plus added `rig status --json` stale/stopped fallback) so stopped rigs immediately appear in Resurrect after machine reboot.
+- **Resurrect Fleet & Kernel Recovery (`openrig/lib/resilience/openrig-provider.mjs`):** Fixed `unverified_stop_exclusion` blocking fleet recovery when the Vault holds an intentionally stopped rig (now uses explicit `rig start --rigs <recoverable...> --json` excluding stopped rigs and `kernel`), and mapped `kernel` recovery to `rig up kernel --existing`.
+- **HITL Option-to-Button Mapping Regression (`openrig/assets/ui/inspector-view.js`):** Removed the blind `opt.badge === '2'` heuristic that mislabeled arbitrary option #2 prompts as `Always (dir)`, preserved explicit `1. / 2. / 3.` terminal option badges on all HITL buttons, and deduplicated repeated command lines in `.hitl-term-context`.
+- **False Alerts from Closed Standalone JSONL Logs (`openrig/lib/universal-discovery.mjs`, `openrig/lib/fleet-intelligence/detectors/context-entropy.mjs`, `openrig/assets/ontology/snapshot.js`, `openrig/assets/ui/topology-view.js`, `openrig/index.html`):** Marked standalone JSONL transcripts with `hasLivePane: false` so archived sessions no longer trigger false `CTX 100%` alarms, `/compact` buttons, tab-title `🔥 [COMPACT]` alerts, `Error: Daemon not running` terminal captures, or overlapping OpenRig queue counters.
+- **Topbar & Radar Consistency (`openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`):** Deduplicated the redundant topbar Auto-Consent button when the live Auto-Consent HUD pill is active, and unified the Wait Radar header (`РАДАР ОЖИДАНИЯ` / `WAIT RADAR`) across OpenRig and Universal modes.
+
+---
+
 ## [3.14.2] - 2026-11-27
 
 ### Fixed & Improved

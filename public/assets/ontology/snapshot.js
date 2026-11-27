@@ -84,7 +84,8 @@ export function classifySeatOperationalState(liveNode, parkedData, ctxPct) {
     activityLabel = `🟠 ЗАДАЧИ (${assignedWorkCount})`;
   }
 
-  const isHotCtx = typeof ctxPct === 'number' && ctxPct >= CONTEXT_CRIT_PCT;
+  const isReadOnlyTranscript = liveNode.hasLivePane === false || liveNode.readOnlyTranscript === true || /\(JSONL\)$/i.test(String(liveNode.resolvedSpecName || ''));
+  const isHotCtx = !isReadOnlyTranscript && typeof ctxPct === 'number' && ctxPct >= CONTEXT_CRIT_PCT;
   const isAttentionRequired = Boolean(state === 'urgent' || isParked || isHotCtx);
   const isCalmVisible = Boolean(isAttentionRequired || state === 'working');
 
@@ -186,6 +187,7 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
       parkedReason: fsm.parkedReason,
       parkedData,
       shellExited: Boolean(liveNode && liveNode.shellExited),
+      hasLivePane: liveNode.hasLivePane !== false && liveNode.readOnlyTranscript !== true && !/\(JSONL\)$/i.test(String(liveNode.resolvedSpecName || '')),
       isAttentionRequired: fsm.isAttentionRequired,
       isCalmVisible: fsm.isCalmVisible,
       assignedWorkCount: liveNode.assignedWorkCount || 0,
@@ -313,7 +315,7 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
         reason: seat.parkedReason || 'Обязательства без live wake'
       });
     }
-    if (sess && typeof sess.ctxPct === 'number' && sess.ctxPct >= CONTEXT_WARN_PCT) {
+    if (seat.hasLivePane !== false && sess && typeof sess.ctxPct === 'number' && sess.ctxPct >= CONTEXT_WARN_PCT) {
       situations.push({
         situationId: `ctx:${seat.seatId}`,
         severity: sess.ctxPct >= CONTEXT_CRIT_PCT ? 'P1' : 'P2',
