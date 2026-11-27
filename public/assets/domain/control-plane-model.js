@@ -14,7 +14,7 @@ export const CONTROL_PLANE_THRESHOLDS = Object.freeze({
   consecutiveSlowProbesP0: 3,
   daemonLogBytesP0: 50 * MB,
   daemonLogGrowthBytesPerHourP0: 5 * MB,
-  sqliteBytesP0: 100 * MB,
+  sqliteBytesP0: 512 * MB,
   stuckSweepConsecutiveFailuresP0: 5,
   opgateZombieCountP1: 20,
   opgateStaleHoursP1: 24,
@@ -472,7 +472,7 @@ export function evaluateControlPlaneHealth(controlPlaneInput) {
     p0Reasons.push(`daemon.log growth ${(m.daemonLogGrowthBytesPerHour / MB).toFixed(1)} MB/h (> 5 MB/h)`);
   }
   if (m.sqliteBytes > CONTROL_PLANE_THRESHOLDS.sqliteBytesP0) {
-    p0Reasons.push(`openrig.sqlite ${(m.sqliteBytes / MB).toFixed(1)} MB (> 100 MB)`);
+    p0Reasons.push(`openrig.sqlite ${(m.sqliteBytes / MB).toFixed(1)} MB (> 512 MB)`);
   }
   if (m.stuckSweepConsecutiveFailures >= CONTROL_PLANE_THRESHOLDS.stuckSweepConsecutiveFailuresP0) {
     p0Reasons.push(`stuckSweep consecutive failures ${m.stuckSweepConsecutiveFailures} (>= 5)`);

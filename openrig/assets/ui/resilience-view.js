@@ -382,6 +382,6 @@ export function createResilienceController({ root, modalRoot, td, lang = () => '
     }
   }
   root.addEventListener('click', click); modalRoot.addEventListener('click', click); modalRoot.addEventListener('keydown', keydown);
-  return { refresh, render, cancel, setStatus, setControlPlane, getState: () => state,
+  return { refresh, render, cancel, setStatus, setControlPlane, openHygienePlan: () => hygienePreview({ providerId: 'openrig', scope: 'fleet', cutoffHours: 24 }), getState: () => state,
     destroy() { destroyed = true; epoch++; root.removeEventListener('click', click); modalRoot.removeEventListener('click', click); modalRoot.removeEventListener('keydown', keydown); } };
 }

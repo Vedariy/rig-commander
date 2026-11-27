@@ -8,6 +8,7 @@ Engineering rules and documentation boundaries for all agents and contributors w
 - **Single Source of Truth:** Edit only `openrig/` and `landing/`. Never hand-edit generated files in `public/`, `openrig/guide.html`, or `openrig/passport.html` — regenerate them deterministically via `npm run sync:public`.
 - **EN / RU Parity:** Every user-facing string in the Deck (`openrig/assets/domain/i18n.js`), Landing (`landing/index.html`), Guide (`landing/guide.html`), and Passport (`landing/passport.html`) must ship with matching English and Russian copy.
 - **Idle-Silent & Non-Blocking:** `0%` background CPU when no active clients are connected; offline `/demo` must never fire live `/api/events` or `/api/capture/stream` requests.
+- **ACTION BUTTON HONESTY RULE (HARD UX INVARIANT):** Кнопки, на которых написано действие и нет явного суффикса `Cmd` со значком копирования (`📋`), **НИКОГДА НЕ ДОЛЖНЫ** копировать команду терминала в буфер обмена — они обязаны выполнять реальное действие внутри приложения (или открывать интерактивный модал/план выполнения). Any button labeled as an action without an explicit `Cmd 📋` copy suffix MUST NEVER copy a CLI command to the clipboard.
 
 ## 2. Three-Tier Documentation & Exposure Boundary
 This repository is **public (MIT Open Source)** and powers both the static showcase (`https://rig-commander.vercel.app`) and the npm CLI (`npx rig-commander@latest`). Follow this strict separation:

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.14.3">
+  <meta name="app-version" content="3.14.4">
   <meta name="theme-color" content="#030712" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
@@ -21,7 +21,7 @@
       "@id": "https://rig-commander.vercel.app/guide#article",
       "headline": "RigCommander Operator Guide",
       "url": "https://rig-commander.vercel.app/guide",
-      "version": "3.14.3",
+      "version": "3.14.4",
       "inLanguage": [
         "en",
         "ru"
@@ -34,7 +34,7 @@
       "@type": "HowTo",
       "@id": "https://rig-commander.vercel.app/guide#quickstart",
       "name": "Start the local RigCommander deck",
-      "version": "3.14.3",
+      "version": "3.14.4",
       "inLanguage": "en",
       "step": [
         {
@@ -47,7 +47,7 @@
           "@type": "HowToStep",
           "position": 2,
           "name": "Start RigCommander",
-          "text": "Run npx rig-commander@3.14.3 --read-only in a terminal."
+          "text": "Run npx rig-commander@3.14.4 --read-only in a terminal."
         },
         {
           "@type": "HowToStep",
@@ -704,7 +704,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/" id="guideBrandLink">
         <span>💠 RIGCOMMANDER</span>
-        <span class="pill-tag">USER GUIDE v3.14.3</span>
+        <span class="pill-tag">USER GUIDE v3.14.4</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a href="/#architecture"><span data-lang-block="ru">Архитектура</span><span data-lang-block="en">Architecture</span></a>
@@ -783,8 +783,8 @@
             </span>
           </div>
           <div class="cmd-row">
-            <code>npx rig-commander@3.14.3 --read-only --no-session-logs</code>
-            <button type="button" class="copy-btn copy-btn-primary" data-copy="npx rig-commander@3.14.3 --read-only --no-session-logs"><span data-lang-block="ru">Копировать запуск</span><span data-lang-block="en">Copy read-only</span></button>
+            <code>npx rig-commander@3.14.4 --read-only --no-session-logs</code>
+            <button type="button" class="copy-btn copy-btn-primary" data-copy="npx rig-commander@3.14.4 --read-only --no-session-logs"><span data-lang-block="ru">Копировать запуск</span><span data-lang-block="en">Copy read-only</span></button>
           </div>
           <div class="ro-disclosure">
             <div class="ro-disclosure-title">
@@ -799,8 +799,8 @@
               </li>
               <li>
                 <strong><span data-lang-block="ru">Живой SSE и редакция секретов:</span><span data-lang-block="en">Live SSE &amp; secret redaction:</span></strong>
-                <span data-lang-block="ru">API-ключи (префиксы провайдеров), Bearer/JWT, PEM-блоки и пары <code class="inline">.env</code> маскируются на сервере до отправки в браузер по SSE (<code class="inline">/api/capture/stream</code>; отключается <code class="inline">--raw-capture</code>). Граница честно: произвольные неструктурированные пароли без ключа в stdout не гарантируются — поэтому для чувствительных панелей используйте <code class="inline">--tmux-socket</code> / <code class="inline">--tmux-session</code> (<a href="https://github.com/Vedariy/rig-commander/tree/v3.14.3/tests" target="_blank" rel="noopener">автотесты v3.14.3</a>). Опциональная <code class="inline">🧠 AI-риск</code> ВЫКЛ по умолчанию (0 исходящих вызовов).</span>
-                <span data-lang-block="en">known API key prefixes, Bearer/JWT tokens, PEM blocks, and <code class="inline">.env</code> key-value pairs are masked server-side before live SSE reaches the browser (<code class="inline">/api/capture/stream</code>; opt out via <code class="inline">--raw-capture</code>). Honest limit: arbitrary unstructured passwords printed raw to stdout are not guaranteed — isolate sensitive panes with <code class="inline">--tmux-socket</code> / <code class="inline">--tmux-session</code> (<a href="https://github.com/Vedariy/rig-commander/tree/v3.14.3/tests" target="_blank" rel="noopener">v3.14.3 test suite</a>). Optional <code class="inline">🧠 AI Risk</code> stays OFF by default (0 outbound API calls).</span>
+                <span data-lang-block="ru">API-ключи (префиксы провайдеров), Bearer/JWT, PEM-блоки и пары <code class="inline">.env</code> маскируются на сервере до отправки в браузер по SSE (<code class="inline">/api/capture/stream</code>; отключается <code class="inline">--raw-capture</code>). Граница честно: произвольные неструктурированные пароли без ключа в stdout не гарантируются — поэтому для чувствительных панелей используйте <code class="inline">--tmux-socket</code> / <code class="inline">--tmux-session</code> (<a href="https://github.com/Vedariy/rig-commander/tree/v3.14.4/tests" target="_blank" rel="noopener">автотесты v3.14.4</a>). Опциональная <code class="inline">🧠 AI-риск</code> ВЫКЛ по умолчанию (0 исходящих вызовов).</span>
+                <span data-lang-block="en">known API key prefixes, Bearer/JWT tokens, PEM blocks, and <code class="inline">.env</code> key-value pairs are masked server-side before live SSE reaches the browser (<code class="inline">/api/capture/stream</code>; opt out via <code class="inline">--raw-capture</code>). Honest limit: arbitrary unstructured passwords printed raw to stdout are not guaranteed — isolate sensitive panes with <code class="inline">--tmux-socket</code> / <code class="inline">--tmux-session</code> (<a href="https://github.com/Vedariy/rig-commander/tree/v3.14.4/tests" target="_blank" rel="noopener">v3.14.4 test suite</a>). Optional <code class="inline">🧠 AI Risk</code> stays OFF by default (0 outbound API calls).</span>
               </li>
               <li>
                 <strong><span data-lang-block="ru">Пишет:</span><span data-lang-block="en">Writes:</span></strong>
@@ -814,12 +814,12 @@
                 <span data-lang-block="en">Verify npm / Sigstore attestation before running without executing code (30s):</span>
               </div>
               <div class="cmd-row ro-verify-row" style="align-items:flex-start; margin-top:4px;">
-                <code style="white-space:normal; overflow-wrap:anywhere; line-height:1.45;">tmp=$(mktemp -d) &amp;&amp; (cd "$tmp" &amp;&amp; npm init -y &gt;/dev/null &amp;&amp; npm install --ignore-scripts rig-commander@3.14.3 &amp;&amp; npm audit signatures) &amp;&amp; rm -rf "$tmp"</code>
-                <button type="button" class="copy-btn copy-btn-secondary" style="flex-shrink:0;" data-copy="tmp=$(mktemp -d) && (cd &quot;$tmp&quot; && npm init -y >/dev/null && npm install --ignore-scripts rig-commander@3.14.3 && npm audit signatures) && rm -rf &quot;$tmp&quot;"><span data-lang-block="ru">Копировать проверку</span><span data-lang-block="en">Copy verify</span></button>
+                <code style="white-space:normal; overflow-wrap:anywhere; line-height:1.45;">tmp=$(mktemp -d) &amp;&amp; (cd "$tmp" &amp;&amp; npm init -y &gt;/dev/null &amp;&amp; npm install --ignore-scripts rig-commander@3.14.4 &amp;&amp; npm audit signatures) &amp;&amp; rm -rf "$tmp"</code>
+                <button type="button" class="copy-btn copy-btn-secondary" style="flex-shrink:0;" data-copy="tmp=$(mktemp -d) && (cd &quot;$tmp&quot; && npm init -y >/dev/null && npm install --ignore-scripts rig-commander@3.14.4 && npm audit signatures) && rm -rf &quot;$tmp&quot;"><span data-lang-block="ru">Копировать проверку</span><span data-lang-block="en">Copy verify</span></button>
               </div>
               <p style="margin-top:4px; font-size:11.5px; color:#94a3b8; line-height:1.45;">
-                <span data-lang-block="ru">Ожидается <code class="inline">1 package has a verified registry signature</code> и <code class="inline">1 package has a verified attestation</code>; сверяется с тегом <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.3" target="_blank" rel="noopener">GitHub v3.14.3</a> (или <code class="inline">npm view rig-commander@3.14.3 dist.attestations</code>).</span>
-                <span data-lang-block="en">Expect <code class="inline">1 package has a verified registry signature</code> &amp; <code class="inline">1 package has a verified attestation</code>; matches <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.3" target="_blank" rel="noopener">GitHub tag v3.14.3</a> (or <code class="inline">npm view rig-commander@3.14.3 dist.attestations</code>).</span>
+                <span data-lang-block="ru">Ожидается <code class="inline">1 package has a verified registry signature</code> и <code class="inline">1 package has a verified attestation</code>; сверяется с тегом <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.4" target="_blank" rel="noopener">GitHub v3.14.4</a> (или <code class="inline">npm view rig-commander@3.14.4 dist.attestations</code>).</span>
+                <span data-lang-block="en">Expect <code class="inline">1 package has a verified registry signature</code> &amp; <code class="inline">1 package has a verified attestation</code>; matches <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.4" target="_blank" rel="noopener">GitHub tag v3.14.4</a> (or <code class="inline">npm view rig-commander@3.14.4 dist.attestations</code>).</span>
               </p>
             </div>
           </div>
@@ -831,8 +831,8 @@
             <span data-lang-block="en">⚡ Full interactive command deck (enables allowlisted HITL keys &amp; /compact)</span>
           </summary>
           <div class="cmd-row" style="margin-top:8px;">
-            <code>npx rig-commander@3.14.3</code>
-            <button type="button" class="copy-btn copy-btn-secondary" data-copy="npx rig-commander@3.14.3"><span data-lang-block="ru">Копировать интерактивный</span><span data-lang-block="en">Copy interactive</span></button>
+            <code>npx rig-commander@3.14.4</code>
+            <button type="button" class="copy-btn copy-btn-secondary" data-copy="npx rig-commander@3.14.4"><span data-lang-block="ru">Копировать интерактивный</span><span data-lang-block="en">Copy interactive</span></button>
           </div>
           <div class="alias-note">
             <span data-lang-block="ru">Версия закреплена для воспроизводимости. <code class="inline">@latest</code> — необязательный алиас на самый свежий релиз.</span>
@@ -867,7 +867,7 @@
           </thead>
           <tbody>
             <tr>
-              <td><code class="inline">npx rig-commander@3.14.3 --read-only</code></td>
+              <td><code class="inline">npx rig-commander@3.14.4 --read-only</code></td>
               <td><span data-lang-block="ru">Безопасный режим осмотра: блокирует любые записи в <code class="inline">tmux</code>, перезапуски и мутации</span><span data-lang-block="en">Zero-write inspection mode: disables all <code class="inline">tmux</code> keystrokes, restarts, and mutations</span></td>
             </tr>
             <tr>
@@ -1411,7 +1411,7 @@
   </div>
 
   <footer>
-    <span>💠 RigCommander // Operator User Guide v3.14.3</span>
+    <span>💠 RigCommander // Operator User Guide v3.14.4</span>
     <span style="display:flex; gap:16px; flex-wrap:wrap;">
       <a href="/" id="footerHomeLink"><span data-lang-block="ru">Главная / Пульт</span><span data-lang-block="en">Home / Deck</span></a>
       <a href="/passport"><span data-lang-block="ru">Паспорт проекта</span><span data-lang-block="en">Project Passport</span></a>

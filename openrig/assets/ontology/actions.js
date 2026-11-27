@@ -280,6 +280,18 @@ export function resolveActionFromFinding(actionPlan, seat = null) {
   const seatId = actionPlan.seatTarget || (seat && seat.id) || '';
   const targetSeat = seat || (seatId ? { id: seatId, harness: '' } : null);
 
+  if (actionPlan.kind === 'open_hygiene_crash_cart') {
+    return {
+      id: 'open_hygiene_plan',
+      transport: 'hygiene_modal',
+      seatId: '',
+      payload: '',
+      label: actionPlan.label || '🩺 Hygiene Plan',
+      title: 'Открыть план очистки очереди и логов / Open Control-Plane Hygiene Plan',
+      tone: 'warn'
+    };
+  }
+
   if (actionPlan.kind === 'compact_seat' && seatId) {
     if (isPiHarness(targetSeat)) {
       const cmd = buildSeatRelaunchCommand(seatId, 'context rotation');

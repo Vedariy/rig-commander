@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.14.3" />
+  <meta name="app-version" content="3.14.4" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -76,7 +76,7 @@
         <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
       <button type="button" class="triage-refresh-btn ac-top-is-off" id="btnAutoConsentTop" onclick="openGuardrailsModal('auto-consent')" title="Scoped Auto-Consent Policy (Dry-Run / Armed)">⚡ <span class="ac-top-lbl-desktop" data-i18n="autoConsent.topBtn">Авто-согласие</span><span class="ac-top-lbl-mobile" data-i18n="autoConsent.mobileShort">Авто</span><span id="btnAutoConsentStateBadge" class="ac-top-badge is-off">ВЫКЛ</span></button>
-      <button type="button" class="triage-refresh-btn fleet-pause-btn" id="btnFleetPause" aria-pressed="false" onclick="toggleFleetPause()" title="Пауза ввода (Shift+Space): замораживает авто-согласие и блокирует отправку команд">⏸ <span id="btnFleetPauseLabel" data-i18n="hud.pauseFleet">Пауза ввода</span><span class="fleet-pause-mobile-lbl" data-i18n="hud.pauseFleetMobile">Пауза</span></button>
+      <button type="button" class="triage-refresh-btn fleet-pause-btn" id="btnFleetPause" aria-pressed="false" onclick="toggleFleetPause()" title="Блокировка ввода (Shift+Space): останавливает авто-ответы и запрещает любую отправку команд с пульта">🔒 <span id="btnFleetPauseLabel" data-i18n="hud.pauseFleet">Блок ввода</span><span class="fleet-pause-mobile-lbl" data-i18n="hud.pauseFleetMobile">Блок</span></button>
       <button class="triage-refresh-btn" id="btnShiftDigest" onclick="openShiftDigestModal()" style="border-color:rgba(251,191,36,0.45); color:#fde68a;" title="Shift Catch-Up / Overnight Digest">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span data-i18n="digest.btn">Смена</span><span id="btnShiftDigestBadge" class="digest-btn-badge" style="display:none;">0</span>
@@ -3051,6 +3051,9 @@
         openSliceOnGantt(payload);
       } else if (transport === 'git_diff' && seatId) {
         openGitDiffModal(seatId, payload);
+      } else if (transport === 'hygiene_modal') {
+        if (typeof closeFleetAdvisorModal === 'function') closeFleetAdvisorModal();
+        if (resilienceUi && typeof resilienceUi.openHygienePlan === 'function') resilienceUi.openHygienePlan();
       } else if (transport === 'clipboard' && payload) {
         copyCmd(payload);
       }
@@ -10352,53 +10355,88 @@
     </button>
   </nav>
 
-  <!-- FLOATING PHOTOSHOP/FIGMA-STYLE DRAGGABLE ICON TOOL DOCK (Grouped by Human Factors) -->
+  <!-- FLOATING PHOTOSHOP/FIGMA-STYLE DRAGGABLE SVG ICON TOOL DOCK (Grouped by Human Factors) -->
   <div class="floating-tool-dock" id="floatingToolDock" role="toolbar" aria-label="Floating tools">
     <div class="ftd-drag-handle" id="ftdDragHandle" title="Перетащить панель / Drag toolbar">⋮⋮</div>
     <!-- 1. Perceptual Load: Calm, Audio, Fullscreen -->
     <div class="ftd-group" aria-label="Perceptual load">
-      <button type="button" class="ftd-btn" onclick="toggleCalmMode()" title="Перцептивная: Calm Focus (спокойное внимание, меньше шума)">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 4c-2 3-3 6-3 9 0 2.5 1.3 4.5 3 5.5 1.7-1 3-3 3-5.5 0-3-1-6-3-9z"/>
-          <path d="M9 14c-2.5-.5-5-2.2-6-5 2.6-.3 5 .8 6.5 2.5"/>
-          <path d="M15 14c2.5-.5 5-2.2 6-5-2.6-.3-5 .8-6.5 2.5"/>
-          <path d="M5 18.5c2.2.8 4.6 1 7 1s4.8-.2 7-1"/>
-        </svg>
+      <button type="button" class="ftd-btn" id="ftdCalmBtn" onclick="toggleCalmMode(); syncFloatingDockStates();" title="Перцептивная: Calm Focus (спокойное внимание)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4c-2 3-3 6-3 9 0 2.5 1.3 4.5 3 5.5 1.7-1 3-3 3-5.5 0-3-1-6-3-9z"/><path d="M9 14c-2.5-.5-5-2.2-6-5 2.6-.3 5 .8 6.5 2.5"/><path d="M15 14c2.5-.5 5-2.2 6-5-2.6-.3-5 .8-6.5 2.5"/><path d="M5 18.5c2.2.8 4.6 1 7 1s4.8-.2 7-1"/></svg>
       </button>
-      <button type="button" class="ftd-btn" onclick="toggleAudioRadar()" title="Перцептивная: Звук (Audio)">🔊</button>
-      <button type="button" class="ftd-btn" onclick="toggleFullscreen()" title="Перцептивная: Полный экран (F)">⛶</button>
+      <button type="button" class="ftd-btn" id="ftdAudioBtn" onclick="toggleAudioRadar(); syncFloatingDockStates();" title="Перцептивная: Звук алертов (Audio)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      </button>
+      <button type="button" class="ftd-btn" id="ftdFullBtn" onclick="toggleFullscreen(); syncFloatingDockStates();" title="Перцептивная: Полный экран (F)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
     </div>
     <div class="ftd-sep" aria-hidden="true"></div>
     <!-- 2. Cognitive Load: Compact/Detailed, Idle -->
     <div class="ftd-group" aria-label="Cognitive load">
-      <button type="button" class="ftd-btn" onclick="toggleDensityMode()" title="Когнитивная: Компакт / Детальный">▦</button>
-      <button type="button" class="ftd-btn" onclick="toggleHideIdle()" title="Когнитивная: Скрыть / показать спящих (Idle)">👁</button>
+      <button type="button" class="ftd-btn" id="ftdDensityBtn" onclick="toggleDensityMode(); syncFloatingDockStates();" title="Когнитивная: Компакт / Детальный вид">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+      </button>
+      <button type="button" class="ftd-btn" id="ftdIdleBtn" onclick="toggleHideIdle(); syncFloatingDockStates();" title="Когнитивная: Скрыть / показать спящих (Idle)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
     </div>
     <div class="ftd-sep" aria-hidden="true"></div>
     <!-- 3. SA & DSS: Fleet Advisor, Shift Catch-Up, Share Card -->
     <div class="ftd-group" aria-label="SA and decision support">
-      <button type="button" class="ftd-btn is-accent" onclick="openFleetAdvisorModal('findings')" title="SA/DSS: Советник флота (Fleet Advisor)">💡</button>
-      <button type="button" class="ftd-btn is-amber" onclick="openShiftDigestModal()" title="SA/DSS: Сводка смены (Catch-Up)">🕒</button>
-      <button type="button" class="ftd-btn" onclick="openShareCardModal()" title="SA/DSS: Карточка дня (Share Card)">📸</button>
+      <button type="button" class="ftd-btn is-accent" onclick="openFleetAdvisorModal('findings')" title="SA/DSS: Советник флота (Fleet Advisor)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+      </button>
+      <button type="button" class="ftd-btn is-amber" onclick="openShiftDigestModal()" title="SA/DSS: Сводка смены (Catch-Up)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+      </button>
+      <button type="button" class="ftd-btn" onclick="openShareCardModal()" title="SA/DSS: Карточка дня (Share Card)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+      </button>
     </div>
     <div class="ftd-sep" aria-hidden="true"></div>
-    <!-- 5. Settings & Guardrails: Auto-Consent, Guardrails/TG, QR, Shortcuts -->
+    <!-- 5. Settings & Guardrails: Auto-Approve, Guardrails/TG, QR, Shortcuts -->
     <div class="ftd-group" aria-label="Settings and guardrails">
-      <button type="button" class="ftd-btn is-emerald" onclick="openGuardrailsModal('auto-consent')" title="Настройки: Авто-согласие">⚡</button>
-      <button type="button" class="ftd-btn is-emerald" onclick="openGuardrailsModal()" title="Настройки: Авто-тормоз / Telegram">🛡</button>
-      <button type="button" class="ftd-btn is-accent" onclick="openMobileQrModal()" title="Настройки: QR на телефон">📱</button>
-      <button type="button" class="ftd-btn" onclick="toggleKeyboardHelpPopover(event)" title="Настройки: Горячие клавиши (?)">⌨</button>
+      <button type="button" class="ftd-btn is-emerald" onclick="openGuardrailsModal('auto-consent')" title="Настройки: Авто-ответы (Auto-Approve)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </button>
+      <button type="button" class="ftd-btn is-emerald" onclick="openGuardrailsModal()" title="Настройки: Авто-тормоз и Telegram">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </button>
+      <button type="button" class="ftd-btn is-accent" onclick="openMobileQrModal()" title="Настройки: QR на телефон (PWA)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      </button>
+      <button type="button" class="ftd-btn" onclick="toggleKeyboardHelpPopover(event)" title="Настройки: Горячие клавиши (?)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="6" y1="9" x2="6.01" y2="9"/><line x1="10" y1="9" x2="10.01" y2="9"/><line x1="14" y1="9" x2="14.01" y2="9"/><line x1="18" y1="9" x2="18.01" y2="9"/><line x1="7" y1="15" x2="17" y2="15"/></svg>
+      </button>
     </div>
     <div class="ftd-sep" aria-hidden="true"></div>
     <!-- 7. General Control: Command Palette, Refresh -->
     <div class="ftd-group" aria-label="General control">
-      <button type="button" class="ftd-btn is-accent" onclick="openCommandPalette()" title="Управление: Палитра команд (⌘K)">⌘</button>
-      <button type="button" class="ftd-btn" onclick="refreshTelemetryNow(true)" title="Управление: Обновить телеметрию">↻</button>
+      <button type="button" class="ftd-btn is-accent" onclick="openCommandPalette()" title="Управление: Палитра команд (⌘K)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button type="button" class="ftd-btn" onclick="refreshTelemetryNow(true)" title="Управление: Обновить телеметрию">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
     </div>
     <div class="ftd-sep" aria-hidden="true"></div>
-    <button type="button" class="ftd-btn ftd-orient-btn" id="ftdOrientBtn" onclick="toggleFloatingDockOrientation()" title="Горизонтально / вертикально">⇄</button>
+    <button type="button" class="ftd-btn ftd-orient-btn" id="ftdOrientBtn" onclick="toggleFloatingDockOrientation()" title="Горизонтально / вертикально">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 2 21 6 17 10"/><line x1="3" y1="6" x2="21" y2="6"/><polyline points="7 22 3 18 7 14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+    </button>
     <button type="button" class="ftd-btn" id="ftdCollapseBtn" onclick="toggleFloatingDockCollapse()" title="Свернуть / развернуть панель инструментов">—</button>
   </div>
+
+  <script>
+    window.syncFloatingDockStates = function syncFloatingDockStates() {
+      const toggle = (id, on) => { const el = document.getElementById(id); if (el) el.classList.toggle('is-active', Boolean(on)); };
+      toggle('ftdCalmBtn', document.body.classList.contains('calm-mode') || document.getElementById('btnCalmMode')?.classList.contains('active'));
+      toggle('ftdAudioBtn', document.getElementById('btnAudioRadar')?.classList.contains('active'));
+      toggle('ftdFullBtn', Boolean(document.fullscreenElement) || document.body.classList.contains('is-fullscreen'));
+      toggle('ftdDensityBtn', document.body.classList.contains('compact-mode') || document.getElementById('btnDensityMode')?.classList.contains('active'));
+      toggle('ftdIdleBtn', document.body.classList.contains('hide-idle-mode') || document.getElementById('btnHideIdle')?.classList.contains('active'));
+    };
+    setTimeout(() => window.syncFloatingDockStates?.(), 800);
+  </script>
 
   <script>
     (function initFloatingToolDock() {

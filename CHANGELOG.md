@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.14.4] - 2026-11-28
+
+### Added & Improved
+- **Uniform Monochrome SVG Floating Tool Dock (`openrig/index.html`, `openrig/assets/styles/deck.css`):**
+  - Replaced mixed emojis in the draggable floating tool dock with a unified `18×18` stroke-`1.8` monochrome SVG icon set matching the Calm Focus lotus, with live `.is-active` cyan state highlighting for `CALM`, `Audio`, `Compact`, `Idle`, and `Fullscreen`.
+- **Plain-Language Topbar Safety Controls (`openrig/assets/domain/i18n.js`, `openrig/index.html`):**
+  - Eliminated duplicate "Pause" buttons in the topbar: Auto-Approve now reads `⚡ Auto-Approve: {n} rules · {count} [⏸ Stop Auto]` / `⚡ Авто-ответы: {n} правил · {count} [⏸ Стоп авто]`, while the global kill-switch is clearly distinguished as `🔒 Lock Input` / `🔒 Блок ввода`.
+- **Outer-Edge Sidebar Arrows & Compact Scope Selectors (`openrig/assets/styles/deck.css`):**
+  - Pinned left/right Wait Radar & Inspector collapse arrows to the outer left/right screen edges (`left: 0` / `right: 0`) and constrained the inline `All Rigs` / `All Flows` dropdowns in the canvas header so they never clip against view toggles.
+
+### Fixed (Bugfixes & Regressions)
+- **Action Button Honesty in Fleet Health Action Plan (`openrig/assets/ontology/actions.js`, `openrig/assets/ui/resilience-view.js`, `openrig/index.html`):**
+  - Wired `Hygiene Crash-Cart` and `Clean Zombie Queue` buttons to open the real interactive 2-step Hygiene Plan modal (`transport: 'hygiene_modal'`) instead of copying a read-only CLI command to the clipboard.
+  - Raised the `openrig.sqlite` P0 degradation threshold from `100 MB` to `512 MB` (`openrig/assets/domain/control-plane-model.js`) so normal active SQLite history no longer falsely craters Fleet Health into `CRITICAL RISK` without an actionable 1-click fix.
+  - Documented the **Action Button Honesty Rule** as a hard UX invariant in `AGENTS.md`.
+
+---
+
 ## [3.14.3] - 2026-11-28
 
 ### Added & Improved

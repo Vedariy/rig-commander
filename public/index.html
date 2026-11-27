@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="3.14.3">
+  <meta name="app-version" content="3.14.4">
   <meta name="theme-color" content="#030712">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,7 +31,7 @@
       "description": "Local command deck for observing AI coding fleets and reviewing terminal actions.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Linux",
-      "softwareVersion": "3.14.3",
+      "softwareVersion": "3.14.4",
       "license": "https://opensource.org/licenses/MIT",
       "isAccessibleForFree": true,
       "offers": {
@@ -55,7 +55,7 @@
       "@type": "HowTo",
       "@id": "https://rig-commander.vercel.app/#quickstart",
       "name": "Start the local RigCommander deck",
-      "version": "3.14.3",
+      "version": "3.14.4",
       "inLanguage": "en",
       "step": [
         {
@@ -68,7 +68,7 @@
           "@type": "HowToStep",
           "position": 2,
           "name": "Start RigCommander",
-          "text": "Run npx rig-commander@3.14.3 --read-only in a terminal."
+          "text": "Run npx rig-commander@3.14.4 --read-only in a terminal."
         },
         {
           "@type": "HowToStep",
@@ -88,7 +88,7 @@
           "name": "How do I start the live deck?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Run npx rig-commander@3.14.3 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
+            "text": "Run npx rig-commander@3.14.4 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
           }
         },
         {
@@ -157,14 +157,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.14.3 --read-only">
+  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.14.4 --read-only">
   <meta property="og:url" content="https://rig-commander.vercel.app/">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.14.3 --read-only">
+  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.14.4 --read-only">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
 
   <style>
@@ -2209,7 +2209,7 @@
     <nav class="navbar" id="primaryNavbar">
       <a href="#" class="nav-brand">
         <span>💠 RIGCOMMANDER</span>
-        <span class="nav-brand-badge" id="navVersionBadge">v3.14.3</span>
+        <span class="nav-brand-badge" id="navVersionBadge">v3.14.4</span>
       </a>
       <ul class="nav-links" id="primaryNavLinks">
         <li><a href="#architecture" data-i18n="nav.arch" onclick="closeMobileNav()">Architecture</a></li>
@@ -2261,9 +2261,9 @@
             <span>→</span>
           </a>
           <div class="hero-cli-group">
-            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.14.3 --read-only --no-session-logs')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.14.3 --read-only --no-session-logs');}" title="Click to copy safe tmux-only read-only CLI command" data-i18n-title="hero.cliTitle">
+            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.14.4 --read-only --no-session-logs')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.14.4 --read-only --no-session-logs');}" title="Click to copy safe tmux-only read-only CLI command" data-i18n-title="hero.cliTitle">
               <span class="cli-prompt">$</span>
-              <span class="cli-cmd-text">npx rig-commander@3.14.3 <span class="nowrap-flag">--read-only</span> <span class="nowrap-flag">--no-session-logs</span></span>
+              <span class="cli-cmd-text">npx rig-commander@3.14.4 <span class="nowrap-flag">--read-only</span> <span class="nowrap-flag">--no-session-logs</span></span>
               <span class="cli-copy-pill" data-i18n="hero.copyBtn">Copy</span>
             </div>
           </div>
@@ -2643,7 +2643,7 @@ $ npx playwright test e2e/boundaries.spec.ts
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">SIGSTORE PROVENANCE</span>
             <div class="sec-guarantee-title" data-i18n="sec.g7.t">Verified Supply Chain &amp; 30-Second Audit</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.3" target="_blank" rel="noopener">v3.14.3 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.4" target="_blank" rel="noopener">v3.14.4 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
           </div>
         </div>
       </div>
@@ -2737,7 +2737,7 @@ $ npx playwright test e2e/boundaries.spec.ts
                   <td data-i18n="cmp.r2.k">Setup &amp; code changes</td>
                   <td data-i18n="cmp.r2.c1">Manual attach &amp; pane-by-pane switching</td>
                   <td data-i18n="cmp.r2.c2">SDK instrumentation, API keys &amp; cloud account</td>
-                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.14.3 --read-only</code> (0 code changes, 0 npm deps)</td>
+                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.14.4 --read-only</code> (0 code changes, 0 npm deps)</td>
                 </tr>
                 <tr>
                   <td data-i18n="cmp.r3.k">Blocked prompts &amp; control</td>
@@ -2994,7 +2994,7 @@ $ npx playwright test e2e/boundaries.spec.ts
             <p class="step-desc" data-i18n="arch.s1.desc">
               Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.
             </p>
-            <div class="step-code">$ npx rig-commander@3.14.3 --read-only</div>
+            <div class="step-code">$ npx rig-commander@3.14.4 --read-only</div>
           </div>
 
           <div class="step-card">
@@ -3056,8 +3056,8 @@ $ npx playwright test e2e/boundaries.spec.ts
       <h2 class="section-title"><span lang="en">Operator FAQ</span><span lang="ru">Вопросы оператора</span></h2>
       <details>
         <summary><span lang="en">How do I start the live deck?</span><span lang="ru">Как запустить живой пульт?</span></summary>
-        <p lang="en">Run npx rig-commander@3.14.3 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
-        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.14.3 --read-only и откройте http://127.0.0.1:7440.</p>
+        <p lang="en">Run npx rig-commander@3.14.4 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
+        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.14.4 --read-only и откройте http://127.0.0.1:7440.</p>
       </details>
       <details>
         <summary><span lang="en">Can I try it without running agents?</span><span lang="ru">Можно попробовать без запущенных агентов?</span></summary>
@@ -3175,7 +3175,7 @@ $ npx playwright test e2e/boundaries.spec.ts
         <span class="pulse-dot" style="background:var(--emerald); box-shadow:0 0 10px var(--emerald);"></span>
         <span data-i18n="footer.status">ALL SYSTEMS OPERATIONAL</span>
         <span>•</span>
-        <span>RigCommander v3.14.3</span>
+        <span>RigCommander v3.14.4</span>
         <span>•</span>
         <a href="/demo" style="color:var(--cyan); text-decoration:none;" data-i18n="nav.demo">Live Demo</a>
         <span>·</span>
@@ -3311,7 +3311,7 @@ $ npx playwright test e2e/boundaries.spec.ts
         'sec.g6.t': 'Malicious Browser Tabs Can\'t Drive Your Terminals',
         'sec.g6.d': 'Local HTTP→tmux control checks every request\'s Host and Origin and requires per-process session auth. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>) — CSRF and DNS-rebinding from other tabs are rejected.',
         'sec.g7.t': 'Verified Supply Chain & 30-Second Audit',
-        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.3" target="_blank" rel="noopener">v3.14.3 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.4" target="_blank" rel="noopener">v3.14.4 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Honest Local Storage Model',
         'sec.g5.d': 'Local recovery & shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.',
         'pain.eyebrow': '4–8 PARALLEL AGENTS IN TMUX',
@@ -3340,7 +3340,7 @@ $ npx playwright test e2e/boundaries.spec.ts
         'cmp.r2.k': 'Setup & code changes',
         'cmp.r2.c1': 'Manual attach & pane-by-pane switching',
         'cmp.r2.c2': 'SDK instrumentation, API keys & cloud account',
-        'cmp.r2.c3': '<code>npx rig-commander@3.14.3 --read-only</code> (0 code changes, 0 npm deps)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.14.4 --read-only</code> (0 code changes, 0 npm deps)',
         'cmp.r3.k': 'Blocked prompts & control',
         'cmp.r3.c1': 'Manual scan across panes to find hangs',
         'cmp.r3.c2': 'Read-only dashboards (no terminal write-back)',
@@ -3516,7 +3516,7 @@ $ npx playwright test e2e/boundaries.spec.ts
         'sec.g6.t': 'Вкладки браузера не управляют вашими терминалами',
         'sec.g6.d': 'Локальный мост HTTP→tmux проверяет Host и Origin каждого запроса и требует аутентификации сессии процесса. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>) — CSRF и DNS-rebinding из других вкладок отклоняются.',
         'sec.g7.t': 'Проверяемая цепочка поставки и аудит за 30 секунд',
-        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте через <code>npm audit signatures</code> и <code>dist.attestations</code> (<a href="/guide#quickstart">готовая команда в Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.3" target="_blank" rel="noopener">исходный тег v3.14.3</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте через <code>npm audit signatures</code> и <code>dist.attestations</code> (<a href="/guide#quickstart">готовая команда в Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.4" target="_blank" rel="noopener">исходный тег v3.14.4</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Честное локальное хранение',
         'sec.g5.d': 'Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска.',
         'pain.eyebrow': '4–8 ПАРАЛЛЕЛЬНЫХ АГЕНТОВ В TMUX',
@@ -3545,7 +3545,7 @@ $ npx playwright test e2e/boundaries.spec.ts
         'cmp.r2.k': 'Установка и правки кода',
         'cmp.r2.c1': 'Ручной attach и переключение между панелями',
         'cmp.r2.c2': 'Встраивание SDK, API-ключи и облачный аккаунт',
-        'cmp.r2.c3': '<code>npx rig-commander@3.14.3 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.14.4 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
         'cmp.r3.k': 'Зависшие промпты и управление',
         'cmp.r3.c1': 'Ручной обход каждой панели в поисках зависания',
         'cmp.r3.c2': 'Только дашборды чтения (нет ответа в терминал)',
@@ -3946,7 +3946,7 @@ $ npx playwright test e2e/boundaries.spec.ts
 
     // Auto-Update Watcher on Website (checks npmjs.org/rig-commander/latest via CORS)
     let landingUpdateState = {
-      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.14.3').trim(),
+      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.14.4').trim(),
       latestVersion: '',
       updateAvailable: false,
       releaseUrl: 'https://www.npmjs.com/package/rig-commander'

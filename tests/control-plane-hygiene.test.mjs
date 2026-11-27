@@ -106,9 +106,9 @@ test('evaluateControlPlaneHealth enforces exact P0 DAEMON_DEGRADED, P1 QUEUE_ZOM
   assert.equal(evaluateControlPlaneHealth({ files: { daemonLog: { bytes: 50 * MB + 1 } } }).findings[0].code, 'DAEMON_DEGRADED');
   assert.equal(evaluateControlPlaneHealth({ files: { daemonLog: { bytes: 10 * MB, growthBytesPerHour: 5 * MB + 1 } } }).findings[0].code, 'DAEMON_DEGRADED');
 
-  // openrig.sqlite > 100 MB
-  assert.equal(evaluateControlPlaneHealth({ files: { sqliteDb: { bytes: 100 * MB } } }).healthy, true);
-  assert.equal(evaluateControlPlaneHealth({ files: { sqliteDb: { bytes: 100 * MB + 1 } } }).findings[0].code, 'DAEMON_DEGRADED');
+  // openrig.sqlite > 512 MB
+  assert.equal(evaluateControlPlaneHealth({ files: { sqliteDb: { bytes: 512 * MB } } }).healthy, true);
+  assert.equal(evaluateControlPlaneHealth({ files: { sqliteDb: { bytes: 512 * MB + 1 } } }).findings[0].code, 'DAEMON_DEGRADED');
 
   // stuckSweep >= 5 failures or unhealthy /healthz
   assert.equal(evaluateControlPlaneHealth({ healthz: { ok: true, stuckSweepConsecutiveFailures: 4 } }).healthy, true);
