@@ -437,22 +437,20 @@
       font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 700;
-      color: var(--emerald);
-      background: rgba(0, 255, 157, 0.1);
-      border: 1px solid rgba(0, 255, 157, 0.3);
-      padding: 2px 7px;
-      border-radius: 999px;
+      color: #6ee7b7;
+      background: transparent;
+      border: none;
+      padding: 0;
       white-space: nowrap;
     }
     .badge-sec {
       font-family: var(--font-mono);
       font-size: 11px;
       font-weight: 700;
-      color: var(--amber);
-      background: rgba(251, 191, 36, 0.1);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      padding: 2px 7px;
-      border-radius: 999px;
+      color: #fde68a;
+      background: transparent;
+      border: none;
+      padding: 0;
       white-space: nowrap;
     }
 
@@ -563,7 +561,7 @@
         <span>·</span>
         <a href="https://github.com/Vedariy/rig-commander/security/advisories/new" target="_blank" rel="noopener"><span data-lang-block="ru">Сообщить об уязвимости</span><span data-lang-block="en">Security Advisories</span></a>
         <span>·</span>
-        <span style="color:#6ee7b7;">378/378 PASS</span>
+        <span style="color:#6ee7b7;">379/379 PASS</span>
       </div>
     </div>
 
@@ -609,8 +607,8 @@
               <td><span class="badge-sec"><span data-lang-block="en">AFTER OPT-IN</span><span data-lang-block="ru">ПОСЛЕ ВКЛЮЧЕНИЯ</span></span></td>
             </tr>
             <tr>
-              <td><b><span data-lang-block="en">Live TMUX SSE Redaction &amp; Log Scope</span><span data-lang-block="ru">Живой поток TMUX SSE и область чтения логов</span></b></td>
-              <td><span data-lang-block="en">API keys, Bearer/JWT tokens, PEM blocks, and <code>.env</code> secrets are masked server-side before live <code>/api/capture</code> or <code>/api/capture/stream</code> SSE reaches the browser (opt out via <code>--raw-capture</code>); live terminal captures stay in browser tab memory only and are never saved to <code>localStorage</code>. Local <code>~/.claude/</code> and <code>~/.codex/</code> logs are read for context/cost counters by default — pass <code>--no-session-logs</code> to restrict discovery strictly to live <code>tmux</code> panes.</span><span data-lang-block="ru">API-ключи, Bearer/JWT-токены, PEM-блоки и секреты <code>.env</code> маскируются на сервере до передачи живого экрана в браузер по <code>/api/capture</code> и SSE <code>/api/capture/stream</code> (отключается флагом <code>--raw-capture</code>); живой вывод хранится только в оперативной памяти вкладки и не пишется в <code>localStorage</code>. Журналы <code>~/.claude/</code> и <code>~/.codex/</code> читаются по умолчанию только для счётчиков контекста и стоимости — передайте <code>--no-session-logs</code>, чтобы ограничить чтение строго живыми панелями <code>tmux</code>.</span></td>
+              <td><b><span data-lang-block="en">TMUX Scope Isolation, Live SSE Redaction &amp; Log Scope</span><span data-lang-block="ru">Изоляция TMUX, редакция SSE и область логов</span></b></td>
+              <td><span data-lang-block="en">API keys, Bearer/JWT tokens, PEM blocks, and <code>.env</code> secrets are masked server-side before live <code>/api/capture</code> or <code>/api/capture/stream</code> SSE reaches the browser (opt out via <code>--raw-capture</code>); live captures stay in tab memory only. Pass <code>--tmux-socket &lt;name&gt;</code> (<code>tmux -L</code>) or <code>--tmux-session &lt;list&gt;</code> allowlist so non-agent/prod SSH panes are never scraped (<code>403</code>), and pass <code>--no-session-logs</code> to skip reading <code>~/.claude/</code> and <code>~/.codex/</code> completely.</span><span data-lang-block="ru">API-ключи, Bearer/JWT-токены, PEM-блоки и секреты <code>.env</code> маскируются на сервере до передачи живого экрана по <code>/api/capture</code> и SSE <code>/api/capture/stream</code> (отключается через <code>--raw-capture</code>); живой вывод хранится только в памяти вкладки. Передайте <code>--tmux-socket &lt;name&gt;</code> (<code>tmux -L</code>) или allowlist <code>--tmux-session &lt;list&gt;</code>, чтобы prod SSH-панели вообще не сканировались (<code>403</code>), и <code>--no-session-logs</code>, чтобы не открывать <code>~/.claude/</code> и <code>~/.codex/</code>.</span></td>
               <td><span class="badge-ok"><span data-lang-block="en">BY DEFAULT</span><span data-lang-block="ru">ПО УМОЛЧАНИЮ</span></span></td>
             </tr>
             <tr>
@@ -651,7 +649,7 @@
         </div>
         <div class="kpi-card">
           <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-          <div class="kpi-val" style="color:var(--emerald);">378 / 378 PASS</div>
+          <div class="kpi-val" style="color:var(--emerald);">379 / 379 PASS</div>
           <div class="kpi-note" data-i18n="kpi.tests.n">45 тестовых наборов • ~3s локально</div>
         </div>
         <div class="kpi-card">
@@ -755,7 +753,7 @@
           <ul>
             <li><span data-lang-block="ru"><strong>Безопасные действия:</strong> каждая кнопка управления учитывает тип харнеса, проверяет предусловия, блокирует двойную отправку и сверяет фактический результат в журнале аудита.</span><span data-lang-block="en"><strong>Safe Controls:</strong> every operator action respects the agent runtime, checks preconditions, prevents duplicate sends, and verifies the post-action outcome automatically.</span></li>
             <li><span data-lang-block="ru"><strong>Авто-тормоз и Telegram HITL:</strong> настраиваемые лимиты бюджета и циклов доработок QA плюс удалённое подтверждение критичных запросов с телефона.</span><span data-lang-block="en"><strong>Circuit-Breaker &amp; Telegram HITL:</strong> configurable spend/rework caps plus optional remote confirmation of critical prompts from your phone.</span></li>
-            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@{{APP_VERSION}} --read-only</code>, встроенное безопасное самообновление и 378 автоматических тестов.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@{{APP_VERSION}} --read-only</code> launch, built-in safe self-update, and 378 automated tests.</span></li>
+            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@{{APP_VERSION}} --read-only</code>, встроенное безопасное самообновление и 379 автоматических тестов.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@{{APP_VERSION}} --read-only</code> launch, built-in safe self-update, and 379 automated tests.</span></li>
           </ul>
         </div>
       </div>
@@ -891,7 +889,7 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тестирование и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 378/378 PASS</span>
+        <span class="sec-tag">NODE --TEST • 379/379 PASS</span>
       </div>
       <table>
         <thead>

@@ -10,6 +10,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.14.0] - 2026-11-27
+
+### Added
+- **Strict TMUX Socket & Session Allowlist Isolation (`bin/cli.mjs`, `openrig/server.mjs`, `openrig/lib/universal-discovery.mjs`):**
+  - Added `--tmux-socket <name>` (`RIGCOMMANDER_TMUX_SOCKET`) to restrict every `tmux` discovery, capture, and send invocation to a dedicated isolated server socket (`tmux -L <name>`), validated against safe socket identifiers.
+  - Added `--tmux-session <prefix[,prefix]>` (`RIGCOMMANDER_TMUX_SESSIONS`) allowlist filtering: non-matching sessions (such as adjacent production SSH or `.env` panes) are excluded before `capture-pane` is ever invoked, and direct capture/send routes reject out-of-scope seats with `403` (`TMUX_SCOPE_DENIED`).
+  - Documented `--tmux-socket` & `--tmux-session` isolation across `--help`, `/guide`, `/passport`, and `llms.txt`, and restored inline visibility for the 30-second Sigstore verification one-liner in `/guide`.
+
+### Fixed & Improved
+- **Exception-Only Dark Cockpit Triage & Borderless Tonal Inspector (`openrig/index.html`, `openrig/assets/ui/topology-view.js`, `openrig/assets/ui/inspector-view.js`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`):**
+  - Renamed the left panel to `TRIAGE` / `ТРИАЖ` in flat `tmux / Universal` mode and folded healthy working panes into a single quiet summary line (`+ N running normally`) to eliminate 4× screen duplication while keeping blockers front and center.
+  - Renamed global `⏸ Pause` to explicit `⏸ Hold Sends` / `⏸ Пауза ввода`, echoed the exact command name inside the primary green Allow Once button (`✓ 1. Allow npm test once (y)`), flattened nested Inspector borders into a calm tonal surface, and compacted `80 lines TMUX` + `AI Risk: OFF` into a single borderless utility row.
+- **Mobile `390×844` Hero CLI Wrap & Honest Auto-Consent Modal (`landing/index.html`, `landing/passport.html`, `openrig/assets/ui/auto-consent-view.js`, `openrig/assets/styles/deck.css`):**
+  - Fixed mobile hero CLI truncation by wrapping `npx rig-commander@3.14.0 --read-only --no-session-logs` cleanly across lines above a full-width Copy button on `<= 640px` viewports, and aligned mobile hero preview buttons 1-to-1 with `/demo`.
+  - Replaced bright cyan switches and bordered status pills in master-OFF Auto-Consent with calm monochrome switch states, renamed the `Safe Read-Only` profile legend honestly to `Read-Only & Local Tests`, and collapsed identical inherited OFF agent rows into a `<details>` disclosure so `Active Ephemeral Session Grants` is never clipped.
+  - Flattened static condition badges in `/passport` (`BY DEFAULT`, `WITH --read-only`, `SIGSTORE`) into crisp unbordered labels.
+
+---
+
 ## [3.13.2] - 2026-11-27
 
 ### Fixed & Improved

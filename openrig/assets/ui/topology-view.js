@@ -592,6 +592,10 @@ export function renderTopology(deps) {
   doc.body?.classList?.toggle('fleet-no-edges', isNoEdgesFleet);
   const centerTitleEl = doc.getElementById('centerPanelTitle');
   const graphBtnEl = doc.getElementById('btnViewGraph');
+  const leftTitleEl = doc.querySelector('#panelLeft .panel-header > span:first-child');
+  if (leftTitleEl) {
+    leftTitleEl.textContent = isNoEdgesFleet ? td('radar.titleTriage') : td('radar.title');
+  }
   if (graphBtnEl) {
     graphBtnEl.textContent = isNoEdgesFleet ? td('center.btnPanes') : td('center.btnGraph');
   }

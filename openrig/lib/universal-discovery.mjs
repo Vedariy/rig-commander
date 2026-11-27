@@ -23,6 +23,41 @@ export function isValidTmuxTarget(target) {
   return /^(%\d+|[a-zA-Z0-9._-]+:\d+\.\d+)$/.test(String(target || ''));
 }
 
+export function sanitizeTmuxSocketName(raw) {
+  const s = String(raw || '').trim();
+  return /^[a-zA-Z0-9._-]+$/.test(s) ? s : '';
+}
+
+export function buildTmuxArgs(socketName, args = []) {
+  const cleanSocket = sanitizeTmuxSocketName(socketName);
+  const rest = Array.isArray(args) ? args : [];
+  return cleanSocket ? ['-L', cleanSocket, ...rest] : rest;
+}
+
+export function parseTmuxSessionFilter(raw) {
+  if (Array.isArray(raw)) {
+    return raw.flatMap(item => parseTmuxSessionFilter(item));
+  }
+  const str = String(raw || '').trim();
+  if (!str) return [];
+  return str
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p && /^[a-zA-Z0-9._*-]+$/.test(p));
+}
+
+export function matchesTmuxSessionFilter(sessionName, filterList = []) {
+  if (!Array.isArray(filterList) || filterList.length === 0) return true;
+  const target = String(sessionName || '').trim();
+  if (!target) return false;
+  return filterList.some((pattern) => {
+    if (pattern.endsWith('*')) {
+      return target.startsWith(pattern.slice(0, -1));
+    }
+    return target === pattern || target.startsWith(`${pattern}-`) || target.startsWith(`${pattern}_`) || target.startsWith(`${pattern}:`);
+  });
+}
+
 export function inferContextWindow(model = '', runtime = '') {
   const m = String(model || '').toLowerCase();
   if (/gemini|glm/i.test(m)) return 1_000_000;
@@ -269,6 +304,8 @@ export async function discoverRecentTranscripts({
  */
 export async function discoverUniversalFleet({
   tmuxBin = 'tmux',
+  tmuxSocket = '',
+  tmuxSessionFilter = [],
   claudeDir = path.join(os.homedir(), '.claude', 'projects'),
   codexDir = path.join(os.homedir(), '.codex', 'sessions'),
   maxAgeMs = 7 * 24 * 3600 * 1000,
@@ -276,14 +313,18 @@ export async function discoverUniversalFleet({
   execTmux = null,
   readSessionLogs = true
 } = {}) {
-  const runTmux = execTmux || (async (args) => {
-    try {
-      const { stdout } = await execFileAsync(tmuxBin, args, { timeout: 3000, maxBuffer: 2 * 1024 * 1024 });
-      return stdout || '';
-    } catch {
-      return '';
-    }
-  });
+  const cleanSocket = sanitizeTmuxSocketName(tmuxSocket);
+  const allowedSessions = parseTmuxSessionFilter(tmuxSessionFilter);
+  const runTmux = execTmux
+    ? (args) => execTmux(buildTmuxArgs(cleanSocket, args))
+    : (async (args) => {
+        try {
+          const { stdout } = await execFileAsync(tmuxBin, buildTmuxArgs(cleanSocket, args), { timeout: 3000, maxBuffer: 2 * 1024 * 1024 });
+          return stdout || '';
+        } catch {
+          return '';
+        }
+      });
 
   const [panesRaw, transcripts] = await Promise.all([
     runTmux([
@@ -295,7 +336,7 @@ export async function discoverUniversalFleet({
       : Promise.resolve([])
   ]);
 
-  const panes = parseTmuxPaneLines(panesRaw);
+  const panes = parseTmuxPaneLines(panesRaw).filter(p => matchesTmuxSessionFilter(p.sessionName, allowedSessions));
   const matchedTranscriptPaths = new Set();
   const nodes = [];
   const tmuxTargets = new Map();
@@ -355,7 +396,7 @@ export async function discoverUniversalFleet({
       assignedWorkCount: actState.display === 'working' ? 1 : 0,
       firstActivityAt: new Date(matchingTr ? matchingTr.firstTsMs : nowMs - 15 * 60_000).toISOString(),
       lastActivityAt: new Date(matchingTr ? matchingTr.mtimeMs : nowMs).toISOString(),
-      tmuxAttachCommand: `tmux attach -t ${pane.sessionName}`,
+      tmuxAttachCommand: cleanSocket ? `tmux -L ${cleanSocket} attach -t ${pane.sessionName}` : `tmux attach -t ${pane.sessionName}`,
       contextUsage: matchingTr ? {
         usedPercentage: matchingTr.usedPercentage,
         usedTokens: matchingTr.usedTokens,

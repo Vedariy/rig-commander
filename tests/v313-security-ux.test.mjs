@@ -8,9 +8,17 @@ import { promisify } from 'node:util';
 import {
   resolveNoSessionLogsMode,
   resolveRedactLiveCapture,
+  resolveTmuxSocket,
+  resolveTmuxSessionFilter,
+  isSeatAllowedByTmuxFilter,
   redactLiveCaptureScreen
 } from '../openrig/server.mjs';
-import { discoverUniversalFleet } from '../openrig/lib/universal-discovery.mjs';
+import {
+  discoverUniversalFleet,
+  buildTmuxArgs,
+  matchesTmuxSessionFilter,
+  sanitizeTmuxSocketName
+} from '../openrig/lib/universal-discovery.mjs';
 import { renderAutoConsentTabHtml, renderSeatAutoConsentPickerHtml, getAutoConsentModalBadge } from '../openrig/assets/ui/auto-consent-view.js';
 import { renderStateIndicatorHtml } from '../openrig/assets/ui/topology-view.js';
 import { renderWarningSignsHtml } from '../openrig/assets/ui/inspector-view.js';
@@ -73,13 +81,55 @@ test('discoverUniversalFleet respects readSessionLogs: false and ignores ~/.clau
   }
 });
 
-test('bin/cli.mjs --help documents --no-session-logs and --raw-capture flags', async () => {
+test('bin/cli.mjs --help documents --no-session-logs, --raw-capture, --tmux-socket and --tmux-session flags', async () => {
   const { stdout } = await execFileAsync(process.execPath, [path.join(root, 'bin/cli.mjs'), '--help']);
   assert.match(stdout, /--no-session-logs\b/);
   assert.match(stdout, /--raw-capture\b/);
+  assert.match(stdout, /--tmux-socket\b/);
+  assert.match(stdout, /--tmux-session\b/);
 });
 
-test('v3.13.0 Dark Cockpit UI contracts: master-OFF dimming, read-only legend, standalone tmux WORK indicator & quiet urgent warning strip', () => {
+test('v3.14.0 TMUX isolation: --tmux-socket passes -L and --tmux-session excludes prod SSH panes BEFORE capture-pane', async () => {
+  assert.equal(sanitizeTmuxSocketName('agents-sock_1'), 'agents-sock_1');
+  assert.equal(sanitizeTmuxSocketName('../bad;rm'), '');
+  assert.deepEqual(buildTmuxArgs('agents', ['list-panes', '-a']), ['-L', 'agents', 'list-panes', '-a']);
+  assert.deepEqual(buildTmuxArgs('', ['list-panes', '-a']), ['list-panes', '-a']);
+
+  assert.equal(resolveTmuxSocket({}, ['node', 'server.mjs', '--tmux-socket', 'ai-dev']), 'ai-dev');
+  assert.equal(resolveTmuxSocket({ RIGCOMMANDER_TMUX_SOCKET: 'env-sock' }, ['node', 'server.mjs']), 'env-sock');
+  assert.deepEqual(resolveTmuxSessionFilter({}, ['node', 'server.mjs', '--tmux-session', 'ai,codex-*']), ['ai', 'codex-*']);
+  assert.equal(matchesTmuxSessionFilter('ai-payments', ['ai', 'codex-*']), true);
+  assert.equal(matchesTmuxSessionFilter('codex-tests', ['ai', 'codex-*']), true);
+  assert.equal(matchesTmuxSessionFilter('prod-ssh-db', ['ai', 'codex-*']), false);
+  assert.equal(isSeatAllowedByTmuxFilter('prod-ssh-db@ops', { filterList: ['ai', 'codex-*'], knownTargets: new Map() }), false);
+  assert.equal(isSeatAllowedByTmuxFilter('codex-tests@payments', { filterList: ['ai', 'codex-*'], knownTargets: new Map() }), true);
+
+  const calls = [];
+  const execTmux = async (argv) => {
+    calls.push(argv);
+    if (argv.includes('list-panes')) {
+      return [
+        'prod-ssh\t0\t0\t%1\tclaude\t/srv/prod\tprod-db\t1',
+        'codex-tests\t0\t0\t%2\tcodex\t/tmp/payments\tcodex-tests\t1'
+      ].join('\n');
+    }
+    return 'Working...\n';
+  };
+  const res = await discoverUniversalFleet({
+    tmuxSocket: 'agents',
+    tmuxSessionFilter: ['codex-*'],
+    readSessionLogs: false,
+    execTmux
+  });
+  assert.equal(res.nodes.length, 1, 'Only allowlisted session is discovered');
+  assert.ok(res.nodes[0].canonicalSessionName.startsWith('codex-tests@'));
+  assert.equal(res.nodes[0].tmuxAttachCommand, 'tmux -L agents attach -t codex-tests');
+  assert.ok(calls.every(c => c[0] === '-L' && c[1] === 'agents'), 'Every tmux invocation must target -L agents');
+  assert.ok(!calls.some(c => c.includes('%1')), 'Non-allowlisted prod-ssh pane %1 must NEVER be passed to capture-pane');
+  assert.ok(calls.some(c => c.includes('capture-pane') && c.includes('%2')), 'Allowlisted pane %2 is captured');
+});
+
+test('v3.13.0–v3.14.0 Dark Cockpit UI contracts: monochrome master-OFF, collapsed inherited rows, standalone tmux WORK & quiet urgent strip', () => {
   const td = (k, vars) => tDeck('ru', k, vars);
   const offHtml = renderAutoConsentTabHtml({
     state: {
@@ -98,8 +148,9 @@ test('v3.13.0 Dark Cockpit UI contracts: master-OFF dimming, read-only legend, s
   });
   assert.match(offHtml, /class="ac-tab-wrap is-master-off"/);
   assert.match(offHtml, /class="ac-master-off-note"/);
-  assert.match(offHtml, /class="ac-switch-pill is-armed-pending"/, 'Pre-armed CTX switch shows explicit ON-armed pill when master is OFF');
-  assert.match(offHtml, /class="ac-switch-pill is-off"/, 'Disabled package/net switches show explicit OFF pill');
+  assert.match(offHtml, /class="ac-switch-note"/, 'Pre-armed CTX switch shows quiet inline pending text without button-like pill');
+  assert.ok(!offHtml.includes('ac-switch-pill'), 'No bordered button-like switch status pills in master-OFF modal');
+  assert.match(offHtml, /class="ac-inherit-disclosure"/, 'Identical inherited OFF agent rows collapse into disclosure so session grants stay unclipped');
   assert.match(offHtml, /class="ac-veto-caveat"/, 'Hard Veto strip includes honest wrapper-script boundary caveat');
   assert.ok(!offHtml.includes('ac-cmd-summary-kicker'), 'No defensive "NOT BUTTONS" kicker needed for flat inline legend');
   assert.ok(!offHtml.includes('ac-eff-chip is-off'), 'Inherited OFF rows omit redundant global-off chip');

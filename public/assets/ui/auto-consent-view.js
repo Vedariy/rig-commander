@@ -560,14 +560,13 @@ export function renderAutoConsentTabHtml({
   const renderSwitch = ({ id, checked, label, isMaster = false, subHint = '' }) => {
     const coolSec = cooldownSecFor(id);
     const isDisabled = busy || coolSec > 0;
-    const statePillHtml = !isMaster
-      ? `<span class="ac-switch-pill ${checked ? (cfg.enabled ? 'is-on' : 'is-armed-pending') : 'is-off'}">${escapeHtml(checked ? (cfg.enabled ? td('autoConsent.switchOn') : td('autoConsent.switchArmedPending')) : td('autoConsent.switchOff'))}</span>`
-      : '';
+    const inlineNote = !isMaster && !cfg.enabled && checked
+      ? ` <span class="ac-switch-note">(${escapeHtml(td('autoConsent.switchArmedPending'))})</span>`
+      : (subHint ? ` <span class="ac-default-off-hint">(${escapeHtml(subHint)})</span>` : '');
     return `<label class="ac-switch${isMaster ? ' is-master' : ''}${checked ? ' is-on' : ' is-off'}${isDisabled ? ' is-disabled' : ''}${coolSec > 0 ? ' is-cooling' : ''}">` +
       `<input type="checkbox" role="switch" id="${escapeHtml(id)}" class="ac-switch-input" data-auto-consent-action="toggle-switch" data-switch-id="${escapeHtml(id)}"${checked ? ' checked' : ''}${isDisabled ? ' disabled' : ''} />` +
       `<span class="ac-switch-track" aria-hidden="true"><span class="ac-switch-thumb"></span></span>` +
-      `<span class="ac-switch-text">${escapeHtml(label)}${subHint && cfg.enabled ? ` <span class="ac-default-off-hint">(${escapeHtml(subHint)})</span>` : ''}</span>` +
-      `${statePillHtml}` +
+      `<span class="ac-switch-text">${escapeHtml(label)}${inlineNote}</span>` +
       `${coolSec > 0 ? `<span class="ac-cooldown-chip" data-cooldown-for="${escapeHtml(id)}" aria-live="polite">${escapeHtml(formatCooldown(coolSec))}</span>` : ''}` +
     `</label>`;
   };
@@ -661,9 +660,12 @@ export function renderAutoConsentTabHtml({
             `<span class="ac-section-title">🤖 ${escapeHtml(td('autoConsent.seatsTitle'))}</span>` +
             `<span class="ac-count-label">${escapeHtml(td('autoConsent.agentsCount', { n: seatList.length }))}</span>` +
           `</div>` +
-          `<div class="ac-scroll-wrap${seatList.length > 3 ? ' has-scroll-fade' : ''}">` +
-            `<div class="ac-policy-list ac-policy-list-scroll">${seatRowsHtml}</div>` +
-          `</div>` +
+          `${(!cfg.enabled && !cfg.masterPaused && seatList.length > 0 && seatList.every((s) => (cfg.seats?.[String(s.id || s.seatId || s.canonicalSessionName || '')]?.profile || 'inherit') === 'inherit'))
+            ? `<details class="ac-inherit-disclosure">` +
+                `<summary class="ac-inherit-summary">${escapeHtml(td('autoConsent.allInheritedSummary', { n: seatList.length, profile: getProfileLabel(AUTO_CONSENT_PROFILES.OFF, td) }))}</summary>` +
+                `<div class="ac-scroll-wrap${seatList.length > 3 ? ' has-scroll-fade' : ''}"><div class="ac-policy-list ac-policy-list-scroll">${seatRowsHtml}</div></div>` +
+              `</details>`
+            : `<div class="ac-scroll-wrap${seatList.length > 3 ? ' has-scroll-fade' : ''}"><div class="ac-policy-list ac-policy-list-scroll">${seatRowsHtml}</div></div>`}` +
         `</section>` +
       `</div>` +
 

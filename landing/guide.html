@@ -795,9 +795,9 @@
             </div>
             <ul>
               <li>
-                <strong><span data-lang-block="ru">Читает:</span><span data-lang-block="en">Reads:</span></strong>
-                <span data-lang-block="ru">только живые локальные панели <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — каталоги <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> не открываются. Уберите <code class="inline">--no-session-logs</code>, если нужны счётчики контекста и стоимости из локальных журналов CLI.</span>
-                <span data-lang-block="en">strictly live local <code class="inline">tmux</code> panes (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> are never touched. Drop <code class="inline">--no-session-logs</code> if you want context &amp; cost counters from local CLI session logs.</span>
+                <strong><span data-lang-block="ru">Читает и изолирует tmux:</span><span data-lang-block="en">Reads &amp; isolates tmux scope:</span></strong>
+                <span data-lang-block="ru">только живые локальные панели <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — каталоги <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> не открываются. Чтобы исключить соседние prod SSH-панели, добавьте <code class="inline">--tmux-socket agents</code> (отдельный сокет <code class="inline">tmux -L agents</code>) или <code class="inline">--tmux-session ai-,codex-*</code> (allowlist сессий: остальные панели вообще не читаются и получают <code class="inline">403</code>). Уберите <code class="inline">--no-session-logs</code>, если нужны счётчики CTX и стоимости из логов CLI.</span>
+                <span data-lang-block="en">strictly live local <code class="inline">tmux</code> panes (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> are never touched. To exclude adjacent prod SSH panes, pass <code class="inline">--tmux-socket agents</code> (isolated <code class="inline">tmux -L agents</code> server) or <code class="inline">--tmux-session ai-,codex-*</code> (strict session allowlist: non-matching panes are never captured and return <code class="inline">403</code>). Drop <code class="inline">--no-session-logs</code> for CTX &amp; cost counters from CLI logs.</span>
               </li>
               <li>
                 <strong><span data-lang-block="ru">Живой SSE и AI-оценка:</span><span data-lang-block="en">Live SSE &amp; AI Evaluator:</span></strong>
@@ -810,20 +810,20 @@
                 <span data-lang-block="en">first-time <code class="inline">npx</code> fetches the tarball from the npm registry; once running, the RigCommander process under <code class="inline">--read-only</code> performs <strong>0</strong> terminal writes, <strong>0</strong> disk writes, and <strong>0</strong> outbound network calls (all mutating routes return <code class="inline">403</code>).</span>
               </li>
             </ul>
-            <details style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(148,163,184,0.18);">
-              <summary style="cursor:pointer; font-family:var(--mono); font-size:12px; color:#7dd3fc; font-weight:700;">
-                <span data-lang-block="ru">Проверить подпись npm / Sigstore до запуска без исполнения кода (30 сек)</span>
-                <span data-lang-block="en">Verify npm / Sigstore attestation before running without executing code (30s)</span>
-              </summary>
-              <p style="margin-top:6px; font-size:12.5px; color:#cbd5e1; line-height:1.5;">
-                <span data-lang-block="ru">Установите <code class="inline">rig-commander@{{APP_VERSION}}</code> в пустой временный каталог с <code class="inline">--ignore-scripts</code>, проверьте криптографическую подпись Sigstore и сверьте с тегом <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">GitHub v{{APP_VERSION}}</a> (ожидается <code class="inline">1 package has a verified registry signature</code> и <code class="inline">1 package has a verified attestation</code>; также доступна <code class="inline">npm view rig-commander@{{APP_VERSION}} dist.attestations</code>):</span>
-                <span data-lang-block="en">Install <code class="inline">rig-commander@{{APP_VERSION}}</code> into a clean temporary directory with <code class="inline">--ignore-scripts</code>, verify its Sigstore attestation, and match against <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">GitHub release tag v{{APP_VERSION}}</a> (expect <code class="inline">1 package has a verified registry signature</code> &amp; <code class="inline">1 package has a verified attestation</code>; or inspect <code class="inline">npm view rig-commander@{{APP_VERSION}} dist.attestations</code>):</span>
-              </p>
-              <div class="cmd-row ro-verify-row" style="align-items:flex-start; margin-top:6px;">
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(148,163,184,0.18);">
+              <div style="font-family:var(--mono); font-size:11.5px; color:#7dd3fc; font-weight:700; margin-bottom:4px;">
+                <span data-lang-block="ru">Проверка подписи npm / Sigstore до запуска без исполнения кода (30 сек):</span>
+                <span data-lang-block="en">Verify npm / Sigstore attestation before running without executing code (30s):</span>
+              </div>
+              <div class="cmd-row ro-verify-row" style="align-items:flex-start; margin-top:4px;">
                 <code style="white-space:normal; overflow-wrap:anywhere; line-height:1.45;">tmp=$(mktemp -d) &amp;&amp; (cd "$tmp" &amp;&amp; npm init -y &gt;/dev/null &amp;&amp; npm install --ignore-scripts rig-commander@{{APP_VERSION}} &amp;&amp; npm audit signatures) &amp;&amp; rm -rf "$tmp"</code>
                 <button type="button" class="copy-btn copy-btn-secondary" style="flex-shrink:0;" data-copy="tmp=$(mktemp -d) && (cd &quot;$tmp&quot; && npm init -y >/dev/null && npm install --ignore-scripts rig-commander@{{APP_VERSION}} && npm audit signatures) && rm -rf &quot;$tmp&quot;"><span data-lang-block="ru">Копировать проверку</span><span data-lang-block="en">Copy verify</span></button>
               </div>
-            </details>
+              <p style="margin-top:4px; font-size:11.5px; color:#94a3b8; line-height:1.45;">
+                <span data-lang-block="ru">Ожидается <code class="inline">1 package has a verified registry signature</code> и <code class="inline">1 package has a verified attestation</code>; сверяется с тегом <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">GitHub v{{APP_VERSION}}</a> (или <code class="inline">npm view rig-commander@{{APP_VERSION}} dist.attestations</code>).</span>
+                <span data-lang-block="en">Expect <code class="inline">1 package has a verified registry signature</code> &amp; <code class="inline">1 package has a verified attestation</code>; matches <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">GitHub tag v{{APP_VERSION}}</a> (or <code class="inline">npm view rig-commander@{{APP_VERSION}} dist.attestations</code>).</span>
+              </p>
+            </div>
           </div>
         </div>
 

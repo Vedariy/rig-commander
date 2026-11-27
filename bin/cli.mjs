@@ -31,6 +31,8 @@ Options:
   --universal             Force Universal Mode (Claude Code / Codex / tmux without OpenRig)
   --read-only             Read-only inspection mode (0 terminal writes or state mutations)
   --no-session-logs       Do not read ~/.claude/ or ~/.codex/ session logs (tmux panes only)
+  --tmux-socket <name>    Isolate discovery & capture to a dedicated tmux server socket (tmux -L <name>)
+  --tmux-session <list>   Allowlist comma-separated tmux session names/prefixes (e.g. ai,codex-*)
   --raw-capture           Disable default secret redaction on live /api/capture SSE stream
   --no-open               Do not automatically open browser on startup
   -v, --version           Show version
@@ -72,6 +74,18 @@ if (pubIdx !== -1 && args[pubIdx + 1]) {
   publicUrl = String(args[pubIdx + 1]).trim();
 }
 
+let tmuxSocket = String(process.env.RIGCOMMANDER_TMUX_SOCKET || '').trim();
+const sockIdx = args.findIndex(a => a === '--tmux-socket');
+if (sockIdx !== -1 && args[sockIdx + 1]) {
+  tmuxSocket = String(args[sockIdx + 1]).trim();
+}
+
+let tmuxSessions = String(process.env.RIGCOMMANDER_TMUX_SESSIONS || '').trim();
+const sessIdx = args.findIndex(a => a === '--tmux-session' || a === '--tmux-sessions');
+if (sessIdx !== -1 && args[sessIdx + 1]) {
+  tmuxSessions = String(args[sessIdx + 1]).trim();
+}
+
 const noOpen = args.includes('--no-open');
 const forceUniversal = args.includes('--universal');
 const noSessionLogs =
@@ -108,7 +122,9 @@ const childEnv = {
   ...(forceUniversal ? { RIGCOMMANDER_FORCE_UNIVERSAL: '1' } : {}),
   ...(readOnly ? { RIGCOMMANDER_READ_ONLY: '1' } : {}),
   ...(noSessionLogs ? { RIGCOMMANDER_NO_SESSION_LOGS: '1' } : {}),
-  ...(rawCapture ? { RIGCOMMANDER_RAW_CAPTURE: '1' } : {})
+  ...(rawCapture ? { RIGCOMMANDER_RAW_CAPTURE: '1' } : {}),
+  ...(tmuxSocket ? { RIGCOMMANDER_TMUX_SOCKET: tmuxSocket } : {}),
+  ...(tmuxSessions ? { RIGCOMMANDER_TMUX_SESSIONS: tmuxSessions } : {})
 };
 
 let serverProc = null;
@@ -123,12 +139,16 @@ function startServerChild(useNpxLatest = false) {
     if (readOnly) npxArgs.push('--read-only');
     if (noSessionLogs) npxArgs.push('--no-session-logs');
     if (rawCapture) npxArgs.push('--raw-capture');
+    if (tmuxSocket) npxArgs.push('--tmux-socket', tmuxSocket);
+    if (tmuxSessions) npxArgs.push('--tmux-session', tmuxSessions);
     serverProc = spawn('npx', npxArgs, { env: childEnv, stdio: 'inherit' });
   } else {
     const serverArgs = [serverPath];
     if (readOnly) serverArgs.push('--read-only');
     if (noSessionLogs) serverArgs.push('--no-session-logs');
     if (rawCapture) serverArgs.push('--raw-capture');
+    if (tmuxSocket) serverArgs.push('--tmux-socket', tmuxSocket);
+    if (tmuxSessions) serverArgs.push('--tmux-session', tmuxSessions);
     serverProc = spawn(process.execPath, serverArgs, { env: childEnv, stdio: 'inherit' });
   }
 

@@ -261,7 +261,10 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     let labelHtml;
     if (isPrimarySlot) {
       const isStandardAllowOnce = /^(?:yes,?\s*)?allow once|^(?:да,?\s*)?разрешить один раз/i.test(String(opt.shortLabel || '').trim());
-      const primaryText = isStandardAllowOnce ? td('insp.hitlAllowOnceShort') : opt.shortLabel;
+      const cleanCmd = preview ? String(preview).trim() : '';
+      const primaryText = isStandardAllowOnce
+        ? (cleanCmd && cleanCmd.length <= 22 ? td('insp.hitlAllowCmdOnce', { cmd: cleanCmd }) : td('insp.hitlAllowOnceShort'))
+        : opt.shortLabel;
       labelHtml = `✓ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(primaryText)}`;
     } else if (opt.isCancel) {
       labelHtml = `✕ ${escapeHtml(td('insp.hitlCancelShort'))}`;

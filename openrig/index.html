@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.13.2" />
+  <meta name="app-version" content="3.14.0" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -74,7 +74,7 @@
         <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
       <button type="button" class="triage-refresh-btn ac-top-is-off" id="btnAutoConsentTop" onclick="openGuardrailsModal('auto-consent')" title="Scoped Auto-Consent Policy (Dry-Run / Armed)">⚡ <span class="ac-top-lbl-desktop" data-i18n="autoConsent.topBtn">Авто-согласие</span><span class="ac-top-lbl-mobile" data-i18n="autoConsent.mobileShort">Авто</span><span id="btnAutoConsentStateBadge" class="ac-top-badge is-off">ВЫКЛ</span></button>
-      <button type="button" class="triage-refresh-btn fleet-pause-btn" id="btnFleetPause" aria-pressed="false" onclick="toggleFleetPause()" title="Пауза флота (Shift+Space): замораживает авто-согласие и блокирует отправку команд">⏸ <span id="btnFleetPauseLabel" data-i18n="hud.pauseFleet">Пауза</span></button>
+      <button type="button" class="triage-refresh-btn fleet-pause-btn" id="btnFleetPause" aria-pressed="false" onclick="toggleFleetPause()" title="Пауза ввода (Shift+Space): замораживает авто-согласие и блокирует отправку команд">⏸ <span id="btnFleetPauseLabel" data-i18n="hud.pauseFleet">Пауза ввода</span><span class="fleet-pause-mobile-lbl" data-i18n="hud.pauseFleetMobile">Стоп</span></button>
       <button class="triage-refresh-btn" id="btnShiftDigest" onclick="openShiftDigestModal()" style="border-color:rgba(251,191,36,0.45); color:#fde68a;" title="Shift Catch-Up / Overnight Digest">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span data-i18n="digest.btn">Смена</span><span id="btnShiftDigestBadge" class="digest-btn-badge" style="display:none;">0</span>
@@ -2313,6 +2313,8 @@
           : `${activeItems.length} ${td('radar.inLoop')}`;
       }
 
+      const isFlatNoEdges = Boolean(document.body?.classList?.contains('fleet-no-edges') || (Array.isArray(EDGES) && EDGES.length === 0));
+      let foldedHealthyCount = 0;
       const nextWaitHtml = activeItems.length === 0
         ? `<div class="wait-card" style="--wait-color:#00ff9d"><div style="font-size:12.5px; color:#6ee7b7;">${td('radar.empty')}</div></div>`
         : groups.map(g => {
@@ -2351,6 +2353,10 @@
                   : 'rgba(245, 158, 11, 0.11)';
             const isRoutineRow = w.prio >= 3 && w.slice === 'active' && !quickActionBtn && !groupBtn && secondaryChipsHtml === '';
             if (isRoutineRow) {
+              if (isFlatNoEdges && currentRadarFilter !== 'tasks') {
+                foldedHealthyCount += 1;
+                return '';
+              }
               const agentObj = AGENTS.find(a => a.id === w.seatId);
               const ctxText = agentObj && typeof agentObj.ctxPct === 'number' ? `${Math.round(agentObj.ctxPct)}%` : '';
               return `
@@ -2416,9 +2422,12 @@
       `;
           }).join('');
         }).join('');
-      if (waitContainer.__lastHtml !== nextWaitHtml) {
-        waitContainer.innerHTML = nextWaitHtml;
-        waitContainer.__lastHtml = nextWaitHtml;
+      const finalWaitHtml = foldedHealthyCount > 0
+        ? `${nextWaitHtml}<div class="wait-healthy-summary">${escapeHtml(td('radar.healthySummary', { n: foldedHealthyCount }))}</div>`
+        : nextWaitHtml;
+      if (waitContainer.__lastHtml !== finalWaitHtml) {
+        waitContainer.innerHTML = finalWaitHtml;
+        waitContainer.__lastHtml = finalWaitHtml;
       }
 
       const decContainer = document.getElementById('decisionsListContainer');

@@ -9,7 +9,15 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { FleetIntelligenceEngine } from './lib/fleet-intelligence/index.mjs';
 import { ActionAuditLog, extractSeatBaseline } from './lib/action-audit.mjs';
-import { discoverUniversalFleet, buildUniversalGanttItems, isValidTmuxTarget } from './lib/universal-discovery.mjs';
+import {
+  discoverUniversalFleet,
+  buildUniversalGanttItems,
+  isValidTmuxTarget,
+  buildTmuxArgs,
+  sanitizeTmuxSocketName,
+  parseTmuxSessionFilter,
+  matchesTmuxSessionFilter
+} from './lib/universal-discovery.mjs';
 import { BudgetCircuitBreaker } from './lib/circuit-breaker.mjs';
 import { TelegramHitlBridge } from './lib/telegram-bridge.mjs';
 import { RemoteAccessGuard, buildLiveManifest, detectTailscaleServeUrl } from './lib/remote-access.mjs';
@@ -66,9 +74,38 @@ function redactLiveCaptureScreen(rawScreen, { enabled = true } = {}) {
   return stripAnsiAndRedact(text, { redactPaths: false }).text;
 }
 
+function resolveTmuxSocket(env = process.env, argv = process.argv) {
+  let raw = String((env && env.RIGCOMMANDER_TMUX_SOCKET) || '').trim();
+  if (Array.isArray(argv)) {
+    const idx = argv.findIndex(a => a === '--tmux-socket');
+    if (idx !== -1 && argv[idx + 1]) raw = String(argv[idx + 1]).trim();
+  }
+  return sanitizeTmuxSocketName(raw);
+}
+
+function resolveTmuxSessionFilter(env = process.env, argv = process.argv) {
+  let raw = String((env && env.RIGCOMMANDER_TMUX_SESSIONS) || '').trim();
+  if (Array.isArray(argv)) {
+    const idx = argv.findIndex(a => a === '--tmux-session' || a === '--tmux-sessions');
+    if (idx !== -1 && argv[idx + 1]) raw = String(argv[idx + 1]).trim();
+  }
+  return parseTmuxSessionFilter(raw);
+}
+
+function isSeatAllowedByTmuxFilter(seatId, { filterList = TMUX_SESSION_FILTER, knownTargets = universalTmuxTargets } = {}) {
+  if (!Array.isArray(filterList) || filterList.length === 0) return true;
+  const s = String(seatId || '').trim();
+  if (!s) return false;
+  if (knownTargets && knownTargets.has(s)) return true;
+  const base = s.split('@')[0];
+  return matchesTmuxSessionFilter(base, filterList);
+}
+
 const READ_ONLY_MODE = resolveReadOnlyMode();
 const NO_SESSION_LOGS_MODE = resolveNoSessionLogsMode();
 const REDACT_LIVE_CAPTURE = resolveRedactLiveCapture();
+const TMUX_SOCKET = resolveTmuxSocket();
+const TMUX_SESSION_FILTER = resolveTmuxSessionFilter();
 const READ_ONLY_ERROR_BODY = Object.freeze({
   ok: false,
   code: 'READ_ONLY_MODE',
@@ -105,10 +142,13 @@ let terminalPromptProbeInFlight = null;
 let latestFleetSnapshot = null;
 
 async function captureSeatScreen(seat, lines = 38) {
+  if (!isSeatAllowedByTmuxFilter(seat)) {
+    return '[Blocked by --tmux-session allowlist: session is outside configured scope]';
+  }
   const lineCount = Math.min(200, Math.max(10, Number(lines) || 38));
   const universalTarget = universalTmuxTargets.get(seat);
   const raw = universalTarget && isValidTmuxTarget(universalTarget)
-    ? await safeTextExec(TMUX_BIN, ['capture-pane', '-p', '-t', universalTarget, '-S', `-${lineCount}`])
+    ? await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['capture-pane', '-p', '-t', universalTarget, '-S', `-${lineCount}`]))
     : await safeTextExec(RIG_BIN, ['capture', seat, '--lines', String(lineCount)]);
   return redactLiveCaptureScreen(raw, { enabled: REDACT_LIVE_CAPTURE });
 }
@@ -157,10 +197,13 @@ async function executeSeatKeyAction(seatId, keyStroke, actionId = '', evalId = n
     actionAudit.record({ actionId, evalId, seatId, type: 'key', payload: keyStroke, httpStatus: 400, ok: false, baseline });
     return { ok: false, error: 'Disallowed tmux keystroke' };
   }
+  if (!isSeatAllowedByTmuxFilter(seatId)) {
+    return { ok: false, code: 'TMUX_SCOPE_DENIED', error: 'Seat is outside --tmux-session allowlist' };
+  }
   const universalTarget = universalTmuxTargets.get(seatId);
   const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
   autoConsent.cancelPending({ seatId, recordOperatorCancel: true });
-  const output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
+  const output = await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, ...keyArgs]));
   terminalPromptProbeCache.delete(seatId);
   invalidateTelemetryCache();
   const rec = actionAudit.record({ actionId, evalId, seatId, type: 'key', payload: keyStroke, httpStatus: 200, ok: true, baseline });
@@ -604,6 +647,8 @@ const selfUpdater = new SelfUpdater({
           if (READ_ONLY_MODE) npxArgs.push('--read-only');
           if (NO_SESSION_LOGS_MODE) npxArgs.push('--no-session-logs');
           if (!REDACT_LIVE_CAPTURE) npxArgs.push('--raw-capture');
+          if (TMUX_SOCKET) npxArgs.push('--tmux-socket', TMUX_SOCKET);
+          if (TMUX_SESSION_FILTER.length > 0) npxArgs.push('--tmux-session', TMUX_SESSION_FILTER.join(','));
           const child = spawn('npx', npxArgs, { detached: true, stdio: 'ignore', env: process.env });
           child.unref();
         } else {
@@ -611,6 +656,8 @@ const selfUpdater = new SelfUpdater({
           if (READ_ONLY_MODE) respawnArgs.push('--read-only');
           if (NO_SESSION_LOGS_MODE) respawnArgs.push('--no-session-logs');
           if (!REDACT_LIVE_CAPTURE) respawnArgs.push('--raw-capture');
+          if (TMUX_SOCKET) respawnArgs.push('--tmux-socket', TMUX_SOCKET);
+          if (TMUX_SESSION_FILTER.length > 0) respawnArgs.push('--tmux-session', TMUX_SESSION_FILTER.join(','));
           const child = spawn(process.execPath, respawnArgs, {
             detached: true,
             stdio: 'ignore',
@@ -1526,20 +1573,20 @@ const STALE_PROMPT_REFUSAL_RE = /is at an interactive prompt\b[^.\n]*(?:pane unr
 
 async function sendPacedTmuxRaw({ target, cleanText, execFn, waitFn, tmuxBin }) {
   // Paced TUI-safe sequence (prevents Codex/Claude slash autocomplete race & partial C-u truncation)
-  const escRes = await execFn(tmuxBin, ['send-keys', '-t', target, 'Escape'], 8000);
+  const escRes = await execFn(tmuxBin, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', target, 'Escape']), 8000);
   if (!escRes.ok) {
     return { ok: false, statusCode: 409, output: escRes.output, error: escRes.output || 'tmux target unavailable' };
   }
   await waitFn(80);
-  await execFn(tmuxBin, ['send-keys', '-t', target, 'C-e'], 8000);
-  await execFn(tmuxBin, ['send-keys', '-t', target, 'C-u'], 8000);
+  await execFn(tmuxBin, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', target, 'C-e']), 8000);
+  await execFn(tmuxBin, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', target, 'C-u']), 8000);
   await waitFn(80);
-  const literalRes = await execFn(tmuxBin, ['send-keys', '-t', target, '-l', cleanText], 8000);
+  const literalRes = await execFn(tmuxBin, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', target, '-l', cleanText]), 8000);
   if (!literalRes.ok) {
     return { ok: false, statusCode: 409, output: literalRes.output, error: literalRes.output || 'tmux literal send failed' };
   }
   await waitFn(cleanText.startsWith('/') ? 320 : 240);
-  const enterRes = await execFn(tmuxBin, ['send-keys', '-t', target, 'Enter'], 8000);
+  const enterRes = await execFn(tmuxBin, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', target, 'Enter']), 8000);
   if (!enterRes.ok) {
     return { ok: false, statusCode: 409, output: enterRes.output, error: enterRes.output || 'tmux Enter send failed' };
   }
@@ -2096,6 +2143,8 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
   if (nodes.length === 0) {
     const universal = await discoverUniversalFleet({
       tmuxBin: TMUX_BIN,
+      tmuxSocket: TMUX_SOCKET,
+      tmuxSessionFilter: TMUX_SESSION_FILTER,
       readSessionLogs: !NO_SESSION_LOGS_MODE
     });
     if (universal.nodes.length > 0) {
@@ -2514,6 +2563,10 @@ async function sendToSeat({ req, json, body: payload }) {
     await json(400, { ok: false, error: 'Invalid seat identifier' });
     return;
   }
+  if (!isSeatAllowedByTmuxFilter(seat)) {
+    await json(403, { ok: false, code: 'TMUX_SCOPE_DENIED', error: 'Seat is outside --tmux-session allowlist' });
+    return;
+  }
 
   // Server-side duplicate-dispatch / double-click idempotency guard
   const idempotencyKey = String(req.headers['x-idempotency-key'] || payload.idempotencyKey || '').trim();
@@ -2546,7 +2599,7 @@ async function sendToSeat({ req, json, body: payload }) {
         await json(400, errBody);
         return;
       }
-      output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, ...keyArgs]);
+      output = await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, ...keyArgs]));
       terminalPromptProbeCache.delete(seat);
     } else if (type === 'raw') {
       // Harness-aware hygiene and deduplication:
@@ -2584,8 +2637,8 @@ async function sendToSeat({ req, json, body: payload }) {
       output = rawRes.output;
     } else if (type === 'interact') {
       if (universalTarget) {
-        await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-        output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+        await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, '-l', text]));
+        output = await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, 'Enter']));
       } else {
         output = await safeTextExec(RIG_BIN, [
           'send',
@@ -2595,15 +2648,15 @@ async function sendToSeat({ req, json, body: payload }) {
           text
         ]);
         if (!output || output.includes('Error') || output.includes('refused')) {
-          await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-          output += '\n' + await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+          await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, '-l', text]));
+          output += '\n' + await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, 'Enter']));
         }
       }
     } else {
       // Standard rig send (or direct tmux send-keys for universal standalone tmux panes)
       if (universalTarget) {
-        await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '-l', text]);
-        output = await safeTextExec(TMUX_BIN, ['send-keys', '-t', tmuxTarget, 'Enter']);
+        await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, '-l', text]));
+        output = await safeTextExec(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, 'Enter']));
       } else {
         output = await safeTextExec(RIG_BIN, ['send', seat, text]);
       }
@@ -2654,7 +2707,7 @@ async function resolveLiveSeatSessionEpoch(seatId, seatNode = null, { fresh = fa
         return cached.epoch;
       }
       const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
-      const res = await execWithStatus(TMUX_BIN, ['display-message', '-p', '-t', tmuxTarget, '#{pane_id}:#{pane_pid}'], 3000);
+      const res = await execWithStatus(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['display-message', '-p', '-t', tmuxTarget, '#{pane_id}:#{pane_pid}']), 3000);
       const out = (res.ok && res.stdout) ? res.stdout.trim() : '';
       if (/^%\d+:\d+$/.test(out)) {
         const epoch = `tmux:${out}`;
@@ -2696,7 +2749,7 @@ async function executeAutoConsentOptionOne({
     const baseline = latestSeatBaselines.get(seatId) || null;
     const universalTarget = universalTmuxTargets.get(seatId);
     const tmuxTarget = universalTarget && isValidTmuxTarget(universalTarget) ? universalTarget : seatId;
-    const sendRes = await execWithStatus(TMUX_BIN, ['send-keys', '-t', tmuxTarget, '1', 'Enter'], 8000);
+    const sendRes = await execWithStatus(TMUX_BIN, buildTmuxArgs(TMUX_SOCKET, ['send-keys', '-t', tmuxTarget, '1', 'Enter']), 8000);
     const ok = Boolean(sendRes && sendRes.ok);
     const safePreview = stripAnsiAndRedact(String(commandPreview || ''), { redactPaths: true }).text
       .replace(/[\r\n]+/g, ' ')
@@ -3121,10 +3174,15 @@ export {
   READ_ONLY_MODE,
   NO_SESSION_LOGS_MODE,
   REDACT_LIVE_CAPTURE,
+  TMUX_SOCKET,
+  TMUX_SESSION_FILTER,
   READ_ONLY_ERROR_BODY,
   resolveReadOnlyMode,
   resolveNoSessionLogsMode,
   resolveRedactLiveCapture,
+  resolveTmuxSocket,
+  resolveTmuxSessionFilter,
+  isSeatAllowedByTmuxFilter,
   redactLiveCaptureScreen,
   buildGanttItems,
   isGanttSystemNoise,
