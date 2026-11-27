@@ -536,40 +536,6 @@
       </p>
     </div>
 
-    <!-- KPI STRIP -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label" data-i18n="kpi.class.l">Класс системы</div>
-        <div class="kpi-val" style="color:var(--cyan);">DSS SA (L1–L3)</div>
-        <div class="kpi-note" data-i18n="kpi.class.n">Dark Cockpit • Management-by-Exception</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label" data-i18n="kpi.arch.l">Архитектура</div>
-        <div class="kpi-val">Local-First</div>
-        <div class="kpi-note" data-i18n="kpi.arch.n">Zero-Build ESM • SSE Push • 0% Idle CPU (no tabs)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label" data-i18n="kpi.deps.l">Зависимости</div>
-        <div class="kpi-val" style="color:var(--emerald);">0 npm deps</div>
-        <div class="kpi-note">Node.js &ge; 18 ESM • MIT License</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label" data-i18n="kpi.ont.l">Цифровой двойник</div>
-        <div class="kpi-val" style="color:var(--lavender);">Ontology v2.2</div>
-        <div class="kpi-note" data-i18n="kpi.ont.n">Objects • Guarded Actions • Advisory AI</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">372 / 372 PASS</div>
-        <div class="kpi-note" data-i18n="kpi.tests.n">40 тестовых наборов • ~1s локально</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
-        <div class="kpi-val" style="color:var(--amber);">127.0.0.1 + QR</div>
-        <div class="kpi-note" data-i18n="kpi.sec.n">Local-Only • Signed Sessions • Idempotent</div>
-      </div>
-    </div>
-
     <!-- SECTION 1: C4 CONTEXT & SECURITY GUARANTEES AT A GLANCE -->
     <section id="context">
       <div class="sec-head">
@@ -582,34 +548,34 @@
             <tr>
               <th data-i18n="sg.c1">Guarantee</th>
               <th data-i18n="sg.c2">Default Behavior &amp; Boundary</th>
-              <th data-i18n="sg.c3">Default</th>
+              <th data-i18n="sg.c3">Condition</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><b><span data-lang-block="en">Loopback &amp; Zero Telemetry</span><span data-lang-block="ru">Только 127.0.0.1 и 0 телеметрии</span></b></td>
-              <td><span data-lang-block="en">Binds strictly to <code>127.0.0.1</code> with 0 outbound network requests by default — no cloud account, no hidden telemetry upload.</span><span data-lang-block="ru">Слушает строго <code>127.0.0.1</code> и делает 0 исходящих сетевых запросов по умолчанию — без облачного аккаунта и скрытой телеметрии.</span></td>
-              <td><span class="badge-ok">127.0.0.1</span></td>
+              <td><span data-lang-block="en">Once started, the RigCommander process binds strictly to <code>127.0.0.1</code> with 0 outbound network requests by default — no cloud account, no hidden telemetry upload.</span><span data-lang-block="ru">После старта процесс RigCommander слушает строго <code>127.0.0.1</code> и делает 0 исходящих сетевых запросов по умолчанию — без облачного аккаунта и скрытой телеметрии.</span></td>
+              <td><span class="badge-ok"><span data-lang-block="en">BY DEFAULT</span><span data-lang-block="ru">ПО УМОЛЧАНИЮ</span></span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Zero-Write Inspection Flag</span><span data-lang-block="ru">Безопасный режим без записи</span></b></td>
-              <td><span data-lang-block="en">Launch with <code>npx rig-commander@{{APP_VERSION}} --read-only</code> for <strong>0</strong> terminal writes, <strong>0</strong> disk writes, and <strong>0</strong> outbound network calls — all mutating routes return <code>403</code>.</span><span data-lang-block="ru">Запуск <code>npx rig-commander@{{APP_VERSION}} --read-only</code> гарантирует <strong>0</strong> записей в терминал, <strong>0</strong> записей на диск и <strong>0</strong> исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.</span></td>
-              <td><span class="badge-ok">--read-only</span></td>
+              <td><span data-lang-block="en">First-time <code>npx</code> fetches the package from npm; once launched with <code>npx rig-commander@{{APP_VERSION}} --read-only</code>, RigCommander performs <strong>0</strong> terminal writes, <strong>0</strong> disk writes, and <strong>0</strong> outbound network calls — all mutating routes return <code>403</code>.</span><span data-lang-block="ru">При первом запуске сам <code>npx</code> загружает пакет из реестра npm; после старта процесс <code>npx rig-commander@{{APP_VERSION}} --read-only</code> делает <strong>0</strong> записей в терминал, <strong>0</strong> записей на диск и <strong>0</strong> исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.</span></td>
+              <td><span class="badge-ok"><span data-lang-block="en">WITH --read-only</span><span data-lang-block="ru">С --read-only</span></span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Local HTTP→TMUX CSRF &amp; DNS-Rebinding Protection</span><span data-lang-block="ru">Защита HTTP→TMUX от CSRF и DNS-rebinding</span></b></td>
               <td><span data-lang-block="en">Strict <code>Host</code> and <code>Origin</code> checks and per-process session authentication — a malicious browser tab cannot drive your local terminals. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>).</span><span data-lang-block="ru">Строгие проверки <code>Host</code> и <code>Origin</code> и аутентификация сессии процесса — вредоносная вкладка браузера не сможет управлять вашими локальными терминалами. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>).</span></td>
-              <td><span class="badge-ok">ENFORCED</span></td>
+              <td><span class="badge-ok"><span data-lang-block="en">BY DEFAULT</span><span data-lang-block="ru">ПО УМОЛЧАНИЮ</span></span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Verified Supply Chain &amp; 30-Second Audit</span><span data-lang-block="ru">Проверяемая цепочка поставки и аудит за 30 секунд</span></b></td>
-              <td><span data-lang-block="en">0 runtime npm dependencies and signed <strong>npm Sigstore Provenance</strong> (GitHub Actions OIDC). Verify locally with <code>npm audit signatures</code> or <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>, inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, and report problems via <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span><span data-lang-block="ru">0 внешних npm-зависимостей и подписанный <strong>провенанс npm (Sigstore)</strong> через GitHub Actions OIDC. Проверьте подпись командой <code>npm audit signatures</code> или <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>, изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> и сообщайте о проблемах в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span></td>
+              <td><span data-lang-block="en">0 runtime npm dependencies and signed <strong>npm Sigstore Provenance</strong> (GitHub Actions OIDC). Verify the exact artifact in a clean temp directory without running code (<code>npm install --ignore-scripts rig-commander@{{APP_VERSION}} &amp;&amp; npm audit signatures</code>, or inspect <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code>), audit the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">v{{APP_VERSION}} source tag</a>, and report problems via <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span><span data-lang-block="ru">0 внешних npm-зависимостей и подписанный <strong>провенанс npm (Sigstore)</strong> через GitHub Actions OIDC. Проверьте конкретный артефакт в пустом временном каталоге без исполнения кода (<code>npm install --ignore-scripts rig-commander@{{APP_VERSION}} &amp;&amp; npm audit signatures</code> или <code>npm view rig-commander@{{APP_VERSION}} dist.attestations</code> — полный однострочник в <a href="/guide#quickstart">Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener">исходный тег v{{APP_VERSION}}</a> и сообщайте о проблемах в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span></td>
               <td><span class="badge-ok">SIGSTORE</span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Opt-In Integrations &amp; TOCTOU Drift Guard</span><span data-lang-block="ru">Внешние модули opt-in и защита TOCTOU</span></b></td>
               <td><span data-lang-block="en">Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent, and optional AI Evaluator are strictly OFF by default until explicitly configured. Before any optional Auto-Consent keypress fires after the 3s grace window, RigCommander re-captures the live terminal and verifies a SHA-256 prompt hash — if the prompt changed by a single character, dispatch aborts with zero writes.</span><span data-lang-block="ru">Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛЮЧЕНЫ по умолчанию. Перед срабатыванием любого опционального авто-подтверждения после 3-секундного окна отмены RigCommander повторно снимает живой экран терминала и сверяет SHA-256 хэш промпта — если запрос изменился хотя бы на один символ, отправка отменяется с нулём записей.</span></td>
-              <td><span class="badge-sec">OFF / OPT-IN</span></td>
+              <td><span class="badge-sec"><span data-lang-block="en">AFTER OPT-IN</span><span data-lang-block="ru">ПОСЛЕ ВКЛЮЧЕНИЯ</span></span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Automatic Secret Redaction &amp; Automated Verification</span><span data-lang-block="ru">Автоматическая редакция секретов и автотесты</span></b></td>
@@ -623,6 +589,40 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- KPI STRIP -->
+      <div class="kpi-grid" style="margin-top:16px;">
+        <div class="kpi-card">
+          <div class="kpi-label" data-i18n="kpi.class.l">Класс системы</div>
+          <div class="kpi-val" style="color:var(--cyan);">DSS SA (L1–L3)</div>
+          <div class="kpi-note" data-i18n="kpi.class.n">Dark Cockpit • Management-by-Exception</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label" data-i18n="kpi.arch.l">Архитектура</div>
+          <div class="kpi-val">Local-First</div>
+          <div class="kpi-note" data-i18n="kpi.arch.n">Zero-Build ESM • SSE Push • 0% Idle CPU (no tabs)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label" data-i18n="kpi.deps.l">Зависимости</div>
+          <div class="kpi-val" style="color:var(--emerald);">0 npm deps</div>
+          <div class="kpi-note">Node.js &ge; 18 ESM • MIT License</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label" data-i18n="kpi.ont.l">Цифровой двойник</div>
+          <div class="kpi-val" style="color:var(--lavender);">Ontology v2.2</div>
+          <div class="kpi-note" data-i18n="kpi.ont.n">Objects • Guarded Actions • Advisory AI</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
+          <div class="kpi-val" style="color:var(--emerald);">372 / 372 PASS</div>
+          <div class="kpi-note" data-i18n="kpi.tests.n">44 тестовых набора • ~3s локально</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label" data-i18n="kpi.sec.l">Граница доверия</div>
+          <div class="kpi-val" style="color:var(--amber);">127.0.0.1 + QR</div>
+          <div class="kpi-note" data-i18n="kpi.sec.n">Local-Only • Signed Sessions • Idempotent</div>
+        </div>
       </div>
       <div class="diagram-box">
         <svg viewBox="0 0 960 285" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="C4 Level 1 System Context">
@@ -933,13 +933,13 @@
         'kpi.ont.l': 'Цифровой двойник',
         'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',
         'kpi.tests.l': 'Автотесты',
-        'kpi.tests.n': '41 тестовый набор • ~1s локально',
+        'kpi.tests.n': '44 тестовых набора • ~3s локально',
         'kpi.sec.l': 'Граница доверия',
         'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
         's1.title': '1. Контекст системы, гарантии и границы доверия (C4 Level 1)',
         'sg.c1': 'Гарантия',
         'sg.c2': 'Поведение по умолчанию и границы',
-        'sg.c3': 'По умолчанию',
+        'sg.c3': 'Условие',
         'svg.op': '👤 ОПЕРАТОР',
         'svg.opSub': 'ПК / Телефон PWA',
         'svg.opProto': 'SSE • QR+PIN • TG',
@@ -1011,13 +1011,13 @@
         'kpi.ont.l': 'Digital Twin',
         'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',
         'kpi.tests.l': 'Automated Tests',
-        'kpi.tests.n': '41 test suites • ~1s locally',
+        'kpi.tests.n': '44 test suites • ~3s locally',
         'kpi.sec.l': 'Trust Boundary',
         'kpi.sec.n': 'Local-Only • Signed Sessions • Idempotent',
         's1.title': '1. System Context, Security Guarantees & Trust Boundaries (C4 Level 1)',
         'sg.c1': 'Guarantee',
         'sg.c2': 'Default Behavior & Boundary',
-        'sg.c3': 'Default',
+        'sg.c3': 'Condition',
         'svg.op': '👤 OPERATOR',
         'svg.opSub': 'Desktop / Phone PWA',
         'svg.opProto': 'SSE Push • QR+PIN • TG',

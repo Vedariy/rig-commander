@@ -115,9 +115,10 @@ export function renderWarningSignsHtml(ctx, agent) {
   }
 
   if (chips.length === 0) {
+    const td = ctx.td || ((k) => k);
     return `
       <div class="insp-signals-strip">
-        <span style="color:#6ee7b7;">🛡️ ${deckLang === 'en' ? 'Nominal' : 'Штатно'}</span>
+        <span style="color:#6ee7b7;" title="${escapeHtml(td('insp.seatNominalTip'))}">🛡️ ${escapeHtml(td('insp.seatNominal'))}</span>
         <span>🔄 ${compCount} ${deckLang === 'en' ? 'swaps' : 'свап.'}${isCoder ? ` • 🪃 Avg ${agent.reworkAvg || 1.0}` : ''}</span>
       </div>
     `;
@@ -241,11 +242,13 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     .filter(opt => opt !== primaryOpt)
     .sort((a, b) => Number(Boolean(b.isCancel)) - Number(Boolean(a.isCancel)));
 
+  let hasAlwaysOption = false;
   const renderOptBtn = (opt, isPrimarySlot) => {
     const isAlways = !isPrimarySlot && !opt.isCancel && (opt.badge === '2' || /always|всегда|remember|запомнить/i.test(`${opt.fullText || ''} ${opt.shortLabel || ''}`));
+    if (isAlways) hasAlwaysOption = true;
     const cls = isPrimarySlot
       ? 'action-pill key-pill key-proceed hitl-btn-primary'
-      : (opt.isCancel ? 'action-pill key-pill key-cancel hitl-btn-secondary' : 'action-pill key-pill key-neutral hitl-btn-secondary');
+      : (opt.isCancel ? 'action-pill key-pill key-cancel hitl-btn-secondary' : 'action-pill key-pill key-neutral hitl-btn-secondary hitl-btn-always');
     const fp = buildSeatSendKey(seatId, 'key', opt.keyStroke);
     const lockAttrs = getControlLockAttrs(scopeKey, fp);
     const confirmAttrs = isAlways
@@ -253,7 +256,9 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
       : '';
     let labelHtml;
     if (isPrimarySlot) {
-      labelHtml = `✅ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}`;
+      const isStandardAllowOnce = /^(?:yes,?\s*)?allow once|^(?:да,?\s*)?разрешить один раз/i.test(String(opt.shortLabel || '').trim());
+      const primaryText = isStandardAllowOnce ? td('insp.hitlAllowOnceShort') : opt.shortLabel;
+      labelHtml = `✅ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(primaryText)}`;
     } else if (opt.isCancel) {
       labelHtml = `❌ ${escapeHtml(td('insp.hitlCancelShort'))}`;
     } else if (isAlways) {
@@ -261,12 +266,16 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     } else {
       labelHtml = `🔹 <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}`;
     }
-    return `<button type="button" class="${cls}" title="${escapeHtml(opt.fullText)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}"${confirmAttrs}${lockAttrs} onclick="triggerPromptOption(this)">${labelHtml}</button>`;
+    const btnTitle = isAlways ? `${opt.fullText} — ${td('insp.hitlAlwaysScopeNote')}` : opt.fullText;
+    return `<button type="button" class="${cls}" title="${escapeHtml(btnTitle)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}"${confirmAttrs}${lockAttrs} onclick="triggerPromptOption(this)">${labelHtml}</button>`;
   };
 
   const primaryHtml = primaryOpt ? renderOptBtn(primaryOpt, true) : '';
   const secondaryHtml = secondaryOpts.length
     ? `<div class="hitl-secondary-row${secondaryOpts.length === 1 ? ' is-single' : ''}">${secondaryOpts.map(opt => renderOptBtn(opt, false)).join('')}</div>`
+    : '';
+  const alwaysNoteHtml = hasAlwaysOption
+    ? `<div class="hitl-always-note">${escapeHtml(td('insp.hitlAlwaysScopeNote'))}</div>`
     : '';
   return `
     <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
@@ -275,6 +284,7 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
       <span class="hitl-options-kicker" style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
       ${primaryHtml}
       ${secondaryHtml}
+      ${alwaysNoteHtml}
     </div>
   `;
 }

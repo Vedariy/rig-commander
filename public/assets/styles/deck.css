@@ -6846,7 +6846,6 @@ body.demo-preset-universal .hud-cluster-scope {
   .triage-cards-container,
   body.demo-mode .triage-cards-container,
   #finopsPillWrap,
-  #btnAutoConsentTop,
   #btnDemoQuest,
   #btnPwaInstall,
   #kbdHelpWrap {
@@ -7073,6 +7072,41 @@ body.demo-mode .agent-node.state-urgent .status-led,
   padding: 8px 10px !important;
   font-size: 11px !important;
   border-radius: 7px !important;
+}
+.diag-inline-hitl .hitl-btn-always {
+  opacity: 0.82;
+  border-style: dashed !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+}
+.diag-inline-hitl .hitl-btn-always:hover:not(:disabled),
+.diag-inline-hitl .hitl-btn-always.is-confirm-armed {
+  opacity: 1;
+  border-style: solid !important;
+}
+.hitl-always-note {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.32;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+.triage-badge-mobile,
+.ac-top-lbl-mobile {
+  display: none;
+}
+@media (max-height: 780px) and (min-width: 769px) {
+  .diag-inline-hitl .hitl-btn-primary {
+    min-height: 40px !important;
+    padding: 8px 10px !important;
+  }
+  .hitl-secondary-row {
+    margin-top: 10px !important;
+  }
+  .diag-inline-hitl .hitl-btn-secondary {
+    min-height: 36px !important;
+    padding: 6px 8px !important;
+  }
 }
 .key-pill.is-confirm-armed {
   border: 1.5px solid #f59e0b !important;
@@ -7444,7 +7478,22 @@ body.demo-mode .hud-header {
     margin-left: auto;
   }
   #finopsPillWrap {
+    display: none !important;
+  }
+  .triage-badge-desktop,
+  .ac-top-lbl-desktop {
+    display: none !important;
+  }
+  .triage-badge-mobile,
+  .ac-top-lbl-mobile {
+    display: inline !important;
+  }
+  #btnAutoConsentTop {
     display: inline-flex !important;
+    padding: 3px 6px !important;
+    min-height: 30px !important;
+    font-size: 9.5px !important;
+    gap: 3px !important;
     flex-shrink: 0;
   }
   .finops-desktop-txt {
@@ -7454,10 +7503,10 @@ body.demo-mode .hud-header {
     display: inline !important;
   }
   #btnFinopsPill {
-    padding: 4px 7px !important;
+    padding: 4px 6px !important;
     min-height: 30px !important;
-    min-width: 44px !important;
-    font-size: 10.5px !important;
+    min-width: 40px !important;
+    font-size: 10px !important;
   }
   .triage-tools summary {
     min-height: 30px !important;

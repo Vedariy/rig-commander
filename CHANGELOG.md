@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.12.1] - 2026-11-27
+
+### Fixed & Improved
+- **Reproducible Pre-Run Supply-Chain Verification & Honest `npx` Boundary (`landing/guide.html`, `landing/passport.html`, `landing/index.html`, `landing/llms*.txt`):**
+  - Replaced ambiguous `npm audit signatures` snippet with a self-contained clean-temp-directory command (`npm install --ignore-scripts rig-commander@3.12.1 && npm audit signatures`) plus expected attestation output, distinct copy button labels, and collapsed interactive mode disclosure on `/guide`.
+  - Moved the C4 Trust Boundaries & Security Guarantees table above the KPI cards on `/passport`, explicitly separated `npx` package fetch from running-process zero-network guarantees, and synced the test-suite badge (`44` suites).
+  - Removed competing navbar glow on `landing/index.html` and aligned mobile hero preview button order (`Cancel (esc)` left, `Always (dir)` right) with `/demo`.
+- **Clearer Fleet Status & HITL Ergonomics on Desktop, Laptop & Mobile (`openrig/index.html`, `openrig/assets/ui/inspector-view.js`, `openrig/assets/domain/i18n.js`, `openrig/assets/styles/deck.css`):**
+  - Replaced raw `1 P0 · 1 P1` header counts with human-readable status (`1 awaiting input · 1 CTX` / `1 ждёт ответа · 1 CTX`), surfaced a compact `Auto: OFF` / `Авто: ВЫКЛ` pill on mobile (`390×844`), labeled local seat health explicitly (`Seat: nominal` / `Узел: штатно`), shortened single-run primary CTA to stay single-line on `1280×720`, and styled `Always (dir)` as a lower-emphasis ghost button with explicit CLI folder-rule scope & revocation note.
+
+---
+
 ## [3.12.0] - 2026-11-27
 
 ### Added

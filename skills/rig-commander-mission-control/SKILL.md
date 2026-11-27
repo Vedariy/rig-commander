@@ -5,7 +5,7 @@ license: MIT
 compatibility: Node.js >= 18 on macOS or Linux; optional tmux or OpenRig daemon for live fleets, plus offline browser /demo.
 metadata:
   author: Vedariy
-  version: "3.12.0"
+  version: "3.12.1"
   homepage: https://rig-commander.vercel.app
   repository: https://github.com/Vedariy/rig-commander
   demo: https://rig-commander.vercel.app/demo

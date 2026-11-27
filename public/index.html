@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="3.12.0">
+  <meta name="app-version" content="3.12.1">
   <meta name="theme-color" content="#030712">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,7 +31,7 @@
       "description": "Local command deck for observing AI coding fleets and reviewing terminal actions.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Linux",
-      "softwareVersion": "3.12.0",
+      "softwareVersion": "3.12.1",
       "license": "https://opensource.org/licenses/MIT",
       "isAccessibleForFree": true,
       "offers": {
@@ -55,7 +55,7 @@
       "@type": "HowTo",
       "@id": "https://rig-commander.vercel.app/#quickstart",
       "name": "Start the local RigCommander deck",
-      "version": "3.12.0",
+      "version": "3.12.1",
       "inLanguage": "en",
       "step": [
         {
@@ -68,7 +68,7 @@
           "@type": "HowToStep",
           "position": 2,
           "name": "Start RigCommander",
-          "text": "Run npx rig-commander@3.12.0 --read-only in a terminal."
+          "text": "Run npx rig-commander@3.12.1 --read-only in a terminal."
         },
         {
           "@type": "HowToStep",
@@ -88,7 +88,7 @@
           "name": "How do I start the live deck?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Run npx rig-commander@3.12.0 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
+            "text": "Run npx rig-commander@3.12.1 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
           }
         },
         {
@@ -157,14 +157,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.12.0 --read-only">
+  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.12.1 --read-only">
   <meta property="og:url" content="https://rig-commander.vercel.app/">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.12.0 --read-only">
+  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.12.1 --read-only">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
 
   <style>
@@ -336,17 +336,17 @@
       justify-content: center;
     }
     .nav-cta {
-      background: linear-gradient(135deg, #00ff9d 0%, #00f0ff 100%);
-      color: #020617;
+      background: rgba(0, 240, 255, 0.1);
+      color: #a5f3fc;
       font-size: 12.5px;
-      font-weight: 800;
+      font-weight: 700;
       min-height: 36px;
-      padding: 0 16px;
+      padding: 0 15px;
       border-radius: 9999px;
       text-decoration: none;
       transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 0 22px rgba(0, 255, 157, 0.42), 0 0 12px rgba(0, 240, 255, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: none;
+      border: 1px solid rgba(0, 240, 255, 0.42);
       display: inline-flex;
       align-items: center;
       gap: 7px;
@@ -354,16 +354,17 @@
     }
     .nav-cta-short { display: none; }
     .nav-cta:hover {
-      box-shadow: 0 0 32px rgba(0, 255, 157, 0.72), 0 0 22px rgba(0, 240, 255, 0.65);
-      transform: translateY(-1px) scale(1.03);
-      color: #000;
+      background: rgba(0, 240, 255, 0.18);
+      border-color: rgba(0, 255, 157, 0.65);
+      color: #ecfeff;
+      transform: translateY(-1px);
     }
     .nav-cta-dot {
       width: 7px;
       height: 7px;
       border-radius: 50%;
-      background: #022c22;
-      box-shadow: 0 0 0 2px rgba(2, 44, 34, 0.28);
+      background: #00ff9d;
+      box-shadow: 0 0 0 2px rgba(0, 255, 157, 0.22);
       animation: demoDotPulse 2s infinite;
     }
     @keyframes demoDotPulse {
@@ -1923,7 +1924,7 @@
     <nav class="navbar" id="primaryNavbar">
       <a href="#" class="nav-brand">
         <span>💠 RIGCOMMANDER</span>
-        <span class="nav-brand-badge" id="navVersionBadge">v3.12.0</span>
+        <span class="nav-brand-badge" id="navVersionBadge">v3.12.1</span>
       </a>
       <ul class="nav-links" id="primaryNavLinks">
         <li><a href="#architecture" data-i18n="nav.arch" onclick="closeMobileNav()">Architecture</a></li>
@@ -1981,9 +1982,9 @@
             <span>→</span>
           </a>
           <div class="hero-cli-group">
-            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.12.0 --read-only')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.12.0 --read-only');}" title="Click to copy safe read-only CLI command" data-i18n-title="hero.cliTitle">
+            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.12.1 --read-only')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.12.1 --read-only');}" title="Click to copy safe read-only CLI command" data-i18n-title="hero.cliTitle">
               <span class="cli-prompt">$</span>
-              <span class="cli-cmd-text">npx rig-commander@3.12.0 --read-only</span>
+              <span class="cli-cmd-text">npx rig-commander@3.12.1 --read-only</span>
               <span class="cli-icon">📋</span>
             </div>
           </div>
@@ -2023,22 +2024,22 @@
             </div>
           </div>
 
-          <!-- Native Mobile P0 HITL Preview Card (<= 640px, matches real mobile /demo) -->
+          <!-- Native Mobile P0 HITL Preview Card (<= 640px, matches real mobile /demo button order) -->
           <div class="sim-mobile-hitl" id="simMobileHitl">
             <div class="sim-m-head">
               <span class="sim-m-seat">codex-tests</span>
-              <span class="sim-m-badge" id="simMobileBadge" data-i18n="sim.mobileBadge">P0 NEEDS INPUT</span>
+              <span class="sim-m-badge" id="simMobileBadge" data-i18n="sim.mobileBadge">SAMPLE · P0</span>
             </div>
             <div class="sim-m-term" id="simMobileTerm" data-i18n="sim.mobileTerm">Command: npm test
 [codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry
 ⚠️ Allow Codex to run npm test in worktree?</div>
             <button type="button" class="sim-m-primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Allow once (y)</button>
             <div class="sim-m-secondary-row">
-              <button type="button" class="sim-m-sec-btn" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">2. Always allow</button>
-              <button type="button" class="sim-m-sec-btn is-cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">3. Cancel (esc)</button>
+              <button type="button" class="sim-m-sec-btn is-cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">❌ Cancel (esc)</button>
+              <button type="button" class="sim-m-sec-btn" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">🔹 Always (dir)</button>
             </div>
             <div class="sim-m-audit" id="simMobileAudit">
-              <span data-i18n="sim.mobileFootLeft">tmux / Universal · Allowlisted quick keys</span>
+              <span data-i18n="sim.mobileFootLeft">Interactive preview · same layout as /demo</span>
               <span style="color:#6ee7b7;" data-i18n="sim.mobileFootRight">CTX 78% · 1-click HITL</span>
             </div>
           </div>
@@ -2246,7 +2247,7 @@ Command: npm test
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">SIGSTORE PROVENANCE</span>
             <div class="sec-guarantee-title" data-i18n="sec.g7.t">Verified Supply Chain &amp; 30-Second Audit</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify with <code>npm audit signatures</code> or <code>npm view rig-commander@3.12.0 dist.attestations</code>, inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.0" target="_blank" rel="noopener">v3.12.0 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify the exact package in a clean temp folder without running code (<code>npm install --ignore-scripts rig-commander@3.12.1 &amp;&amp; npm audit signatures</code>, or <code>npm view rig-commander@3.12.1 dist.attestations</code>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.1" target="_blank" rel="noopener">v3.12.1 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
           </div>
         </div>
       </div>
@@ -2340,7 +2341,7 @@ Command: npm test
                   <td data-i18n="cmp.r2.k">Setup &amp; code changes</td>
                   <td data-i18n="cmp.r2.c1">Manual attach &amp; pane-by-pane switching</td>
                   <td data-i18n="cmp.r2.c2">SDK instrumentation, API keys &amp; cloud account</td>
-                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.12.0 --read-only</code> (0 code changes, 0 npm deps)</td>
+                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.12.1 --read-only</code> (0 code changes, 0 npm deps)</td>
                 </tr>
                 <tr>
                   <td data-i18n="cmp.r3.k">Blocked prompts &amp; control</td>
@@ -2597,7 +2598,7 @@ Command: npm test
             <p class="step-desc" data-i18n="arch.s1.desc">
               Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.
             </p>
-            <div class="step-code">$ npx rig-commander@3.12.0 --read-only</div>
+            <div class="step-code">$ npx rig-commander@3.12.1 --read-only</div>
           </div>
 
           <div class="step-card">
@@ -2659,8 +2660,8 @@ Command: npm test
       <h2 class="section-title"><span lang="en">Operator FAQ</span><span lang="ru">Вопросы оператора</span></h2>
       <details>
         <summary><span lang="en">How do I start the live deck?</span><span lang="ru">Как запустить живой пульт?</span></summary>
-        <p lang="en">Run npx rig-commander@3.12.0 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
-        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.12.0 --read-only и откройте http://127.0.0.1:7440.</p>
+        <p lang="en">Run npx rig-commander@3.12.1 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
+        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.12.1 --read-only и откройте http://127.0.0.1:7440.</p>
       </details>
       <details>
         <summary><span lang="en">Can I try it without running agents?</span><span lang="ru">Можно попробовать без запущенных агентов?</span></summary>
@@ -2778,7 +2779,7 @@ Command: npm test
         <span class="pulse-dot" style="background:var(--emerald); box-shadow:0 0 10px var(--emerald);"></span>
         <span data-i18n="footer.status">ALL SYSTEMS OPERATIONAL</span>
         <span>•</span>
-        <span>RigCommander v3.12.0</span>
+        <span>RigCommander v3.12.1</span>
         <span>•</span>
         <a href="/demo" style="color:var(--cyan); text-decoration:none;" data-i18n="nav.demo">Live Demo</a>
         <span>·</span>
@@ -2871,9 +2872,9 @@ Command: npm test
         'hero.cliTitle': 'Click to copy safe read-only CLI command',
         'sim.viewGraph': 'Graph',
         'sim.viewGantt': 'Gantt',
-        'sim.mobileBadge': 'P0 NEEDS INPUT',
+        'sim.mobileBadge': 'SAMPLE · P0',
         'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Allow Codex to run npm test in worktree?',
-        'sim.mobileFootLeft': 'tmux / Universal · Allowlisted quick keys',
+        'sim.mobileFootLeft': 'Interactive preview · same layout as /demo',
         'sim.mobileFootRight': 'CTX 78% · 1-click HITL',
         'sim.waitRadar': 'WAIT RADAR',
         'sim.card1': 'Context at 78% (threshold 75%): preemptive /compact ready before quality drops.',
@@ -2884,16 +2885,16 @@ Command: npm test
         'sim.opt1': '✅ 1. Allow once (y)',
         'sim.opt2': '2. Always allow in worktree',
         'sim.opt3': '3. Cancel (esc)',
-        'sim.opt2Short': '2. Always allow',
-        'sim.opt3Short': '3. Cancel (esc)',
+        'sim.opt2Short': '🔹 Always (dir)',
+        'sim.opt3Short': '❌ Cancel (esc)',
         'sim.auditTitle': '🧾 ACTION AUDIT (POSTCONDITION)',
         'sec.eyebrow': 'SECURITY & PRIVACY GUARANTEES AT A GLANCE',
         'sec.title': 'Local-First by Default. Zero Cloud Traps.',
         'sec.passportLink': '🛡️ Full Security Passport →',
         'sec.g1.t': '0 Outbound Requests by Default',
-        'sec.g1.d': 'Binds strictly to <code>127.0.0.1</code> with zero outbound network calls, no cloud account, and no telemetry upload.',
+        'sec.g1.d': 'Once started, RigCommander binds strictly to <code>127.0.0.1</code> with zero outbound network calls, no cloud account, and no telemetry upload.',
         'sec.g2.t': 'Zero-Write First Evaluation',
-        'sec.g2.d': 'Launch with <code>--read-only</code> for 0 terminal writes, 0 disk writes, and 0 outbound calls — all mutating routes return <code>403</code>.',
+        'sec.g2.d': 'After <code>npx</code> fetches the tarball, <code>--read-only</code> enforces 0 terminal writes, 0 disk writes, and 0 outbound calls — all mutating routes return <code>403</code>.',
         'sec.g3.t': 'External Modules OFF + TOCTOU Guard',
         'sec.g3.d': 'Remote HTTPS tunnel/PWA pairing, Telegram bridge, Auto-Consent & optional AI Evaluator stay OFF until enabled. Before any optional Auto-Consent keypress fires after the 3s grace window, RigCommander re-captures the live terminal and verifies a SHA-256 prompt hash — if the prompt changed by a single character, dispatch aborts with zero writes.',
         'sec.g4.t': 'Secrets Masked & Verified by npm test',
@@ -2901,7 +2902,7 @@ Command: npm test
         'sec.g6.t': 'Malicious Browser Tabs Can\'t Drive Your Terminals',
         'sec.g6.d': 'Local HTTP→tmux control checks every request\'s Host and Origin and requires per-process session auth. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>) — CSRF and DNS-rebinding from other tabs are rejected.',
         'sec.g7.t': 'Verified Supply Chain & 30-Second Audit',
-        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify with <code>npm audit signatures</code> or <code>npm view rig-commander@3.12.0 dist.attestations</code>, inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.0" target="_blank" rel="noopener">v3.12.0 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify the exact package in a clean temp folder without running code (<code>npm install --ignore-scripts rig-commander@3.12.1 &amp;&amp; npm audit signatures</code>, or <code>npm view rig-commander@3.12.1 dist.attestations</code>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.1" target="_blank" rel="noopener">v3.12.1 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Honest Local Storage Model',
         'sec.g5.d': 'Local recovery & shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.',
         'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
@@ -2930,7 +2931,7 @@ Command: npm test
         'cmp.r2.k': 'Setup & code changes',
         'cmp.r2.c1': 'Manual attach & pane-by-pane switching',
         'cmp.r2.c2': 'SDK instrumentation, API keys & cloud account',
-        'cmp.r2.c3': '<code>npx rig-commander@3.12.0 --read-only</code> (0 code changes, 0 npm deps)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.12.1 --read-only</code> (0 code changes, 0 npm deps)',
         'cmp.r3.k': 'Blocked prompts & control',
         'cmp.r3.c1': 'Manual scan across panes to find hangs',
         'cmp.r3.c2': 'Read-only dashboards (no terminal write-back)',
@@ -3063,9 +3064,9 @@ Command: npm test
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду безопасного read-only запуска',
         'sim.viewGraph': 'Граф',
         'sim.viewGantt': 'Гант',
-        'sim.mobileBadge': 'P0 ЖДЁТ ВВОДА',
+        'sim.mobileBadge': 'ПРИМЕР · P0',
         'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Разрешить Codex запуск npm test в worktree?',
-        'sim.mobileFootLeft': 'tmux / Universal · Разрешённые быстрые клавиши',
+        'sim.mobileFootLeft': 'Пример запроса · порядок кнопок как в /demo',
         'sim.mobileFootRight': 'CTX 78% · HITL в 1 клик',
         'sim.waitRadar': 'РАДАР ОЖИДАНИЯ',
         'sim.card1': 'Контекст 78% (порог 75%): готов превентивный /compact до потери качества.',
@@ -3076,16 +3077,16 @@ Command: npm test
         'sim.opt1': '✅ 1. Разрешить один раз (y)',
         'sim.opt2': '2. Всегда разрешать в worktree',
         'sim.opt3': '3. Отмена (esc)',
-        'sim.opt2Short': '2. Всегда разрешать',
-        'sim.opt3Short': '3. Отмена (esc)',
+        'sim.opt2Short': '🔹 Всегда (папка)',
+        'sim.opt3Short': '❌ Отмена (esc)',
         'sim.auditTitle': '🧾 ЖУРНАЛ ДЕЙСТВИЙ (POSTCONDITION)',
         'sec.eyebrow': 'ГАРАНТИИ БЕЗОПАСНОСТИ И ПРИВАТНОСТИ',
         'sec.title': 'Локально по умолчанию. Без облачных ловушек.',
         'sec.passportLink': '🛡️ Полный паспорт безопасности →',
         'sec.g1.t': '0 исходящих запросов по умолчанию',
-        'sec.g1.d': 'Слушает строго <code>127.0.0.1</code> — ноль сетевых обращений наружу, без облачного аккаунта и скрытой телеметрии.',
+        'sec.g1.d': 'После старта процесс RigCommander слушает строго <code>127.0.0.1</code> — ноль сетевых обращений наружу, без облачного аккаунта и скрытой телеметрии.',
         'sec.g2.t': 'Первый осмотр без записи',
-        'sec.g2.d': 'Запуск с <code>--read-only</code> гарантирует 0 записей в терминал, 0 записей на диск и 0 исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.',
+        'sec.g2.d': 'После загрузки пакета через <code>npx</code> режим <code>--read-only</code> гарантирует 0 записей в терминал, 0 записей на диск и 0 исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.',
         'sec.g3.t': 'Внешние модули ВЫКЛ + защита TOCTOU',
         'sec.g3.d': 'Удалённый HTTPS-туннель/PWA, Telegram-мост, Auto-Consent и опциональный AI-оценщик строго ВЫКЛ, пока вы их не включите. Перед срабатыванием любого опционального авто-подтверждения после 3-секундного окна отмены RigCommander повторно снимает живой экран терминала и сверяет SHA-256 хэш промпта — если запрос изменился хотя бы на один символ, отправка отменяется с нулём записей.',
         'sec.g4.t': 'Редакция секретов и проверка npm test',
@@ -3093,7 +3094,7 @@ Command: npm test
         'sec.g6.t': 'Вкладки браузера не управляют вашими терминалами',
         'sec.g6.d': 'Локальный мост HTTP→tmux проверяет Host и Origin каждого запроса и требует аутентификации сессии процесса. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>) — CSRF и DNS-rebinding из других вкладок отклоняются.',
         'sec.g7.t': 'Проверяемая цепочка поставки и аудит за 30 секунд',
-        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте локально через <code>npm audit signatures</code> или <code>npm view rig-commander@3.12.0 dist.attestations</code>, изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.0" target="_blank" rel="noopener">исходный тег v3.12.0</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте артефакт в пустом временном каталоге без запуска кода (<code>npm install --ignore-scripts rig-commander@3.12.1 &amp;&amp; npm audit signatures</code> или <code>npm view rig-commander@3.12.1 dist.attestations</code>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.12.1" target="_blank" rel="noopener">исходный тег v3.12.1</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Честное локальное хранение',
         'sec.g5.d': 'Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска.',
         'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
@@ -3122,7 +3123,7 @@ Command: npm test
         'cmp.r2.k': 'Установка и правки кода',
         'cmp.r2.c1': 'Ручной attach и переключение между панелями',
         'cmp.r2.c2': 'Встраивание SDK, API-ключи и облачный аккаунт',
-        'cmp.r2.c3': '<code>npx rig-commander@3.12.0 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.12.1 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
         'cmp.r3.k': 'Зависшие промпты и управление',
         'cmp.r3.c1': 'Ручной обход каждой панели в поисках зависания',
         'cmp.r3.c2': 'Только дашборды чтения (нет ответа в терминал)',
@@ -3465,7 +3466,7 @@ Command: npm test
 
     // Auto-Update Watcher on Website (checks npmjs.org/rig-commander/latest via CORS)
     let landingUpdateState = {
-      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.12.0').trim(),
+      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.12.1').trim(),
       latestVersion: '',
       updateAvailable: false,
       releaseUrl: 'https://www.npmjs.com/package/rig-commander'
