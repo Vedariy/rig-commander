@@ -589,6 +589,36 @@
     html[lang="en"] .operator-faq [lang="ru"], html[lang="ru"] .operator-faq [lang="en"] { display: none; }
 
     /* INTERACTIVE PRODUCT HERO SIMULATOR (SYNCHRONIZED WITH REAL /demo HEADER) */
+    .hero-preview-kicker {
+      max-width: 1160px;
+      margin: 0 auto 7px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      padding: 0 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+    .hero-preview-kicker-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      color: #7dd3fc;
+      letter-spacing: 0.35px;
+    }
+    .hero-preview-kicker-link {
+      color: #6ee7b7;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      font-weight: 700;
+    }
+    .hero-preview-kicker-link:hover {
+      color: #ecfdf5;
+    }
     .hero-simulator-wrapper {
       background: linear-gradient(180deg, rgba(56, 189, 248, 0.25) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
       padding: 1px;
@@ -1918,8 +1948,27 @@
         display: none;
       }
       .sim-m-secondary-row {
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
+        grid-template-columns: 1fr;
+        gap: 5px;
+      }
+      .sim-m-sec-btn.is-always {
+        border-style: dashed !important;
+        border-color: rgba(245, 158, 11, 0.52) !important;
+        color: #fde68a !important;
+        background: rgba(30, 41, 59, 0.44) !important;
+        min-height: 30px !important;
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+      }
+      .hero-preview-kicker {
+        font-size: 10px;
+        justify-content: center;
+        text-align: center;
+        margin-bottom: 5px;
+        gap: 3px 8px;
+      }
+      .sim-m-audit {
+        display: none !important;
       }
       .sim-mobile-hitl {
         padding: 10px 12px !important;
@@ -2056,13 +2105,17 @@
         <p lang="en">The simulator follows a terminal approval through a fleet handoff. To inspect your own sessions, launch the local deck and follow the <a href="/guide#quickstart">operator guide</a>.</p>
         <p lang="ru">Симулятор показывает подтверждение в терминале и передачу задачи. Для работы со своими сессиями запустите локальный пульт по <a href="/guide#quickstart">руководству оператора</a>.</p>
       </noscript>
+      <div class="hero-preview-kicker">
+        <span class="hero-preview-kicker-tag" data-i18n="sim.kickerMode">CASE 1: UNIVERSAL TMUX (STANDALONE · NO FRAMEWORK)</span>
+        <a href="/demo" class="hero-preview-kicker-link" data-i18n="sim.kickerFleetLink">Open /demo for coordinated Fleet Topology Graph (OpenRig) →</a>
+      </div>
       <div class="hero-simulator-wrapper">
         <div class="hero-simulator">
           <div class="sim-header">
             <div class="sim-brand-cluster">
               <span class="sim-brand-name">💠 RIGCOMMANDER</span>
               <span class="sim-demo-pill" data-i18n="sim.previewBadge">PREVIEW</span>
-              <span class="sim-preset-pill">tmux / Universal</span>
+              <span class="sim-preset-pill">Universal tmux</span>
             </div>
 
             <div class="sim-telemetry-cluster">
@@ -2088,7 +2141,7 @@
             <button type="button" class="sim-m-primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Allow once (y)</button>
             <div class="sim-m-secondary-row">
               <button type="button" class="sim-m-sec-btn is-cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">❌ Cancel (esc)</button>
-              <button type="button" class="sim-m-sec-btn" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">🔹 Always (dir)</button>
+              <button type="button" class="sim-m-sec-btn is-always" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">🔹 Always (dir)</button>
             </div>
             <div class="sim-m-audit" id="simMobileAudit">
               <span data-i18n="sim.mobileFootLeft">Interactive preview · same layout as /demo</span>
@@ -2119,9 +2172,8 @@
                   Context at 78% (threshold 75%): preemptive /compact ready before quality drops.
                 </div>
               </div>
-              <div class="sim-card" style="border-left: 2px solid rgba(56,189,248,0.45); padding:6px 9px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="selectSimNode(document.getElementById('simGeminiNode'), 'gemini-docs', 'Gemini CLI • OpenAPI & docs', '22% CTX • gemini-2.5-pro', 'active')">
-                <span style="color:#e2e8f0; font-weight:700;">● gemini-docs</span>
-                <span style="color:#94a3b8; font-size:10px;">22%</span>
+              <div style="font-size:10.5px; color:#94a3b8; padding:6px 4px 0; border-top:1px solid rgba(148,163,184,0.14);" data-i18n="sim.healthySummary">
+                + 2 running normally (see Panes)
               </div>
             </div>
 
@@ -2904,6 +2956,9 @@ $ npm test -- --grep "webhooks"
         'qr.copy': '📋 Copy URL',
         'hero.passportCta': '🛡️ Security Passport →',
         'hero.cliTitle': 'Click to copy safe tmux-only read-only CLI command',
+        'sim.kickerMode': 'CASE 1: UNIVERSAL TMUX (STANDALONE · NO FRAMEWORK)',
+        'sim.kickerFleetLink': 'Open /demo for coordinated Fleet Topology Graph (OpenRig) →',
+        'sim.healthySummary': '+ 2 running normally (see Panes)',
         'sim.previewBadge': 'PREVIEW',
         'sim.viewGraph': 'Panes',
         'sim.viewGantt': 'Gantt',
@@ -3098,6 +3153,9 @@ $ npm test -- --grep "webhooks"
         'qr.copy': '📋 Скопировать ссылку',
         'hero.passportCta': '🛡️ Паспорт безопасности →',
         'hero.cliTitle': 'Нажмите, чтобы скопировать команду безопасного read-only запуска только для tmux',
+        'sim.kickerMode': 'КЕЙС 1: UNIVERSAL TMUX (БЕЗ ФРЕЙМВОРКОВ)',
+        'sim.kickerFleetLink': 'В /demo — граф связанного флота (OpenRig) →',
+        'sim.healthySummary': '+ 2 работают штатно (см. Панели)',
         'sim.previewBadge': 'ПРИМЕР',
         'sim.viewGraph': 'Панели',
         'sim.viewGantt': 'Гант',

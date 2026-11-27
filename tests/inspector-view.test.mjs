@@ -499,9 +499,9 @@ test('v3.11.0 Wait Radar deduplication merges multiple alerts per agent into ONE
   assert.deepEqual(merged[0].secondaryChips, [{ label: '⚠️ CTX 79%', tone: 'amber' }]);
   assert.equal(merged[1].seatId, 'dev-coder3@core-platform');
 
-  // 2. Single-row unified topbar + default Universal preset active + unified Guardrails dialog title
+  // 2. Single-row unified topbar + default Fleet (OpenRig) preset active + unified Guardrails dialog title
   assert.match(indexHtml, /class="triage-strip unified-topbar"/);
-  assert.match(indexHtml, /id="btnPresetUniversal"[^>]*active|class="hud-segment-btn active" id="btnPresetUniversal"/);
+  assert.match(indexHtml, /id="btnPresetOpenRig"[^>]*active|class="hud-segment-btn active" id="btnPresetOpenRig"/);
   assert.match(indexHtml, /data-i18n="guard\.dialogTitle"/);
 });
 

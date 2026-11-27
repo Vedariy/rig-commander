@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.14.1" />
+  <meta name="app-version" content="3.14.2" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -38,9 +38,9 @@
         <span id="deckBrandTitle" class="topbar-brand-name">RIGCOMMANDER</span>
         <span class="live-dot" id="liveConnectionBadge">● LIVE 4s</span>
         <span class="read-only-badge" id="readOnlyModeBadge" hidden data-i18n="hud.readOnlyBadge" title="Read-only mode (--read-only): zero terminal writes or mutations">🔒 READ-ONLY</span>
-        <div class="hud-segmented-group demo-preset-switch" id="demoPresetSwitch" hidden role="group" aria-label="Demo fleet preset">
-          <button type="button" class="hud-segment-btn active" id="btnPresetUniversal" onclick="setDemoPreset('universal')" data-i18n="preset.universal">tmux / Universal</button>
-          <button type="button" class="hud-segment-btn" id="btnPresetOpenRig" onclick="setDemoPreset('openrig')" data-i18n="preset.openrig">OpenRig Pod</button>
+        <div class="hud-segmented-group demo-preset-switch" id="demoPresetSwitch" hidden role="group" aria-label="Demo fleet mode">
+          <button type="button" class="hud-segment-btn active" id="btnPresetOpenRig" onclick="setDemoPreset('openrig')" data-i18n="preset.openrig">Флот (OpenRig)</button>
+          <button type="button" class="hud-segment-btn" id="btnPresetUniversal" onclick="setDemoPreset('universal')" data-i18n="preset.universal">Обычный tmux</button>
         </div>
       </div>
       <span class="mobile-brand-chip" aria-label="RigCommander">💠 <b>RigCmd</b></span>
@@ -1304,6 +1304,11 @@
         SLICES_LANES.splice(0, SLICES_LANES.length);
         PAIR_ENVELOPES = {};
         selectedAgentId = 'codex-tests';
+        const layoutEl = document.getElementById('mainLayout');
+        if (layoutEl && localStorage.getItem('openrig_sidebar_left') === null) {
+          layoutEl.classList.remove('left-collapsed');
+          updateSidebarUi();
+        }
       } else {
         AGENTS.splice(0, AGENTS.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.agents)));
         EDGES.splice(0, EDGES.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.edges)));
@@ -1312,6 +1317,11 @@
         SLICES_LANES.splice(0, SLICES_LANES.length, ...JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.lanes)));
         PAIR_ENVELOPES = JSON.parse(JSON.stringify(OPENRIG_DEMO_BACKUP.envelopes));
         selectedAgentId = 'dev-check@core-platform';
+        const layoutEl = document.getElementById('mainLayout');
+        if (layoutEl && localStorage.getItem('openrig_sidebar_left') === null) {
+          layoutEl.classList.add('left-collapsed');
+          updateSidebarUi();
+        }
       }
 
       liveScreenCapture = getDemoTerminalCapture(selectedAgentId);
@@ -8035,7 +8045,9 @@
       if (!layout) return;
       const savedLeft = localStorage.getItem('openrig_sidebar_left');
       const savedRight = localStorage.getItem('openrig_sidebar_right');
-      if (savedLeft === '1') layout.classList.add('left-collapsed');
+      if (savedLeft === '1' || (savedLeft === null && IS_OFFLINE_DEMO && demoPreset !== 'universal')) {
+        layout.classList.add('left-collapsed');
+      }
       if (savedRight === '1') layout.classList.add('right-collapsed');
       updateSidebarUi();
     }
@@ -9355,13 +9367,18 @@
             return 'openrig';
           }
           if (p === 'universal' || p === 'tmux') return 'universal';
-          return 'universal';
-        } catch { return 'universal'; }
+          return 'openrig';
+        } catch { return 'openrig'; }
       })();
       if (IS_OFFLINE_DEMO && initialPreset === 'universal') {
         setDemoPreset('universal', true);
       } else {
         if (IS_OFFLINE_DEMO) {
+          demoPreset = 'openrig';
+          const layoutEl = document.getElementById('mainLayout');
+          if (layoutEl && localStorage.getItem('openrig_sidebar_left') === null) {
+            layoutEl.classList.add('left-collapsed');
+          }
           liveScreenCapture = getDemoTerminalCapture(selectedAgentId);
           lastScreenBySeat[selectedAgentId] = liveScreenCapture;
         }

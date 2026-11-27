@@ -10,6 +10,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.14.2] - 2026-11-27
+
+### Fixed & Improved
+- **Coordinated Fleet Topology as Default `/demo` Showcase (`openrig/index.html`, `openrig/assets/domain/i18n.js`, `openrig/assets/styles/deck.css`):**
+  - Switched the default `/demo` preset to `Fleet (OpenRig)` / `Флот (OpenRig)` with the left Radar collapsed on first visit so visitors immediately see the full multi-agent call-highway topology, bottleneck highlighting (`dev-check (QA)` HITL + `79%` CTX), dormant bench, quiet clusters, and cross-seat Git worktree overlap in one glance.
+  - Made the top-bar mode switcher (`Fleet (OpenRig)` | `Plain tmux` / `Флот (OpenRig)` | `Обычный tmux`) visibly highlighted and self-explanatory, keeping `?preset=universal` / `?preset=tmux` directly accessible.
+- **Explicit Universal TMUX Framing on Landing Hero (`landing/index.html`):**
+  - Added a clear mode kicker above the landing hero simulator (`CASE 1: UNIVERSAL TMUX` / `КЕЙС 1: UNIVERSAL TMUX (БЕЗ ФРЕЙМВОРКОВ)`) paired with a direct link to the coordinated Fleet Graph in `/demo`.
+  - Replaced the working `gemini-docs` card in the hero Wait Radar with `+ 2 running normally` and aligned the mobile `390×844` hero preview buttons 1-to-1 with `/demo` (vertical Cancel + dashed de-escalated `▸ Always (dir)`).
+
+---
+
 ## [3.14.1] - 2026-11-27
 
 ### Fixed & Improved

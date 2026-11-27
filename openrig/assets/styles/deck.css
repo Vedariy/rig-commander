@@ -6527,13 +6527,30 @@ body.demo-preset-universal .hud-cluster-scope {
   align-items: center;
   padding: 2px;
   gap: 2px;
-  border-color: rgba(56, 189, 248, 0.38);
+  background: rgba(10, 18, 36, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.48);
+  border-radius: 7px;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.08);
 }
 .demo-preset-switch[hidden] { display: none !important; }
 .demo-preset-switch .hud-segment-btn {
-  min-height: 24px;
-  padding: 2px 8px;
+  min-height: 26px;
+  padding: 2px 9px;
   font-size: 10.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  border-radius: 5px;
+}
+.demo-preset-switch .hud-segment-btn:hover:not(.active) {
+  color: #f8fafc;
+  background: rgba(56, 189, 248, 0.1);
+}
+.demo-preset-switch .hud-segment-btn.active {
+  background: rgba(0, 240, 255, 0.18) !important;
+  border: 1px solid rgba(56, 189, 248, 0.72) !important;
+  color: #ecfeff !important;
+  font-weight: 800;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.18);
 }
 
 /* Desktop & Laptop (> 768px): Enforce crisp 2-row chrome <= 104px total */
