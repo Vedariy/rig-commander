@@ -12,6 +12,7 @@ import { ModelMismatchDetector } from './detectors/model-mismatch.mjs';
 import { CeremonyAmplifierDetector } from './detectors/ceremony.mjs';
 import { ZombieSeatDetector } from './detectors/zombie-seat.mjs';
 import { GitConflictDetector } from './detectors/git-conflict.mjs';
+import { ControlPlaneHygieneDetector } from './detectors/control-plane-hygiene.mjs';
 
 export class FleetIntelligenceEngine {
   constructor(options = {}) {
@@ -23,7 +24,8 @@ export class FleetIntelligenceEngine {
       new ModelMismatchDetector(),
       new CeremonyAmplifierDetector(),
       new ZombieSeatDetector(),
-      new GitConflictDetector()
+      new GitConflictDetector(),
+      new ControlPlaneHygieneDetector()
     ];
     this.cachedReport = null;
     this.cachedReports = new Map();
@@ -65,6 +67,7 @@ export class FleetIntelligenceEngine {
       healthFindings: snapshot.healthFindings || [],
       parkedSeats: snapshot.parkedSeats || {},
       gitRadar: snapshot.gitRadar || null,
+      controlPlane: snapshot.controlPlane || null,
       rigId: snapshot.requestedRig || 'all'
     };
 

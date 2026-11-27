@@ -6,10 +6,14 @@ import { LocalFsVaultAdapter } from './vault-interface.mjs';
 import { ProcessProviderRegistry } from './provider-interface.mjs';
 import { OpenRigResilienceProvider } from './openrig-provider.mjs';
 import { RecoveryPolicyGate } from './policy-gate.mjs';
+import { HygienePolicyGate } from './hygiene-gate.mjs';
+import { ControlPlaneProbe, resolveDefaultOpenrigHome } from '../control-plane-probe.mjs';
 
 export class FleetResilienceService {
   constructor({ providers = [new OpenRigResilienceProvider()], vault, stateDir, store, now = Date.now,
-    actionAudit = new ActionAuditLog(), shiftHistory = new ShiftHistoryStore(), notify = () => {} } = {}) {
+    actionAudit = new ActionAuditLog(), shiftHistory = new ShiftHistoryStore(), notify = () => {},
+    openrigHome = resolveDefaultOpenrigHome(), rigBin, readOnly = false, execCommand,
+    controlPlaneProbe = new ControlPlaneProbe(), getHygieneState = null } = {}) {
     this.registry = new ProcessProviderRegistry(providers);
     this.store = store || new FleetManifestStore({ vault: vault || new LocalFsVaultAdapter({ baseDir: stateDir }), now });
     this.now = now;
@@ -17,6 +21,8 @@ export class FleetResilienceService {
     this.checkpoints = new Map();
     this.lastTick = null;
     this.lastWakeAdvisory = null;
+    this.lastHygieneSnapshot = null;
+    this.controlPlaneProbe = controlPlaneProbe;
     this.gate = new RecoveryPolicyGate({ registry: this.registry, now, getContext: provider => this.context(provider),
       record: async (operation, request, receipt) => {
         const success = ['created', 'restored'].includes(receipt.status);
@@ -33,6 +39,65 @@ export class FleetResilienceService {
           catch { receipt.historyWarning = 'history_write_failed'; }
         } else this.checkpoints.delete(JSON.stringify([request.providerId, request.target]));
       } });
+
+    const defaultProvider = this.registry.resolveDefault();
+    const resolvedRigBin = rigBin || defaultProvider?.rigBin || 'rig';
+    const defaultExec = execCommand || (defaultProvider?.execFileFn
+      ? (file, argv, opts) => defaultProvider.execFileFn(file, argv, { timeout: 15_000, maxBuffer: 5 * 1024 * 1024, ...opts, shell: false })
+      : undefined);
+
+    this.hygieneGate = new HygienePolicyGate({
+      now,
+      openrigHome,
+      rigBin: resolvedRigBin,
+      readOnly,
+      probe: this.controlPlaneProbe,
+      ...(defaultExec ? { execCommand: defaultExec } : {}),
+      getState: getHygieneState || (async ({ fresh } = {}) => {
+        if (!fresh && this.lastHygieneSnapshot) return this.lastHygieneSnapshot;
+        const provider = this.registry.resolveDefault();
+        let nodes = this.lastHygieneSnapshot?.nodes || [];
+        let activeQueue = this.lastHygieneSnapshot?.activeQueue || [];
+        if (fresh || !this.lastHygieneSnapshot) {
+          if (provider?.capabilities?.daemonProbe) {
+            try {
+              const seen = await provider.probe();
+              if (Array.isArray(seen?.liveNodes) && seen.liveNodes.length > 0) nodes = seen.liveNodes;
+            } catch {}
+          }
+          if (typeof this.hygieneGate?.execCommand === 'function') {
+            try {
+              const { stdout } = await this.hygieneGate.execCommand(resolvedRigBin, ['queue', 'list', '-A', '--json'], { shell: false, timeout: 10_000 });
+              const parsed = JSON.parse(stdout);
+              if (Array.isArray(parsed)) activeQueue = parsed;
+            } catch {}
+          }
+        }
+        return {
+          activeQueue,
+          nodes,
+          healthz: this.lastHygieneSnapshot?.controlPlane?.healthz || null,
+          controlPlane: fresh ? null : (this.lastHygieneSnapshot?.controlPlane || null)
+        };
+      }),
+      record: async (operation, request, receipt) => {
+        const success = receipt.status === 'cleaned';
+        const failed = receipt.status === 'failed';
+        const targetLabel = request.scope === 'rig' ? `rig:${request.targetRig}` : 'fleet';
+        const entry = actionAudit.record({
+          actionId: `resilience_${operation}`,
+          type: 'resilience',
+          seatId: targetLabel,
+          payload: `hygiene ${receipt.status} cleaned=${receipt.cleanedCount} remaining=${receipt.after?.remainingStaleQueueCount ?? 'unknown'}`,
+          httpStatus: failed ? 502 : 200,
+          ok: !failed,
+          nowMs: now()
+        });
+        entry.postconditionStatus = success ? 'verified' : receipt.status;
+        entry.postconditionDetail = receipt.status;
+        shiftHistory.recordOperatorAction(entry);
+      }
+    });
   }
 
   async context(provider, envelope = undefined) {
@@ -119,6 +184,13 @@ export class FleetResilienceService {
   }
 
   async observeTelemetry(snapshot) {
+    if (snapshot && typeof snapshot === 'object') {
+      this.lastHygieneSnapshot = {
+        nodes: Array.isArray(snapshot.nodes) ? snapshot.nodes : [],
+        activeQueue: Array.isArray(snapshot.activeQueue) ? snapshot.activeQueue : [],
+        controlPlane: snapshot.controlPlane || null
+      };
+    }
     if (snapshot.discoveryMode !== 'openrig' || snapshot.requestedRig !== 'all') return;
     const nodes = snapshot.nodes.map(n => ({ ...n, rigId: n.rigName || n.canonicalSessionName?.split('@')[1] }));
     const rigs = snapshot.availableRigs.filter(r => typeof r.name === 'string' && SAFE_RIG_NAME_RE.test(r.name))

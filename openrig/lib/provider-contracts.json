@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-11-27",
+  "providers": {
+    "openrig": {
+      "providerId": "openrig",
+      "binary": "rig",
+      "versionArgs": ["--version"],
+      "helpArgs": ["--help"],
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)",
+      "testedVersionRange": ">=0.7.0 <0.9.0",
+      "requiredHelpTokens": [
+        "start",
+        "status",
+        "crash-cart",
+        "parked",
+        "ps",
+        "queue",
+        "transcript"
+      ],
+      "contracts": {
+        "apiRigsItem": {
+          "required": ["id|rigId", "name|rigName"],
+          "types": {
+            "id|rigId": "string",
+            "name|rigName": "string"
+          }
+        },
+        "apiNode": {
+          "required": ["canonicalSessionName", "activityState"],
+          "types": {
+            "canonicalSessionName": "string",
+            "activityState": "object"
+          }
+        },
+        "queueItem": {
+          "required": ["qitemId|id", "state"],
+          "types": {
+            "qitemId|id": "string",
+            "state": "string"
+          }
+        }
+      }
+    },
+    "codex": {
+      "providerId": "codex",
+      "binary": "codex",
+      "versionArgs": ["--version"],
+      "helpArgs": ["--help"],
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)",
+      "testedVersionRange": ">=0.150.0 <0.200.0",
+      "requiredHelpTokens": [
+        "exec",
+        "review",
+        "resume",
+        "agents"
+      ],
+      "contracts": {
+        "jsonlSessionMeta": {
+          "required": ["type", "payload"],
+          "types": {
+            "type": "string",
+            "payload": "object"
+          }
+        },
+        "jsonlTokenCount": {
+          "required": [
+            "type",
+            "payload",
+            "payload.info",
+            "payload.info.last_token_usage|payload.info.total_token_usage"
+          ],
+          "types": {
+            "type": "string",
+            "payload": "object",
+            "payload.info": "object"
+          }
+        }
+      }
+    },
+    "claude-code": {
+      "providerId": "claude-code",
+      "binary": "claude",
+      "versionArgs": ["--version"],
+      "helpArgs": ["--help"],
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)",
+      "testedVersionRange": ">=1.0.0 <3.0.0",
+      "requiredHelpTokens": [
+        "--print",
+        "--output-format",
+        "--resume"
+      ],
+      "contracts": {
+        "jsonlAssistant": {
+          "required": ["type", "message", "message.model", "message.usage"],
+          "types": {
+            "type": "string",
+            "message": "object",
+            "message.model": "string",
+            "message.usage": "object"
+          }
+        },
+        "teamConfig": {
+          "required": ["members"],
+          "types": {
+            "members": "object|array"
+          }
+        },
+        "teamTask": {
+          "required": ["id|subject", "status"],
+          "types": {
+            "status": "string"
+          }
+        }
+      }
+    },
+    "agy": {
+      "providerId": "agy",
+      "binary": "agy",
+      "versionArgs": ["--version"],
+      "helpArgs": ["--help"],
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)",
+      "testedVersionRange": ">=1.4.0 <2.0.0",
+      "requiredHelpTokens": [
+        "--print",
+        "--output-format",
+        "--conversation",
+        "--model",
+        "agents"
+      ],
+      "contracts": {
+        "swarmMeta": {
+          "required": ["version", "swarm_id"],
+          "types": {
+            "version": "number",
+            "swarm_id": "string"
+          }
+        },
+        "swarmMembers": {
+          "required": ["members"],
+          "types": {
+            "members": "object"
+          }
+        },
+        "swarmMemberEntry": {
+          "required": ["phase|desired_state", "wake_mode"],
+          "types": {
+            "wake_mode": "string"
+          }
+        },
+        "swarmPlan": {
+          "required": ["goal|tasks|threads"]
+        },
+        "swarmBoardEntry": {
+          "required": ["seq", "agent", "text"],
+          "types": {
+            "seq": "number",
+            "agent": "string",
+            "text": "string"
+          }
+        }
+      }
+    }
+  }
+}
