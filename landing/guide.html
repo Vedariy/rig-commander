@@ -735,17 +735,15 @@
       <a href="#legend"><span data-lang-block="ru">3. Цвета, статусы и линии</span><span data-lang-block="en">3. Status & Highway Legend</span></a>
       <a href="#playbooks"><span data-lang-block="ru">4. Операционные плейбуки</span><span data-lang-block="en">4. Operational Playbooks</span></a>
       <a href="#guardrails"><span data-lang-block="ru">5. FinOps, Авто-тормоз и TG</span><span data-lang-block="en">5. FinOps, Guardrails & TG</span></a>
-      <a href="#auto-consent"><span data-lang-block="ru">5b. Политика авто-согласия</span><span data-lang-block="en">5b. Scoped Auto-Consent</span></a>
+      <a href="#auto-consent" style="padding-left:18px; font-size:12px;"><span data-lang-block="ru">↳ Политика авто-согласия</span><span data-lang-block="en">↳ Scoped Auto-Consent</span></a>
       <a href="#pwa"><span data-lang-block="ru">6. Live PWA (Mac + телефон)</span><span data-lang-block="en">6. Live PWA (Mac + Phone)</span></a>
       <a href="#shortcuts"><span data-lang-block="ru">7. Горячие клавиши и Share Card</span><span data-lang-block="en">7. Shortcuts & Share Card</span></a>
       <a href="#faq"><span data-lang-block="ru">8. FAQ и диагностика</span><span data-lang-block="en">8. FAQ & Troubleshooting</span></a>
       <a href="#openrig-playbook"><span data-lang-block="ru">9. OpenRig Playbook (L3)</span><span data-lang-block="en">9. OpenRig Playbook (L3)</span></a>
       <a href="#resilience"><span data-lang-block="ru">10. Восстановление флота</span><span data-lang-block="en">10. Fleet recovery</span></a>
       <div class="toc-sep"></div>
-      <a class="toc-mini-link" href="/passport"><span data-lang-block="ru">📐 Инженерный паспорт (C4)</span><span data-lang-block="en">📐 Architecture Passport (C4)</span></a>
       <a class="toc-mini-link" href="https://github.com/Vedariy/rig-commander/blob/main/openrig/docs/openrig-playbook.md" target="_blank" rel="noopener">🧭 OpenRig Playbook (MD)</a>
       <a class="toc-mini-link" href="https://github.com/Vedariy/rig-commander/blob/main/CHANGELOG.md" target="_blank" rel="noopener">📜 Changelog</a>
-      <a class="toc-mini-link" href="https://github.com/Vedariy/rig-commander/blob/main/docs/USER_GUIDE.md" target="_blank" rel="noopener">📄 Markdown (GitHub)</a>
     </aside>
 
     <main class="content">
@@ -800,9 +798,9 @@
                 <span data-lang-block="en">strictly live local <code class="inline">tmux</code> panes (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> are never touched. To exclude adjacent prod SSH panes, pass <code class="inline">--tmux-socket agents</code> (isolated <code class="inline">tmux -L agents</code> server) or <code class="inline">--tmux-session ai-,codex-*</code> (strict session allowlist: non-matching panes are never captured and return <code class="inline">403</code>). Drop <code class="inline">--no-session-logs</code> for CTX &amp; cost counters from CLI logs.</span>
               </li>
               <li>
-                <strong><span data-lang-block="ru">Живой SSE и AI-оценка:</span><span data-lang-block="en">Live SSE &amp; AI Evaluator:</span></strong>
-                <span data-lang-block="ru">секреты (API-ключи, Bearer/JWT, PEM, <code class="inline">.env</code>-секреты) автоматически маскируются на сервере до отправки живого экрана в браузер по SSE (<code class="inline">/api/capture/stream</code>; отключается флагом <code class="inline">--raw-capture</code>). Опциональная <code class="inline">🧠 AI-риск</code> выключена по умолчанию (0 исходящих вызовов API до явной настройки).</span>
-                <span data-lang-block="en">secrets (API keys, Bearer/JWT, PEM blocks, <code class="inline">.env</code> values) are masked server-side before live capture reaches the browser over SSE (<code class="inline">/api/capture/stream</code>; opt out with <code class="inline">--raw-capture</code>). Optional <code class="inline">🧠 AI Risk</code> stays OFF by default (0 outbound API calls until explicitly configured).</span>
+                <strong><span data-lang-block="ru">Живой SSE и редакция секретов:</span><span data-lang-block="en">Live SSE &amp; secret redaction:</span></strong>
+                <span data-lang-block="ru">API-ключи (префиксы провайдеров), Bearer/JWT, PEM-блоки и пары <code class="inline">.env</code> маскируются на сервере до отправки в браузер по SSE (<code class="inline">/api/capture/stream</code>; отключается <code class="inline">--raw-capture</code>). Граница честно: произвольные неструктурированные пароли без ключа в stdout не гарантируются — поэтому для чувствительных панелей используйте <code class="inline">--tmux-socket</code> / <code class="inline">--tmux-session</code> (<a href="https://github.com/Vedariy/rig-commander/tree/v{{APP_VERSION}}/tests" target="_blank" rel="noopener">автотесты v{{APP_VERSION}}</a>). Опциональная <code class="inline">🧠 AI-риск</code> ВЫКЛ по умолчанию (0 исходящих вызовов).</span>
+                <span data-lang-block="en">known API key prefixes, Bearer/JWT tokens, PEM blocks, and <code class="inline">.env</code> key-value pairs are masked server-side before live SSE reaches the browser (<code class="inline">/api/capture/stream</code>; opt out via <code class="inline">--raw-capture</code>). Honest limit: arbitrary unstructured passwords printed raw to stdout are not guaranteed — isolate sensitive panes with <code class="inline">--tmux-socket</code> / <code class="inline">--tmux-session</code> (<a href="https://github.com/Vedariy/rig-commander/tree/v{{APP_VERSION}}/tests" target="_blank" rel="noopener">v{{APP_VERSION}} test suite</a>). Optional <code class="inline">🧠 AI Risk</code> stays OFF by default (0 outbound API calls).</span>
               </li>
               <li>
                 <strong><span data-lang-block="ru">Пишет:</span><span data-lang-block="en">Writes:</span></strong>

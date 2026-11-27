@@ -1286,7 +1286,11 @@ test('v3.10 UX: Auto-Consent modal polish — seatsTitle key, Allowed vs Hard-Ve
     assert.match(offHtml, /class="ac-policy-list ac-policy-list-scroll"/);
     assert.match(offHtml, /class="ac-count-label"/);
     assert.doesNotMatch(offHtml, /data-auto-consent-action="grant-session"/, 'v3.11.0: per-row +60m Session buttons hidden when global Auto-Consent is OFF');
-    assert.match(offHtml, /<footer class="ac-modal-footer">[\s\S]*class="ac-footer-emergency"><\/div>[\s\S]*class="ac-footer-actions">[\s\S]*data-auto-consent-action="save-policy"/);
+    assert.match(offHtml, /class="ac-effective-bar"/, 'v3.14.1: explicit Effective-vs-Draft bar must render when master is OFF');
+    assert.match(offHtml, /class="ac-empty-log-disclosure"/, 'v3.14.1: empty sessions & decisions log must collapse into 1 compact disclosure');
+    assert.match(offHtml, /data-auto-consent-action="close-modal"/, 'v3.14.1: footer must include explicit Cancel button');
+    assert.ok(offHtml.includes(escapeHtml(tDeck(lang, 'autoConsent.saveDraftBtn'))), 'v3.14.1: Save button must clearly state Save Draft when master is OFF');
+    assert.match(offHtml, /<footer class="ac-modal-footer">[\s\S]*class="ac-footer-emergency"><\/div>[\s\S]*class="ac-footer-actions">[\s\S]*data-auto-consent-action="close-modal"[\s\S]*data-auto-consent-action="save-policy"/);
     assert.doesNotMatch(offHtml, /data-auto-consent-action="pause-all"/, 'PAUSE must be hidden when global Auto-Consent is OFF');
     assert.doesNotMatch(offHtml, /class="ac-btn-row"/, 'Old inline button row must be replaced by modal footer');
     assert.match(offHtml, /id="acModeSelect" class="rig-select ac-mode-select is-dry"/);

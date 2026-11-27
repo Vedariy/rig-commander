@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.14.0" />
+  <meta name="app-version" content="3.14.1" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -12,7 +12,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
-  <title>RigCommander // Command Deck v3.13</title>
+  <title>RigCommander // Command Deck v3.14</title>
   <meta name="description" content="Interactive Neural Command Deck for autonomous AI coding fleets (Claude Code, Codex CLI, tmux & OpenRig). Live Graph ⇄ Task Gantt, 1-click HITL, SUB vs PAYG FinOps & Share Card PNG export." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="RigCommander" />
@@ -74,7 +74,7 @@
         <span data-i18n="guard.btn">Авто-тормоз / TG</span>
       </button>
       <button type="button" class="triage-refresh-btn ac-top-is-off" id="btnAutoConsentTop" onclick="openGuardrailsModal('auto-consent')" title="Scoped Auto-Consent Policy (Dry-Run / Armed)">⚡ <span class="ac-top-lbl-desktop" data-i18n="autoConsent.topBtn">Авто-согласие</span><span class="ac-top-lbl-mobile" data-i18n="autoConsent.mobileShort">Авто</span><span id="btnAutoConsentStateBadge" class="ac-top-badge is-off">ВЫКЛ</span></button>
-      <button type="button" class="triage-refresh-btn fleet-pause-btn" id="btnFleetPause" aria-pressed="false" onclick="toggleFleetPause()" title="Пауза ввода (Shift+Space): замораживает авто-согласие и блокирует отправку команд">⏸ <span id="btnFleetPauseLabel" data-i18n="hud.pauseFleet">Пауза ввода</span><span class="fleet-pause-mobile-lbl" data-i18n="hud.pauseFleetMobile">Стоп</span></button>
+      <button type="button" class="triage-refresh-btn fleet-pause-btn" id="btnFleetPause" aria-pressed="false" onclick="toggleFleetPause()" title="Пауза ввода (Shift+Space): замораживает авто-согласие и блокирует отправку команд">⏸ <span id="btnFleetPauseLabel" data-i18n="hud.pauseFleet">Пауза ввода</span><span class="fleet-pause-mobile-lbl" data-i18n="hud.pauseFleetMobile">Пауза</span></button>
       <button class="triage-refresh-btn" id="btnShiftDigest" onclick="openShiftDigestModal()" style="border-color:rgba(251,191,36,0.45); color:#fde68a;" title="Shift Catch-Up / Overnight Digest">
         <svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span data-i18n="digest.btn">Смена</span><span id="btnShiftDigestBadge" class="digest-btn-badge" style="display:none;">0</span>
@@ -1210,8 +1210,7 @@
             assignedWorkCount: 1,
             callsIn: 0,
             callsOut: 0,
-            reworkBadge: en ? 'HITL waiting' : 'Ожидание HITL',
-            reworkClass: 'chip-rework-warn',
+            reworkBadge: null,
             cwd: '~/projects/payments-api',
             tmuxAttachCommand: 'tmux attach -t codex-tests',
             port: '—',
@@ -1252,7 +1251,7 @@
           {
             id: 'claude-refactor',
             shortName: 'claude-refactor',
-            role: en ? 'Claude Code • Storage Refactor' : 'Claude Code • Рефакторинг хранилища',
+            role: en ? 'Claude Code • Storage Refactor' : 'Claude Code • Рефакторинг',
             icon: '🟠',
             harness: 'claude-code',
             model: 'claude-opus-4',
@@ -1584,6 +1583,7 @@
           sendTerminalKey(seatId, '1 Enter', statusElId || 'cmdSendStatus', 'answer_prompt_option', controlEl);
         },
         onOpenTab: () => openGuardrailsModal('auto-consent'),
+        onCloseModal: () => closeGuardrailsModal(),
         onGuardrailsRerender: () => {
           const gm = document.getElementById('guardrailsModal');
           if (gm && gm.classList.contains('open') && activeGuardrailsTab === 'auto-consent') {
@@ -2376,6 +2376,7 @@
             if (isCompactAlert) {
               const isP0 = w.prio === 0;
               const tagText = isP0 ? 'P0' : w.slice;
+              const reasonText = isP0 ? String(w.state || '').replace(/^P0\s*[·•:\-]\s*/i, '') : w.state;
               const compactSummary = isP0
                 ? (deckLang === 'en' ? 'Waiting on terminal confirmation — answer in Inspector.' : 'Ждёт подтверждения в терминале — ответьте в инспекторе.')
                 : w.summary;
@@ -2389,7 +2390,7 @@
             <span class="wait-prio-tag ${isP0 ? 'is-p0' : 'is-p1'}">${escapeHtml(tagText)}</span>
             <strong class="wait-seat-name">${w.from}</strong>
             ${secondaryChipsHtml}
-            <span class="wait-reason-chip">${w.state}</span>
+            <span class="wait-reason-chip">${reasonText}</span>
           </div>
           <div class="wait-compact-summary">${compactSummary}</div>
           ${quickActionBtn}

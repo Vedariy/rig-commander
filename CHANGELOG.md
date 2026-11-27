@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.14.1] - 2026-11-27
+
+### Fixed & Improved
+- **Unified Terminal Disclosure & Distinct HITL Hierarchy (`openrig/assets/ui/inspector-view.js`, `openrig/assets/styles/deck.css`, `openrig/index.html`, `openrig/assets/domain/i18n.js`):**
+  - Merged duplicate `80 lines TMUX` and `Raw TMUX & manual keys` triggers into one unified `Terminal (80 lines) & manual keys` disclosure hosting inline capture, manual keys, and full 80-line modal expand — freeing ~100px vertically so `⚡ Auto-Consent` stays above the fold on `1280×720` laptops.
+  - Separated Option 2 (`▸ Always (dir)`) into a compact lower-weight inline row alongside its high-contrast scope note so safe 1-time Allow, Cancel, and persistent Always rules have unmistakable visual hierarchy.
+  - Removed visual echo on `/demo` (double `P0` prefix in Triage card, duplicate `HITL waiting` sub-badge on `codex-tests`, truncated `claude-refactor` role), lifted dark-mode contrast on secondary metadata, separated `⏸ Hold Sends` / `⏸ Пауза ввода` into a cool slate control (zero amber collision with FinOps telemetry), and aligned mobile hold label (`Пауза` / `Hold`).
+- **Auto-Consent Effective-vs-Draft Clarity & Compact Empty Logs (`openrig/assets/ui/auto-consent-view.js`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`):**
+  - Added an explicit 1-line `Active now: OFF (0 automated sends) · Settings below are a staged draft` banner, styled draft switches with dashed muted tracks and explicit `(draft · inactive while OFF)` wording, collapsed empty ephemeral session grants & audit logs into one compact disclosure (`0 temporary sessions · 0 audit decisions`), and added an explicit `Cancel` button beside `Save Draft (Keep OFF)`.
+- **Landing, Guide & Passport Trust Polish (`landing/index.html`, `landing/guide.html`, `landing/passport.html`):**
+  - Linked `--tmux-socket` isolation directly under the hero CLI command, tightened mobile `390×844` hero preview spacing so all buttons fit cleanly above the fold, and replaced Russian copy calques (`по сиденьям` → `по агентам и сессиям`, `автономные рои` → `4–8 параллельных агентов в tmux`).
+  - Removed duplicate sidebar links in `/guide`, documented honest regex secret-redaction boundaries with a direct link to the public test suite, made `379/379 PASS` in `/passport` a direct link to GitHub Actions CI, and renamed the right trust-boundary column to `Mode / Verification`.
+
+---
+
 ## [3.14.0] - 2026-11-27
 
 ### Added

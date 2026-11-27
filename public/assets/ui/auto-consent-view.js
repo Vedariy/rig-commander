@@ -578,6 +578,7 @@ export function renderAutoConsentTabHtml({
       `${demoTrack ? `<div class="ac-demo-notice">${escapeHtml(td('autoConsent.demoTrackBanner'))}</div>` : ''}` +
       `${cfg.masterPaused ? `<div class="ac-paused-banner"><span>${escapeHtml(td('autoConsent.pausedBanner'))}</span><button type="button" class="action-pill key-proceed" data-auto-consent-action="resume-all"${disabledAttr}>${escapeHtml(td('autoConsent.resumeAllBtn'))}</button></div>` : ''}` +
       `<div class="ac-subtitle-box">${escapeHtml(td('autoConsent.subtitle'))}</div>` +
+      `${(!cfg.enabled && !cfg.masterPaused) ? `<div class="ac-effective-bar" role="status">${escapeHtml(td('autoConsent.effectiveOffBanner'))}</div>` : ''}` +
 
       `<div class="ac-top-grid">` +
         `<section class="ac-card ac-master-card">` +
@@ -669,15 +670,22 @@ export function renderAutoConsentTabHtml({
         `</section>` +
       `</div>` +
 
-      `<section class="ac-card">` +
-        `<div class="ac-section-title">⏱️ ${escapeHtml(td('autoConsent.sessionsTitle'))} (${activeGrants.length})</div>` +
-        `<div class="ac-policy-list">${grantsHtml}</div>` +
-      `</section>` +
-
-      `<section class="ac-card">` +
-        `<div class="ac-section-title">📜 ${escapeHtml(td('autoConsent.recentRunsTitle'))}</div>` +
-        `<div class="ac-runs-list">${runsHtml}</div>` +
-      `</section>` +
+      `${(activeGrants.length === 0 && recentRuns.length === 0)
+        ? `<details class="ac-empty-log-disclosure">` +
+            `<summary class="ac-empty-log-summary">⏱️ ${escapeHtml(td('autoConsent.emptyActivitySummary'))}</summary>` +
+            `<div class="ac-empty-log-body">` +
+              `<div class="ac-empty-note">${escapeHtml(td('autoConsent.sessionsTitle'))}: ${escapeHtml(td('autoConsent.noSessions'))}</div>` +
+              `<div class="ac-empty-note">${escapeHtml(td('autoConsent.recentRunsTitle'))}: ${escapeHtml(td('autoConsent.noRuns'))}</div>` +
+            `</div>` +
+          `</details>`
+        : `<section class="ac-card">` +
+            `<div class="ac-section-title">⏱️ ${escapeHtml(td('autoConsent.sessionsTitle'))} (${activeGrants.length})</div>` +
+            `<div class="ac-policy-list">${grantsHtml}</div>` +
+          `</section>` +
+          `<section class="ac-card">` +
+            `<div class="ac-section-title">📜 ${escapeHtml(td('autoConsent.recentRunsTitle'))}</div>` +
+            `<div class="ac-runs-list">${runsHtml}</div>` +
+          `</section>`}` +
     `</div>` +
 
     `<footer class="ac-modal-footer">` +
@@ -689,7 +697,8 @@ export function renderAutoConsentTabHtml({
             : '')}` +
       `</div>` +
       `<div class="ac-footer-actions">` +
-        `<button type="button" class="action-pill key-proceed ac-save-btn" data-auto-consent-action="save-policy"${disabledAttr}>${escapeHtml(td('autoConsent.saveBtn'))}</button>` +
+        `<button type="button" class="action-pill ac-cancel-btn" data-auto-consent-action="close-modal">${escapeHtml(td('autoConsent.cancelBtn'))}</button>` +
+        `<button type="button" class="action-pill key-proceed ac-save-btn${cfg.enabled ? '' : ' is-draft-save'}" data-auto-consent-action="save-policy"${disabledAttr}>${escapeHtml(td(cfg.enabled ? 'autoConsent.saveBtn' : 'autoConsent.saveDraftBtn'))}</button>` +
       `</div>` +
     `</footer>` +
   `</div>`;
@@ -946,6 +955,7 @@ export function createAutoConsentController({
   postJson,
   sendAllowOnce = () => {},
   onOpenTab = () => {},
+  onCloseModal = () => {},
   onGuardrailsRerender = () => {},
   onDemoScreenUpdate = () => {},
   onToastNotice = () => {},
@@ -1805,6 +1815,10 @@ export function createAutoConsentController({
     const action = el.dataset.autoConsentAction;
     if (action === 'open-tab') {
       onOpenTab();
+      return;
+    }
+    if (action === 'close-modal') {
+      onCloseModal();
       return;
     }
     if (action === 'pause-all') {

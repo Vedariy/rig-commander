@@ -8446,5 +8446,193 @@ body.fleet-no-edges #nodesLayer .node-meta-row:empty {
   display: none;
 }
 
+/* ==========================================================================
+   7. v3.14.1 Subtraction Polish: Distinct Pause Color, Compact Always Row,
+      Unified Terminal Disclosure, Lifted Contrast & Effective-vs-Draft Modal
+   ========================================================================== */
+
+/* Distinct cool steel-slate idle Pause button (zero color collision with amber FinOps pill) */
+.fleet-pause-btn {
+  border-color: rgba(148, 163, 184, 0.46) !important;
+  background: rgba(30, 41, 59, 0.78) !important;
+  color: #f1f5f9 !important;
+}
+.fleet-pause-btn:hover {
+  border-color: rgba(244, 63, 94, 0.65) !important;
+  background: rgba(136, 19, 55, 0.28) !important;
+  color: #ffe4e6 !important;
+}
+.fleet-pause-btn.is-paused {
+  border-color: #ef4444 !important;
+  background: rgba(153, 27, 27, 0.48) !important;
+  color: #fff1f2 !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+}
+
+/* Geometrically distinct HITL hierarchy: 44px Primary -> 34px Cancel -> Compact Dashed Always link */
+#inspectorBoxCard.inspector-box {
+  gap: 6px !important;
+}
+.diag-inline-hitl .hitl-target-scope {
+  color: #cbd5e1 !important;
+}
+.diag-inline-hitl .hitl-btn-primary {
+  min-height: 42px !important;
+  padding: 8px 11px !important;
+}
+.hitl-secondary-row {
+  margin-top: 7px !important;
+}
+.diag-inline-hitl .hitl-btn-secondary {
+  min-height: 34px !important;
+  padding: 5px 10px !important;
+}
+.hitl-always-row {
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.24);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+.diag-inline-hitl .hitl-btn-always {
+  width: auto !important;
+  margin-top: 0 !important;
+  min-height: 28px !important;
+  padding: 3px 9px !important;
+  font-size: 10.5px !important;
+  color: #fde68a !important;
+  border: 1px dashed rgba(245, 158, 11, 0.56) !important;
+  background: rgba(30, 41, 59, 0.44) !important;
+  flex-shrink: 0;
+}
+.diag-inline-hitl .hitl-btn-always::before {
+  display: none !important;
+}
+.hitl-always-row .hitl-always-note {
+  width: auto !important;
+  flex: 1 1 150px;
+  margin-top: 0 !important;
+  font-size: 10px !important;
+  color: #cbd5e1 !important;
+  line-height: 1.3;
+}
+.diag-utility-row.is-eval-only {
+  justify-content: flex-end !important;
+  padding-top: 3px;
+  margin-top: 0;
+  border-top: none;
+}
+.diag-utility-row.is-eval-only .diag-ai-summary {
+  min-height: 24px !important;
+  padding: 2px 18px 2px 4px !important;
+  color: #cbd5e1 !important;
+}
+.insp-raw-tmux-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.insp-raw-tmux-summary {
+  color: #cbd5e1 !important;
+}
+.insp-raw-tmux-summary:hover {
+  color: #f8fafc !important;
+  border-color: rgba(56, 189, 248, 0.36) !important;
+}
+
+/* Lifted dark-mode contrast on secondary metadata */
+.wait-healthy-summary {
+  color: #94a3b8 !important;
+}
+.node-meta-tokens,
+.spec-harness,
+.spec-model {
+  color: #cbd5e1 !important;
+}
+.node-role {
+  color: #94a3b8 !important;
+}
+
+/* Auto-Consent Modal: Effective-vs-Draft bar, collapsed empty log disclosure, Cancel + Draft Save */
+.ac-effective-bar {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-left: 3px solid #94a3b8;
+  border-radius: 6px;
+  padding: 6px 10px;
+  line-height: 1.35;
+}
+.ac-tab-wrap.is-master-off .ac-switch:not(.is-master) .ac-switch-input:checked + .ac-switch-track,
+.ac-tab-wrap.is-master-off .ac-switch:not(.is-master).is-on .ac-switch-track {
+  background: rgba(51, 65, 85, 0.45) !important;
+  border: 1px dashed rgba(148, 163, 184, 0.62) !important;
+}
+.ac-tab-wrap.is-master-off .ac-switch:not(.is-master) .ac-switch-input:checked + .ac-switch-track .ac-switch-thumb,
+.ac-tab-wrap.is-master-off .ac-switch:not(.is-master).is-on .ac-switch-thumb {
+  background: #94a3b8 !important;
+}
+.ac-empty-log-disclosure {
+  background: rgba(10, 18, 34, 0.56);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 7px;
+  padding: 6px 10px;
+}
+.ac-empty-log-summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  user-select: none;
+}
+.ac-empty-log-summary:hover {
+  color: #e2e8f0;
+}
+.ac-empty-log-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.18);
+}
+.ac-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ac-cancel-btn {
+  background: transparent !important;
+  border-color: rgba(148, 163, 184, 0.34) !important;
+  color: #cbd5e1 !important;
+  min-height: 34px !important;
+  padding: 6px 13px !important;
+}
+.ac-cancel-btn:hover {
+  border-color: rgba(148, 163, 184, 0.62) !important;
+  color: #f8fafc !important;
+  background: rgba(30, 41, 59, 0.6) !important;
+}
+.ac-save-btn.is-draft-save {
+  background: rgba(30, 41, 59, 0.85) !important;
+  border-color: rgba(148, 163, 184, 0.52) !important;
+  color: #f1f5f9 !important;
+}
+.ac-save-btn.is-draft-save:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.92) !important;
+  border-color: rgba(56, 189, 248, 0.65) !important;
+  color: #ffffff !important;
+}
+
+
 
 

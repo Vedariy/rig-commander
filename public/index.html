@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="3.14.0">
+  <meta name="app-version" content="3.14.1">
   <meta name="theme-color" content="#030712">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,7 +31,7 @@
       "description": "Local command deck for observing AI coding fleets and reviewing terminal actions.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "macOS, Linux",
-      "softwareVersion": "3.14.0",
+      "softwareVersion": "3.14.1",
       "license": "https://opensource.org/licenses/MIT",
       "isAccessibleForFree": true,
       "offers": {
@@ -55,7 +55,7 @@
       "@type": "HowTo",
       "@id": "https://rig-commander.vercel.app/#quickstart",
       "name": "Start the local RigCommander deck",
-      "version": "3.14.0",
+      "version": "3.14.1",
       "inLanguage": "en",
       "step": [
         {
@@ -68,7 +68,7 @@
           "@type": "HowToStep",
           "position": 2,
           "name": "Start RigCommander",
-          "text": "Run npx rig-commander@3.14.0 --read-only in a terminal."
+          "text": "Run npx rig-commander@3.14.1 --read-only in a terminal."
         },
         {
           "@type": "HowToStep",
@@ -88,7 +88,7 @@
           "name": "How do I start the live deck?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Run npx rig-commander@3.14.0 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
+            "text": "Run npx rig-commander@3.14.1 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440."
           }
         },
         {
@@ -157,14 +157,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.14.0 --read-only">
+  <meta property="og:description" content="Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI & tmux agents — works with or without OpenRig. Try safely: npx rig-commander@3.14.1 --read-only">
   <meta property="og:url" content="https://rig-commander.vercel.app/">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Mission Control for Autonomous AI Coding Fleets">
-  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.14.0 --read-only">
+  <meta name="twitter:description" content="Local-first, 0-dep MIT command deck for Claude Code, Codex CLI, Gemini CLI & tmux agents — no cloud account. Try safely: npx rig-commander@3.14.1 --read-only">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
 
   <style>
@@ -1847,40 +1847,41 @@
         display: inline;
       }
       .hero {
-        padding-top: 18px;
-        padding-bottom: 36px;
+        padding-top: 10px;
+        padding-bottom: 32px;
       }
       .hero-eyebrow {
         max-width: 100%;
         font-size: 10px;
         padding: 5px 12px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
       .hero-title {
-        font-size: clamp(26px, 7.6vw, 38px);
-        line-height: 1.1;
+        font-size: clamp(24px, 7.2vw, 34px);
+        line-height: 1.08;
       }
       .hero-subtitle {
-        font-size: 14px;
-        line-height: 1.48;
-        margin-bottom: 14px;
+        font-size: 13.5px;
+        line-height: 1.42;
+        margin-bottom: 10px;
       }
       .hero-actions {
-        margin-bottom: 14px;
-        gap: 8px;
+        margin-bottom: 10px;
+        gap: 6px;
       }
       .hero-primary-paths {
         flex-direction: column;
         align-items: stretch;
-        gap: 10px;
+        gap: 8px;
       }
       .btn-demo-hero {
         width: 100%;
         justify-content: center;
         flex-wrap: wrap;
-        row-gap: 6px;
-        padding: 12px 16px;
-        font-size: 14.5px;
+        row-gap: 4px;
+        padding: 10px 14px;
+        min-height: 42px;
+        font-size: 14px;
         text-align: center;
       }
       .btn-demo-label-full { display: none; }
@@ -1892,29 +1893,52 @@
         width: 100%;
         flex-direction: column;
         align-items: stretch;
-        gap: 8px;
-        font-size: 12px;
-        padding: 10px 12px;
-        min-height: 44px;
+        gap: 6px;
+        font-size: 11.5px;
+        padding: 8px 10px;
+        min-height: 40px;
       }
       .cli-copy-box .cli-cmd-text {
         white-space: pre-wrap;
         word-break: break-word;
         overflow-x: visible;
-        line-height: 1.45;
+        line-height: 1.38;
       }
       .cli-copy-box .cli-copy-pill {
         margin-left: 0;
         width: 100%;
         text-align: center;
-        padding: 7px 10px;
+        padding: 5px 10px;
+      }
+      .hero-cli-note {
+        font-size: 10.5px;
+        line-height: 1.35;
       }
       .cli-copy-box .cli-prompt {
         display: none;
       }
       .sim-m-secondary-row {
-        grid-template-columns: 1fr;
-        gap: 8px;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .sim-mobile-hitl {
+        padding: 10px 12px !important;
+        gap: 7px !important;
+      }
+      .sim-m-term {
+        padding: 7px 8px !important;
+        font-size: 10.5px !important;
+        line-height: 1.35 !important;
+      }
+      .sim-m-primary {
+        min-height: 38px !important;
+        padding: 7px 10px !important;
+        font-size: 11.5px !important;
+      }
+      .sim-m-sec-btn {
+        min-height: 34px !important;
+        padding: 5px 8px !important;
+        font-size: 10.5px !important;
       }
       .sim-header {
         padding: 8px 12px;
@@ -1963,7 +1987,7 @@
     <nav class="navbar" id="primaryNavbar">
       <a href="#" class="nav-brand">
         <span>💠 RIGCOMMANDER</span>
-        <span class="nav-brand-badge" id="navVersionBadge">v3.14.0</span>
+        <span class="nav-brand-badge" id="navVersionBadge">v3.14.1</span>
       </a>
       <ul class="nav-links" id="primaryNavLinks">
         <li><a href="#architecture" data-i18n="nav.arch" onclick="closeMobileNav()">Architecture</a></li>
@@ -2015,15 +2039,15 @@
             <span>→</span>
           </a>
           <div class="hero-cli-group">
-            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.14.0 --read-only --no-session-logs')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.14.0 --read-only --no-session-logs');}" title="Click to copy safe tmux-only read-only CLI command" data-i18n-title="hero.cliTitle">
+            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@3.14.1 --read-only --no-session-logs')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@3.14.1 --read-only --no-session-logs');}" title="Click to copy safe tmux-only read-only CLI command" data-i18n-title="hero.cliTitle">
               <span class="cli-prompt">$</span>
-              <span class="cli-cmd-text">npx rig-commander@3.14.0 <span class="nowrap-flag">--read-only</span> <span class="nowrap-flag">--no-session-logs</span></span>
+              <span class="cli-cmd-text">npx rig-commander@3.14.1 <span class="nowrap-flag">--read-only</span> <span class="nowrap-flag">--no-session-logs</span></span>
               <span class="cli-copy-pill" data-i18n="hero.copyBtn">Copy</span>
             </div>
           </div>
         </div>
         <div class="hero-cli-note" data-i18n-html="hero.cliNote">
-          0-setup browser demo · tmux-only zero-write inspection (drop <code>--no-session-logs</code> for CTX &amp; cost) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>
+          0-setup demo · tmux-only zero-write inspection (drop <code>--no-session-logs</code> for $ &amp; CTX) · <a href="/guide#quickstart" style="color:#7dd3fc;">--tmux-socket isolation →</a> · <a href="/passport" style="color:#7dd3fc;">Passport →</a>
         </div>
       </div>
 
@@ -2256,7 +2280,7 @@ $ npm test -- --grep "webhooks"
           <div class="sec-guarantee-card">
             <span class="sec-guarantee-tag">SIGSTORE PROVENANCE</span>
             <div class="sec-guarantee-title" data-i18n="sec.g7.t">Verified Supply Chain &amp; 30-Second Audit</div>
-            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.0" target="_blank" rel="noopener">v3.14.0 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
+            <div class="sec-guarantee-desc" data-i18n-html="sec.g7.d">0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.1" target="_blank" rel="noopener">v3.14.1 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</div>
           </div>
         </div>
       </div>
@@ -2265,10 +2289,10 @@ $ npm test -- --grep "webhooks"
     <!-- THE PAIN STRIP / WHY NOW -->
     <section class="pain-section" id="comparison">
       <div class="container">
-        <div class="section-eyebrow" data-i18n="pain.eyebrow">THE 10-AGENT TIPPING POINT</div>
-        <h2 class="section-title" data-i18n="pain.title">Why Autonomous Swarms Break Down</h2>
+        <div class="section-eyebrow" data-i18n="pain.eyebrow">4–8 PARALLEL AGENTS IN TMUX</div>
+        <h2 class="section-title" data-i18n="pain.title">Why Multi-Agent Terminal Sessions Break Down</h2>
         <p class="section-desc" data-i18n="pain.desc">
-          One AI agent in your editor feels like magic. Ten concurrent agents across separate worktrees create an unobservable, expensive black box.
+          One AI agent in your editor feels effortless. Once 4–8 parallel sessions run across separate tmux panes and worktrees, blocked prompts, context drift, and spend disappear into a black box.
         </p>
 
         <div class="comparison-grid">
@@ -2350,7 +2374,7 @@ $ npm test -- --grep "webhooks"
                   <td data-i18n="cmp.r2.k">Setup &amp; code changes</td>
                   <td data-i18n="cmp.r2.c1">Manual attach &amp; pane-by-pane switching</td>
                   <td data-i18n="cmp.r2.c2">SDK instrumentation, API keys &amp; cloud account</td>
-                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.14.0 --read-only</code> (0 code changes, 0 npm deps)</td>
+                  <td class="col-rc" data-i18n-html="cmp.r2.c3"><code>npx rig-commander@3.14.1 --read-only</code> (0 code changes, 0 npm deps)</td>
                 </tr>
                 <tr>
                   <td data-i18n="cmp.r3.k">Blocked prompts &amp; control</td>
@@ -2607,7 +2631,7 @@ $ npm test -- --grep "webhooks"
             <p class="step-desc" data-i18n="arch.s1.desc">
               Loopback-only Node.js BFF (127.0.0.1) auto-discovers OpenRig fleets OR plain Claude Code / Codex CLI / tmux sessions with zero npm dependencies.
             </p>
-            <div class="step-code">$ npx rig-commander@3.14.0 --read-only</div>
+            <div class="step-code">$ npx rig-commander@3.14.1 --read-only</div>
           </div>
 
           <div class="step-card">
@@ -2669,8 +2693,8 @@ $ npm test -- --grep "webhooks"
       <h2 class="section-title"><span lang="en">Operator FAQ</span><span lang="ru">Вопросы оператора</span></h2>
       <details>
         <summary><span lang="en">How do I start the live deck?</span><span lang="ru">Как запустить живой пульт?</span></summary>
-        <p lang="en">Run npx rig-commander@3.14.0 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
-        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.14.0 --read-only и откройте http://127.0.0.1:7440.</p>
+        <p lang="en">Run npx rig-commander@3.14.1 --read-only with Node.js 18 or later, then open http://127.0.0.1:7440.</p>
+        <p lang="ru">С Node.js версии 18 или новее выполните npx rig-commander@3.14.1 --read-only и откройте http://127.0.0.1:7440.</p>
       </details>
       <details>
         <summary><span lang="en">Can I try it without running agents?</span><span lang="ru">Можно попробовать без запущенных агентов?</span></summary>
@@ -2788,7 +2812,7 @@ $ npm test -- --grep "webhooks"
         <span class="pulse-dot" style="background:var(--emerald); box-shadow:0 0 10px var(--emerald);"></span>
         <span data-i18n="footer.status">ALL SYSTEMS OPERATIONAL</span>
         <span>•</span>
-        <span>RigCommander v3.14.0</span>
+        <span>RigCommander v3.14.1</span>
         <span>•</span>
         <a href="/demo" style="color:var(--cyan); text-decoration:none;" data-i18n="nav.demo">Live Demo</a>
         <span>·</span>
@@ -2872,7 +2896,7 @@ $ npm test -- --grep "webhooks"
         'hero.demoCtaShort': '▶ Interactive Demo',
         'hero.demoTag': '0 SETUP',
         'hero.copyBtn': 'Copy',
-        'hero.cliNote': '0-setup browser demo · tmux-only zero-write inspection (drop <code>--no-session-logs</code> for CTX &amp; cost) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>',
+        'hero.cliNote': '0-setup demo · tmux-only zero-write inspection (drop <code>--no-session-logs</code> for $ &amp; CTX) · <a href="/guide#quickstart" style="color:#7dd3fc;">--tmux-socket isolation →</a> · <a href="/passport" style="color:#7dd3fc;">Passport →</a>',
         'qr.title': '📱 Open RigCommander Mobile PWA',
         'qr.sub': 'Point your iPhone or Android camera at the QR code to launch the mobile Command Deck:',
         'qr.ios': 'iOS: Safari → Share ⬆ → "Add to Home Screen"',
@@ -2913,22 +2937,22 @@ $ npm test -- --grep "webhooks"
         'sec.g6.t': 'Malicious Browser Tabs Can\'t Drive Your Terminals',
         'sec.g6.d': 'Local HTTP→tmux control checks every request\'s Host and Origin and requires per-process session auth. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>) — CSRF and DNS-rebinding from other tabs are rejected.',
         'sec.g7.t': 'Verified Supply Chain & 30-Second Audit',
-        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.0" target="_blank" rel="noopener">v3.14.0 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 runtime npm dependencies and signed npm Sigstore provenance (GitHub Actions OIDC). Verify via <code>npm audit signatures</code> &amp; <code>dist.attestations</code> (<a href="/guide#quickstart">copyable 1-liner in Guide</a>), inspect the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.1" target="_blank" rel="noopener">v3.14.1 source tag</a>, or report a problem in <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Honest Local Storage Model',
         'sec.g5.d': 'Local recovery & shift files are stored as unencrypted plaintext with owner-only OS permissions — rely on disk encryption.',
-        'pain.eyebrow': 'THE 10-AGENT TIPPING POINT',
-        'pain.title': 'Why Autonomous Swarms Break Down',
-        'pain.desc': 'One AI agent in your editor feels like magic. Ten concurrent agents across separate worktrees create an unobservable, expensive black box.',
+        'pain.eyebrow': '4–8 PARALLEL AGENTS IN TMUX',
+        'pain.title': 'Why Multi-Agent Terminal Sessions Break Down',
+        'pain.desc': 'One AI agent in your editor feels effortless. Once 4–8 parallel sessions run across separate tmux panes and worktrees, blocked prompts, context drift, and spend disappear into a black box.',
         'pain.badTitle': 'Without RigCommander: Chaos',
-        'pain.bad1': '<b>Blind Terminal Hopping:</b> Scrambling through 12 detached tmux panes trying to figure out which agent is blocked or waiting in queue.',
-        'pain.bad2': '<b>Silent Permission Hangs:</b> An agent sits idle for 4 hours waiting for a numbered confirmation prompt you never saw.',
-        'pain.bad3': '<b>Circular Rework Loops:</b> QA rejects coder\'s PR 5 times in a loop, burning 300,000 tokens without anyone noticing wait bottlenecks.',
-        'pain.bad4': '<b>Blind Token Spend &amp; Unverified Commands:</b> No visibility into per-seat $ burn, cache-hit rates, or whether /compact actually reduced context.',
+        'pain.bad1': '<b>Blind Terminal Hopping:</b> Cycling through detached tmux panes to find which agent is blocked or waiting.',
+        'pain.bad2': '<b>Silent Permission Hangs:</b> An agent sits idle for hours waiting on a numbered confirmation prompt you never saw.',
+        'pain.bad3': '<b>Circular Rework Loops:</b> QA bounces a PR 5 times in a row, burning 300k tokens before anyone notices the bottleneck.',
+        'pain.bad4': '<b>Blind Token Spend &amp; Unverified Commands:</b> No view of per-agent $ burn, cache-hit %, or whether /compact reduced context.',
         'pain.goodTitle': 'With RigCommander: Deterministic Control',
-        'pain.good1': '<b>One Live Map for Every Agent:</b> Auto-discover parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux sessions, then flip between live graph and task timeline (<code>G</code>) to spot waits and rework loops.',
-        'pain.good2': '<b>1-Click Terminal HITL with Safety Guards:</b> Read the live <code>tmux</code> prompt and parsed approval options before clicking; quick-action buttons dispatch strictly allowlisted control keys (optional manual input requires explicit typing + confirmation), deduplicated and verified after send.',
-        'pain.good3': '<b>Proactive Context &amp; Spend Guardrails:</b> Catch overheating sessions (≥75% context) with 1-click <code>/compact</code>, flag repeating QA loops, and cap token burn with a local circuit-breaker.',
-        'pain.good4': '<b>Local-First Cost Clarity &amp; Zero-Write Start:</b> Compare subscription usage (<code>SUB</code>) vs estimated API spend (<code>PAYG</code>), evaluate safely with <code>--read-only</code>, and keep all logs on your machine.',
+        'pain.good1': '<b>One Live Map for Every Agent:</b> Auto-discover Claude Code, Codex CLI, Gemini CLI &amp; tmux panes, and toggle Task Gantt (<code>G</code>) to spot waits.',
+        'pain.good2': '<b>1-Click Terminal HITL with Guards:</b> Inspect the live <code>tmux</code> command before clicking; allowlisted quick keys are deduplicated and postcondition-verified.',
+        'pain.good3': '<b>Context &amp; Spend Guardrails:</b> Catch overheating sessions (≥75% CTX) with 1-click <code>/compact</code>, flag QA loops, and cap spend with a local breaker.',
+        'pain.good4': '<b>Local Cost Clarity &amp; Zero-Write Start:</b> Compare <code>SUB</code> vs estimated <code>PAYG</code> spend, start safely with <code>--read-only</code>, and keep logs local.',
         'cmp.title': 'Raw tmux vs Cloud Tracing vs RigCommander',
         'cmp.sub': 'DIFFERENT JOBS • COMPLEMENTARY STACK',
         'cmp.h0': 'Dimension',
@@ -2942,7 +2966,7 @@ $ npm test -- --grep "webhooks"
         'cmp.r2.k': 'Setup & code changes',
         'cmp.r2.c1': 'Manual attach & pane-by-pane switching',
         'cmp.r2.c2': 'SDK instrumentation, API keys & cloud account',
-        'cmp.r2.c3': '<code>npx rig-commander@3.14.0 --read-only</code> (0 code changes, 0 npm deps)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.14.1 --read-only</code> (0 code changes, 0 npm deps)',
         'cmp.r3.k': 'Blocked prompts & control',
         'cmp.r3.c1': 'Manual scan across panes to find hangs',
         'cmp.r3.c2': 'Read-only dashboards (no terminal write-back)',
@@ -3066,7 +3090,7 @@ $ npm test -- --grep "webhooks"
         'hero.demoCtaShort': '▶ Интерактивное демо',
         'hero.demoTag': 'БЕЗ УСТАНОВКИ',
         'hero.copyBtn': 'Копировать',
-        'hero.cliNote': 'Демо без установки · осмотр только tmux без записи (уберите <code>--no-session-logs</code> для CTX и стоимости) · <a href="/passport" style="color:#7dd3fc;">Паспорт безопасности →</a>',
+        'hero.cliNote': 'Демо без установки · осмотр только tmux без записи (уберите <code>--no-session-logs</code> для $ и CTX) · <a href="/guide#quickstart" style="color:#7dd3fc;">Изоляция --tmux-socket →</a> · <a href="/passport" style="color:#7dd3fc;">Паспорт →</a>',
         'qr.title': '📱 Открыть мобильную PWA-версию',
         'qr.sub': 'Наведи камеру iPhone или Android на QR-код — откроется мобильный Command Deck:',
         'qr.ios': 'iOS: Safari → «Поделиться» ⬆ → «На экран „Домой“»',
@@ -3107,22 +3131,22 @@ $ npm test -- --grep "webhooks"
         'sec.g6.t': 'Вкладки браузера не управляют вашими терминалами',
         'sec.g6.d': 'Локальный мост HTTP→tmux проверяет Host и Origin каждого запроса и требует аутентификации сессии процесса. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>) — CSRF и DNS-rebinding из других вкладок отклоняются.',
         'sec.g7.t': 'Проверяемая цепочка поставки и аудит за 30 секунд',
-        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте через <code>npm audit signatures</code> и <code>dist.attestations</code> (<a href="/guide#quickstart">готовая команда в Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.0" target="_blank" rel="noopener">исходный тег v3.14.0</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
+        'sec.g7.d': '0 внешних npm-зависимостей и подписанный провенанс npm через Sigstore (GitHub Actions OIDC). Проверьте через <code>npm audit signatures</code> и <code>dist.attestations</code> (<a href="/guide#quickstart">готовая команда в Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.14.1" target="_blank" rel="noopener">исходный тег v3.14.1</a> или сообщите о проблеме в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.',
         'sec.g5.t': 'Честное локальное хранение',
         'sec.g5.d': 'Локальные файлы смен и восстановления хранятся без шифрования с правами только владельца — полагайтесь на шифрование диска.',
-        'pain.eyebrow': 'ТОЧКА ПЕРЕЛОМА 10+ АГЕНТОВ',
-        'pain.title': 'Почему автономные рои ломаются',
-        'pain.desc': 'Один ИИ-агент в редакторе ощущается как магия. Десять параллельных агентов в отдельных worktree превращаются в неуправляемый и дорогой чёрный ящик.',
+        'pain.eyebrow': '4–8 ПАРАЛЛЕЛЬНЫХ АГЕНТОВ В TMUX',
+        'pain.title': 'Почему работа с несколькими агентами ломается',
+        'pain.desc': 'Один ИИ-агент в редакторе работает предсказуемо. Как только в tmux параллельно крутятся 4–8 сессий в разных worktree, блокировки, перегрев контекста и расход уходят в чёрный ящик.',
         'pain.badTitle': 'Без RigCommander: хаос',
-        'pain.bad1': '<b>Слепые прыжки по терминалам:</b> лихорадочный перебор 12 tmux-панелей в поисках того, кто заблокирован или ждёт в очереди.',
-        'pain.bad2': '<b>Тихие зависания на промптах:</b> агент простаивает 4 часа на нумерованном меню подтверждения, которое вы не заметили.',
-        'pain.bad3': '<b>Циклы переделок и простои:</b> QA возвращает PR 5 раз подряд, сжигая 300 000 токенов без видимости узких мест во времени.',
-        'pain.bad4': '<b>Слепой расход и команды без сверки:</b> не видно расхода $ по сиденьям, % кэша и того, действительно ли /compact снизил контекст.',
+        'pain.bad1': '<b>Слепые прыжки по терминалам:</b> перебор detached tmux-панелей в поисках того, кто заблокирован или ждёт ввода.',
+        'pain.bad2': '<b>Тихие зависания на промптах:</b> агент простаивает часами на меню подтверждения, которое вы не заметили.',
+        'pain.bad3': '<b>Циклы переделок и простои:</b> QA возвращает PR 5 раз подряд, сжигая сотни тысяч токенов без видимости узких мест.',
+        'pain.bad4': '<b>Слепой расход и команды без сверки:</b> не видно расхода $ по агентам и сессиям, % кэша и эффекта от /compact.',
         'pain.goodTitle': 'С RigCommander: детерминированный контроль',
-        'pain.good1': '<b>Единая карта для всех агентов:</b> автообнаружение параллельных сессий Claude Code, Codex CLI, Gemini CLI и <code>tmux</code>, плюс переключение на Гант задач (<code>G</code>) для поиска простоев и циклов доработок.',
-        'pain.good2': '<b>HITL в терминале в 1 клик с защитой:</b> прочитайте живой промпт <code>tmux</code> и распарсенные варианты до клика — кнопки быстрых действий отправляют строго разрешённые управляющие клавиши (опциональный ручной ввод требует явного набора и подтверждения), с защитой от дублей и проверкой результата.',
-        'pain.good3': '<b>Защита от перегрева контекста и петель:</b> замечайте агентов на ≥75% контекста с <code>/compact</code> в 1 клик, отлавливайте возвраты QA и задавайте локальный авто-тормоз бюджета.',
-        'pain.good4': '<b>Ясная экономика и старт без записи:</b> сравнивайте подписку (<code>SUB</code>) с оценкой API-токенов (<code>PAYG</code>), начните безопасно с <code>--read-only</code> и держите все логи строго на своей машине.',
+        'pain.good1': '<b>Единая карта всех агентов:</b> автообнаружение Claude Code, Codex CLI, Gemini CLI и <code>tmux</code> плюс Гант задач (<code>G</code>) для поиска простоев.',
+        'pain.good2': '<b>HITL в 1 клик с защитой:</b> видите живую команду <code>tmux</code> до клика; быстрые клавиши идут по allowlist с защитой от дублей и проверкой результата.',
+        'pain.good3': '<b>Контроль контекста и бюджета:</b> перегрев ≥75% виден сразу с <code>/compact</code> в 1 клик, циклы QA подсвечены, локальный авто-тормоз ограничивает расход.',
+        'pain.good4': '<b>Ясная экономика и старт без записи:</b> сравнение подписки (<code>SUB</code>) и API (<code>PAYG</code>), безопасный старт через <code>--read-only</code> и логи только локально.',
         'cmp.title': 'Обычный tmux vs Облачная трассировка vs RigCommander',
         'cmp.sub': 'РАЗНЫЕ ЗАДАЧИ • ВЗАИМОДОПОЛНЯЮЩИЙ СТЕК',
         'cmp.h0': 'Критерий',
@@ -3136,7 +3160,7 @@ $ npm test -- --grep "webhooks"
         'cmp.r2.k': 'Установка и правки кода',
         'cmp.r2.c1': 'Ручной attach и переключение между панелями',
         'cmp.r2.c2': 'Встраивание SDK, API-ключи и облачный аккаунт',
-        'cmp.r2.c3': '<code>npx rig-commander@3.14.0 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
+        'cmp.r2.c3': '<code>npx rig-commander@3.14.1 --read-only</code> (0 правок кода, 0 npm-зависимостей)',
         'cmp.r3.k': 'Зависшие промпты и управление',
         'cmp.r3.c1': 'Ручной обход каждой панели в поисках зависания',
         'cmp.r3.c2': 'Только дашборды чтения (нет ответа в терминал)',
@@ -3486,7 +3510,7 @@ $ npm test -- --grep "webhooks"
 
     // Auto-Update Watcher on Website (checks npmjs.org/rig-commander/latest via CORS)
     let landingUpdateState = {
-      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.14.0').trim(),
+      currentVersion: ((document.querySelector('meta[name="app-version"]') || {}).content || '3.14.1').trim(),
       latestVersion: '',
       updateAvailable: false,
       releaseUrl: 'https://www.npmjs.com/package/rig-commander'

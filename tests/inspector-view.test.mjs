@@ -220,12 +220,11 @@ test('v3.9.0 inline HITL command preview and Option 1/2/3 buttons render directl
     assert.match(html, /data-key="1 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
     assert.match(html, /data-key="2 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
     assert.match(html, /data-key="3 Enter"[^>]*onclick="triggerPromptOption\(this\)"/);
-    assert.ok(html.indexOf('hitl-command-preview') < html.indexOf('data-transport="modal_terminal"'), 'Inline HITL decision must precede modal fallback button');
-    // v3.10.0: zero contradiction — no red diag-hitl-primary button when inline Option 1/2/3 buttons are rendered
+    // v3.10.0 + v3.14.1: zero contradiction & zero duplicate TMUX entry points when inline Option 1/2/3 buttons are rendered
     assert.doesNotMatch(html, /diag-hitl-primary/);
     assert.ok(!html.includes(ctx.td('diag.resolveHitlBtn')), `${lang}: contradictory red resolveHitlBtn must not render alongside inline HITL options`);
-    assert.match(html, /diag-tmux-secondary-link/);
-    assert.ok(html.includes(ctx.td('diag.openTmux80Btn')), `${lang}: muted 80-line TMUX secondary link must render`);
+    assert.doesNotMatch(html, /diag-tmux-secondary-link/, `${lang}: duplicate 80-line TMUX link must not render inside P0 card when unified Terminal disclosure hosts it`);
+    assert.match(html, /class="hitl-always-row"/, `${lang}: Always (dir) option must sit in its own compact lower-weight row separated from Cancel`);
     // v3.10.0: S1/S2 tucked inside expandable details; distinct key-neutral class on Option 2
     assert.match(html, /class="diag-ai-details"/);
     assert.match(html, /key-neutral/);
@@ -418,12 +417,13 @@ test('v3.11.0 HITL fat-finger safety: destination+scope line, sole full-width pr
     assert.ok(html.includes(ctx.td('insp.hitlScopeSingle')));
     assert.ok(html.indexOf('hitl-target-scope') < html.indexOf('hitl-command-preview'));
 
-    // 2. Primary full-width CTA precedes 2-column secondary row with Cancel LEFT and Always RIGHT
+    // 2. Primary full-width CTA precedes secondary Cancel row and separated compact Always row
     assert.match(html, /class="action-pill key-pill key-proceed hitl-btn-primary"/);
-    assert.match(html, /class="hitl-secondary-row"/);
+    assert.match(html, /class="hitl-secondary-row\b/);
+    assert.match(html, /class="hitl-always-row"/);
     const cancelIdx = html.indexOf('key-cancel hitl-btn-secondary');
     const alwaysIdx = html.indexOf('key-neutral hitl-btn-secondary');
-    assert.ok(cancelIdx > 0 && alwaysIdx > cancelIdx, `${lang}: Cancel must sit left of Always in 2-col secondary row`);
+    assert.ok(cancelIdx > 0 && alwaysIdx > cancelIdx, `${lang}: Cancel must precede separated Always row`);
     assert.match(html, /data-key="2 Enter"[^>]*data-confirm-always="true"/);
   }
 

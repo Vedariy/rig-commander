@@ -278,11 +278,13 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
   };
 
   const primaryHtml = primaryOpt ? renderOptBtn(primaryOpt, true) : '';
-  const secondaryHtml = secondaryOpts.length
-    ? `<div class="hitl-secondary-row${secondaryOpts.length === 1 ? ' is-single' : ''}">${secondaryOpts.map(opt => renderOptBtn(opt, false)).join('')}</div>`
+  const alwaysOpts = secondaryOpts.filter(opt => !opt.isCancel && (opt.badge === '2' || /always|всегда|remember|запомнить/i.test(`${opt.fullText || ''} ${opt.shortLabel || ''}`)));
+  const nonAlwaysSecondary = secondaryOpts.filter(opt => !alwaysOpts.includes(opt));
+  const secondaryHtml = nonAlwaysSecondary.length
+    ? `<div class="hitl-secondary-row${nonAlwaysSecondary.length === 1 ? ' is-single' : ''}">${nonAlwaysSecondary.map(opt => renderOptBtn(opt, false)).join('')}</div>`
     : '';
-  const alwaysNoteHtml = hasAlwaysOption
-    ? `<div class="hitl-always-note">${escapeHtml(td('insp.hitlAlwaysScopeNote'))}</div>`
+  const alwaysRowHtml = alwaysOpts.length
+    ? `<div class="hitl-always-row">${alwaysOpts.map(opt => renderOptBtn(opt, false)).join('')}<span class="hitl-always-note">${escapeHtml(td('insp.hitlAlwaysScopeNote'))}</span></div>`
     : '';
   return `
     <div class="ctrl-prompt-options" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; width:100%; padding-bottom:6px; border-bottom:1px dashed rgba(56,189,248,0.25); margin-bottom:4px;">
@@ -292,7 +294,7 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
       <span class="hitl-options-kicker" style="font-family:var(--font-mono); font-size:10.5px; color:#fbbf24; font-weight:800;">${td('insp.promptOptions')}</span>
       ${primaryHtml}
       ${secondaryHtml}
-      ${alwaysNoteHtml}
+      ${alwaysRowHtml}
     </div>
   `;
 }
@@ -564,9 +566,9 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
   const resolvedPrimary = primary.actionPlan ? resolveActionFromFinding(primary.actionPlan, agent) : null;
   if (resolvedPrimary && resolvedPrimary.transport !== 'select_seat') {
     if (agent.state === 'urgent' && resolvedPrimary.transport === 'modal_terminal') {
-      if (hasInlineHitlOptions) {
-        pushAction({ ...resolvedPrimary, label: td('diag.openTmux80Btn') }, '', 'diag-tmux-secondary-link');
-      } else {
+      // v3.14.1: Avoid duplicating TMUX entry points when inline HITL options are active;
+      // the single unified Terminal (80 lines) disclosure below hosts inline TMUX + 80-line modal expand.
+      if (!hasInlineHitlOptions) {
         pushAction({ ...resolvedPrimary, label: td('diag.resolveHitlBtn') }, '', 'action-pill diag-hitl-primary');
       }
     } else {
@@ -618,9 +620,9 @@ export function renderSeatDiagnosisHtml(ctx, agent) {
     </div>
   ` : '';
 
-  const useCompactUtilityRow = hasInlineHitlOptions && actionBtns.length === 1 && !s1Busy && !s2Busy;
+  const useCompactUtilityRow = hasInlineHitlOptions && actionBtns.length <= 1 && !s1Busy && !s2Busy;
   const actionsAndEvalHtml = useCompactUtilityRow
-    ? `<div class="diag-utility-row">${actionBtns[0]}${evalDetailsHtml}</div>`
+    ? `<div class="diag-utility-row${actionBtns.length === 0 ? ' is-eval-only' : ''}">${actionBtns[0] || ''}${evalDetailsHtml}</div>`
     : `${actionBtns.length > 0 ? `<div class="diag-actions">${actionBtns.join('')}</div>` : ''}${evalDetailsHtml}`;
 
   return `
@@ -918,6 +920,11 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
             </span>`}
           </summary>
           <div class="insp-raw-tmux-body">
+            ${(!isSwarmSeat && agent.state === 'urgent') ? `<div class="insp-raw-tmux-toolbar">
+              <button class="action-pill tmux-hdr-btn" type="button" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
+              <button class="action-pill tmux-hdr-btn" type="button" id="btnAutoFollow" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
+              <button class="action-pill tmux-hdr-btn" type="button" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${escapeHtml(td('diag.openTmux80Btn'))}</button>
+            </div>` : ''}
             <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(screenOrSwarmText)}</div>
 
             ${isSwarmSeat ? `
