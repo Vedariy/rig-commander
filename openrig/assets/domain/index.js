@@ -207,4 +207,30 @@ export {
   summarizeActiveAutoConsentScopes
 } from './auto-consent-model.js';
 
+export {
+  SAFE_HYGIENE_CUTOFFS_HOURS,
+  SAFE_QITEM_ID_RE,
+  SAFE_SEAT_TARGET_RE,
+  CONTROL_PLANE_THRESHOLDS,
+  CONTROL_PLANE_FINDING_CODES,
+  parseQueueItemTimestampMs,
+  isOpgateQueueItem,
+  summarizeQueueAndSeats,
+  evaluateControlPlaneHealth,
+  buildOfficialCancelCommand,
+  buildHygienePlan
+} from './control-plane-model.js';
+
+export {
+  SWARM_PROVIDER_KINDS,
+  SWARM_READONLY_CAPABILITIES,
+  sanitizeSwarmIdPart,
+  parseSwarmTimestampMs,
+  deriveSwarmRigSlug,
+  projectSwarmMemberStatus,
+  parseBoardMentions,
+  buildSwarmGanttItems,
+  normalizeSwarmCluster
+} from './swarm-model.js';
+
 

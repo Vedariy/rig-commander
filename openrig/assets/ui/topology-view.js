@@ -100,6 +100,11 @@ export function renderNodeSpecMetaHtml(agent, burn, { deckLang, escapeHtml }) {
     const etaLabel = deckLang === 'en' ? `~${etaMin}m to 75%` : `~${etaMin}м до 75%`;
     parts.push(`<span class="spec-eta" title="${escapeHtml(burn.label || '')}">${escapeHtml(etaLabel)}</span>`);
   }
+  if (agent.schemaDrift) {
+    parts.push(`<span class="spec-qa is-warn">⚠️ schema_drift</span>`);
+  } else if (agent.providerDrift?.status === 'unverified_version') {
+    parts.push(`<span class="spec-eta" title="unverified CLI version">unverified ver</span>`);
+  }
   return parts.join('<span class="spec-sep">·</span>');
 }
 
@@ -382,12 +387,13 @@ export function renderRigClustersHtml(clusters, { cw, ch, escapeHtml, td, collap
   return clusters.map(c => {
     const x = c.xPct * cw / 100, y = c.yPct * ch / 100;
     const w = c.wPct * cw / 100, h = c.hPct * ch / 100;
-    const label = `@${c.rigId} · ${c.count}`;
+    const isSwarm = String(c.rigId || '').startsWith('swarm-');
+    const label = `${isSwarm ? '🐝 SWARM · ' : ''}@${c.rigId} · ${c.count}`;
     let toggle = '';
     if (collapsibleRigIds?.has(c.rigId)) {
       toggle = `<foreignObject x="${x + w - 32}" y="${y + 2}" width="30" height="29">${renderQuietCollapseButton(c.rigId, { td, escapeHtml })}</foreignObject>`;
     }
-    return `<g class="rig-cluster-zone" data-rig-id="${escapeHtml(c.rigId)}"><title>${escapeHtml(label)}</title><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/><text x="${x + 12}" y="${y + 21}">${escapeHtml(label)}</text>${toggle}</g>`;
+    return `<g class="rig-cluster-zone${isSwarm ? ' is-swarm-cluster' : ''}" data-rig-id="${escapeHtml(c.rigId)}"><title>${escapeHtml(label)}</title><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/><text x="${x + 12}" y="${y + 21}">${escapeHtml(label)}</text>${toggle}</g>`;
   }).join('');
 }
 
@@ -395,10 +401,11 @@ export function renderQuietClustersPillHtml(minimizedClusters = [], { td, escape
   const clusters = Array.isArray(minimizedClusters) ? minimizedClusters : [];
   if (clusters.length === 0) return '';
   const chips = clusters.map(c => {
+    const isSwarm = String(c.rigId || '').startsWith('swarm-');
     const parkedBadge = c.parkedCount > 0
       ? `<span class="quiet-parked-badge">🟠 ${escapeHtml(c.parkedWorkCount > 0 ? c.parkedWorkCount : c.parkedCount)}</span>`
       : `<span>${escapeHtml(c.count)}</span>`;
-    return `<button type="button" class="quiet-cluster-chip" aria-expanded="false" data-quiet-rig="${escapeHtml(c.rigId)}" title="${escapeHtml(td('graph.expandQuietTip', { rig: c.rigId }))}" onclick="toggleQuietRigCluster(this.dataset.quietRig)">@${escapeHtml(c.rigId)} · ${parkedBadge}</button>`;
+    return `<button type="button" class="quiet-cluster-chip" aria-expanded="false" data-quiet-rig="${escapeHtml(c.rigId)}" title="${escapeHtml(td('graph.expandQuietTip', { rig: c.rigId }))}" onclick="toggleQuietRigCluster(this.dataset.quietRig)">${isSwarm ? '🐝 ' : ''}@${escapeHtml(c.rigId)} · ${parkedBadge}</button>`;
   }).join('');
   return `<span class="quiet-clusters-label">${escapeHtml(td('graph.quietClustersLabel', { count: clusters.length }))}</span>${chips}<button type="button" class="quiet-expand-btn" onclick="expandAllQuietRigs()">${escapeHtml(td('graph.expandAllQuiet'))}</button>`;
 }

@@ -10,6 +10,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.12.0] - 2026-11-27
+
+### Added
+- **Control-Plane Watchdog & 2-Step Queue Hygiene (`openrig/assets/domain/control-plane-model.js`, `openrig/lib/control-plane-probe.mjs`, `openrig/lib/fleet-intelligence/detectors/control-plane-hygiene.mjs`, `openrig/lib/resilience/hygiene-gate.mjs`, `openrig/assets/ui/resilience-view.js`):**
+  - Monitors OpenRig daemon probe latencies (avg/p95/consecutive slow probes), bounded `<= 32KB` `mtimeMs`-cached `daemon.log` tail error patterns, `openrig.sqlite` size, `qitem-opgate-*` age buckets (`24h`/`72h`/`168h`), detached target seats, and `stale_runtime_hook` (`DAEMON_DEGRADED`, `QUEUE_ZOMBIE_STORM`, `BROKEN_ESCALATION_ROUTE`).
+  - Added 2-step `/api/resilience/hygiene/{plan,execute}` Crash-Cart preview/confirm workflow (`5`-min single-use SHA-256 `planHash`, `X-Idempotency-Key` deduplication, `crossRigWarning`, official `rig queue update --state done --closure-reason canceled` previews, safe copy-and-truncate `daemon.log` rotation, `--read-only` enforcement, and honest `cleaned`/`partial`/`failed`/`unknown` receipts).
+- **Additive Multi-Vendor Swarm Discovery & Provider Drift Guard (`openrig/assets/domain/swarm-model.js`, `openrig/lib/swarm-discovery.mjs`, `openrig/lib/provider-contracts.json`, `openrig/lib/provider-drift-guard.mjs`, `scripts/verify-providers.mjs`):**
+  - Read-only additive discovery of native Antigravity `/swarm`, Claude Teams, and Codex subagents alongside OpenRig & `tmux` (`🐝 SWARM · @swarm-*` clusters, `@mention` Call Highways edges, Swarm Gantt items, redacted `boardTail` in Inspector, strict `capabilities.canSendKeys: false` write/tmux disablement, and hard `VETO_NON_TMUX_SEAT` in `AutoConsentEngine`).
+  - Two-contour Provider Drift Guard verifying CLI version ranges & JSON/JSONL contracts (`npm run verify:providers -- --json`), surfacing `SCHEMA DRIFT` / `UNVERIFIED VER` pills and showing `unknown (schema_drift)` instead of `0` on incompatible outputs.
+
+### Fixed
+- **HITL Inspector Deduplication & Credibility Alignment (`openrig/assets/ui/inspector-view.js`, `openrig/assets/domain/{prompt-parser,i18n}.js`, `openrig/index.html`, `landing/{index,guide,passport}.html`, `landing/llms*.txt`):**
+  - Deduplicated bottom `#inspectorPromptOptionsBar` whenever top P0 `#inspDiagInlineHitl` is active across full render, `fetchTerminalCapture`, and `applyIncomingTmuxScreen`.
+  - Replaced truncated `Always in repo...` with untruncated `Always (dir)` / `Всегда (папка)`, updated `codex-tests` capture to authentic Codex `$ npm test`, fixed multi-line `$ <cmd>` prompt extraction in `prompt-parser.js`, and aligned landing `0% CPU (no tabs)` / `tmux (or OpenRig)` phrasing.
+- **Test Verification:** Expanded automated test coverage to **`372 / 372 PASS` across `44` test suites** (`npm test`) with `EXPOSURE_AUDIT_PASS` and `verify:providers` `ok: true`.
+
+---
+
 ## [3.11.0] - 2026-11-27
 
 ### Added

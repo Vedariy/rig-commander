@@ -3,7 +3,7 @@ import test from 'node:test';
 import { tDeck } from '../openrig/assets/domain/i18n.js';
 import {
   dedupeRadarItemsByAgent, renderActionAuditHtml, renderContextBadgesHtml, renderContextLineageHtml, renderCurrentTaskHtml, renderHarnessQuickKeys,
-  renderInteractivePromptOptionsHtml, renderSeatDiagnosisHtml, renderSeatGitWorktreeHtml
+  renderInspectorAndScorecards, renderInteractivePromptOptionsHtml, renderSeatDiagnosisHtml, renderSeatGitWorktreeHtml, updateInspectorPromptOptions
 } from '../openrig/assets/ui/inspector-view.js';
 
 const seat = 'coder@example';
@@ -314,7 +314,7 @@ test('v3.10.0 Universal tmux preset, FinOps pill, zero scattered widget-hints & 
   assert.equal(uniAgents.find(a => a.id === 'claude-refactor').ctxPct, 78);
   assert.equal(vm.runInContext('SLICES_LANES.length', sandbox), 0);
   assert.equal(vm.runInContext('RECENT_DECISIONS.length', sandbox), 0);
-  assert.match(vm.runInContext("getDemoTerminalCapture('codex-tests')", sandbox), /Bash\(npm test\)/);
+  assert.match(vm.runInContext("getDemoTerminalCapture('codex-tests')", sandbox), /npm test/);
   assert.doesNotMatch(vm.runInContext("getDemoTerminalCapture('codex-tests')", sandbox), /rig capture|decisions\/\*\.tsv|parked: no live wake/i);
   assert.equal(bodyClasses.has('demo-preset-universal'), true);
 
@@ -503,4 +503,139 @@ test('v3.11.0 Wait Radar deduplication merges multiple alerts per agent into ONE
   assert.match(indexHtml, /class="triage-strip unified-topbar"/);
   assert.match(indexHtml, /id="btnPresetUniversal"[^>]*active|class="hud-segment-btn active" id="btnPresetUniversal"/);
   assert.match(indexHtml, /data-i18n="guard\.dialogTitle"/);
+});
+
+function createStubDom() {
+  const els = new Map();
+  const getEl = id => {
+    if (!els.has(id)) {
+      const attrs = new Map();
+      els.set(id, {
+        id,
+        innerHTML: '',
+        textContent: '',
+        title: '',
+        dataset: { seat: '' },
+        style: {},
+        className: '',
+        classList: { toggle() {}, add() {}, remove() {}, contains: () => false },
+        setAttribute: (k, v) => attrs.set(k, String(v)),
+        getAttribute: k => attrs.get(k) ?? null
+      });
+    }
+    return els.get(id);
+  };
+  const doc = {
+    getElementById: id => (id === 'inspectorBoxCard' ? null : getEl(id)),
+    querySelectorAll: () => []
+  };
+  return { doc, getEl };
+}
+
+test('v3.12.0 inspector deduplicates HITL options bar when P0 inline card is present, shows full Always (dir), and enforces read-only swarm seats + schemaDrift badges', () => {
+  const promptScreen = [
+    'Do you want to run tests?',
+    '$ npm test',
+    '❯ 1. Yes',
+    '  2. Yes, and always allow in this directory',
+    '  3. No'
+  ].join('\n');
+
+  // 1. Live tmux seat with HITL prompt -> inline HITL present, bottom #inspectorPromptOptionsBar empty, Always (dir) untruncated
+  for (const [lang, expectedAlways] of [['en', 'Always (dir)'], ['ru', 'Всегда (папка)']]) {
+    const { doc, getEl } = createStubDom();
+    const baseCtx = {
+      ...context(lang),
+      agents: [{ id: 'codex-tests', shortName: 'codex-tests', role: 'CLI', state: 'urgent', harness: 'codex', ctxPct: 35, ctxWindowSize: 200000, icon: '⚡', cwd: '/work/repo', capabilities: { canSendKeys: true, canCaptureTmux: true } }],
+      queueItems: [],
+      ganttRows: [],
+      showAllQueuePackets: false,
+      activeInspectorTab: 'status',
+      lastScreenBySeat: { 'codex-tests': promptScreen },
+      liveScreenCapture: promptScreen,
+      selectedAgentId: 'codex-tests',
+      renderStateIndicatorHtml: () => '<span>NEEDS INPUT</span>',
+      formatRoleForRig: r => r,
+      getNodeDisplayTitle: a => a.shortName,
+      ageLabel: () => '1m',
+      tmuxStreamConnected: false,
+      tmuxStreamSeat: null,
+      autoFollow: true,
+      inspectorRefOpen: false,
+      currentRigFilter: 'all',
+      expandedQueueEnvelopes: new Set(),
+      formatEnvelopeClock: () => '12:00'
+    };
+    renderInspectorAndScorecards(doc, baseCtx, true);
+    const html = getEl('nodeInspector').innerHTML;
+    assert.match(html, /id="inspDiagInlineHitl"/);
+    assert.ok(html.includes(expectedAlways), `Expected ${expectedAlways} in ${lang}`);
+    assert.ok(!html.includes('Always in repo...'), 'Should not use truncated Always label');
+    const optBarMatch = html.match(/<div id="inspectorPromptOptionsBar"[^>]*>([\s\S]*?)<\/div>/);
+    assert.ok(optBarMatch, '#inspectorPromptOptionsBar container should exist');
+    assert.equal(optBarMatch[1].trim(), '', 'Bottom #inspectorPromptOptionsBar must be empty when top inline HITL renders');
+  }
+
+  // 2. Non-tmux read-only swarm seat with schemaDrift -> SWARM BOARD (READ-ONLY), no #terminalCtrlBar/#manualCmdDisclosure, SCHEMA DRIFT + unknown (schema_drift)
+  const { doc: swarmDoc, getEl: getSwarmEl } = createStubDom();
+  const swarmAgent = {
+    id: 'worker-1@swarm-4b4b',
+    shortName: 'worker-1',
+    role: 'Swarm Worker',
+    state: 'working',
+    harness: 'antigravity',
+    providerKind: 'antigravity_swarm',
+    ctxPct: 0,
+    ctxWindowSize: 200000,
+    icon: '🐝',
+    schemaDrift: true,
+    capabilities: { canSendKeys: false, canCaptureTmux: false, readOnlyBoard: true },
+    swarmMeta: {
+      title: 'Release Swarm',
+      workspaceMode: 'share',
+      boardCursor: 12,
+      boardTail: [{ seq: 12, agent: 'coordinator', text: 'Verify ~/repo build' }]
+    }
+  };
+  renderInspectorAndScorecards(swarmDoc, {
+    ...context('en'),
+    agents: [swarmAgent],
+    queueItems: [],
+    ganttRows: [],
+    showAllQueuePackets: false,
+    activeInspectorTab: 'status',
+    lastScreenBySeat: {},
+    liveScreenCapture: '',
+    selectedAgentId: swarmAgent.id,
+    renderStateIndicatorHtml: () => '<span>ACTIVE</span>',
+    formatRoleForRig: r => r,
+    getNodeDisplayTitle: a => a.shortName,
+    ageLabel: () => '1m',
+    tmuxStreamConnected: false,
+    tmuxStreamSeat: null,
+    autoFollow: true,
+    inspectorRefOpen: false,
+    currentRigFilter: 'all',
+    expandedQueueEnvelopes: new Set(),
+    formatEnvelopeClock: () => '12:00'
+  }, true);
+  const swarmHtml = getSwarmEl('nodeInspector').innerHTML;
+  assert.ok(swarmHtml.includes(tDeck('en', 'swarm.boardTailTitle')));
+  assert.match(swarmHtml, /class="swarm-readonly-note"/);
+  assert.doesNotMatch(swarmHtml, /id="terminalCtrlBar"|id="manualCmdDisclosure"/);
+  assert.ok(swarmHtml.includes(tDeck('en', 'drift.schemaDriftBadge')));
+  assert.ok(swarmHtml.includes(tDeck('en', 'drift.unknownMetrics')));
+  assert.ok(getSwarmEl('tmuxScreenBox').textContent.includes('Verify ~/repo build'));
+
+  // 3. updateInspectorPromptOptions clears bar when #inspDiagInlineHitl is already in ownerDocument
+  const attrs = new Map([['data-cache-key', 'stale']]);
+  const barStub = {
+    innerHTML: '<button>dup</button>',
+    ownerDocument: { getElementById: id => (id === 'inspDiagInlineHitl' ? {} : null) },
+    getAttribute: k => attrs.get(k) ?? null,
+    setAttribute: (k, v) => attrs.set(k, String(v))
+  };
+  updateInspectorPromptOptions(barStub, '<button>duplicate</button>');
+  assert.equal(barStub.innerHTML, '');
+  assert.equal(attrs.get('data-cache-key'), '');
 });

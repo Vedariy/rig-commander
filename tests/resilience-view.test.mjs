@@ -150,3 +150,65 @@ test('rig_down banner formats multi-day snapshot age cleanly and supports collap
   assert.doesNotMatch(ddHtml, /is-collapsed/);
   assert.match(ddHtml, /resilience-provider/);
 });
+
+test('Control-Plane Queue Hygiene banner stays hidden when healthy, renders on zombie backlog, and executes 2-step plan/confirm', async () => {
+  const healthyCp = {
+    latency: { avgMs: 42, p95Ms: 80, consecutiveSlowCount: 0 },
+    files: { daemonLog: { bytes: 1024 }, sqliteDb: { bytes: 4096 } },
+    queue: { opgateOlderThan24h: 0, detachedTargetCount: 0, staleRuntimeHookCount: 0, byRig: {} },
+    daemonLogTail: { permanentRoutingErrorCount: 0, noHumanRegisteredCount: 0, stuckSweepCrashLoopLines: 0, consecutiveFailures: 0 }
+  };
+  assert.equal(renderCrashCartBannerHtml(buildDemoResilienceScenario('recovered'), { ...deps('en'), controlPlane: healthyCp }), '');
+
+  const zombieCp = {
+    ...healthyCp,
+    files: { daemonLog: { bytes: 60 * 1024 * 1024 }, sqliteDb: { bytes: 20 * 1024 * 1024 } },
+    queue: { opgateOlderThan24h: 25, detachedTargetCount: 1, staleRuntimeHookCount: 0, byRig: {} }
+  };
+  const bannerHtml = renderCrashCartBannerHtml(buildDemoResilienceScenario('recovered'), { ...deps('en'), controlPlane: zombieCp });
+  assert.match(bannerHtml, /data-resilience-action="hygiene-plan"/);
+  assert.ok(bannerHtml.includes(tDeck('en', 'hygiene.planBtn')));
+  assert.match(bannerHtml, /25/);
+  assert.match(bannerHtml, /60\.0/);
+
+  const calls = [];
+  const root = surface(), modalRoot = surface();
+  let returnMissingReceipt = false;
+  const ui = createResilienceController({
+    root, modalRoot, td: deps('en').td, lang: () => 'en', isLive: () => true,
+    getJson: async () => buildDemoResilienceScenario('recovered'),
+    postJson: async (endpoint, body) => {
+      calls.push([endpoint, body]);
+      if (endpoint.endsWith('/hygiene/plan')) {
+        return {
+          plan: { scope: 'fleet', cutoffHours: 24, daemonLogBytes: 60 * 1024 * 1024, sqliteBytes: 20 * 1024 * 1024, totals: { staleOpgateCount: 25 }, warnings: ['rotate ok'], commandPreview: 'rig queue update qitem-1 --state done --closure-reason canceled --json' },
+          planHash: 'h-hash-123',
+          expiresAt: new Date(Date.now() + 60_000).toISOString()
+        };
+      }
+      return returnMissingReceipt ? { ok: true } : { receipt: { status: 'cleaned', targetCount: 25, cleanedCount: 25 } };
+    }
+  });
+  ui.setStatus(buildDemoResilienceScenario('recovered'));
+  ui.setControlPlane(zombieCp);
+  assert.match(root.innerHTML, /data-resilience-action="hygiene-plan"/);
+
+  await root.click('hygiene-plan', { scope: 'fleet', cutoffHours: '24' });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], '/api/resilience/hygiene/plan');
+  assert.equal(ui.getState().phase, 'preview');
+  assert.equal(ui.getState().operation, 'hygiene');
+  assert.match(modalRoot.innerHTML, /data-resilience-action="hygiene-confirm"[^>]*data-plan-hash="h-hash-123"/);
+
+  await modalRoot.click('hygiene-confirm', { planHash: 'h-hash-123' });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1][0], '/api/resilience/hygiene/execute');
+  assert.equal(calls[1][1].confirmed, true);
+  assert.equal(calls[1][1].planHash, 'h-hash-123');
+  assert.equal(ui.getState().hygieneReceipt.status, 'cleaned');
+
+  returnMissingReceipt = true;
+  await root.click('hygiene-plan', { scope: 'fleet', cutoffHours: '24' });
+  await modalRoot.click('hygiene-confirm', { planHash: 'h-hash-123' });
+  assert.equal(ui.getState().hygieneReceipt.status, 'unknown');
+});

@@ -1,6 +1,6 @@
 {
   "name": "rig-commander",
-  "version": "3.11.0",
+  "version": "3.12.0",
   "description": "Mission Control & Neural Command Deck for Autonomous AI Engineering Fleets",
   "type": "module",
   "main": "openrig/server.mjs",
@@ -22,6 +22,7 @@
     "deck": "node openrig/server.mjs",
     "sync:public": "node scripts/sync-public.mjs",
     "audit:exposure": "node scripts/audit-exposure.mjs",
+    "verify:providers": "node scripts/verify-providers.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "keywords": [

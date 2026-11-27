@@ -5,7 +5,7 @@ license: MIT
 compatibility: Node.js >= 18 on macOS or Linux; optional tmux or OpenRig daemon for live fleets, plus offline browser /demo.
 metadata:
   author: Vedariy
-  version: "3.11.0"
+  version: "3.12.0"
   homepage: https://rig-commander.vercel.app
   repository: https://github.com/Vedariy/rig-commander
   demo: https://rig-commander.vercel.app/demo
@@ -22,7 +22,8 @@ Activate this skill when an engineer or operator needs to:
 - Triage blocked agents waiting on terminal confirmations (HITL), hot context windows, parked obligations, or exited shells.
 - Trace multi-agent task handoffs, queue wait times, and QA bounce-back loops across Topology Graph and Task Gantt.
 - Inspect Git worktree drift, cross-seat file overlaps, or `SUB` vs `PAYG` FinOps usage.
-- Plan and verify 2-step Crash-Cart fleet recovery after sleep, crash, or restart.
+- Preview and verify 2-step Crash-Cart fleet recovery or control-plane queue hygiene after sleep, crash, or backlog buildup.
+- Observe additive read-only multi-vendor swarms (Antigravity `/swarm`, Claude Teams, Codex subagents) alongside OpenRig and `tmux` with non-tmux write & Auto-Consent vetoes enforced.
 - Configure, preview, pause, or audit scoped opt-in Auto-Consent policies.
 
 ## Quick Launch & Offline Demo

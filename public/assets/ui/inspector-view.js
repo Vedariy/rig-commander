@@ -280,9 +280,13 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
 }
 
 export function updateInspectorPromptOptions(bar, html) {
-  if (bar && bar.getAttribute('data-cache-key') !== html) {
-    bar.innerHTML = html;
-    bar.setAttribute('data-cache-key', html);
+  if (!bar) return;
+  const doc = bar.ownerDocument;
+  const hasTopInlineHitl = Boolean(doc && doc.getElementById && doc.getElementById('inspDiagInlineHitl'));
+  const targetHtml = hasTopInlineHitl ? '' : html;
+  if (bar.getAttribute('data-cache-key') !== targetHtml) {
+    bar.innerHTML = targetHtml;
+    bar.setAttribute('data-cache-key', targetHtml);
   }
 }
 
@@ -680,10 +684,33 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
   const exactTokensLine = agent.ctxUsedTokens && agent.ctxWindowSize
     ? `${agent.ctxUsedTokens.toLocaleString('ru-RU')} / ${agent.ctxWindowSize.toLocaleString('ru-RU')} tok`
     : thermal.label;
-  const attachCmd = agent.tmuxAttachCommand || `rig capture ${agent.id} --lines 40`;
+  const isSwarmSeat = Boolean(agent.capabilities && agent.capabilities.canSendKeys === false && agent.capabilities.readOnlyBoard === true);
+  const attachCmd = isSwarmSeat ? '/swarm board' : (agent.tmuxAttachCommand || `rig capture ${agent.id} --lines 40`);
   const showBurnInline = (typeof agent.ctxPct === 'number' && agent.ctxPct >= 60) || computeBurn(agent, deckLang).perHour > 0;
-  const quickKeysHtml = renderHarnessQuickKeys(ctx, agent, 'cmdSendStatus');
-  const optionsHtml = renderInteractivePromptOptionsHtml(ctx, agent.id, lastScreenBySeat[agent.id] || '');
+  const quickKeysHtml = isSwarmSeat ? '' : renderHarnessQuickKeys(ctx, agent, 'cmdSendStatus');
+  const diagHtmlNow = renderSeatDiagnosisHtml(ctx, agent);
+  const hasTopInlineHitl = Boolean(diagHtmlNow && diagHtmlNow.includes('id="inspDiagInlineHitl"'));
+  const optionsHtml = (isSwarmSeat || hasTopInlineHitl)
+    ? ''
+    : renderInteractivePromptOptionsHtml(ctx, agent.id, lastScreenBySeat[agent.id] || '');
+  const attachBtnLabel = isSwarmSeat ? td('swarm.copyBoardBtn') : td('insp.copyAttachBtn');
+  const driftBadgeHtml = agent.schemaDrift
+    ? `<span class="spec-drift-pill is-schema-drift" title="${escapeHtml(td('drift.schemaDriftTip'))}">⚠️ ${escapeHtml(td('drift.schemaDriftBadge'))}</span>`
+    : (agent.providerDrift?.status === 'unverified_version'
+        ? `<span class="spec-drift-pill is-unverified" title="${escapeHtml(td('drift.unverifiedTip'))}">ℹ️ ${escapeHtml(td('drift.unverifiedBadge'))}</span>`
+        : '');
+  const renderSwarmBoardBody = () => {
+    const sm = agent.swarmMeta || {};
+    const tail = Array.isArray(sm.boardTail) ? sm.boardTail : [];
+    const metaLine = [sm.title, sm.workspaceMode ? `ws:${sm.workspaceMode}` : '', sm.boardCursor != null ? `#${sm.boardCursor}` : '']
+      .filter(Boolean).join(' · ');
+    const tailText = tail.length > 0
+      ? tail.map(e => `[#${e.seq ?? '?'} ${e.agent || '?'}] ${e.text || ''}`).join('\n')
+      : (sm.goalLine || td('swarm.emptyBoard'));
+    return `${metaLine ? `${metaLine}\n${'─'.repeat(Math.min(48, Math.max(16, metaLine.length)))}\n` : ''}${tailText}`;
+  };
+  const screenOrSwarmTitle = isSwarmSeat ? `🐝 ${escapeHtml(td('swarm.boardTailTitle'))}` : '🖥️ TMUX';
+  const screenOrSwarmText = isSwarmSeat ? renderSwarmBoardBody() : liveScreenCapture;
 
   const existingCard = document.getElementById('inspectorBoxCard');
   const canPatchInPlace = existingCard && existingCard.dataset.seat === agent.id && !flashHighlight;
@@ -707,6 +734,11 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
       elHarness.textContent = harnessLbl;
       elHarness.title = harnessLbl;
     }
+    const elDrift = document.getElementById('inspValDriftBadge');
+    if (elDrift && elDrift.getAttribute('data-cache-key') !== driftBadgeHtml) {
+      elDrift.innerHTML = driftBadgeHtml;
+      elDrift.setAttribute('data-cache-key', driftBadgeHtml);
+    }
 
     const elCtx = document.getElementById('inspValContext');
     if (elCtx) {
@@ -714,7 +746,9 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
       elCtx.className = isCritCtx ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill';
       elCtx.style.color = isCritCtx ? '#fde68a' : thermal.color;
       elCtx.title = exactTokensLine;
-      elCtx.textContent = `${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}`;
+      elCtx.textContent = agent.schemaDrift
+        ? td('drift.unknownMetrics')
+        : `${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}`;
     }
 
     const elCtxBar = document.getElementById('inspCtxBarFill');
@@ -725,10 +759,9 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
 
     const elDiag = document.getElementById('inspSeatDiagnosis');
     if (elDiag) {
-      const diagHtml = renderSeatDiagnosisHtml(ctx, agent);
-      if (elDiag.getAttribute('data-cache-key') !== diagHtml) {
-        elDiag.innerHTML = diagHtml;
-        elDiag.setAttribute('data-cache-key', diagHtml);
+      if (elDiag.getAttribute('data-cache-key') !== diagHtmlNow) {
+        elDiag.innerHTML = diagHtmlNow;
+        elDiag.setAttribute('data-cache-key', diagHtmlNow);
       }
     }
 
@@ -819,7 +852,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
             </div>
           </div>
           <div class="insp-identity-actions" style="display:flex; gap:4px; align-items:center; flex-shrink:0;">
-            <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 8px; font-size:10px; min-height:28px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 ${escapeHtml(td('insp.copyAttachBtn'))}</button>
+            <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 8px; font-size:10px; min-height:28px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 ${escapeHtml(attachBtnLabel)}</button>
           </div>
         </div>
 
@@ -829,18 +862,21 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
             <div id="inspValActivity" class="${agent.state === 'urgent' ? 'insp-act-pill is-urgent' : 'insp-act-pill'}" style="display:flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11.5px; font-weight:700; color:${agent.state === 'urgent' ? '#fecdd3' : agent.state === 'working' ? '#6ee7b7' : '#7dd3fc'};">
               ${renderStateIndicatorHtml(agent)} <span style="font-size:10.5px; color:${agent.state === 'urgent' ? '#ffe4e6' : '#94a3b8'}; font-weight:500;">(${lastActStr})</span>
             </div>
-            <span id="inspValHarness" style="font-family:var(--font-mono); font-size:10.5px; color:#e9d5ff; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(formatAgentHarnessLabel(ctx, agent))}">${escapeHtml(formatAgentHarnessLabel(ctx, agent))}</span>
+            <span style="display:inline-flex; align-items:center; gap:4px; max-width:100%; flex-wrap:wrap; justify-content:flex-end;">
+              <span id="inspValHarness" style="font-family:var(--font-mono); font-size:10.5px; color:#e9d5ff; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25); padding:1px 6px; border-radius:4px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(formatAgentHarnessLabel(ctx, agent))}">${escapeHtml(formatAgentHarnessLabel(ctx, agent))}</span>
+              <span id="inspValDriftBadge" data-cache-key="${escapeHtml(driftBadgeHtml)}">${driftBadgeHtml}</span>
+            </span>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <div style="flex:1 1 56px; min-width:44px; height:5px; background:rgba(148,163,184,0.16); border-radius:999px; overflow:hidden;">
               <div id="inspCtxBarFill" style="width:${thermal.pct}%; height:100%; background:${thermal.tier === 'crit' ? '#f59e0b' : thermal.color}; transition:width 0.3s ease;"></div>
             </div>
-            <span id="inspValContext" class="${thermal.tier === 'crit' ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill'}" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.tier === 'crit' ? '#fde68a' : thermal.color}; max-width:100%; white-space:normal; line-height:1.35; overflow-wrap:anywhere;" title="${exactTokensLine}">${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}</span>
+            <span id="inspValContext" class="${thermal.tier === 'crit' ? 'insp-ctx-pill is-crit' : 'insp-ctx-pill'}" style="font-family:var(--font-mono); font-size:10.5px; font-weight:700; color:${thermal.tier === 'crit' ? '#fde68a' : thermal.color}; max-width:100%; white-space:normal; line-height:1.35; overflow-wrap:anywhere;" title="${exactTokensLine}">${agent.schemaDrift ? escapeHtml(td('drift.unknownMetrics')) : `${thermal.label}${showBurnInline ? ' • ' + computeBurn(agent, deckLang).label : ''}`}</span>
           </div>
         </div>
 
         <!-- SA Level 1.5: Actionable Fleet Intelligence Diagnosis (What is wrong & how to fix it) -->
-        <div id="inspSeatDiagnosis">${renderSeatDiagnosisHtml(ctx, agent)}</div>
+        <div id="inspSeatDiagnosis" data-cache-key="${escapeHtml(diagHtmlNow)}">${diagHtmlNow}</div>
 
         <!-- SA Level 2: Current Task -->
         <div id="inspCurrentTask">${renderCurrentTaskHtml(ctx, agent)}</div>
@@ -851,18 +887,21 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
         <!-- SA Level 2: Management-by-Exception Signals -->
         <div id="inspWarningSignsGrid">${renderWarningSignsHtml(ctx, agent)}</div>
 
-        <!-- SA Level 3: Action Feedback, Live TMUX Preview & Collapsible Manual Operator Input -->
+        <!-- SA Level 3: Action Feedback, Live TMUX / Read-only Swarm Preview & Collapsible Manual Operator Input -->
         <div id="cmdSendStatus" class="ctrl-status"></div>
         <div style="font-family:var(--font-mono); font-size:10px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:4px; flex-wrap:nowrap;">
-          <span style="display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-weight:700;">🖥️ TMUX <span id="inspTmuxStreamBadge" class="tmux-stream-pill" style="display:${tmuxStreamConnected && tmuxStreamSeat === agent.id ? 'inline-flex' : 'none'};" title="${escapeHtml(td('sse.streamTip'))}">${escapeHtml(td('sse.streamLive'))}</span></span>
-          ${agent.state === 'urgent' ? '' : `<span style="display:flex; gap:4px; flex-shrink:0; align-items:center;">
+          <span style="display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-weight:700;">${screenOrSwarmTitle} ${isSwarmSeat ? '' : `<span id="inspTmuxStreamBadge" class="tmux-stream-pill" style="display:${tmuxStreamConnected && tmuxStreamSeat === agent.id ? 'inline-flex' : 'none'};" title="${escapeHtml(td('sse.streamTip'))}">${escapeHtml(td('sse.streamLive'))}</span>`}</span>
+          ${(isSwarmSeat || agent.state === 'urgent') ? '' : `<span style="display:flex; gap:4px; flex-shrink:0; align-items:center;">
             <button class="action-pill tmux-hdr-btn" type="button" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
             <button class="action-pill tmux-hdr-btn" type="button" id="btnAutoFollow" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
             <button class="action-pill tmux-hdr-btn" type="button" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
           </span>`}
         </div>
-        <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(liveScreenCapture)}</div>
+        <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(screenOrSwarmText)}</div>
 
+        ${isSwarmSeat ? `
+        <div class="swarm-readonly-note" style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.22); border-radius:8px; padding:8px 10px; margin-top:4px; line-height:1.45;">🐝 ${escapeHtml(td('swarm.readonlyNotice'))}</div>
+        ` : `
         <div class="terminal-ctrl-bar" id="terminalCtrlBar">
           <div id="inspectorPromptOptionsBar" data-cache-key="${escapeHtml(optionsHtml)}">${optionsHtml}</div>
           <div class="ctrl-quick-keys" id="ctrlQuickKeysBar" data-cache-key="${escapeHtml(quickKeysHtml)}">
@@ -877,6 +916,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
             </form>
           </details>
         </div>
+        `}
 
         <!-- SA Level 3: Verified Action Audit Trail (Always visible when records exist) -->
         <div id="inspActionAudit">${renderActionAuditHtml(ctx, agent.id)}</div>
@@ -921,7 +961,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
     }
   }
 
-  updateTerminalScreen(document.getElementById('tmuxScreenBox'), liveScreenCapture, 35);
+  updateTerminalScreen(document.getElementById('tmuxScreenBox'), screenOrSwarmText, 35);
 
   const visibleQItems = currentRigFilter === 'all'
     ? queueItems

@@ -257,12 +257,22 @@ function currentPromptCommand(screen) {
     if (end < 0) end = lines.length;
   }
   let question = '';
+  let shellFallback = '';
   for (let i = end - 1; i >= Math.max(0, end - 12); i--) {
     const line = lines[i];
     if (NUMBERED_OPT_RE.test(line) || HITL_STRONG_NAV_RE.test(line) || IDLE_BARE_PROMPT_RE.test(line)) break;
     const bash = line.match(/^(?:[●⏺]\s*)?Bash\((.+)\)$/i);
     if (bash) return bash[1];
-    if (/^(?:requesting permission for:|would you like to run\b)/i.test(line)) {
+    if (!shellFallback && /^\$\s+(.+)$/.test(line)) {
+      const joined = [];
+      for (const part of lines.slice(i, end)) {
+        if (/^(?:run this command\?|justification:|reason:)/i.test(part)) break;
+        if (!/^[-─━]+$/.test(part)) joined.push(part);
+      }
+      shellFallback = joined.join(' ').replace(/^\$\s+/, '');
+      continue;
+    }
+    if (/^(?:requesting permission for:|would you like to run\b|выполнить следующую команду\b)/i.test(line)) {
       const inline = line.match(/^requesting permission for:\s*(.+)/i);
       const promptBody = lines.slice(i + 1, end);
       const shellLine = promptBody.findIndex(part => /^\$\s/.test(part));
@@ -272,15 +282,15 @@ function currentPromptCommand(screen) {
         if (!/^[-─━]+$/.test(part)) commandLines.push(part);
       }
       const command = inline?.[1] || commandLines.join(' ');
-      return command.replace(/^\$\s+/, '') || line;
+      return command.replace(/^\$\s+/, '') || shellFallback || line;
     }
     if (/^(?:allow\b.*\?|do you want to\b.*\?|run this command\?)$/i.test(line)) {
-      if (question) break;
+      if (question || shellFallback) break;
       question = line;
       if (!/^(?:allow this (?:command|tool|action)|do you want to proceed|run this command)\?$/i.test(line)) return line;
     }
   }
-  return question;
+  return shellFallback || question;
 }
 
 /** Presentation data for both approval surfaces. Only sanitized text reaches their tooltips. */

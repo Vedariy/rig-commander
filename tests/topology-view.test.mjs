@@ -340,3 +340,26 @@ test('Routine active edges recolor crimson/magenta to calm cyan while P0 urgent/
   includes(p0Html, 'marker-end="url(#arr-crimson)"');
   includes(p0Html, '🚨 HITL');
 });
+
+test('Swarm clusters render 🐝 SWARM header badge and nodes surface SCHEMA DRIFT / UNVERIFIED VER pills', () => {
+  const clustersHtml = renderRigClustersHtml([
+    { rigId: 'swarm-4b4b', isSwarm: true, providerKind: 'antigravity_swarm', count: 3, xPct: 5, yPct: 5, wPct: 42, hPct: 70 },
+    { rigId: 'core-platform', count: 2, xPct: 52, yPct: 5, wPct: 42, hPct: 70 }
+  ], { cw: 1000, ch: 600, escapeHtml, td: (k, v) => tDeck('en', k, v) });
+  includes(clustersHtml, 'is-swarm-cluster');
+  includes(clustersHtml, '🐝 SWARM · @swarm-4b4b');
+
+  const driftSpec = renderNodeSpecMetaHtml(
+    { ...agents[0], schemaDrift: true, harness: 'codex' },
+    { perHour: 0 },
+    deps('en')
+  );
+  includes(driftSpec, '⚠️ schema_drift');
+
+  const unverifiedSpec = renderNodeSpecMetaHtml(
+    { ...agents[0], providerDrift: { status: 'unverified_version' }, harness: 'agy' },
+    { perHour: 0 },
+    deps('ru')
+  );
+  includes(unverifiedSpec, 'unverified ver');
+});

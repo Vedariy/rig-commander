@@ -189,21 +189,22 @@ flowchart TD
     subgraph FE["Frontend (openrig/) — Zero-Build ES Modules"]
         HTML["index.html (Граф, Гант, Радар, Инспектор, Git Radar, Shift Digest, ⌘K Palette)"]
         CSS["assets/styles/deck.css (Dark Cockpit tokens)"]
-        DOM["assets/domain/* (19 чистых модулей без DOM)"]
+        DOM["assets/domain/* (чистые zero-DOM модули + control-plane-model.js, swarm-model.js)"]
         ONT["assets/ontology/* (actions.js, snapshot.js)"]
     end
 
     subgraph BE["Backend BFF (openrig/server.mjs + lib/)"]
         SEC["HTTP Router, Security Gate & ServerIdempotencyCache"]
         SSE["lib/sse-hub.mjs (SSE Push + Live TMUX Stream)"]
-        INTEL["lib/fleet-intelligence/* (6 детекторов) + lib/ai-evaluator/* (Advisory-Only)"]
-        OPS["lib/git-radar.mjs, shift-history.mjs, action-audit.mjs, circuit-breaker.mjs"]
-        CONN["lib/remote-access.mjs, telegram-bridge.mjs, universal-discovery.mjs, self-update.mjs"]
+        INTEL["lib/fleet-intelligence/* (включая provider-drift-guard.mjs) + lib/ai-evaluator/* (Advisory-Only)"]
+        OPS["lib/control-plane-probe.mjs, resilience/hygiene-gate.mjs, git-radar.mjs, shift-history.mjs, action-audit.mjs"]
+        CONN["lib/swarm-discovery.mjs, universal-discovery.mjs, remote-access.mjs, telegram-bridge.mjs, self-update.mjs"]
     end
 
     subgraph DEV["Доставка и тесты"]
         SYNC["scripts/sync-public.mjs -> public/ (Vercel)"]
-        TEST["tests/*.test.mjs (24 набора, 125/125 PASS на node --test)"]
+        CLI["scripts/verify-providers.mjs (npm run verify:providers)"]
+        TEST["tests/*.test.mjs (44 набора, 372/372 PASS на node --test)"]
     end
 
     HTML --> CSS
@@ -222,7 +223,7 @@ flowchart TD
 ```
 
 ### Четыре архитектурных правила
-1. **Чистый слой `assets/domain/` и `assets/ontology/`:** 19 доменных модулей не обращаются к DOM/`window` и тестируются напрямую в `node --test`.
+1. **Чистый слой `assets/domain/` и `assets/ontology/`:** доменные модули не обращаются к DOM/`window` и тестируются напрямую в `node --test`.
 2. **Единый источник правды:** правки вносятся только в `openrig/` и `landing/`; папка `public/` генерируется детерминированно командой `npm run sync:public` (при этом `openrig/docs/` никогда не копируется в `public/`).
 3. **Неблокирующая аналитика и 0% CPU в простое:** детекторы `FleetIntelligenceEngine` работают внеполосно с изоляцией сбоев, а `SsePushHub` останавливает фоновые циклы при отсутствии активных клиентов.
 4. **Действия по предусловию и с аудитом:** все контролы берутся из единого реестра действий; у здорового `idle`-узла `0` лишних кнопок вмешательства; дубли блокируются на клиенте и сервере.

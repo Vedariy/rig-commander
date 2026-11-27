@@ -40,14 +40,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="RigCommander">
   <meta property="og:title" content="RigCommander — Architecture & Security Passport">
-  <meta property="og:description" content="Local-first trust boundaries, 0-dependency architecture, Operational Twin, privacy & security guarantees, and 355 automated tests.">
+  <meta property="og:description" content="Local-first trust boundaries, 0-dependency architecture, Operational Twin, privacy & security guarantees, and 372 automated tests.">
   <meta property="og:url" content="https://rig-commander.vercel.app/passport">
   <meta property="og:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="RigCommander — Architecture & Security Passport">
-  <meta name="twitter:description" content="Local-first trust boundaries, 0-dep architecture, Operational Twin, hardened security guarantees & 355 automated tests.">
+  <meta name="twitter:description" content="Local-first trust boundaries, 0-dep architecture, Operational Twin, hardened security guarantees & 372 automated tests.">
   <meta name="twitter:image" content="https://rig-commander.vercel.app/media/og-card.png">
   <style>
     :root {
@@ -546,7 +546,7 @@
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.arch.l">Архитектура</div>
         <div class="kpi-val">Local-First</div>
-        <div class="kpi-note" data-i18n="kpi.arch.n">Zero-Build ESM • SSE Push • 0% Idle CPU</div>
+        <div class="kpi-note" data-i18n="kpi.arch.n">Zero-Build ESM • SSE Push • 0% Idle CPU (no tabs)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.deps.l">Зависимости</div>
@@ -560,7 +560,7 @@
       </div>
       <div class="kpi-card">
         <div class="kpi-label" data-i18n="kpi.tests.l">Автотесты</div>
-        <div class="kpi-val" style="color:var(--emerald);">355 / 355 PASS</div>
+        <div class="kpi-val" style="color:var(--emerald);">372 / 372 PASS</div>
         <div class="kpi-note" data-i18n="kpi.tests.n">40 тестовых наборов • ~1s локально</div>
       </div>
       <div class="kpi-card">
@@ -710,7 +710,7 @@
           <h3>⚡ <span data-lang-block="ru">Локальный мост и аналитическое ядро</span><span data-lang-block="en">Local Bridge &amp; Advisory Core</span></h3>
           <ul>
             <li><span data-lang-block="ru"><strong>Внеполосный сбор данных:</strong> подключается к живому OpenRig либо автоматически находит обычные <code>tmux</code>-сессии и локальные транскрипты без правки кода агентов.</span><span data-lang-block="en"><strong>Out-of-Band Telemetry:</strong> connects to OpenRig or automatically discovers standalone <code>tmux</code> sessions and local transcripts with zero code instrumentation.</span></li>
-            <li><span data-lang-block="ru"><strong>SSE Push и FinOps:</strong> доставляет изменения флота и экранов по дельтам (0% CPU в простое) и считает экономику <code>SUB vs PAYG</code> в реальном времени.</span><span data-lang-block="en"><strong>SSE Push &amp; FinOps:</strong> streams fleet &amp; terminal deltas only on change (0% idle CPU) and tracks real-time <code>SUB vs PAYG</code> unit economics.</span></li>
+            <li><span data-lang-block="ru"><strong>SSE Push и FinOps:</strong> доставляет изменения флота и экранов по дельтам (0% CPU при отсутствии открытых вкладок) и считает экономику <code>SUB vs PAYG</code> в реальном времени.</span><span data-lang-block="en"><strong>SSE Push &amp; FinOps:</strong> streams fleet &amp; terminal deltas only on change (0% CPU when no browser tabs are open) and tracks real-time <code>SUB vs PAYG</code> unit economics.</span></li>
             <li><span data-lang-block="ru"><strong>Опциональный 3-Tier AI Evaluator:</strong> работает строго в режиме <em>Advisory-Only</em> — сначала детерминированные правила безопасности, затем быстрый классификатор и только при необходимости глубокая модель.</span><span data-lang-block="en"><strong>Opt-in 3-Tier AI Evaluator:</strong> strictly <em>Advisory-Only</em> — deterministic safety guardrails first, fast triage tier second, and deep reasoning only when escalated.</span></li>
           </ul>
         </div>
@@ -719,7 +719,7 @@
           <ul>
             <li><span data-lang-block="ru"><strong>Безопасные действия:</strong> каждая кнопка управления учитывает тип харнеса, проверяет предусловия, блокирует двойную отправку и сверяет фактический результат в журнале аудита.</span><span data-lang-block="en"><strong>Safe Controls:</strong> every operator action respects the agent runtime, checks preconditions, prevents duplicate sends, and verifies the post-action outcome automatically.</span></li>
             <li><span data-lang-block="ru"><strong>Авто-тормоз и Telegram HITL:</strong> настраиваемые лимиты бюджета и циклов доработок QA плюс удалённое подтверждение критичных запросов с телефона.</span><span data-lang-block="en"><strong>Circuit-Breaker &amp; Telegram HITL:</strong> configurable spend/rework caps plus optional remote confirmation of critical prompts from your phone.</span></li>
-            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@{{APP_VERSION}} --read-only</code>, встроенное безопасное самообновление и 355 автоматических тестов.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@{{APP_VERSION}} --read-only</code> launch, built-in safe self-update, and 355 automated tests.</span></li>
+            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@{{APP_VERSION}} --read-only</code>, встроенное безопасное самообновление и 372 автоматических теста.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@{{APP_VERSION}} --read-only</code> launch, built-in safe self-update, and 372 automated tests.</span></li>
           </ul>
         </div>
       </div>
@@ -855,7 +855,7 @@
     <section id="quality">
       <div class="sec-head">
         <h2 data-i18n="s5.title">5. Верификация, тестирование и запуск</h2>
-        <span class="sec-tag">NODE --TEST • 355/355 PASS</span>
+        <span class="sec-tag">NODE --TEST • 372/372 PASS</span>
       </div>
       <table>
         <thead>
@@ -864,7 +864,7 @@
         <tbody>
           <tr>
             <td><b><span data-lang-block="ru">Локальный мост, SSE Push и Discovery</span><span data-lang-block="en">Local Bridge, SSE Push &amp; Discovery</span></b></td>
-            <td><span data-lang-block="ru">Потоковая доставка дельт телеметрии и экранов TMUX, 0% CPU в простое, автообнаружение OpenRig и standalone <code>tmux</code>/JSONL, инкрементальное чтение больших логов</span><span data-lang-block="en">Delta SSE telemetry &amp; deduplicated Live TMUX streaming, 0% idle CPU, OpenRig + standalone <code>tmux</code>/JSONL discovery, chunked large-log reading</span></td>
+            <td><span data-lang-block="ru">Потоковая доставка дельт телеметрии и экранов TMUX, 0% CPU без открытых вкладок, автообнаружение OpenRig, <code>tmux</code>/JSONL и нативных роёв, инкрементальное чтение больших логов</span><span data-lang-block="en">Delta SSE telemetry &amp; deduplicated Live TMUX streaming, 0% CPU with no open tabs, OpenRig + standalone <code>tmux</code>/JSONL + native swarm discovery, chunked large-log reading</span></td>
             <td><span class="badge-ok">PASS</span></td>
           </tr>
           <tr>
@@ -928,7 +928,7 @@
         'kpi.class.l': 'Класс системы',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Архитектура',
-        'kpi.arch.n': 'Zero-Build ESM • SSE Push • 0% Idle CPU',
+        'kpi.arch.n': 'Zero-Build ESM • SSE Push • 0% CPU (без вкладок)',
         'kpi.deps.l': 'Зависимости',
         'kpi.ont.l': 'Цифровой двойник',
         'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',
@@ -1006,7 +1006,7 @@
         'kpi.class.l': 'System Class',
         'kpi.class.n': 'Dark Cockpit • Management-by-Exception',
         'kpi.arch.l': 'Architecture',
-        'kpi.arch.n': 'Zero-Build ESM • SSE Push • 0% Idle CPU',
+        'kpi.arch.n': 'Zero-Build ESM • SSE Push • 0% Idle CPU (no tabs)',
         'kpi.deps.l': 'Dependencies',
         'kpi.ont.l': 'Digital Twin',
         'kpi.ont.n': 'Objects • Guarded Actions • Advisory AI',

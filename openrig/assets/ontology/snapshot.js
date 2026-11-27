@@ -195,6 +195,11 @@ export function buildOntologySnapshot(rawTelemetry, prevSnapshot = null, nowMs =
       callsOut: traffic.out || 0,
       lastActivityAt: liveNode.lastActivityAt || null,
       tmuxAttachCommand: liveNode.tmuxAttachCommand || null,
+      capabilities: liveNode.capabilities || null,
+      swarmMeta: liveNode.swarmMeta || null,
+      providerKind: liveNode.providerKind || null,
+      schemaDrift: Boolean(liveNode.schemaDrift),
+      providerDrift: liveNode.providerDrift || null,
       cwd: liveNode.cwd ? liveNode.cwd.split('/').pop() : 'core-platform',
       guidance: seatGuidance[seatId] || null,
       git: gitBySeatId[seatId] || null

@@ -838,10 +838,10 @@
             </p>
           </div>
           <div class="subcard">
-            <div class="subcard-title">🌐 <span data-lang-block="ru">Режим 2: Universal (без OpenRig)</span><span data-lang-block="en">Mode 2: Universal Mode (No OpenRig Needed)</span></div>
+            <div class="subcard-title">🌐 <span data-lang-block="ru">Режим 2: Universal (без OpenRig) и Рои (/swarm)</span><span data-lang-block="en">Mode 2: Universal Mode &amp; Additive Swarm Discovery</span></div>
             <p>
-              <span data-lang-block="ru">Если OpenRig не запущен (или передан флаг <code class="inline">--universal</code>), пульт сам сканирует локальные <code class="inline">tmux</code>-панели с Claude Code / Codex / Aider / Gemini и инкрементально читает JSONL-транскрипты в <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code>.</span>
-              <span data-lang-block="en">If OpenRig is absent (or you pass <code class="inline">--universal</code>), RigCommander automatically discovers local <code class="inline">tmux</code> panes running Claude Code / Codex / Aider / Gemini and tails JSONL transcripts in <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code>.</span>
+              <span data-lang-block="ru">Если OpenRig не запущен (или передан <code class="inline">--universal</code>), пульт сам сканирует локальные <code class="inline">tmux</code>-панели с Claude Code / Codex / Aider / Gemini и читает локальные транскрипты. Дополнительно (даже при активном OpenRig) пульт в режиме <strong>только чтения</strong> обнаруживает нативные рои Antigravity <code class="inline">/swarm</code>, Claude Teams и субагентов Codex: показывает доску задач, переходы по упоминаниям и запрещает отправку клавиш на не-tmux узлы.</span>
+              <span data-lang-block="en">When OpenRig is absent (or with <code class="inline">--universal</code>), RigCommander discovers local <code class="inline">tmux</code> panes running Claude Code / Codex / Aider / Gemini and tails local transcripts. Additively (even alongside OpenRig), read-only <strong>Swarm Discovery</strong> detects native Antigravity <code class="inline">/swarm</code> sessions, Claude Teams, and Codex subagents—rendering their shared board tail and mention topology while keeping terminal writes disabled on non-tmux seats.</span>
             </p>
           </div>
         </div>
@@ -1383,8 +1383,8 @@
           <li><span data-lang-block="ru">Прочитайте результат: восстановление может быть частичным или остаться неподтверждённым. Команду можно скопировать для ручной диагностики.</span><span data-lang-block="en">Read the result: recovery may be partial or remain unconfirmed. Copy the command for manual diagnosis when needed.</span></li>
         </ol>
         <div class="callout warn" style="margin-bottom:14px;">
-          <span data-lang-block="ru">Локальное хранилище не зашифровано (открытый текст с правами доступа только владельца — полагайтесь на шифрование диска). Снимок не гарантирует сохранения всей истории диалога. Автоматического восстановления без вашего действия нет.</span>
-          <span data-lang-block="en">The local vault is unencrypted plaintext with owner-only OS permissions — rely on full-disk encryption. A snapshot does not guarantee the entire conversation history is preserved. Recovery never starts without your action.</span>
+          <span data-lang-block="ru">Локальное хранилище не зашифровано (открытый текст с правами доступа только владельца — полагайтесь на шифрование диска). Снимок не гарантирует сохранения всей истории диалога. Автоматического восстановления без вашего действия нет. Встроенный <strong>Watchdog control-plane и гигиена очереди</strong> при замедлении демона или росте зависших задач показывают план безопасных команд <code class="inline">rig queue update</code> (и ротации лога) в 2 шага с явным подтверждением и честным отчётом (<code class="inline">cleaned</code> / <code class="inline">partial</code> / <code class="inline">failed</code> / <code class="inline">unknown</code>).</span>
+          <span data-lang-block="en">The local vault is unencrypted plaintext with owner-only OS permissions — rely on full-disk encryption. A snapshot does not guarantee the entire conversation history is preserved. Recovery never starts without your action. The built-in <strong>Control-Plane Watchdog &amp; Queue Hygiene</strong> also surfaces daemon slowdowns or stale queues and previews official <code class="inline">rig queue update</code> cleanup steps (plus safe log rotation) in a 2-step confirm modal with honest receipts.</span>
         </div>
         <a class="cta-btn" href="/demo?track=resilience"><span data-lang-block="ru">▶ Попробовать безопасную симуляцию</span><span data-lang-block="en">▶ Try the Safe Simulation</span></a>
       </section>

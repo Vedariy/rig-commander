@@ -21,7 +21,8 @@ Idle CPU / Простой: 0% idle CPU target for telemetry polling with no acti
 
 - Trace a handoff from graph to Gantt to queue. / Проследите передачу задачи по графу, Ганту и очереди.
 - Read a terminal prompt before answering. Compare subscription and token costs. / Прочитайте запрос терминала перед ответом. Сопоставьте подписку и оплату за токены.
-- Preview fleet recovery, confirm the plan, then inspect results for each target. / Проверьте план восстановления флота, подтвердите его и прочитайте результат для каждого участника.
+- Preview fleet recovery or control-plane queue hygiene, confirm the plan, then inspect honest results for each target. / Проверьте план восстановления флота или гигиены очереди, подтвердите его и прочитайте честный результат по каждой цели.
+- Additive read-only Swarm Discovery surfaces Antigravity `/swarm`, Claude Teams, and Codex subagents alongside OpenRig and tmux with terminal writes disabled on non-tmux seats; Provider Drift Guard flags CLI format changes and marks uncertain metrics `unknown` instead of `0`. / Аддитивное обнаружение роёв в режиме только чтения показывает Antigravity `/swarm`, Claude Teams и субагентов Codex рядом с OpenRig и tmux (запись клавиш на не-tmux узлы отключена); страж дрейфа провайдеров отмечает несовместимые изменения формата CLI и выводит `unknown` вместо `0`.
 - Optional scoped Auto-Consent (off by default) automates bounded single-use approvals with a visible cancel countdown, instant pause, and hard vetoes for destructive commands and operator questions. / Опциональное авто-подтверждение по областям (выключено по умолчанию) автоматизирует ограниченные разовые подтверждения с видимым отсчётом отмены, мгновенной паузой и жёсткими вето на разрушительные команды и вопросы оператору.
 
 ## Security Boundaries

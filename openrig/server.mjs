@@ -38,6 +38,9 @@ import { registerGuardrailRoutes } from './lib/routes/guardrails.mjs';
 import { registerPlaybookRoutes } from './lib/routes/playbooks.mjs';
 import { registerAutoConsentRoutes } from './lib/routes/auto-consent.mjs';
 import { registerGitShiftRoutes } from './lib/routes/git-shift.mjs';
+import { ControlPlaneProbe, recordProbeLatency, probeControlPlane } from './lib/control-plane-probe.mjs';
+import { discoverSwarmFleets } from './lib/swarm-discovery.mjs';
+import { ProviderDriftGuard } from './lib/provider-drift-guard.mjs';
 
 function resolveReadOnlyMode(env = process.env, argv = process.argv) {
   const rawEnv = String((env && env.RIGCOMMANDER_READ_ONLY) || '').trim().toLowerCase();
@@ -54,6 +57,12 @@ const READ_ONLY_ERROR_BODY = Object.freeze({
 // Per-process secret: injected into index.html on load, required on /api/send.
 const DECK_TOKEN = crypto.randomBytes(24).toString('hex');
 const fleetIntelligence = new FleetIntelligenceEngine({ maxSnapshots: 30, evalThrottleMs: 3000 });
+const providerDriftGuard = new ProviderDriftGuard();
+let latestDriftFindings = [];
+fleetIntelligence.registerDetector({
+  id: 'provider-drift-guard',
+  evaluate: () => (Array.isArray(latestDriftFindings) ? latestDriftFindings : [])
+});
 const shiftHistory = new ShiftHistoryStore({ readOnly: READ_ONLY_MODE });
 const actionAudit = new ActionAuditLog({
   maxRecords: 100,
@@ -1440,11 +1449,14 @@ async function getRecentDecisionsCached(limit = 15, nodes = []) {
 }
 
 async function fetchDaemonJson(endpoint) {
+  const startedAt = Date.now();
   try {
     const res = await fetch(`${DAEMON_URL}${endpoint}`);
+    recordProbeLatency({ endpoint, durationMs: Date.now() - startedAt, ok: res.ok, tsMs: Date.now() });
     if (!res.ok) return null;
     return await res.json();
   } catch {
+    recordProbeLatency({ endpoint, durationMs: Date.now() - startedAt, ok: false, tsMs: Date.now() });
     return null;
   }
 }
@@ -2084,10 +2096,90 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
     nodes = await enrichOpenRigTerminalPrompts(nodes, { allowBackgroundSWR: true });
   }
 
-  const [decisions, usageReport, gitRadarBundle] = await Promise.all([
+  // Additive multi-vendor swarm discovery (Antigravity /swarm, Claude Teams, Codex subagents)
+  const disableSwarm = process.env.RIGCOMMANDER_DISABLE_SWARM === '1';
+  const [swarmBundle] = await Promise.all([
+    disableSwarm
+      ? Promise.resolve(null)
+      : discoverSwarmFleets({ driftGuard: providerDriftGuard, includeKilled: false }).catch(() => null),
+    providerDriftGuard.probeAllProviders().catch(() => null)
+  ]);
+
+  let resolvedSwarms = [];
+  let resolvedSwarmEdges = [];
+  let rawGitWorktreeNodes = [];
+  const driftFindings = [];
+
+  if (swarmBundle) {
+    const matchesRig = item => {
+      if (rigKey === 'all') return true;
+      const itemRig = item?.rigId || (typeof item?.canonicalSessionName === 'string' && item.canonicalSessionName.includes('@') ? item.canonicalSessionName.split('@').pop() : '');
+      return itemRig === rigKey;
+    };
+    const seenNodeIds = new Set(nodes.map(n => n && n.canonicalSessionName).filter(Boolean));
+    const seenRigIds = new Set(resolvedAvailableRigs.map(r => r && (r.id || r.rigId || r.name)).filter(Boolean));
+
+    for (const sRig of (swarmBundle.availableRigs || [])) {
+      const rId = sRig?.id || sRig?.rigId || sRig?.name;
+      if (rId && !seenRigIds.has(rId)) {
+        seenRigIds.add(rId);
+        resolvedAvailableRigs.push(sRig);
+      }
+    }
+    const matchingSwarmNodes = (swarmBundle.nodes || []).filter(matchesRig);
+    for (const sn of matchingSwarmNodes) {
+      if (sn && sn.canonicalSessionName && !seenNodeIds.has(sn.canonicalSessionName)) {
+        seenNodeIds.add(sn.canonicalSessionName);
+        nodes.push(sn);
+      }
+    }
+    if (discoveryMode === 'none' && matchingSwarmNodes.length > 0) {
+      discoveryMode = 'swarm';
+    }
+    resolvedSwarms = (swarmBundle.swarms || []).filter(s => rigKey === 'all' || s?.rig?.id === rigKey || s?.rigId === rigKey);
+    resolvedSwarmEdges = (swarmBundle.edges || []).filter(e => {
+      if (rigKey === 'all') return true;
+      return seenNodeIds.has(e?.from) || seenNodeIds.has(e?.to);
+    });
+    if (Array.isArray(swarmBundle.ganttItems) && swarmBundle.ganttItems.length > 0) {
+      const swarmGantt = swarmBundle.ganttItems.filter(it => rigKey === 'all' || it?.rigId === rigKey || seenNodeIds.has(it?.from) || seenNodeIds.has(it?.to));
+      if (swarmGantt.length > 0) {
+        resolvedHistory = {
+          ...resolvedHistory,
+          ganttItems: [...(Array.isArray(resolvedHistory.ganttItems) ? resolvedHistory.ganttItems : []), ...swarmGantt]
+        };
+        resolvedHistoryRev = `${resolvedHistoryRev}:sw${swarmBundle.stats?.clusterCount || 0}`;
+      }
+    }
+    rawGitWorktreeNodes = (swarmBundle.gitWorktrees || []).filter(matchesRig);
+    if (Array.isArray(swarmBundle.driftFindings)) driftFindings.push(...swarmBundle.driftFindings);
+  }
+  const driftStatus = providerDriftGuard.getStatus();
+  if (Array.isArray(driftStatus?.findings) && driftStatus.findings.length > 0) {
+    const seenDriftIds = new Set(driftFindings.map(f => f && f.id).filter(Boolean));
+    for (const f of driftStatus.findings) {
+      if (f && f.id && !seenDriftIds.has(f.id)) driftFindings.push(f);
+    }
+  }
+  latestDriftFindings = driftFindings;
+
+  const gitRadarNodes = rawGitWorktreeNodes.length > 0 ? [...nodes, ...rawGitWorktreeNodes] : nodes;
+  const openrigHome = process.env.OPENRIG_HOME || undefined;
+  const shouldProbeHealthz = discoveryMode === 'openrig' || (!forceUniversal && effectiveRigs.length > 0);
+
+  const [decisions, usageReport, gitRadarBundle, controlPlaneData] = await Promise.all([
     getRecentDecisionsCached(15, nodes),
     buildSeatUsageReport(nodes),
-    getGitRadarCached(rigKey, nodes, { forceRefresh: forceGit })
+    getGitRadarCached(rigKey, gitRadarNodes, { forceRefresh: forceGit }),
+    probeControlPlane({
+      openrigHome,
+      activeQueue: Array.isArray(activeQueue) ? activeQueue : [],
+      nodes,
+      nowMs: Date.now(),
+      daemonUrl: DAEMON_URL,
+      fetchFn: typeof fetch === 'function' ? fetch : null,
+      probeHealthz: shouldProbeHealthz
+    }).catch(() => null)
   ]);
 
   const guidanceMap = Object.assign({}, DEFAULT_SEAT_GUIDANCE);
@@ -2156,6 +2248,10 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
     autoConsent: autoConsent.getState(),
     update: selfUpdater.getStatus(),
     evaluator: aiEvaluator.getTelemetrySummary(),
+    controlPlane: controlPlaneData || null,
+    swarms: resolvedSwarms,
+    swarmEdges: resolvedSwarmEdges,
+    providerDrift: driftStatus || null,
     intelligence: null
   };
 
@@ -2233,6 +2329,7 @@ async function assembleTelemetryBundle(requestedRig = 'all', { forceGit = false 
         autoConsent.reconcileSeatStates(nodes);
       }
       for (const n of nodes) {
+        if (n?.capabilities?.canCaptureTmux === false) continue;
         const disp = (n && n.activityState && n.activityState.display) || '';
         const needsCount = (n && n.activityState && n.activityState.needsInput && n.activityState.needsInput.count) || 0;
         if ((disp === 'needs-input' || needsCount > 0) && n.canonicalSessionName) {
@@ -2691,6 +2788,9 @@ if (READ_ONLY_MODE) {
 
 const resilience = new FleetResilienceService({
   stateDir: resolvedStateDir,
+  openrigHome: process.env.OPENRIG_HOME || undefined,
+  rigBin: RIG_BIN,
+  readOnly: READ_ONLY_MODE,
   providers: [new OpenRigResilienceProvider({ rigBin: RIG_BIN, daemonUrl: DAEMON_URL })],
   actionAudit, shiftHistory,
   notify: async advisory => {
