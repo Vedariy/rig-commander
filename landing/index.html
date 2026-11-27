@@ -562,8 +562,25 @@
       box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
     }
     .cli-prompt { color: var(--cyan); font-weight: 700; user-select: none; }
-    .cli-icon { opacity: 0.6; transition: opacity 0.2s; }
-    .cli-copy-box:hover .cli-icon { opacity: 1; }
+    .cli-copy-pill {
+      margin-left: 4px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #bae6fd;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .cli-copy-box:hover .cli-copy-pill {
+      background: rgba(56, 189, 248, 0.28);
+      border-color: var(--cyan);
+      color: #ffffff;
+    }
+    .nowrap-flag { white-space: nowrap; }
 
     .operator-faq { padding-block: 3rem; }
     .operator-faq details { padding-block: .6rem; border-bottom: 1px solid var(--border-subtle); }
@@ -700,10 +717,49 @@
     /* SIMULATOR STAGE / WORKSPACE */
     .sim-body {
       display: grid;
-      grid-template-columns: 240px 1fr 280px;
-      min-height: 480px;
+      grid-template-columns: 228px 1fr 296px;
+      min-height: 296px;
       background: #01040a;
       position: relative;
+    }
+    .sim-panes-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      width: 100%;
+      align-content: start;
+    }
+    .sim-panes-grid .sim-node {
+      position: relative;
+      inset: auto;
+      min-width: 0;
+      width: 100%;
+      padding: 10px 11px;
+      transform: none !important;
+    }
+    .sim-panes-grid .sim-node.selected {
+      border-color: rgba(244, 63, 94, 0.72);
+      background: linear-gradient(180deg, rgba(40, 12, 24, 0.94), rgba(14, 16, 30, 0.96));
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), inset 3px 0 0 #fb7185;
+    }
+    .sim-canvas {
+      padding: 14px !important;
+      align-items: stretch !important;
+    }
+    .sim-graph-view {
+      position: relative !important;
+      inset: auto !important;
+      width: 100%;
+    }
+    .sim-right-col {
+      padding: 10px 12px !important;
+      gap: 7px !important;
+    }
+    .sim-terminal-screen {
+      padding: 8px 9px !important;
+      font-size: 10px !important;
+      line-height: 1.4 !important;
+      flex: 0 0 auto !important;
     }
     @media (max-width: 960px) {
       .sim-body { grid-template-columns: 1fr; }
@@ -1926,8 +1982,8 @@
         <span class="accent-cyan">approve in 1 click.</span>
       </h1>
 
-      <p class="hero-subtitle" data-i18n="hero.subtitle">
-        Local-first, 0 npm dependencies, MIT command deck for parallel Claude Code, Codex CLI, Gemini CLI &amp; tmux agents. Works with or without OpenRig — start safely with --read-only.
+      <p class="hero-subtitle" data-i18n-html="hero.subtitle">
+        Local-first, 0 npm dependencies, MIT command deck running on top of local tmux (or OpenRig) for Claude Code, Codex CLI, and Gemini CLI — start safely with <span class="nowrap-flag">--read-only</span>.
       </p>
 
       <div class="hero-actions">
@@ -1938,15 +1994,15 @@
             <span>→</span>
           </a>
           <div class="hero-cli-group">
-            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@{{APP_VERSION}} --read-only')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@{{APP_VERSION}} --read-only');}" title="Click to copy safe read-only CLI command" data-i18n-title="hero.cliTitle">
+            <div class="cli-copy-box" role="button" tabindex="0" onclick="copyCli('npx rig-commander@{{APP_VERSION}} --read-only --no-session-logs')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyCli('npx rig-commander@{{APP_VERSION}} --read-only --no-session-logs');}" title="Click to copy safe tmux-only read-only CLI command" data-i18n-title="hero.cliTitle">
               <span class="cli-prompt">$</span>
-              <span class="cli-cmd-text">npx rig-commander@{{APP_VERSION}} --read-only</span>
-              <span class="cli-icon">📋</span>
+              <span class="cli-cmd-text">npx rig-commander@{{APP_VERSION}} --read-only --no-session-logs</span>
+              <span class="cli-copy-pill" data-i18n="hero.copyBtn">Copy</span>
             </div>
           </div>
         </div>
         <div class="hero-cli-note" data-i18n-html="hero.cliNote">
-          0-setup browser demo · zero-write inspection (add <code>--no-session-logs</code> for tmux-only) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>
+          0-setup browser demo · tmux-only zero-write inspection (drop <code>--no-session-logs</code> for CTX &amp; cost) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>
         </div>
       </div>
 
@@ -1960,7 +2016,7 @@
           <div class="sim-header">
             <div class="sim-brand-cluster">
               <span class="sim-brand-name">💠 RIGCOMMANDER</span>
-              <span class="sim-demo-pill">DEMO</span>
+              <span class="sim-demo-pill" data-i18n="sim.previewBadge">PREVIEW</span>
               <span class="sim-preset-pill">tmux / Universal</span>
             </div>
 
@@ -1970,7 +2026,7 @@
             </div>
 
             <div class="sim-view-switch" role="tablist" aria-label="Preview mode">
-              <button type="button" class="sim-tab-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">Graph</button>
+              <button type="button" class="sim-tab-btn active" id="simViewGraph" onclick="setSimView('graph')" data-i18n="sim.viewGraph">Panes</button>
               <button type="button" class="sim-tab-btn" id="simViewGantt" onclick="setSimView('gantt')" data-i18n="sim.viewGantt">Gantt</button>
             </div>
           </div>
@@ -1996,120 +2052,109 @@
           </div>
 
           <div class="sim-body" id="simBodyGrid">
-            <!-- Left Col: Wait Radar -->
+            <!-- Left Col: Wait Radar (1-to-1 parity with /demo) -->
             <div class="sim-left-col">
               <div class="sim-col-title">
                 <span data-i18n="sim.waitRadar">WAIT RADAR</span>
                 <span style="color:var(--amber);">P0–P1</span>
               </div>
-              <div class="sim-card" style="border-left: 3px solid var(--coral); cursor:pointer;" onclick="selectSimNode(document.getElementById('simQaNode'), 'codex-tests', 'Test Runner (tmux %4)', '78% CTX • permission_prompt HITL', 'alert')">
+              <div class="sim-card" style="border-left: 3px solid var(--coral); cursor:pointer;" onclick="selectSimNode(document.getElementById('simQaNode'), 'codex-tests', 'Codex CLI • Integration tests', '46% CTX • permission_prompt HITL', 'alert')">
                 <div class="sim-card-header">
-                  <span style="color:var(--coral);">P0 • codex-tests</span>
+                  <span style="color:#fda4af;">P0 · codex-tests</span>
                 </div>
                 <div class="sim-card-body" data-i18n="sim.card3">
                   NEEDS INPUT: Command npm test — 3 parsed options ready for 1-click HITL.
                 </div>
               </div>
-              <div class="sim-card" style="border-left: 3px solid var(--amber); cursor:pointer;" onclick="selectSimNode(document.getElementById('simClaudeNode'), 'claude-auth', 'Auth Refactor (tmux %2)', '78% CTX • claude-sonnet-4 • ~$2.14', 'warm')">
+              <div class="sim-card" style="border-left: 3px solid var(--amber); cursor:pointer;" onclick="selectSimNode(document.getElementById('simClaudeNode'), 'claude-refactor', 'Claude Code • Storage refactor', '78% CTX • claude-opus-4 • /compact ready', 'warm')">
                 <div class="sim-card-header">
-                  <span>P1 • claude-auth</span>
+                  <span style="color:#fde68a;">CTX 78% · claude-refactor</span>
                 </div>
                 <div class="sim-card-body" data-i18n="sim.card1">
                   Context at 78% (threshold 75%): preemptive /compact ready before quality drops.
                 </div>
               </div>
-              <div class="sim-card" style="border-left: 3px solid var(--emerald); cursor:pointer;" onclick="selectSimNode(document.getElementById('simGeminiNode'), 'gemini-docs', 'Docs & Migration (tmux %5)', '24% CTX • gemini-cli • ~$0.42', 'active')">
-                <div class="sim-card-header">
-                  <span>WORK • gemini-docs</span>
-                </div>
-                <div class="sim-card-body" data-i18n="sim.card2">
-                  Updating OpenAPI migration notes (24% CTX, 0 blockers).
-                </div>
+              <div class="sim-card" style="border-left: 2px solid rgba(56,189,248,0.45); padding:6px 9px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="selectSimNode(document.getElementById('simGeminiNode'), 'gemini-docs', 'Gemini CLI • OpenAPI & docs', '22% CTX • gemini-2.5-pro', 'active')">
+                <span style="color:#e2e8f0; font-weight:700;">● gemini-docs</span>
+                <span style="color:#94a3b8; font-size:10px;">22%</span>
               </div>
             </div>
 
-            <!-- Center Col: Interactive Topology Canvas + Toggleable Mini Gantt -->
+            <!-- Center Col: 2x2 TMUX Panes Grid (matches /demo tmux / Universal) + Mini Gantt -->
             <div class="sim-canvas" id="simCanvas">
               <div id="simGraphView" class="sim-graph-view">
-                <!-- SVG Connection Lines -->
-                <svg style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none;" id="simSvgLines">
-                  <line x1="50%" y1="22%" x2="24%" y2="54%" stroke="rgba(251, 191, 36, 0.45)" stroke-width="2" />
-                  <line x1="50%" y1="22%" x2="76%" y2="54%" stroke="rgba(0, 255, 157, 0.45)" stroke-width="2" />
-                  <line x1="24%" y1="54%" x2="50%" y2="80%" stroke="rgba(255, 0, 85, 0.55)" stroke-width="2.5" stroke-dasharray="5,4" />
-                  <line x1="76%" y1="54%" x2="50%" y2="80%" stroke="rgba(56, 189, 248, 0.35)" stroke-width="2" />
-                </svg>
-
-                <!-- Node 1: Lead / Orchestrator -->
-                <div class="sim-node" style="top: 10%; left: 36%; min-width:165px;" onclick="selectSimNode(this, 'tmux-lead', 'Session Lead (tmux %1)', '31% CTX • gpt-5-codex • ~$1.12', 'active')">
-                  <div class="sim-node-title">
-                    <span>💠 tmux-lead</span>
-                    <span style="color:var(--cyan); font-weight:800;">ACTIVE</span>
+                <div class="sim-panes-grid">
+                  <!-- Pane 1: claude-api -->
+                  <div class="sim-node" onclick="selectSimNode(this, 'claude-api', 'Claude Code • API routes', '34% CTX • claude-sonnet-4', 'active')">
+                    <div class="sim-node-title">
+                      <span>claude-api</span>
+                      <span style="color:var(--emerald); font-weight:800;">● WORK</span>
+                    </div>
+                    <div class="sim-node-meta">34% · claude-sonnet-4</div>
+                    <div class="sim-node-meter"><div class="sim-node-fill" style="width:34%; background:var(--cyan);"></div></div>
                   </div>
-                  <div class="sim-node-meta">CTX: 31% • gpt-5-codex</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:31%; background:var(--cyan);"></div></div>
-                </div>
 
-                <!-- Node 2: Claude Auth (P1 CTX 78%) -->
-                <div class="sim-node pulse-amber" id="simClaudeNode" style="top: 44%; left: 8%;" onclick="selectSimNode(this, 'claude-auth', 'Auth Refactor (tmux %2)', '78% CTX • claude-sonnet-4 • ~$2.14', 'warm')">
-                  <div class="sim-node-title">
-                    <span>🟠 claude-auth</span>
-                    <span style="color:var(--amber); font-weight:800;">CTX 78%</span>
+                  <!-- Pane 2: codex-tests (P0 NEEDS INPUT — top row, 100% above fold on 1280x720) -->
+                  <div class="sim-node pulse-coral selected" id="simQaNode" onclick="selectSimNode(this, 'codex-tests', 'Codex CLI • Integration tests', '46% CTX • permission_prompt HITL', 'alert')">
+                    <div class="sim-node-title">
+                      <span>codex-tests</span>
+                      <span id="simQaBadge" style="color:#fda4af; font-weight:800;">● NEEDS INPUT</span>
+                    </div>
+                    <div class="sim-node-meta">46% · Command: npm test · P0</div>
+                    <div class="sim-node-meter"><div class="sim-node-fill" style="width:46%; background:#fb7185;"></div></div>
                   </div>
-                  <div class="sim-node-meta">claude-sonnet-4 • /compact ready</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:78%; background:var(--amber);"></div></div>
-                </div>
 
-                <!-- Node 3: Gemini Docs -->
-                <div class="sim-node" id="simGeminiNode" style="top: 44%; right: 8%;" onclick="selectSimNode(this, 'gemini-docs', 'Docs & Migration (tmux %5)', '24% CTX • gemini-cli • ~$0.42', 'active')">
-                  <div class="sim-node-title">
-                    <span>🔵 gemini-docs</span>
-                    <span style="color:var(--emerald); font-weight:800;">WORK</span>
+                  <!-- Pane 3: gemini-docs -->
+                  <div class="sim-node" id="simGeminiNode" onclick="selectSimNode(this, 'gemini-docs', 'Gemini CLI • OpenAPI & docs', '22% CTX • gemini-2.5-pro', 'active')">
+                    <div class="sim-node-title">
+                      <span>gemini-docs</span>
+                      <span style="color:var(--emerald); font-weight:800;">● WORK</span>
+                    </div>
+                    <div class="sim-node-meta">22% · gemini-2.5-pro</div>
+                    <div class="sim-node-meter"><div class="sim-node-fill" style="width:22%; background:var(--emerald);"></div></div>
                   </div>
-                  <div class="sim-node-meta">CTX: 24% • gemini-cli</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:24%; background:var(--emerald);"></div></div>
-                </div>
 
-                <!-- Node 4: Codex Tests (P0 NEEDS INPUT) -->
-                <div class="sim-node pulse-coral selected" id="simQaNode" style="bottom: 10%; left: 35%; min-width:175px;" onclick="selectSimNode(this, 'codex-tests', 'Test Runner (tmux %4)', '64% CTX • permission_prompt HITL', 'alert')">
-                  <div class="sim-node-title">
-                    <span>🟣 codex-tests</span>
-                    <span id="simQaBadge" style="color:var(--coral); font-weight:800;">NEEDS INPUT</span>
+                  <!-- Pane 4: claude-refactor (P1 CTX 78%) -->
+                  <div class="sim-node pulse-amber" id="simClaudeNode" onclick="selectSimNode(this, 'claude-refactor', 'Claude Code • Storage refactor', '78% CTX • claude-opus-4 • /compact ready', 'warm')">
+                    <div class="sim-node-title">
+                      <span>claude-refactor</span>
+                      <span style="color:var(--amber); font-weight:800;">CTX 78%!</span>
+                    </div>
+                    <div class="sim-node-meta">claude-opus-4 · /compact ready</div>
+                    <div class="sim-node-meter"><div class="sim-node-fill" style="width:78%; background:var(--amber);"></div></div>
                   </div>
-                  <div class="sim-node-meta">Command: npm test • P0</div>
-                  <div class="sim-node-meter"><div class="sim-node-fill" style="width:64%; background:var(--coral);"></div></div>
                 </div>
               </div>
 
               <!-- Toggleable Mini Task Gantt View -->
               <div class="sim-gantt-view" id="simGanttView">
                 <div style="display:flex; justify-content:space-between; align-items:center; color:#94a3b8; padding-bottom:4px; border-bottom:1px solid rgba(56,189,248,0.18);">
-                  <span style="color:var(--cyan); font-weight:800;" data-i18n="sim.ganttTitle">📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)</span>
+                  <span style="color:var(--cyan); font-weight:800;" data-i18n="sim.ganttTitle">TASK GANTT TIMELINE • LAST 6H</span>
                   <span style="color:#64748b;">tmux / Universal</span>
                 </div>
                 <div class="sim-gantt-row">
-                  <span style="color:#7dd3fc; font-weight:700;">💠 tmux-lead</span>
+                  <span style="color:#7dd3fc; font-weight:700;">claude-api</span>
                   <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:4%; width:20%; background:#38bdf8;">plan:auth-v2</div>
-                  </div>
-                </div>
-                <div class="sim-gantt-row">
-                  <span style="color:#fde68a; font-weight:700;">🟠 claude-auth</span>
-                  <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:24%; width:38%; background:#fbbf24;">refresh-token + guard</div>
-                    <div class="sim-gantt-work" style="left:70%; width:18%; background:#00ff9d;">/compact ready</div>
-                  </div>
-                </div>
-                <div class="sim-gantt-row">
-                  <span style="color:#e2e8f0; font-weight:700;">🔵 gemini-docs</span>
-                  <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:32%; width:34%; background:#00ff9d;">openapi-migration</div>
+                    <div class="sim-gantt-work" style="left:6%; width:32%; background:#38bdf8;">api-routes</div>
                   </div>
                 </div>
                 <div class="sim-gantt-row" style="border-color:rgba(255,0,85,0.35);">
-                  <span style="color:#fda4af; font-weight:700;">🟣 codex-tests</span>
+                  <span style="color:#fda4af; font-weight:700;">codex-tests</span>
                   <div class="sim-gantt-track">
-                    <div class="sim-gantt-work" style="left:44%; width:18%; background:#c084fc;">unit + auth</div>
-                    <div class="sim-gantt-wait" style="left:62%; width:24%;" title="Waiting for HITL approval"></div>
+                    <div class="sim-gantt-work" style="left:36%; width:22%; background:#c084fc;">webhooks-v2</div>
+                    <div class="sim-gantt-wait" style="left:58%; width:26%;" title="Waiting for HITL approval"></div>
+                  </div>
+                </div>
+                <div class="sim-gantt-row">
+                  <span style="color:#e2e8f0; font-weight:700;">gemini-docs</span>
+                  <div class="sim-gantt-track">
+                    <div class="sim-gantt-work" style="left:28%; width:38%; background:#00ff9d;">openapi-docs</div>
+                  </div>
+                </div>
+                <div class="sim-gantt-row">
+                  <span style="color:#fde68a; font-weight:700;">claude-refactor</span>
+                  <div class="sim-gantt-track">
+                    <div class="sim-gantt-work" style="left:18%; width:46%; background:#fbbf24;">storage-refactor · /compact</div>
                   </div>
                 </div>
               </div>
@@ -2121,31 +2166,23 @@
                 <span data-i18n="sim.inspector">INSPECTOR &amp; HITL</span>
                 <span style="color:var(--cyan);" id="simInspectorId">codex-tests</span>
               </div>
-              <div class="sim-terminal-screen" id="simTerminalScreen">[codex-tests · tmux %4]
-$ npm test -- --grep "auth-refresh"
+              <div class="sim-terminal-screen" id="simTerminalScreen">[codex-tests · tmux %4 · feat/webhooks-v2]
+$ npm test -- --grep "webhooks"
   ✓ 18 passed  ✘ 1 token-expiry
---------------------------------
-⚠️ PERMISSION PROMPT (HITL):
-Command: npm test
-› 1. Allow once (y)
-  2. Always allow in worktree
-  3. Cancel (esc)</div>
+⚠️ Run command: npm test
+› 1. Allow once (y) · 2. Always (dir) · 3. Cancel</div>
 
               <div class="sim-prompt-pills" id="simPromptPills">
-                <button type="button" class="sim-prompt-pill primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Allow once (y)</button>
-                <button type="button" class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">❌ Cancel (esc)</button>
-                <button type="button" class="sim-prompt-pill" style="opacity:0.78; border-style:dashed;" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">🔹 Always (dir)</button>
+                <button type="button" class="sim-prompt-pill primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✓ 1. Allow once (y)</button>
+                <button type="button" class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">✕ Cancel (esc)</button>
+                <button type="button" class="sim-prompt-pill" style="opacity:0.88; border-style:dashed;" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">▸ Always (dir)</button>
               </div>
 
               <div class="sim-audit-box" id="simAuditBox">
-                <div style="color:#94a3b8; font-weight:800; letter-spacing:0.3px;" data-i18n="sim.auditTitle">🧾 ACTION AUDIT (POSTCONDITION)</div>
+                <div style="color:#94a3b8; font-weight:800; letter-spacing:0.3px;" data-i18n="sim.auditTitle">ACTION AUDIT (POSTCONDITION)</div>
                 <div style="display:flex; justify-content:space-between; gap:4px;">
-                  <span style="color:#e2e8f0;">✅ compact_context</span>
+                  <span style="color:#e2e8f0;">✓ compact_context</span>
                   <span style="color:#6ee7b7;">78% → 19%</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; gap:4px;">
-                  <span style="color:#e2e8f0;">⏳ answer_prompt</span>
-                  <span style="color:#fda4af;">codex-tests</span>
                 </div>
               </div>
             </div>
@@ -2809,19 +2846,21 @@ Command: npm test
         'nav.ctaShort': 'Demo',
         'hero.eyebrow': 'LOCAL-FIRST AI AGENT MISSION CONTROL',
         'hero.title': 'See which AI terminal agent is blocked&nbsp;—<br><span class="accent-cyan">approve in 1 click.</span>',
-        'hero.subtitle': 'Local-first, 0 npm dependencies, MIT command deck running on top of local tmux (or OpenRig) for Claude Code, Codex CLI, and Gemini CLI — start safely with --read-only.',
+        'hero.subtitle': 'Local-first, 0 npm dependencies, MIT command deck on top of local tmux (or OpenRig) for Claude Code, Codex CLI &amp; Gemini CLI — safe start with <span class="nowrap-flag">--read-only</span>.',
         'hero.demoCta': '▶ Launch Interactive Demo',
         'hero.demoCtaShort': '▶ Interactive Demo',
         'hero.demoTag': '0 SETUP',
-        'hero.cliNote': '0-setup browser demo · zero-write inspection (add <code>--no-session-logs</code> for tmux-only) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>',
+        'hero.copyBtn': 'Copy',
+        'hero.cliNote': '0-setup browser demo · tmux-only zero-write inspection (drop <code>--no-session-logs</code> for CTX &amp; cost) · <a href="/passport" style="color:#7dd3fc;">Security Passport →</a>',
         'qr.title': '📱 Open RigCommander Mobile PWA',
         'qr.sub': 'Point your iPhone or Android camera at the QR code to launch the mobile Command Deck:',
         'qr.ios': 'iOS: Safari → Share ⬆ → "Add to Home Screen"',
         'qr.android': 'Android: Chrome → "Install app"',
         'qr.copy': '📋 Copy URL',
         'hero.passportCta': '🛡️ Security Passport →',
-        'hero.cliTitle': 'Click to copy safe read-only CLI command',
-        'sim.viewGraph': 'Graph',
+        'hero.cliTitle': 'Click to copy safe tmux-only read-only CLI command',
+        'sim.previewBadge': 'PREVIEW',
+        'sim.viewGraph': 'Panes',
         'sim.viewGantt': 'Gantt',
         'sim.mobileBadge': 'SAMPLE · P0',
         'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Allow Codex to run npm test in worktree?',
@@ -2833,12 +2872,12 @@ Command: npm test
         'sim.card3': 'NEEDS INPUT: Command npm test — 3 parsed options ready for 1-click HITL.',
         'sim.ganttTitle': '📊 TASK GANTT TIMELINE • LAST 6H (HATCHED = QUEUE WAIT)',
         'sim.inspector': 'INSPECTOR & HITL',
-        'sim.opt1': '✅ 1. Allow once (y)',
+        'sim.opt1': '✓ 1. Allow once (y)',
         'sim.opt2': '2. Always allow in worktree',
         'sim.opt3': '3. Cancel (esc)',
-        'sim.opt2Short': '🔹 Always (dir)',
-        'sim.opt3Short': '❌ Cancel (esc)',
-        'sim.auditTitle': '🧾 ACTION AUDIT (POSTCONDITION)',
+        'sim.opt2Short': '▸ Always (dir)',
+        'sim.opt3Short': '✕ Cancel (esc)',
+        'sim.auditTitle': 'ACTION AUDIT (POSTCONDITION)',
         'sec.eyebrow': 'SECURITY & PRIVACY GUARANTEES AT A GLANCE',
         'sec.title': 'Local-First by Default. Zero Cloud Traps.',
         'sec.passportLink': '🛡️ Full Security Passport →',
@@ -3001,19 +3040,21 @@ Command: npm test
         'nav.ctaShort': 'Демо',
         'hero.eyebrow': 'ЛОКАЛЬНЫЙ ПУЛЬТ ДЛЯ ИИ-АГЕНТОВ',
         'hero.title': 'Сразу видно, какой ИИ-агент застрял в терминале&nbsp;—<br><span class="accent-cyan">отвечайте в 1 клик.</span>',
-        'hero.subtitle': 'Локальный пульт под лицензией MIT без внешних npm-зависимостей поверх локального tmux (или OpenRig) для Claude Code, Codex CLI и Gemini CLI — безопасный старт через --read-only.',
+        'hero.subtitle': 'Локальный пульт под лицензией MIT без внешних npm-зависимостей поверх tmux (или OpenRig) для Claude Code, Codex CLI и Gemini CLI — безопасный старт через <span class="nowrap-flag">--read-only</span>.',
         'hero.demoCta': '▶ Открыть интерактивное демо',
         'hero.demoCtaShort': '▶ Интерактивное демо',
         'hero.demoTag': 'БЕЗ УСТАНОВКИ',
-        'hero.cliNote': 'Демо без установки · осмотр без записи (добавьте <code>--no-session-logs</code> для режима только tmux) · <a href="/passport" style="color:#7dd3fc;">Паспорт безопасности →</a>',
+        'hero.copyBtn': 'Копировать',
+        'hero.cliNote': 'Демо без установки · осмотр только tmux без записи (уберите <code>--no-session-logs</code> для CTX и стоимости) · <a href="/passport" style="color:#7dd3fc;">Паспорт безопасности →</a>',
         'qr.title': '📱 Открыть мобильную PWA-версию',
         'qr.sub': 'Наведи камеру iPhone или Android на QR-код — откроется мобильный Command Deck:',
         'qr.ios': 'iOS: Safari → «Поделиться» ⬆ → «На экран „Домой“»',
         'qr.android': 'Android: Chrome → «Установить приложение»',
         'qr.copy': '📋 Скопировать ссылку',
         'hero.passportCta': '🛡️ Паспорт безопасности →',
-        'hero.cliTitle': 'Нажмите, чтобы скопировать команду безопасного read-only запуска',
-        'sim.viewGraph': 'Граф',
+        'hero.cliTitle': 'Нажмите, чтобы скопировать команду безопасного read-only запуска только для tmux',
+        'sim.previewBadge': 'ПРИМЕР',
+        'sim.viewGraph': 'Панели',
         'sim.viewGantt': 'Гант',
         'sim.mobileBadge': 'ПРИМЕР · P0',
         'sim.mobileTerm': 'Command: npm test\n[codex-tests · tmux %4] ✓ 18 passed · ✘ 1 token-expiry\n⚠️ Разрешить Codex запуск npm test в worktree?',
@@ -3025,12 +3066,12 @@ Command: npm test
         'sim.card3': 'ЖДЁТ ВВОДА: команда npm test — 3 варианта распарсены для HITL в 1 клик.',
         'sim.ganttTitle': '📊 ДИАГРАММА ГАНТА • ПОСЛЕДНИЕ 6Ч (ШТРИХОВКА = ОЖИДАНИЕ)',
         'sim.inspector': 'ИНСПЕКТОР И HITL',
-        'sim.opt1': '✅ 1. Разрешить один раз (y)',
+        'sim.opt1': '✓ 1. Разрешить один раз (y)',
         'sim.opt2': '2. Всегда разрешать в worktree',
         'sim.opt3': '3. Отмена (esc)',
-        'sim.opt2Short': '🔹 Всегда (папка)',
-        'sim.opt3Short': '❌ Отмена (esc)',
-        'sim.auditTitle': '🧾 ЖУРНАЛ ДЕЙСТВИЙ (POSTCONDITION)',
+        'sim.opt2Short': '▸ Всегда (папка)',
+        'sim.opt3Short': '✕ Отмена (esc)',
+        'sim.auditTitle': 'ЖУРНАЛ ДЕЙСТВИЙ (POSTCONDITION)',
         'sec.eyebrow': 'ГАРАНТИИ БЕЗОПАСНОСТИ И ПРИВАТНОСТИ',
         'sec.title': 'Локально по умолчанию. Без облачных ловушек.',
         'sec.passportLink': '🛡️ Полный паспорт безопасности →',

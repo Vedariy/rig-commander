@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.13.2] - 2026-11-27
+
+### Fixed & Improved
+- **Landing Hero Parity & `1280×720` Above-the-Fold Fit (`landing/index.html`, `landing/guide.html`):**
+  - Unified the primary copyable CLI command across `/` and `/guide` to `npx rig-commander@3.13.2 --read-only --no-session-logs`, replaced the dim clipboard emoji with an explicit bordered `Copy` / `Копировать` button, and wrapped `--read-only` in `white-space: nowrap` so the flag never splits across lines.
+  - Replaced the tall hero diamond mockup with a compact 2×2 `TMUX Panes` preview (`claude-api`, `codex-tests`, `gemini-docs`, `claude-refactor`) matching `/demo` 1-to-1 and labeled `PREVIEW` / `ПРИМЕР`, keeping the P0 node and all 3 HITL buttons cleanly above the fold on `1280×720`.
+  - Folded the 14-line Sigstore `mktemp` verification snippet on `/guide` into a clean collapsible `<details>` disclosure and unified the static-site header CTA (`Live Demo →`).
+- **Dark Cockpit Header Isolation, Triage Calm & Compact Inspector (`openrig/index.html`, `openrig/assets/ui/topology-view.js`, `openrig/assets/ui/inspector-view.js`, `openrig/assets/ui/auto-consent-view.js`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`):**
+  - Hid inactive (`OFF`) Auto-Consent from the desktop/laptop/mobile top bar (surfaces when active/paused), isolated `⏸ Pause` with dedicated visual spacing, and collapsed the unconfigured Inspector Auto-Consent block into a 1-line row (`Auto-Consent · Off · Configure`), reclaiming ~70px so the entire Inspector fits cleanly on `1280×720`.
+  - Collapsed the 4-badge Wait Radar P0/P1 alert stack into a 2-line aviation-grade triage card, renamed the center tab button to `PANES` / `ПАНЕЛИ` when rendering flat `tmux` panes, allowed 2-line role wrap on cards (zero truncation), and reduced decorative emoji noise.
+- **Auto-Consent Modal Semantic Switch Clarity (`openrig/assets/ui/auto-consent-view.js`, `openrig/assets/styles/deck.css`, `openrig/assets/domain/i18n.js`):**
+  - Renamed the modal status badge to `AUTO-CONSENT OFF` / `АВТО-СОГЛАСИЕ ВЫКЛ`, replaced blanket opacity dimming with distinct semantic ON-armed (muted cyan + `ON (armed)` pill) vs OFF (graphite + `OFF` pill) states, elevated `Save Policy` to a primary button, and documented the wrapper-script boundary caveat inside Hard Vetoes.
+
+---
+
 ## [3.13.1] - 2026-11-27
 
 ### Fixed & Improved

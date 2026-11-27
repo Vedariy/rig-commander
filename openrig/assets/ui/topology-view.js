@@ -20,7 +20,7 @@ export function renderStateIndicatorHtml(agent, { escapeHtml, deckLang = 'en', t
       : `<span>🟠 PARKED (${escapeHtml(agent.assignedWorkCount || 1)})</span>`;
   }
   if (agent.state === 'urgent') {
-    return `<span>🚨 ${deckLang === 'en' ? 'NEEDS INPUT' : 'ЖДЁТ ВВОДА'}</span>`;
+    return `<span class="urgent-status-dot" aria-hidden="true">●</span><span>${deckLang === 'en' ? 'NEEDS INPUT' : 'ЖДЁТ ВВОДА'}</span>`;
   }
   return `<span>${escapeHtml(agent.activityLabel || 'IDLE')}</span>`;
 }
@@ -592,6 +592,9 @@ export function renderTopology(deps) {
   doc.body?.classList?.toggle('fleet-no-edges', isNoEdgesFleet);
   const centerTitleEl = doc.getElementById('centerPanelTitle');
   const graphBtnEl = doc.getElementById('btnViewGraph');
+  if (graphBtnEl) {
+    graphBtnEl.textContent = isNoEdgesFleet ? td('center.btnPanes') : td('center.btnGraph');
+  }
   if (centerTitleEl && (!graphBtnEl || graphBtnEl.classList?.contains('active'))) {
     centerTitleEl.textContent = isNoEdgesFleet ? td('center.panesTitle') : td('center.graphTitle');
   }

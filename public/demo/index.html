@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.13.1" />
+  <meta name="app-version" content="3.13.2" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -2366,6 +2366,30 @@
         </div>
       `;
             }
+            const isCompactAlert = (w.prio === 0 || w.prio === 0.8) && !groupBtn;
+            if (isCompactAlert) {
+              const isP0 = w.prio === 0;
+              const tagText = isP0 ? 'P0' : w.slice;
+              const compactSummary = isP0
+                ? (deckLang === 'en' ? 'Waiting on terminal confirmation — answer in Inspector.' : 'Ждёт подтверждения в терминале — ответьте в инспекторе.')
+                : w.summary;
+              return `
+        <div class="wait-card is-compact-alert ${isP0 ? 'is-p0-alert' : 'is-p1-alert'}${w.seatId === selectedAgentId ? ' is-selected-card' : ''}" style="--wait-color:${w.color}; --wait-wash:${washColor};"
+             data-seat="${safeSeat}"
+             onmouseenter="if (this.getAttribute('data-seat')) setHoverAgent(this.getAttribute('data-seat'))"
+             onmouseleave="if (this.getAttribute('data-seat')) setHoverAgent(null)"
+             onclick="if (this.getAttribute('data-seat')) focusFromRadar(this.getAttribute('data-seat'), 'focus')">
+          <div class="wait-compact-head">
+            <span class="wait-prio-tag ${isP0 ? 'is-p0' : 'is-p1'}">${escapeHtml(tagText)}</span>
+            <strong class="wait-seat-name">${w.from}</strong>
+            ${secondaryChipsHtml}
+            <span class="wait-reason-chip">${w.state}</span>
+          </div>
+          <div class="wait-compact-summary">${compactSummary}</div>
+          ${quickActionBtn}
+        </div>
+      `;
+            }
             return `
         <div class="wait-card${w.seatId === selectedAgentId ? ' is-selected-card' : ''}" style="--wait-color:${w.color}; --wait-wash:${washColor};"
              data-seat="${safeSeat}"
@@ -2374,12 +2398,12 @@
              onclick="if (this.getAttribute('data-seat')) focusFromRadar(this.getAttribute('data-seat'), 'focus')">
           <div class="wait-flow">
             <span class="actor-pill">${w.from}</span>
-            <span class="wait-arrow">══▶</span>
+            <span class="wait-arrow">→</span>
             <span class="actor-pill">${w.to}</span>
             ${groupBtn}
           </div>
           <div class="wait-meta-row" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:5px; gap:3px 6px;">
-            <span class="wait-slice-label" style="font-family:var(--font-mono); font-size:10.5px; color:var(--cyan); line-height:1.3; word-break:break-word;">🏷️ ${w.slice}</span>
+            <span class="wait-slice-label" style="font-family:var(--font-mono); font-size:10.5px; color:var(--cyan); line-height:1.3; word-break:break-word;">${w.slice}</span>
             <span style="display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap;">
               ${secondaryChipsHtml}
               <span class="${w.prio === 0 ? 'wait-state-pill is-p0' : 'wait-state-pill'}" style="font-family:var(--font-mono); font-size:10px; font-weight:800; color:${w.prio === 0 ? '#fecdd3' : w.color}; white-space:nowrap;">${w.state}</span>
@@ -2510,12 +2534,15 @@
       if (gantt) gantt.style.display = isGantt ? 'flex' : 'none';
       const bG = document.getElementById('btnViewGraph');
       const bT = document.getElementById('btnViewGantt');
-      if (bG) bG.classList.toggle('active', !isGantt);
+      const isNoEdges = document.body?.classList?.contains('fleet-no-edges');
+      if (bG) {
+        bG.classList.toggle('active', !isGantt);
+        bG.textContent = isNoEdges ? td('center.btnPanes') : td('center.btnGraph');
+      }
       if (bT) bT.classList.toggle('active', isGantt);
       updateGraphLayoutSwitchUi();
       const title = document.getElementById('centerPanelTitle');
       if (title) {
-        const isNoEdges = document.body?.classList?.contains('fleet-no-edges');
         title.textContent = isGantt ? td('center.ganttTitle') : (isNoEdges ? td('center.panesTitle') : td('center.graphTitle'));
       }
       document.querySelectorAll('[data-gantt-window]').forEach(b => {
@@ -10143,16 +10170,16 @@
   <!-- MOBILE PWA BOTTOM TAB DOCK (<= 768px): 3 CLEAN 44px TABS -->
   <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile navigation">
     <button type="button" class="mobile-nav-btn" data-mobile-tab="radar" onclick="setMobileTab('radar')">
-      <span class="mnav-ico">🚨</span>
+      <span class="mnav-ico" aria-hidden="true">!</span>
       <span data-i18n="mobile.tabTriage">Триаж</span>
       <span class="mobile-nav-badge" id="mobileRadarBadge"></span>
     </button>
     <button type="button" class="mobile-nav-btn" data-mobile-tab="map" onclick="setMobileTab('map')">
-      <span class="mnav-ico">🕸️</span>
+      <span class="mnav-ico" aria-hidden="true">⊞</span>
       <span data-i18n="mobile.tabMap">Карта</span>
     </button>
     <button type="button" class="mobile-nav-btn active" data-mobile-tab="tmux" onclick="setMobileTab('tmux')">
-      <span class="mnav-ico">🔬</span>
+      <span class="mnav-ico" aria-hidden="true">⌘</span>
       <span data-i18n="mobile.tabInspector">Инспектор</span>
     </button>
   </nav>

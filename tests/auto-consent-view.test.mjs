@@ -768,7 +768,7 @@ test('v3.8.1 UX: Top triage button badge, localized modal header badges, Inspect
     assert.equal(getAutoConsentTopButtonState(armedState, { td }).text, lang === 'ru' ? 'БОЕВОЙ' : 'ARMED');
     assert.equal(getAutoConsentTopButtonState(pausedState, { td }).text, lang === 'ru' ? 'ПАУЗА' : 'PAUSED');
 
-    assert.equal(getAutoConsentModalBadge(offState, td).text, lang === 'ru' ? 'ВЫКЛ (БЕЗОПАСНО)' : 'DISABLED (SAFE)');
+    assert.equal(getAutoConsentModalBadge(offState, td).text, lang === 'ru' ? 'АВТО-СОГЛАСИЕ ВЫКЛ' : 'AUTO-CONSENT OFF');
     assert.equal(getAutoConsentModalBadge(dryState, td).text, lang === 'ru' ? 'ТЕСТ (DRY-RUN)' : 'DRY-RUN PREVIEW');
     assert.equal(getAutoConsentModalBadge(armedState, td).text, lang === 'ru' ? 'БОЕВОЙ (ARMED) • 12/30/h' : 'ARMED • 12/30/h');
     assert.equal(getAutoConsentModalBadge(cappedState, td).text, lang === 'ru' ? 'ЛИМИТ КВОТЫ • 30/30/h' : 'RATE-CAPPED • 30/30/h');

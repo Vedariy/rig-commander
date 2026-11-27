@@ -560,10 +560,14 @@ export function renderAutoConsentTabHtml({
   const renderSwitch = ({ id, checked, label, isMaster = false, subHint = '' }) => {
     const coolSec = cooldownSecFor(id);
     const isDisabled = busy || coolSec > 0;
+    const statePillHtml = !isMaster
+      ? `<span class="ac-switch-pill ${checked ? (cfg.enabled ? 'is-on' : 'is-armed-pending') : 'is-off'}">${escapeHtml(checked ? (cfg.enabled ? td('autoConsent.switchOn') : td('autoConsent.switchArmedPending')) : td('autoConsent.switchOff'))}</span>`
+      : '';
     return `<label class="ac-switch${isMaster ? ' is-master' : ''}${checked ? ' is-on' : ' is-off'}${isDisabled ? ' is-disabled' : ''}${coolSec > 0 ? ' is-cooling' : ''}">` +
       `<input type="checkbox" role="switch" id="${escapeHtml(id)}" class="ac-switch-input" data-auto-consent-action="toggle-switch" data-switch-id="${escapeHtml(id)}"${checked ? ' checked' : ''}${isDisabled ? ' disabled' : ''} />` +
       `<span class="ac-switch-track" aria-hidden="true"><span class="ac-switch-thumb"></span></span>` +
-      `<span class="ac-switch-text">${escapeHtml(label)}${subHint ? ` <span class="ac-default-off-hint">(${escapeHtml(subHint)})</span>` : ''}</span>` +
+      `<span class="ac-switch-text">${escapeHtml(label)}${subHint && cfg.enabled ? ` <span class="ac-default-off-hint">(${escapeHtml(subHint)})</span>` : ''}</span>` +
+      `${statePillHtml}` +
       `${coolSec > 0 ? `<span class="ac-cooldown-chip" data-cooldown-for="${escapeHtml(id)}" aria-live="polite">${escapeHtml(formatCooldown(coolSec))}</span>` : ''}` +
     `</label>`;
   };
@@ -637,8 +641,9 @@ export function renderAutoConsentTabHtml({
           `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
         `</div>` +
         `<div class="ac-cmd-col is-veto">` +
-          `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}:</span> ` +
+          `<span class="ac-cmd-col-title">${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}:</span> ` +
           `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
+          `<div class="ac-veto-caveat">${escapeHtml(td('autoConsent.cmdStripVetoCaveat'))}</div>` +
         `</div>` +
       `</div>` +
 
@@ -763,11 +768,12 @@ export function renderSeatAutoConsentPickerHtml({
     ? `<button type="button" class="action-pill key-cancel ac-insp-btn" data-auto-consent-action="revoke-grant" data-grant-id="${escapeHtml(activeSeatGrant.grant.grantId)}" title="${escapeHtml(td('autoConsent.remainingMeta', { min: activeSeatGrant.remainingMin, left: activeSeatGrant.remainingApprovals, max: activeSeatGrant.effectiveMax }))}"${disabledAttr}>${escapeHtml(td('autoConsent.revokeGrantBtn'))} (${escapeHtml(formatTtlShort(activeSeatGrant.remainingMin, lang))})</button>`
     : `<button type="button" class="action-pill ac-insp-btn${grantBtnToneClass}" data-auto-consent-action="grant-session" data-scope="seat" data-target="${escapeHtml(seatId)}" data-profile="trusted_dev" data-ttl-min="60"${disabledAttr}>${escapeHtml(td('autoConsent.grantSessionBtn'))}</button>`;
 
-  return `<div class="ac-inspector-strip" data-seat="${escapeHtml(seatId)}">` +
+  const isCompactOff = !cfg.enabled && !cfg.masterPaused && explicitProfile === 'inherit' && !activeSeatGrant && !hasConfiguredActiveProfile;
+  return `<div class="ac-inspector-strip${isCompactOff ? ' is-compact-off' : ''}" data-seat="${escapeHtml(seatId)}">` +
     `<div class="ac-inspector-head">` +
       `<span class="ac-inspector-label">${escapeHtml(td('autoConsent.tabTitle'))}</span>` +
       `<button type="button" class="ac-eff-chip ac-eff-chip-btn ${effClass}" data-auto-consent-action="open-tab">${escapeHtml(effSummary)}</button>` +
-      `<button type="button" class="ac-insp-gear" data-auto-consent-action="open-tab" aria-label="${escapeHtml(td('autoConsent.modalTitle'))}" title="${escapeHtml(td('autoConsent.modalTitle'))}">⚙️</button>` +
+      `<button type="button" class="ac-insp-gear" data-auto-consent-action="open-tab" aria-label="${escapeHtml(td('autoConsent.modalTitle'))}" title="${escapeHtml(td('autoConsent.modalTitle'))}">⚙</button>` +
     `</div>` +
     `<div class="ac-inspector-controls">` +
       `<select class="rig-select ac-insp-select" aria-label="${escapeHtml(td('autoConsent.tabTitle'))}" data-auto-consent-action="set-seat-policy" data-target="${escapeHtml(seatId)}"${disabledAttr}>` +

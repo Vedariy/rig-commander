@@ -11,7 +11,7 @@ import {
   redactLiveCaptureScreen
 } from '../openrig/server.mjs';
 import { discoverUniversalFleet } from '../openrig/lib/universal-discovery.mjs';
-import { renderAutoConsentTabHtml } from '../openrig/assets/ui/auto-consent-view.js';
+import { renderAutoConsentTabHtml, renderSeatAutoConsentPickerHtml, getAutoConsentModalBadge } from '../openrig/assets/ui/auto-consent-view.js';
 import { renderStateIndicatorHtml } from '../openrig/assets/ui/topology-view.js';
 import { renderWarningSignsHtml } from '../openrig/assets/ui/inspector-view.js';
 import { tDeck } from '../openrig/assets/domain/i18n.js';
@@ -98,8 +98,22 @@ test('v3.13.0 Dark Cockpit UI contracts: master-OFF dimming, read-only legend, s
   });
   assert.match(offHtml, /class="ac-tab-wrap is-master-off"/);
   assert.match(offHtml, /class="ac-master-off-note"/);
+  assert.match(offHtml, /class="ac-switch-pill is-armed-pending"/, 'Pre-armed CTX switch shows explicit ON-armed pill when master is OFF');
+  assert.match(offHtml, /class="ac-switch-pill is-off"/, 'Disabled package/net switches show explicit OFF pill');
+  assert.match(offHtml, /class="ac-veto-caveat"/, 'Hard Veto strip includes honest wrapper-script boundary caveat');
   assert.ok(!offHtml.includes('ac-cmd-summary-kicker'), 'No defensive "NOT BUTTONS" kicker needed for flat inline legend');
   assert.ok(!offHtml.includes('ac-eff-chip is-off'), 'Inherited OFF rows omit redundant global-off chip');
+
+  const offBadge = getAutoConsentModalBadge({ config: { enabled: false, mode: 'dry_run', masterPaused: false } }, td);
+  assert.equal(offBadge.text, 'АВТО-СОГЛАСИЕ ВЫКЛ');
+
+  const compactSeatHtml = renderSeatAutoConsentPickerHtml({
+    seat: { id: 'codex-tests' },
+    state: { config: { enabled: false, mode: 'dry_run', masterPaused: false, projects: {}, seats: {} }, sessionGrants: [] },
+    td,
+    lang: 'ru'
+  });
+  assert.match(compactSeatHtml, /class="ac-inspector-strip is-compact-off"/, 'Unconfigured master-OFF inspector auto-consent strip collapses cleanly');
 
   const escapeHtml = (s) => String(s ?? '');
   const standaloneInd = renderStateIndicatorHtml({ id: 'claude-api', state: 'working', assignedWorkCount: 1 }, { escapeHtml, deckLang: 'ru', td });
@@ -107,4 +121,8 @@ test('v3.13.0 Dark Cockpit UI contracts: master-OFF dimming, read-only legend, s
 
   const urgentWarn = renderWarningSignsHtml({ deckLang: 'ru', escapeHtml, ageLabel: () => '', td }, { id: 'codex-tests', state: 'urgent', compactionsCount: 0 });
   assert.equal(urgentWarn, '', 'Urgent P0 HITL seat omits contradictory "Seat: nominal" strip');
+
+  const landingSrc = fs.readFileSync(path.join(root, 'landing/index.html'), 'utf8');
+  assert.ok(landingSrc.includes('npx rig-commander@{{APP_VERSION}} --read-only --no-session-logs'), 'Hero CLI command matches /guide with --no-session-logs');
+  assert.ok(landingSrc.includes('class="sim-panes-grid"'), 'Desktop hero simulator mirrors /demo 2x2 tmux panes layout');
 });

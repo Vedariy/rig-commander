@@ -234,7 +234,7 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     ? `<div class="hitl-target-scope">tmux: <b>${escapeHtml(shortName)}</b>${cwdText ? ` · <span>${escapeHtml(cwdText)}</span>` : ''} · <span>${escapeHtml(scopeLabel)}</span></div>`
     : '';
   const banner = preview
-    ? `<div class="hitl-command-preview" title="${escapeHtml(fullCommand)}"><strong>🔍 ${escapeHtml(td('insp.hitlCmdLabel'))}</strong> <code>${escapeHtml(preview)}</code></div>`
+    ? `<div class="hitl-command-preview" title="${escapeHtml(fullCommand)}"><strong>${escapeHtml(td('insp.hitlCmdLabel'))}</strong> <code>${escapeHtml(preview)}</code></div>`
     : '';
   const termContextHtml = contextLines.length
     ? `<pre class="hitl-term-context" aria-label="Live terminal context">${escapeHtml(contextLines.join('\n'))}</pre>`
@@ -262,13 +262,13 @@ export function renderInteractivePromptOptionsHtml(ctx, seatId, screenText, stat
     if (isPrimarySlot) {
       const isStandardAllowOnce = /^(?:yes,?\s*)?allow once|^(?:да,?\s*)?разрешить один раз/i.test(String(opt.shortLabel || '').trim());
       const primaryText = isStandardAllowOnce ? td('insp.hitlAllowOnceShort') : opt.shortLabel;
-      labelHtml = `✅ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(primaryText)}`;
+      labelHtml = `✓ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(primaryText)}`;
     } else if (opt.isCancel) {
-      labelHtml = `❌ ${escapeHtml(td('insp.hitlCancelShort'))}`;
+      labelHtml = `✕ ${escapeHtml(td('insp.hitlCancelShort'))}`;
     } else if (isAlways) {
-      labelHtml = `🔹 ${escapeHtml(td('insp.hitlAlwaysShort'))}`;
+      labelHtml = `▸ ${escapeHtml(td('insp.hitlAlwaysShort'))}`;
     } else {
-      labelHtml = `🔹 <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}`;
+      labelHtml = `▸ <b>${escapeHtml(opt.badge)}.</b> ${escapeHtml(opt.shortLabel)}`;
     }
     const btnTitle = isAlways ? `${opt.fullText} — ${td('insp.hitlAlwaysScopeNote')}` : opt.fullText;
     return `<button type="button" class="${cls}" title="${escapeHtml(btnTitle)}" data-seat="${escapeHtml(seatId)}" data-key="${escapeHtml(opt.keyStroke)}" data-status="${escapeHtml(statusElId)}"${confirmAttrs}${lockAttrs} onclick="triggerPromptOption(this)">${labelHtml}</button>`;
@@ -868,7 +868,7 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
             </div>
           </div>
           <div class="insp-identity-actions" style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
-            <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 8px; font-size:10px; min-height:28px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 ${escapeHtml(attachBtnLabel)}</button>
+            <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 9px; font-size:10px; min-height:28px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">${escapeHtml(attachBtnLabel)}</button>
           </div>
         </div>
 
