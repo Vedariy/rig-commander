@@ -352,6 +352,9 @@
       gap: 7px;
       white-space: nowrap;
     }
+    .navbar-wrapper:not(.is-scrolled) .nav-cta {
+      display: none;
+    }
     .nav-cta-short { display: none; }
     .nav-cta:hover {
       background: rgba(0, 240, 255, 0.18);
@@ -374,7 +377,7 @@
 
     /* HERO SECTION */
     .hero {
-      padding-top: 16px;
+      padding-top: 12px;
       padding-bottom: 44px;
       text-align: center;
       position: relative;
@@ -384,11 +387,11 @@
     }
 
     .hero-title {
-      font-size: clamp(30px, 4.1vw, 52px);
+      font-size: clamp(27px, 3.35vw, 46px);
       font-weight: 900;
-      line-height: 1.07;
+      line-height: 1.05;
       letter-spacing: -0.032em;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       background: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -401,9 +404,9 @@
 
     .hero-subtitle {
       max-width: 720px;
-      margin: 0 auto 14px;
-      font-size: clamp(14.5px, 1.55vw, 17px);
-      line-height: 1.5;
+      margin: 0 auto 10px;
+      font-size: clamp(14px, 1.45vw, 16px);
+      line-height: 1.45;
       color: #94a3b8;
       font-weight: 500;
     }
@@ -413,8 +416,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 7px;
-      margin-bottom: 14px;
+      gap: 5px;
+      margin-bottom: 10px;
     }
     .hero-primary-paths {
       display: flex;
@@ -980,6 +983,7 @@
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
       gap: 14px;
+      align-items: start;
     }
     .sec-strip-grid > .sec-guarantee-card { grid-column: span 3; }
     .sec-strip-grid > .sec-guarantee-card:nth-child(n+5) { grid-column: span 4; }
@@ -1918,7 +1922,7 @@
     <!-- HERO SECTION -->
     <section class="hero container">
       <h1 class="hero-title" data-i18n-html="hero.title">
-        See which AI terminal agent is blocked —<br>
+        See which AI terminal agent is blocked&nbsp;—<br>
         <span class="accent-cyan">approve in 1 click.</span>
       </h1>
 
@@ -2129,8 +2133,8 @@ Command: npm test
 
               <div class="sim-prompt-pills" id="simPromptPills">
                 <button type="button" class="sim-prompt-pill primary" onclick="simChoosePrompt(1)" data-i18n="sim.opt1">✅ 1. Allow once (y)</button>
-                <button type="button" class="sim-prompt-pill" onclick="simChoosePrompt(2)" data-i18n="sim.opt2">2. Always allow in worktree</button>
-                <button type="button" class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3">3. Cancel (esc)</button>
+                <button type="button" class="sim-prompt-pill cancel" onclick="simChoosePrompt(3)" data-i18n="sim.opt3Short">❌ Cancel (esc)</button>
+                <button type="button" class="sim-prompt-pill" style="opacity:0.78; border-style:dashed;" onclick="simChoosePrompt(2)" data-i18n="sim.opt2Short">🔹 Always (dir)</button>
               </div>
 
               <div class="sim-audit-box" id="simAuditBox">
@@ -2804,7 +2808,7 @@ Command: npm test
         'nav.cta': 'Live Demo',
         'nav.ctaShort': 'Demo',
         'hero.eyebrow': 'LOCAL-FIRST AI AGENT MISSION CONTROL',
-        'hero.title': 'See which AI terminal agent is blocked —<br><span class="accent-cyan">approve in 1 click.</span>',
+        'hero.title': 'See which AI terminal agent is blocked&nbsp;—<br><span class="accent-cyan">approve in 1 click.</span>',
         'hero.subtitle': 'Local-first, 0 npm dependencies, MIT command deck running on top of local tmux (or OpenRig) for Claude Code, Codex CLI, and Gemini CLI — start safely with --read-only.',
         'hero.demoCta': '▶ Launch Interactive Demo',
         'hero.demoCtaShort': '▶ Interactive Demo',
@@ -2996,7 +3000,7 @@ Command: npm test
         'nav.cta': 'Живое демо',
         'nav.ctaShort': 'Демо',
         'hero.eyebrow': 'ЛОКАЛЬНЫЙ ПУЛЬТ ДЛЯ ИИ-АГЕНТОВ',
-        'hero.title': 'Сразу видно, какой ИИ-агент застрял в терминале —<br><span class="accent-cyan">отвечайте в 1 клик.</span>',
+        'hero.title': 'Сразу видно, какой ИИ-агент застрял в терминале&nbsp;—<br><span class="accent-cyan">отвечайте в 1 клик.</span>',
         'hero.subtitle': 'Локальный пульт под лицензией MIT без внешних npm-зависимостей поверх локального tmux (или OpenRig) для Claude Code, Codex CLI и Gemini CLI — безопасный старт через --read-only.',
         'hero.demoCta': '▶ Открыть интерактивное демо',
         'hero.demoCtaShort': '▶ Интерактивное демо',
@@ -3355,6 +3359,13 @@ Command: npm test
     }
 
     // Initialize language from URL (?lang=ru|en), localStorage, or browser locale
+    (function initNavbarScrollCta() {
+      const navWrap = document.querySelector('.navbar-wrapper');
+      if (!navWrap) return;
+      const sync = () => navWrap.classList.toggle('is-scrolled', window.scrollY > 280);
+      window.addEventListener('scroll', sync, { passive: true });
+      sync();
+    })();
     (function initLang() {
       let initial = 'en';
       try {

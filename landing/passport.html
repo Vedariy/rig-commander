@@ -304,11 +304,30 @@
     .sec-tag {
       font-family: var(--font-mono);
       font-size: 11px;
-      color: var(--cyan);
-      background: rgba(0, 240, 255, 0.08);
-      border: 1px solid rgba(0, 240, 255, 0.25);
-      padding: 2px 9px;
-      border-radius: 999px;
+      color: #94a3b8;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      padding: 0;
+    }
+    .hero-meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .hero-meta-bar a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      color: #7dd3fc;
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
 
     .grid-2 {
@@ -535,6 +554,17 @@
       <p class="hero-sub" data-i18n="hero.sub">
         Локальный пульт управления параллельными ИИ-агентами в терминале (tmux, Claude Code, Codex CLI, Gemini CLI и OpenRig). Вместо ручного обхода вкладок показывает зависшие подтверждения HITL, перегрев контекста и Git Worktree — в отличие от облачных трейсеров (LangSmith/Langfuse), не требует аккаунта и оставляет вывод терминала на вашей машине.
       </p>
+      <div class="hero-meta-bar">
+        <span>MIT Open Source · 0 npm deps</span>
+        <span>·</span>
+        <span><span data-lang-block="ru">Мейнтейнер:</span><span data-lang-block="en">Maintainer:</span> <a href="https://github.com/Vedariy" target="_blank" rel="noopener">@Vedariy</a></span>
+        <span>·</span>
+        <a href="https://github.com/Vedariy/rig-commander/releases/tag/v{{APP_VERSION}}" target="_blank" rel="noopener"><span data-lang-block="ru">Исходники v{{APP_VERSION}}</span><span data-lang-block="en">Source v{{APP_VERSION}}</span></a>
+        <span>·</span>
+        <a href="https://github.com/Vedariy/rig-commander/security/advisories/new" target="_blank" rel="noopener"><span data-lang-block="ru">Сообщить об уязвимости</span><span data-lang-block="en">Security Advisories</span></a>
+        <span>·</span>
+        <span style="color:#6ee7b7;">378/378 PASS</span>
+      </div>
     </div>
 
     <!-- SECTION 1: C4 CONTEXT & SECURITY GUARANTEES AT A GLANCE -->
@@ -565,7 +595,7 @@
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Local HTTP→TMUX CSRF &amp; DNS-Rebinding Protection</span><span data-lang-block="ru">Защита HTTP→TMUX от CSRF и DNS-rebinding</span></b></td>
-              <td><span data-lang-block="en">Strict <code>Host</code> and <code>Origin</code> checks and per-process session authentication — a malicious browser tab cannot drive your local terminals. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>).</span><span data-lang-block="ru">Строгие проверки <code>Host</code> и <code>Origin</code> и аутентификация сессии процесса — вредоносная вкладка браузера не сможет управлять вашими локальными терминалами. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>).</span></td>
+              <td><span data-lang-block="en">Strict <code>Host</code> and <code>Origin</code> checks plus a random per-process session token injected into loopback page load (required on mutating routes) — a malicious browser tab cannot drive your local terminals. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>).</span><span data-lang-block="ru">Строгие проверки <code>Host</code> и <code>Origin</code> плюс случайный токен сессии процесса, выдаваемый локальной странице на <code>127.0.0.1</code> (обязателен для мутирующих маршрутов) — вредоносная вкладка браузера не сможет управлять вашими терминалами. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>).</span></td>
               <td><span class="badge-ok"><span data-lang-block="en">BY DEFAULT</span><span data-lang-block="ru">ПО УМОЛЧАНИЮ</span></span></td>
             </tr>
             <tr>

@@ -97,7 +97,8 @@ test('v3.13.0 Dark Cockpit UI contracts: master-OFF dimming, read-only legend, s
     deckLang: 'ru'
   });
   assert.match(offHtml, /class="ac-tab-wrap is-master-off"/);
-  assert.match(offHtml, /class="ac-cmd-summary-kicker"/);
+  assert.match(offHtml, /class="ac-master-off-note"/);
+  assert.ok(!offHtml.includes('ac-cmd-summary-kicker'), 'No defensive "NOT BUTTONS" kicker needed for flat inline legend');
   assert.ok(!offHtml.includes('ac-eff-chip is-off'), 'Inherited OFF rows omit redundant global-off chip');
 
   const escapeHtml = (s) => String(s ?? '');

@@ -601,7 +601,10 @@ export function renderAutoConsentTabHtml({
         `</section>` +
 
         `<section class="ac-card">` +
-          `<div class="ac-section-title">🛡️ ${escapeHtml(td('autoConsent.settingsTitle'))}</div>` +
+          `<div class="ac-section-head">` +
+            `<span class="ac-section-title">🛡️ ${escapeHtml(td('autoConsent.settingsTitle'))}</span>` +
+            `${!cfg.enabled ? `<span class="ac-master-off-note">${escapeHtml(td('autoConsent.appliesWhenEnabled'))}</span>` : ''}` +
+          `</div>` +
           `<div class="ac-setting-row">` +
             `<label for="acGraceWindowSelect">${escapeHtml(td('autoConsent.graceWindowLabel'))}</label>` +
             `<select id="acGraceWindowSelect" class="rig-select ac-compact-select"${disabledAttr}>` +
@@ -624,21 +627,18 @@ export function renderAutoConsentTabHtml({
         `</section>` +
       `</div>` +
 
-      `<div class="ac-cmd-legend-block">` +
-        `<div class="ac-cmd-summary-kicker">${escapeHtml(td('autoConsent.cmdLegendNote'))}</div>` +
-        `<div class="ac-cmd-summary" role="region" aria-label="${escapeHtml(td('autoConsent.cmdStripLabel'))}">` +
-          `<div class="ac-cmd-col is-safe">` +
-            `<span class="ac-cmd-col-title">🟢 ${escapeHtml(td('autoConsent.cmdStripSafeTitle'))}</span>` +
-            `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripSafeBody'))}</span>` +
-          `</div>` +
-          `<div class="ac-cmd-col is-dev">` +
-            `<span class="ac-cmd-col-title">⚡ ${escapeHtml(td('autoConsent.cmdStripDevTitle'))}</span>` +
-            `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
-          `</div>` +
-          `<div class="ac-cmd-col is-veto">` +
-            `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}</span>` +
-            `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
-          `</div>` +
+      `<div class="ac-cmd-summary" role="region" aria-label="${escapeHtml(td('autoConsent.cmdStripLabel'))}">` +
+        `<div class="ac-cmd-col is-safe">` +
+          `<span class="ac-cmd-col-title">${escapeHtml(td('autoConsent.cmdStripSafeTitle'))}:</span> ` +
+          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripSafeBody'))}</span>` +
+        `</div>` +
+        `<div class="ac-cmd-col is-dev">` +
+          `<span class="ac-cmd-col-title">${escapeHtml(td('autoConsent.cmdStripDevTitle'))}:</span> ` +
+          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripDevBody'))}</span>` +
+        `</div>` +
+        `<div class="ac-cmd-col is-veto">` +
+          `<span class="ac-cmd-col-title">🛡️ ${escapeHtml(td('autoConsent.cmdStripVetoTitle'))}:</span> ` +
+          `<span class="ac-cmd-col-body">${escapeHtml(td('autoConsent.cmdStripVetoBody'))}</span>` +
         `</div>` +
       `</div>` +
 

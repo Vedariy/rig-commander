@@ -869,7 +869,6 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
           </div>
           <div class="insp-identity-actions" style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
             <button type="button" class="action-pill insp-copy-attach-btn" style="padding:4px 8px; font-size:10px; min-height:28px;" data-cmd="${escapeHtml(attachCmd)}" title="${escapeHtml(attachCmd)}" onclick="copyCmd(this.getAttribute('data-cmd'))">📋 ${escapeHtml(attachBtnLabel)}</button>
-            ${isSwarmSeat ? '' : `<button type="button" class="action-pill key-cancel insp-ctrlc-btn" style="padding:4px 8px; font-size:10px; min-height:28px;" data-seat="${escapeHtml(agent.id)}" data-key="C-c" data-status="cmdSendStatus" title="${escapeHtml(td('insp.ctrlCTip'))}"${getControlLockAttrs(buildSeatScopeKey(agent.id), buildSeatSendKey(agent.id, 'key', 'C-c'))} onclick="sendTerminalKey(this.getAttribute('data-seat'), 'C-c', 'cmdSendStatus', 'ctrl_c', this)">🛑 Ctrl+C</button>`}
           </div>
         </div>
 
@@ -906,34 +905,38 @@ export function renderInspectorAndScorecards(document, ctx, flashHighlight = fal
 
         <!-- SA Level 3: Action Feedback, Live TMUX / Read-only Swarm Preview & Collapsible Manual Operator Input -->
         <div id="cmdSendStatus" class="ctrl-status"></div>
-        <div style="font-family:var(--font-mono); font-size:10px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; margin-top:2px; gap:4px; flex-wrap:nowrap;">
-          <span style="display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-weight:700;">${screenOrSwarmTitle} ${isSwarmSeat ? '' : `<span id="inspTmuxStreamBadge" class="tmux-stream-pill" style="display:${tmuxStreamConnected && tmuxStreamSeat === agent.id ? 'inline-flex' : 'none'};" title="${escapeHtml(td('sse.streamTip'))}">${escapeHtml(td('sse.streamLive'))}</span>`}</span>
-          ${(isSwarmSeat || agent.state === 'urgent') ? '' : `<span style="display:flex; gap:4px; flex-shrink:0; align-items:center;">
-            <button class="action-pill tmux-hdr-btn" type="button" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
-            <button class="action-pill tmux-hdr-btn" type="button" id="btnAutoFollow" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
-            <button class="action-pill tmux-hdr-btn" type="button" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
-          </span>`}
-        </div>
-        <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(screenOrSwarmText)}</div>
+        <details class="insp-raw-tmux-disclosure"${(agent.state === 'urgent' && hasTopInlineHitl && !isSwarmSeat) ? '' : ' open'}>
+          <summary class="insp-raw-tmux-summary">
+            <span style="display:inline-flex; align-items:center; gap:5px; white-space:nowrap; font-weight:700;">${(agent.state === 'urgent' && hasTopInlineHitl && !isSwarmSeat) ? escapeHtml(td('insp.rawTmuxSummary')) : screenOrSwarmTitle} ${isSwarmSeat ? '' : `<span id="inspTmuxStreamBadge" class="tmux-stream-pill" style="display:${tmuxStreamConnected && tmuxStreamSeat === agent.id ? 'inline-flex' : 'none'};" title="${escapeHtml(td('sse.streamTip'))}">${escapeHtml(td('sse.streamLive'))}</span>`}</span>
+            ${(isSwarmSeat || agent.state === 'urgent') ? '' : `<span style="display:flex; gap:4px; flex-shrink:0; align-items:center;" onclick="event.stopPropagation()">
+              <button class="action-pill tmux-hdr-btn" type="button" title="${escapeHtml(td('insp.retryCaptureBtn'))}" onclick="fetchTerminalCapture(selectedAgentId, false)">🔄</button>
+              <button class="action-pill tmux-hdr-btn" type="button" id="btnAutoFollow" onclick="toggleAutoFollow()">${autoFollow ? td('insp.autoFollowOn') : td('insp.autoFollowOff')}</button>
+              <button class="action-pill tmux-hdr-btn" type="button" data-seat="${escapeHtml(agent.id)}" onclick="openTerminalModal(this.getAttribute('data-seat'))">${td('insp.expand80')}</button>
+            </span>`}
+          </summary>
+          <div class="insp-raw-tmux-body">
+            <div class="terminal-screen" id="tmuxScreenBox">${escapeHtml(screenOrSwarmText)}</div>
 
-        ${isSwarmSeat ? `
-        <div class="swarm-readonly-note" style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.22); border-radius:8px; padding:8px 10px; margin-top:4px; line-height:1.45;">🐝 ${escapeHtml(td('swarm.readonlyNotice'))}</div>
-        ` : `
-        <div class="terminal-ctrl-bar" id="terminalCtrlBar">
-          <div id="inspectorPromptOptionsBar" data-cache-key="${escapeHtml(optionsHtml)}">${optionsHtml}</div>
-          <div class="ctrl-quick-keys" id="ctrlQuickKeysBar" data-cache-key="${escapeHtml(quickKeysHtml)}">
-            ${quickKeysHtml}
+            ${isSwarmSeat ? `
+            <div class="swarm-readonly-note" style="font-family:var(--font-mono); font-size:10.5px; color:#94a3b8; background:rgba(15,23,42,0.55); border:1px solid rgba(56,189,248,0.22); border-radius:8px; padding:8px 10px; margin-top:4px; line-height:1.45;">🐝 ${escapeHtml(td('swarm.readonlyNotice'))}</div>
+            ` : `
+            <div class="terminal-ctrl-bar" id="terminalCtrlBar">
+              <div id="inspectorPromptOptionsBar" data-cache-key="${escapeHtml(optionsHtml)}">${optionsHtml}</div>
+              <div class="ctrl-quick-keys" id="ctrlQuickKeysBar" data-cache-key="${escapeHtml(quickKeysHtml)}">
+                ${quickKeysHtml}
+              </div>
+              <details class="manual-cmd-disclosure" id="manualCmdDisclosure">
+                <summary class="manual-cmd-summary">${escapeHtml(td('insp.manualCmdSummary'))}</summary>
+                <form class="ctrl-input-form" data-seat="${escapeHtml(agent.id)}" onsubmit="submitAgentPrompt(this.dataset.seat, event, 'terminalCmdInput', 'cmdSendStatus')">
+                  <div class="ctrl-prompt-tag">&gt;</div>
+                  <input type="text" id="terminalCmdInput" class="ctrl-input" placeholder="${escapeHtml(td('insp.cmdPlaceholder'))}" autocomplete="off" onkeydown="handleHistoryKey(event, 'terminalCmdInput')" />
+                  <button type="submit" class="cyber-btn active ctrl-send-btn"${getControlLockAttrs(buildSeatScopeKey(agent.id))}>${td('insp.sendBtn')}</button>
+                </form>
+              </details>
+            </div>
+            `}
           </div>
-          <details class="manual-cmd-disclosure" id="manualCmdDisclosure">
-            <summary class="manual-cmd-summary">${escapeHtml(td('insp.manualCmdSummary'))}</summary>
-            <form class="ctrl-input-form" data-seat="${escapeHtml(agent.id)}" onsubmit="submitAgentPrompt(this.dataset.seat, event, 'terminalCmdInput', 'cmdSendStatus')">
-              <div class="ctrl-prompt-tag">&gt;</div>
-              <input type="text" id="terminalCmdInput" class="ctrl-input" placeholder="${escapeHtml(td('insp.cmdPlaceholder'))}" autocomplete="off" onkeydown="handleHistoryKey(event, 'terminalCmdInput')" />
-              <button type="submit" class="cyber-btn active ctrl-send-btn"${getControlLockAttrs(buildSeatScopeKey(agent.id))}>${td('insp.sendBtn')}</button>
-            </form>
-          </details>
-        </div>
-        `}
+        </details>
 
         <!-- SA Level 3: Verified Action Audit Trail (Always visible when records exist) -->
         <div id="inspActionAudit">${renderActionAuditHtml(ctx, agent.id)}</div>

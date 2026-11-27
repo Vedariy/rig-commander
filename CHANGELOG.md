@@ -10,6 +10,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ---
 
+## [3.13.1] - 2026-11-27
+
+### Fixed & Improved
+- **Inspector HITL De-Duplication & Safety (`openrig/assets/ui/inspector-view.js`, `openrig/assets/styles/deck.css`, `openrig/index.html`):**
+  - Removed `🛑 Ctrl+C` from the Inspector header next to safe `📋 Attach` to eliminate accidental-SIGINT risk and duplicate controls; collapsed the redundant raw `🖥️ TMUX` block by default when an inline P0 HITL prompt card is active (`<details class="insp-raw-tmux-disclosure">`), freeing ~260px on `1280×720` laptops.
+  - Replaced competing cyan+red double borders on selected urgent cards with a calm elevated dark-crimson surface, dropped redundant `"working"` text on 1-line routine radar rows so `gemini-docs` never truncates on `1280×720`, and shortened `AI Risk: OFF` for clean chevron spacing.
+- **Mobile Header Clarity & Auto-Consent Modal (`openrig/assets/ui/auto-consent-view.js`, `openrig/assets/styles/deck.css`):**
+  - Hid inactive (`OFF`) Auto-Consent from the `390×844` mobile top bar (remains accessible in Tools and surfaces in the bar when active), giving `⏸ Pause` a full readable label and touch target.
+  - Replaced the card-like 3-column legend and defensive `(NOT BUTTONS)` caption in Auto-Consent with a flat inline text legend + dedicated veto strip, truly desaturated sub-switch thumbs when global Auto-Consent is OFF, and added an explicit `"Applies when enabled"` note.
+- **Landing Hero, Guide & Passport Polish (`landing/index.html`, `landing/guide.html`, `landing/passport.html`):**
+  - Hid the duplicate navbar `Live Demo →` button while the primary Hero CTA is visible above the fold, synced the desktop hero simulator button order with `/demo` (`Allow once → Cancel → Always`), and tightened hero height for `1280×720`.
+  - Updated `/guide` primary copyable zero-write inspection command to `npx rig-commander@3.13.1 --read-only --no-session-logs` and calmed inline code badges; added an above-the-fold maintainer/source/security bar and per-process session token detail to `/passport`.
+
+---
+
 ## [3.13.0] - 2026-11-27
 
 ### Added

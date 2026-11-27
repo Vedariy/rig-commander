@@ -432,20 +432,21 @@
     .safe-start {
       margin-top: 10px;
       padding: 12px 14px 12px;
-      border: 1px solid rgba(0, 255, 157, 0.5);
+      border: 1px solid rgba(16, 185, 129, 0.34);
       border-radius: 12px;
-      background: linear-gradient(180deg, rgba(0, 255, 157, 0.09), rgba(0, 255, 157, 0.02));
-      box-shadow: 0 0 22px rgba(0, 255, 157, 0.12);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.06), rgba(15, 23, 42, 0.52));
+      box-shadow: none;
     }
     .safe-start-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .safe-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #00ff9d;
-      color: #022c22;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.14);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.34);
       font-family: var(--font-mono);
       font-size: 10.5px;
       font-weight: 800;
@@ -496,9 +497,9 @@
     code.inline {
       font-family: var(--font-mono);
       font-size: 11.8px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      padding: 1px 6px;
+      background: rgba(148, 163, 184, 0.12);
+      border: none;
+      padding: 1px 5px;
       border-radius: 5px;
       color: #a5f3fc;
     }
@@ -784,19 +785,19 @@
             </span>
           </div>
           <div class="cmd-row">
-            <code>npx rig-commander@{{APP_VERSION}} --read-only</code>
-            <button type="button" class="copy-btn copy-btn-primary" data-copy="npx rig-commander@{{APP_VERSION}} --read-only"><span data-lang-block="ru">Копировать запуск</span><span data-lang-block="en">Copy read-only</span></button>
+            <code>npx rig-commander@{{APP_VERSION}} --read-only --no-session-logs</code>
+            <button type="button" class="copy-btn copy-btn-primary" data-copy="npx rig-commander@{{APP_VERSION}} --read-only --no-session-logs"><span data-lang-block="ru">Копировать запуск</span><span data-lang-block="en">Copy read-only</span></button>
           </div>
           <div class="ro-disclosure">
             <div class="ro-disclosure-title">
-              <span data-lang-block="ru">Что читает и пишет --read-only, и как проверить пакет до запуска:</span>
-              <span data-lang-block="en">What --read-only reads, writes &amp; how to verify before running:</span>
+              <span data-lang-block="ru">Что читает и пишет --read-only --no-session-logs, и как проверить пакет до запуска:</span>
+              <span data-lang-block="en">What --read-only --no-session-logs reads, writes &amp; how to verify before running:</span>
             </div>
             <ul>
               <li>
                 <strong><span data-lang-block="ru">Читает:</span><span data-lang-block="en">Reads:</span></strong>
-                <span data-lang-block="ru">статус и вывод локальных панелей <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) и по умолчанию локальные журналы CLI (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) для счётчиков контекста и стоимости. Добавьте <code class="inline">--no-session-logs</code>, чтобы полностью отключить чтение <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> (только <code class="inline">tmux</code>).</span>
-                <span data-lang-block="en">local <code class="inline">tmux</code> pane status/output (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) and, by default, local CLI session logs (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) for context &amp; cost counters. Pass <code class="inline">--no-session-logs</code> to disable reading <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> completely (tmux panes only).</span>
+                <span data-lang-block="ru">только живые локальные панели <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — каталоги <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> не открываются. Уберите <code class="inline">--no-session-logs</code>, если нужны счётчики контекста и стоимости из локальных журналов CLI.</span>
+                <span data-lang-block="en">strictly live local <code class="inline">tmux</code> panes (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> are never touched. Drop <code class="inline">--no-session-logs</code> if you want context &amp; cost counters from local CLI session logs.</span>
               </li>
               <li>
                 <strong><span data-lang-block="ru">Живой SSE и AI-оценка:</span><span data-lang-block="en">Live SSE &amp; AI Evaluator:</span></strong>

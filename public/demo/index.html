@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.13.0" />
+  <meta name="app-version" content="3.13.1" />
   <meta name="theme-color" content="#030712" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -2352,17 +2352,17 @@
             const isRoutineRow = w.prio >= 3 && w.slice === 'active' && !quickActionBtn && !groupBtn && secondaryChipsHtml === '';
             if (isRoutineRow) {
               const agentObj = AGENTS.find(a => a.id === w.seatId);
-              const ctxText = agentObj && typeof agentObj.ctxPct === 'number' ? `CTX ${Math.round(agentObj.ctxPct)}%` : '';
+              const ctxText = agentObj && typeof agentObj.ctxPct === 'number' ? `${Math.round(agentObj.ctxPct)}%` : '';
               return `
         <div class="wait-card is-routine-row${w.seatId === selectedAgentId ? ' is-selected-card' : ''}" style="--wait-color:${w.color};"
              data-seat="${safeSeat}"
+             title="${escapeHtml(td('radar.routineWorking'))}"
              onmouseenter="if (this.getAttribute('data-seat')) setHoverAgent(this.getAttribute('data-seat'))"
              onmouseleave="if (this.getAttribute('data-seat')) setHoverAgent(null)"
              onclick="if (this.getAttribute('data-seat')) focusFromRadar(this.getAttribute('data-seat'), 'focus')">
           <span class="routine-dot" aria-hidden="true">●</span>
           <span class="routine-name">${w.from}</span>
           ${ctxText ? `<span class="routine-ctx">${escapeHtml(ctxText)}</span>` : ''}
-          <span class="routine-state">${escapeHtml(td('radar.routineWorking'))}</span>
         </div>
       `;
             }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="app-version" content="3.13.0">
+  <meta name="app-version" content="3.13.1">
   <meta name="theme-color" content="#030712">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -25,7 +25,7 @@
       "@id": "https://rig-commander.vercel.app/passport#article",
       "headline": "RigCommander Architecture and Security Passport",
       "url": "https://rig-commander.vercel.app/passport",
-      "version": "3.13.0",
+      "version": "3.13.1",
       "inLanguage": [
         "en",
         "ru"
@@ -304,11 +304,30 @@
     .sec-tag {
       font-family: var(--font-mono);
       font-size: 11px;
-      color: var(--cyan);
-      background: rgba(0, 240, 255, 0.08);
-      border: 1px solid rgba(0, 240, 255, 0.25);
-      padding: 2px 9px;
-      border-radius: 999px;
+      color: #94a3b8;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      padding: 0;
+    }
+    .hero-meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 14px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .hero-meta-bar a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      color: #7dd3fc;
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
 
     .grid-2 {
@@ -509,7 +528,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/">
         <span>💠 RIGCOMMANDER</span>
-        <span class="pill-tag" data-i18n="badge">PASSPORT v3.13.0</span>
+        <span class="pill-tag" data-i18n="badge">PASSPORT v3.13.1</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a href="/#architecture"><span data-lang-block="ru">Архитектура</span><span data-lang-block="en">Architecture</span></a>
@@ -535,6 +554,17 @@
       <p class="hero-sub" data-i18n="hero.sub">
         Локальный пульт управления параллельными ИИ-агентами в терминале (tmux, Claude Code, Codex CLI, Gemini CLI и OpenRig). Вместо ручного обхода вкладок показывает зависшие подтверждения HITL, перегрев контекста и Git Worktree — в отличие от облачных трейсеров (LangSmith/Langfuse), не требует аккаунта и оставляет вывод терминала на вашей машине.
       </p>
+      <div class="hero-meta-bar">
+        <span>MIT Open Source · 0 npm deps</span>
+        <span>·</span>
+        <span><span data-lang-block="ru">Мейнтейнер:</span><span data-lang-block="en">Maintainer:</span> <a href="https://github.com/Vedariy" target="_blank" rel="noopener">@Vedariy</a></span>
+        <span>·</span>
+        <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.1" target="_blank" rel="noopener"><span data-lang-block="ru">Исходники v3.13.1</span><span data-lang-block="en">Source v3.13.1</span></a>
+        <span>·</span>
+        <a href="https://github.com/Vedariy/rig-commander/security/advisories/new" target="_blank" rel="noopener"><span data-lang-block="ru">Сообщить об уязвимости</span><span data-lang-block="en">Security Advisories</span></a>
+        <span>·</span>
+        <span style="color:#6ee7b7;">378/378 PASS</span>
+      </div>
     </div>
 
     <!-- SECTION 1: C4 CONTEXT & SECURITY GUARANTEES AT A GLANCE -->
@@ -560,17 +590,17 @@
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Zero-Write Inspection Flag</span><span data-lang-block="ru">Безопасный режим без записи</span></b></td>
-              <td><span data-lang-block="en">First-time <code>npx</code> fetches the package from npm; once launched with <code>npx rig-commander@3.13.0 --read-only</code>, RigCommander performs <strong>0</strong> terminal writes, <strong>0</strong> disk writes, and <strong>0</strong> outbound network calls — all mutating routes return <code>403</code>.</span><span data-lang-block="ru">При первом запуске сам <code>npx</code> загружает пакет из реестра npm; после старта процесс <code>npx rig-commander@3.13.0 --read-only</code> делает <strong>0</strong> записей в терминал, <strong>0</strong> записей на диск и <strong>0</strong> исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.</span></td>
+              <td><span data-lang-block="en">First-time <code>npx</code> fetches the package from npm; once launched with <code>npx rig-commander@3.13.1 --read-only</code>, RigCommander performs <strong>0</strong> terminal writes, <strong>0</strong> disk writes, and <strong>0</strong> outbound network calls — all mutating routes return <code>403</code>.</span><span data-lang-block="ru">При первом запуске сам <code>npx</code> загружает пакет из реестра npm; после старта процесс <code>npx rig-commander@3.13.1 --read-only</code> делает <strong>0</strong> записей в терминал, <strong>0</strong> записей на диск и <strong>0</strong> исходящих запросов — все мутирующие маршруты возвращают <code>403</code>.</span></td>
               <td><span class="badge-ok"><span data-lang-block="en">WITH --read-only</span><span data-lang-block="ru">С --read-only</span></span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Local HTTP→TMUX CSRF &amp; DNS-Rebinding Protection</span><span data-lang-block="ru">Защита HTTP→TMUX от CSRF и DNS-rebinding</span></b></td>
-              <td><span data-lang-block="en">Strict <code>Host</code> and <code>Origin</code> checks and per-process session authentication — a malicious browser tab cannot drive your local terminals. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>).</span><span data-lang-block="ru">Строгие проверки <code>Host</code> и <code>Origin</code> и аутентификация сессии процесса — вредоносная вкладка браузера не сможет управлять вашими локальными терминалами. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>).</span></td>
+              <td><span data-lang-block="en">Strict <code>Host</code> and <code>Origin</code> checks plus a random per-process session token injected into loopback page load (required on mutating routes) — a malicious browser tab cannot drive your local terminals. Quick-action buttons (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) dispatch strictly allowlisted control keys; optional manual command input requires explicit operator typing + confirmation, and <code>--read-only</code> hard-blocks all terminal writes (<code>403</code>).</span><span data-lang-block="ru">Строгие проверки <code>Host</code> и <code>Origin</code> плюс случайный токен сессии процесса, выдаваемый локальной странице на <code>127.0.0.1</code> (обязателен для мутирующих маршрутов) — вредоносная вкладка браузера не сможет управлять вашими терминалами. Кнопки быстрых действий (<code>1 / 2 / 3 / Enter / Esc / Ctrl+C / /compact</code>) отправляют строго разрешённые управляющие клавиши; опциональный ручной ввод команды требует явного набора и подтверждения оператором, а <code>--read-only</code> жёстко блокирует все записи в терминал (<code>403</code>).</span></td>
               <td><span class="badge-ok"><span data-lang-block="en">BY DEFAULT</span><span data-lang-block="ru">ПО УМОЛЧАНИЮ</span></span></td>
             </tr>
             <tr>
               <td><b><span data-lang-block="en">Verified Supply Chain &amp; 30-Second Audit</span><span data-lang-block="ru">Проверяемая цепочка поставки и аудит за 30 секунд</span></b></td>
-              <td><span data-lang-block="en">0 runtime npm dependencies and signed <strong>npm Sigstore Provenance</strong> (GitHub Actions OIDC). Verify the exact artifact in a clean temp directory without running code (<code>npm install --ignore-scripts rig-commander@3.13.0 &amp;&amp; npm audit signatures</code>, or inspect <code>npm view rig-commander@3.13.0 dist.attestations</code>), audit the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.0" target="_blank" rel="noopener">v3.13.0 source tag</a>, and report problems via <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span><span data-lang-block="ru">0 внешних npm-зависимостей и подписанный <strong>провенанс npm (Sigstore)</strong> через GitHub Actions OIDC. Проверьте конкретный артефакт в пустом временном каталоге без исполнения кода (<code>npm install --ignore-scripts rig-commander@3.13.0 &amp;&amp; npm audit signatures</code> или <code>npm view rig-commander@3.13.0 dist.attestations</code> — полный однострочник в <a href="/guide#quickstart">Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.0" target="_blank" rel="noopener">исходный тег v3.13.0</a> и сообщайте о проблемах в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span></td>
+              <td><span data-lang-block="en">0 runtime npm dependencies and signed <strong>npm Sigstore Provenance</strong> (GitHub Actions OIDC). Verify the exact artifact in a clean temp directory without running code (<code>npm install --ignore-scripts rig-commander@3.13.1 &amp;&amp; npm audit signatures</code>, or inspect <code>npm view rig-commander@3.13.1 dist.attestations</code>), audit the <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.1" target="_blank" rel="noopener">v3.13.1 source tag</a>, and report problems via <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span><span data-lang-block="ru">0 внешних npm-зависимостей и подписанный <strong>провенанс npm (Sigstore)</strong> через GitHub Actions OIDC. Проверьте конкретный артефакт в пустом временном каталоге без исполнения кода (<code>npm install --ignore-scripts rig-commander@3.13.1 &amp;&amp; npm audit signatures</code> или <code>npm view rig-commander@3.13.1 dist.attestations</code> — полный однострочник в <a href="/guide#quickstart">Гайде</a>), изучите <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.1" target="_blank" rel="noopener">исходный тег v3.13.1</a> и сообщайте о проблемах в <a href="https://github.com/Vedariy/rig-commander/issues" target="_blank" rel="noopener">GitHub issues</a>.</span></td>
               <td><span class="badge-ok">SIGSTORE</span></td>
             </tr>
             <tr>
@@ -725,7 +755,7 @@
           <ul>
             <li><span data-lang-block="ru"><strong>Безопасные действия:</strong> каждая кнопка управления учитывает тип харнеса, проверяет предусловия, блокирует двойную отправку и сверяет фактический результат в журнале аудита.</span><span data-lang-block="en"><strong>Safe Controls:</strong> every operator action respects the agent runtime, checks preconditions, prevents duplicate sends, and verifies the post-action outcome automatically.</span></li>
             <li><span data-lang-block="ru"><strong>Авто-тормоз и Telegram HITL:</strong> настраиваемые лимиты бюджета и циклов доработок QA плюс удалённое подтверждение критичных запросов с телефона.</span><span data-lang-block="en"><strong>Circuit-Breaker &amp; Telegram HITL:</strong> configurable spend/rework caps plus optional remote confirmation of critical prompts from your phone.</span></li>
-            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@3.13.0 --read-only</code>, встроенное безопасное самообновление и 378 автоматических тестов.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@3.13.0 --read-only</code> launch, built-in safe self-update, and 378 automated tests.</span></li>
+            <li><span data-lang-block="ru"><strong>Прозрачный open-source цикл:</strong> запуск одной командой <code>npx rig-commander@3.13.1 --read-only</code>, встроенное безопасное самообновление и 378 автоматических тестов.</span><span data-lang-block="en"><strong>Transparent Open-Source Delivery:</strong> single-command <code>npx rig-commander@3.13.1 --read-only</code> launch, built-in safe self-update, and 378 automated tests.</span></li>
           </ul>
         </div>
       </div>
@@ -902,8 +932,8 @@
       </table>
 
       <div class="cmd-strip">
-        <div class="cmd-box"><span data-i18n="cmd.ro">Safe zero-write first launch</span>npx rig-commander@3.13.0 --read-only</div>
-        <div class="cmd-box"><span data-i18n="cmd.npx">Instant zero-install launch</span>npx rig-commander@3.13.0</div>
+        <div class="cmd-box"><span data-i18n="cmd.ro">Safe zero-write first launch</span>npx rig-commander@3.13.1 --read-only</div>
+        <div class="cmd-box"><span data-i18n="cmd.npx">Instant zero-install launch</span>npx rig-commander@3.13.1</div>
         <div class="cmd-box"><span data-i18n="cmd.start">Run locally from repository (:7440)</span>npm start</div>
         <div class="cmd-box"><span data-i18n="cmd.test">Run all automated tests (~1s)</span>npm test</div>
       </div>
@@ -911,7 +941,7 @@
   </main>
 
   <footer>
-    <span>💠 RigCommander // Operational &amp; Security Passport v3.13.0 (MIT Open Source)</span>
+    <span>💠 RigCommander // Operational &amp; Security Passport v3.13.1 (MIT Open Source)</span>
     <span>
       <a href="/" data-i18n="footer.landing">Landing</a> · <a href="/guide" data-i18n="footer.guide">User Guide</a> · <a href="/guide#openrig-playbook">OpenRig Playbook</a> · <a href="/demo" data-i18n="footer.demo">Live Demo</a> · <a href="/demo?track=tour" data-i18n="footer.tour">SA-DSS Tour</a> · <a href="https://github.com/Vedariy/rig-commander" target="_blank" rel="noopener">GitHub</a>
     </span>
@@ -920,7 +950,7 @@
   <script>
     const I18N = {
       ru: {
-        badge: 'PASSPORT v3.13.0',
+        badge: 'PASSPORT v3.13.1',
         'nav.context': 'C4 Контекст',
         'nav.components': 'Архитектура',
         'nav.ontology': 'Модель',
@@ -998,7 +1028,7 @@
         'footer.tour': 'Тур SA-DSS'
       },
       en: {
-        badge: 'PASSPORT v3.13.0',
+        badge: 'PASSPORT v3.13.1',
         'nav.context': 'C4 Context',
         'nav.components': 'Architecture',
         'nav.ontology': 'Model',

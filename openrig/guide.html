@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="app-version" content="3.13.0">
+  <meta name="app-version" content="3.13.1">
   <meta name="theme-color" content="#030712" />
   <link rel="icon" type="image/svg+xml" href="/assets/icons/favicon.svg" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png" />
@@ -21,7 +21,7 @@
       "@id": "https://rig-commander.vercel.app/guide#article",
       "headline": "RigCommander Operator Guide",
       "url": "https://rig-commander.vercel.app/guide",
-      "version": "3.13.0",
+      "version": "3.13.1",
       "inLanguage": [
         "en",
         "ru"
@@ -34,7 +34,7 @@
       "@type": "HowTo",
       "@id": "https://rig-commander.vercel.app/guide#quickstart",
       "name": "Start the local RigCommander deck",
-      "version": "3.13.0",
+      "version": "3.13.1",
       "inLanguage": "en",
       "step": [
         {
@@ -47,7 +47,7 @@
           "@type": "HowToStep",
           "position": 2,
           "name": "Start RigCommander",
-          "text": "Run npx rig-commander@3.13.0 --read-only in a terminal."
+          "text": "Run npx rig-commander@3.13.1 --read-only in a terminal."
         },
         {
           "@type": "HowToStep",
@@ -432,20 +432,21 @@
     .safe-start {
       margin-top: 10px;
       padding: 12px 14px 12px;
-      border: 1px solid rgba(0, 255, 157, 0.5);
+      border: 1px solid rgba(16, 185, 129, 0.34);
       border-radius: 12px;
-      background: linear-gradient(180deg, rgba(0, 255, 157, 0.09), rgba(0, 255, 157, 0.02));
-      box-shadow: 0 0 22px rgba(0, 255, 157, 0.12);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.06), rgba(15, 23, 42, 0.52));
+      box-shadow: none;
     }
     .safe-start-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .safe-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #00ff9d;
-      color: #022c22;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.14);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.34);
       font-family: var(--font-mono);
       font-size: 10.5px;
       font-weight: 800;
@@ -496,9 +497,9 @@
     code.inline {
       font-family: var(--font-mono);
       font-size: 11.8px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      padding: 1px 6px;
+      background: rgba(148, 163, 184, 0.12);
+      border: none;
+      padding: 1px 5px;
       border-radius: 5px;
       color: #a5f3fc;
     }
@@ -703,7 +704,7 @@
     <div class="topbar-inner">
       <a class="brand" href="/" id="guideBrandLink">
         <span>💠 RIGCOMMANDER</span>
-        <span class="pill-tag">USER GUIDE v3.13.0</span>
+        <span class="pill-tag">USER GUIDE v3.13.1</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a href="/#architecture"><span data-lang-block="ru">Архитектура</span><span data-lang-block="en">Architecture</span></a>
@@ -784,19 +785,19 @@
             </span>
           </div>
           <div class="cmd-row">
-            <code>npx rig-commander@3.13.0 --read-only</code>
-            <button type="button" class="copy-btn copy-btn-primary" data-copy="npx rig-commander@3.13.0 --read-only"><span data-lang-block="ru">Копировать запуск</span><span data-lang-block="en">Copy read-only</span></button>
+            <code>npx rig-commander@3.13.1 --read-only --no-session-logs</code>
+            <button type="button" class="copy-btn copy-btn-primary" data-copy="npx rig-commander@3.13.1 --read-only --no-session-logs"><span data-lang-block="ru">Копировать запуск</span><span data-lang-block="en">Copy read-only</span></button>
           </div>
           <div class="ro-disclosure">
             <div class="ro-disclosure-title">
-              <span data-lang-block="ru">Что читает и пишет --read-only, и как проверить пакет до запуска:</span>
-              <span data-lang-block="en">What --read-only reads, writes &amp; how to verify before running:</span>
+              <span data-lang-block="ru">Что читает и пишет --read-only --no-session-logs, и как проверить пакет до запуска:</span>
+              <span data-lang-block="en">What --read-only --no-session-logs reads, writes &amp; how to verify before running:</span>
             </div>
             <ul>
               <li>
                 <strong><span data-lang-block="ru">Читает:</span><span data-lang-block="en">Reads:</span></strong>
-                <span data-lang-block="ru">статус и вывод локальных панелей <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) и по умолчанию локальные журналы CLI (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) для счётчиков контекста и стоимости. Добавьте <code class="inline">--no-session-logs</code>, чтобы полностью отключить чтение <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> (только <code class="inline">tmux</code>).</span>
-                <span data-lang-block="en">local <code class="inline">tmux</code> pane status/output (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) and, by default, local CLI session logs (<code class="inline">~/.claude/</code>, <code class="inline">~/.codex/</code>) for context &amp; cost counters. Pass <code class="inline">--no-session-logs</code> to disable reading <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> completely (tmux panes only).</span>
+                <span data-lang-block="ru">только живые локальные панели <code class="inline">tmux</code> (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — каталоги <code class="inline">~/.claude/</code> и <code class="inline">~/.codex/</code> не открываются. Уберите <code class="inline">--no-session-logs</code>, если нужны счётчики контекста и стоимости из локальных журналов CLI.</span>
+                <span data-lang-block="en">strictly live local <code class="inline">tmux</code> panes (<code class="inline">list-panes</code> / <code class="inline">capture-pane</code>) — <code class="inline">~/.claude/</code> and <code class="inline">~/.codex/</code> are never touched. Drop <code class="inline">--no-session-logs</code> if you want context &amp; cost counters from local CLI session logs.</span>
               </li>
               <li>
                 <strong><span data-lang-block="ru">Живой SSE и AI-оценка:</span><span data-lang-block="en">Live SSE &amp; AI Evaluator:</span></strong>
@@ -810,11 +811,11 @@
               </li>
               <li>
                 <strong><span data-lang-block="ru">Проверить артефакт npm до запуска без исполнения кода (30 сек):</span><span data-lang-block="en">Verify the npm artifact before running without executing code (30s):</span></strong>
-                <span data-lang-block="ru">установите <code class="inline">rig-commander@3.13.0</code> в пустой временный каталог с <code class="inline">--ignore-scripts</code>, проверьте криптографическую подпись Sigstore и сверьте с тегом <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.0" target="_blank" rel="noopener">GitHub v3.13.0</a> (ожидается <code class="inline">1 package has a verified registry signature</code> и <code class="inline">1 package has a verified attestation</code>; также доступна <code class="inline">npm view rig-commander@3.13.0 dist.attestations</code>):</span>
-                <span data-lang-block="en">install <code class="inline">rig-commander@3.13.0</code> into a clean temporary directory with <code class="inline">--ignore-scripts</code>, verify its Sigstore attestation, and match against <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.0" target="_blank" rel="noopener">GitHub release tag v3.13.0</a> (expect <code class="inline">1 package has a verified registry signature</code> &amp; <code class="inline">1 package has a verified attestation</code>; or inspect <code class="inline">npm view rig-commander@3.13.0 dist.attestations</code>):</span>
+                <span data-lang-block="ru">установите <code class="inline">rig-commander@3.13.1</code> в пустой временный каталог с <code class="inline">--ignore-scripts</code>, проверьте криптографическую подпись Sigstore и сверьте с тегом <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.1" target="_blank" rel="noopener">GitHub v3.13.1</a> (ожидается <code class="inline">1 package has a verified registry signature</code> и <code class="inline">1 package has a verified attestation</code>; также доступна <code class="inline">npm view rig-commander@3.13.1 dist.attestations</code>):</span>
+                <span data-lang-block="en">install <code class="inline">rig-commander@3.13.1</code> into a clean temporary directory with <code class="inline">--ignore-scripts</code>, verify its Sigstore attestation, and match against <a href="https://github.com/Vedariy/rig-commander/releases/tag/v3.13.1" target="_blank" rel="noopener">GitHub release tag v3.13.1</a> (expect <code class="inline">1 package has a verified registry signature</code> &amp; <code class="inline">1 package has a verified attestation</code>; or inspect <code class="inline">npm view rig-commander@3.13.1 dist.attestations</code>):</span>
                 <div class="cmd-row ro-verify-row" style="align-items:flex-start;">
-                  <code style="white-space:normal; overflow-wrap:anywhere; line-height:1.45;">tmp=$(mktemp -d) &amp;&amp; (cd "$tmp" &amp;&amp; npm init -y &gt;/dev/null &amp;&amp; npm install --ignore-scripts rig-commander@3.13.0 &amp;&amp; npm audit signatures) &amp;&amp; rm -rf "$tmp"</code>
-                  <button type="button" class="copy-btn copy-btn-secondary" style="flex-shrink:0;" data-copy="tmp=$(mktemp -d) && (cd &quot;$tmp&quot; && npm init -y >/dev/null && npm install --ignore-scripts rig-commander@3.13.0 && npm audit signatures) && rm -rf &quot;$tmp&quot;"><span data-lang-block="ru">Копировать проверку</span><span data-lang-block="en">Copy verify</span></button>
+                  <code style="white-space:normal; overflow-wrap:anywhere; line-height:1.45;">tmp=$(mktemp -d) &amp;&amp; (cd "$tmp" &amp;&amp; npm init -y &gt;/dev/null &amp;&amp; npm install --ignore-scripts rig-commander@3.13.1 &amp;&amp; npm audit signatures) &amp;&amp; rm -rf "$tmp"</code>
+                  <button type="button" class="copy-btn copy-btn-secondary" style="flex-shrink:0;" data-copy="tmp=$(mktemp -d) && (cd &quot;$tmp&quot; && npm init -y >/dev/null && npm install --ignore-scripts rig-commander@3.13.1 && npm audit signatures) && rm -rf &quot;$tmp&quot;"><span data-lang-block="ru">Копировать проверку</span><span data-lang-block="en">Copy verify</span></button>
                 </div>
               </li>
             </ul>
@@ -827,8 +828,8 @@
             <span data-lang-block="en">⚡ Full interactive command deck (enables allowlisted HITL keys &amp; /compact)</span>
           </summary>
           <div class="cmd-row" style="margin-top:8px;">
-            <code>npx rig-commander@3.13.0</code>
-            <button type="button" class="copy-btn copy-btn-secondary" data-copy="npx rig-commander@3.13.0"><span data-lang-block="ru">Копировать интерактивный</span><span data-lang-block="en">Copy interactive</span></button>
+            <code>npx rig-commander@3.13.1</code>
+            <button type="button" class="copy-btn copy-btn-secondary" data-copy="npx rig-commander@3.13.1"><span data-lang-block="ru">Копировать интерактивный</span><span data-lang-block="en">Copy interactive</span></button>
           </div>
           <div class="alias-note">
             <span data-lang-block="ru">Версия закреплена для воспроизводимости. <code class="inline">@latest</code> — необязательный алиас на самый свежий релиз.</span>
@@ -863,7 +864,7 @@
           </thead>
           <tbody>
             <tr>
-              <td><code class="inline">npx rig-commander@3.13.0 --read-only</code></td>
+              <td><code class="inline">npx rig-commander@3.13.1 --read-only</code></td>
               <td><span data-lang-block="ru">Безопасный режим осмотра: блокирует любые записи в <code class="inline">tmux</code>, перезапуски и мутации</span><span data-lang-block="en">Zero-write inspection mode: disables all <code class="inline">tmux</code> keystrokes, restarts, and mutations</span></td>
             </tr>
             <tr>
@@ -1407,7 +1408,7 @@
   </div>
 
   <footer>
-    <span>💠 RigCommander // Operator User Guide v3.13.0</span>
+    <span>💠 RigCommander // Operator User Guide v3.13.1</span>
     <span style="display:flex; gap:16px; flex-wrap:wrap;">
       <a href="/" id="footerHomeLink"><span data-lang-block="ru">Главная / Пульт</span><span data-lang-block="en">Home / Deck</span></a>
       <a href="/passport"><span data-lang-block="ru">Паспорт проекта</span><span data-lang-block="en">Project Passport</span></a>
